@@ -1,25 +1,39 @@
 <script setup lang="ts">
-import HelloWorld from './components/HelloWorld.vue'
-import home from './pages/Home.vue'
+import { RouterView} from 'vue-router';
+import Home from './pages/Home.vue';
+
 </script>
 
-<template>
-  <home />
 
+<template>
+
+
+  <p>
+    <strong> current route</strong>{{ $route.path }}
   
+  </p>
+  <nav>
+    <ul>
+      <li>
+        <router-link to="/">Home</router-link>
+      </li>
+      <li>
+        <router-link to="/about">About</router-link>
+      </li>
+      <li>
+        <router-link to="/contact">Contact Us</router-link>
+      </li>
+      <li>
+        <router-link to="/packages">Packages</router-link>
+      </li>
+    </ul>
+   
+    
+  </nav>
+  <main>
+    <router-view />
+  </main>
 </template>
 
-<style scoped>
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.vue:hover {
-  filter: drop-shadow(0 0 2em #42b883aa);
-}
+<style>
 </style>
