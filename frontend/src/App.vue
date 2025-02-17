@@ -36,4 +36,26 @@ import Home from './pages/Home.vue';
 </template>
 
 <style>
+  nav {
+    background-color: #f0f0f0;
+    padding: 1em;
+  }
+  nav ul {
+    display: flex;
+    justify-content: space-around;
+    list-style: none;
+    padding: 0;
+  
+    list-style: none;
+
+  }
+  nav ul li {
+    margin: 0;
+  }
+  nav ul li a {
+    text-decoration: none;
+  }
+  main {
+    padding: 1em;
+  }
 </style>
