@@ -1,13 +1,8 @@
-import { Hono } from "hono";
+import { Hono } from 'hono';
+import { createPayment, getPayments } from '../controllers/paymentController';
 
-const paymentRoutes = new Hono();
+const router = new Hono()
+    .post('/', createPayment)
+    .get('/', getPayments);
 
-paymentRoutes.get("/" , async (c) => {
-    return c.json({message: "Payment history"});
-});
-
-paymentRoutes.post("/" , async (c) => {
-    return c.json({message: "Payment processed"});
-});
-
-export default paymentRoutes;
+export default router;

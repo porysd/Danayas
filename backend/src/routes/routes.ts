@@ -1,21 +1,19 @@
 import { Hono } from "hono";
-import usersRoutes from './userRoutes'
-import authRoutes from "./authRoutes";
+import usersRoutes from './userRoutes';
+import roleRoutes from './roleRoutes';
 import bookingRoutes from "./bookingRoutes";
-import inquiryRoutes from "./inquiryRoutes";
+import packageRoutes from "./packageRoutes";
+import discountRoutes from "./discountRoutes";
+import bookingAddOnRoutes from "./bookingAddOnRoutes";
+import billingRoutes from "./billingRoutes";
+// import contentManagementRoutes from "./contentManagementRoutes";
 import paymentRoutes from "./paymentRoutes";
-import reportRoutes from "./reportRoutes";
-import reservationRoutes from "./reservationRoutes";
+// import reportRoutes from "./reportRoutes";
 
-export const route = [
-    { path: "/auth", handler: authRoutes },
-    { path: "/bookings", handler: bookingRoutes },
-    { path: "/inquiries", handler: inquiryRoutes },
-    { path: "/payments", handler: paymentRoutes },
-    { path: "/reports", handler: reportRoutes },
-    { path: "/reservations", handler: reservationRoutes },
-];
 
-export const routes = [usersRoutes] as const;
+export const routes = [usersRoutes, roleRoutes, 
+                       bookingRoutes, packageRoutes,
+                       bookingAddOnRoutes, discountRoutes,
+                       paymentRoutes, billingRoutes] as const;
 
 export type AppRoutes = (typeof routes)[number];

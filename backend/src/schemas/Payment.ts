@@ -1,25 +1,37 @@
-import { sqliteTable, text, integer, real, check } from "drizzle-orm/sqlite-core";
-import { User } from "./User";
-import { Packages } from "./Packages";
-import { sql } from "drizzle-orm";
+import { sqliteTable, text, integer, real, check } from 'drizzle-orm/sqlite-core';
+import { Booking } from './Booking';
+import { sql } from 'drizzle-orm';
+import { z } from 'zod';
 
-export const Payment = sqliteTable("payment", {
-  id: integer("id").primaryKey({autoIncrement: true}),
-  userId: integer("userId").references(() => User.id),
-  amount: real("amount").notNull(),
-  isDiscount: integer("isDiscount").notNull(),
-  packageId: integer("packageId").references(() => Packages.id),
-  mode: text("mode").notNull(),
-  reference: text("reference"),
-  status: text("status").notNull(),
-  downpaymentAmount: real("downpaymentAmount"),
-  time: text("time").notNull()
-},
+export const Payment = sqliteTable('PAYMENT', {
+  paymentId: integer('paymentId').primaryKey({ autoIncrement: true }),
+  bookingId: integer('bookingId').references(() => Booking.bookingId).notNull(),
+  discountAmount: real('discountAmount'),
+  downpaymentAmount: real('downpaymentAmount'),
+  amountPaid: real('amountPaid').notNull(),
+  totalAmountDue: real('totalAmountDue').notNull(),
+  mode: text('mode').notNull(),
+  reference: text('reference'),
+  paymentStatus: text('paymentStatus').notNull(),
+  paidAt: text('paidAt').notNull().default(sql`(current_timestamp)`),
+}, 
 
 (table) => [
-    check("discountCheck", sql`${table.isDiscount} in (0, 1)`),
-    check("modeCheck", sql`${table.mode} in ("gcash", "cash")`),
-    check("statusCheck", sql`${table.status} in ("pending", "in progress", "done")`)
-]
+  check('modeCheck', sql`${table.mode} in ('gcash', 'cash')`),
+  check('paymentStatusCheck', sql`${table.paymentStatus} in ('pending', 'partially_paid', 'paid', 'failed')`)
+]);
 
-);
+
+// ZOD
+// export const PaymentSchema = z.object({
+//   paymentId: z.number().int().optional(),
+//   bookingId: z.number().int(),
+//   discountAmount: z.number().optional(),
+//   downpaymentAmount: z.number().optional(),
+//   amountPaid: z.number(),
+//   totalAmountDue: z.number(),
+//   mode: z.string(),
+//   reference: z.string().optional(),
+//   paymentStatus: z.enum(['pending', 'partially_paid', 'paid', 'failed']),
+// });
+

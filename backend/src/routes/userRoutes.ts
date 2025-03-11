@@ -1,17 +1,17 @@
 import { Hono } from 'hono';
 import {
-    getUsersController,
-    getUserController,
-    createUserController,
-    updateUserController,
-    deleteUserController
+    getUser,
+    createUser,
+    getUserById,
+    updateUser,
+    deleteUser
 } from '../controllers/userController';
 
 const router = new Hono()
-    .get('/users', getUsersController)
-    .get('/users/:id', getUserController)
-    .post('/users', createUserController)
-    .put('/users/:id', updateUserController)
-    .delete('/users/:id', deleteUserController);
+    .get('/users', getUser)
+    .post('/users', createUser)
+    .get('/users/:id', getUserById)
+    .put('/users/:id', updateUser)
+    .delete('/users/:id', deleteUser);
 
 export default router;
