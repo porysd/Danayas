@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "e753d1b8-50e6-4f46-b8a5-8013f516053f",
+  "id": "0c4d1990-0928-4812-a770-2ba247537ef5",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "USER": {
@@ -47,16 +47,15 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true,
-          "autoincrement": false,
-          "default": "(current_timestamp)"
+          "autoincrement": false
         },
         "status": {
           "name": "status",
-          "type": "integer",
+          "type": "text",
           "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
           "autoincrement": false,
-          "default": 1
+          "default": "'active'"
         },
         "email": {
           "name": "email",
@@ -72,12 +71,13 @@
           "notNull": true,
           "autoincrement": false
         },
-        "roleId": {
-          "name": "roleId",
-          "type": "integer",
+        "role": {
+          "name": "role",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
-          "autoincrement": false
+          "autoincrement": false,
+          "default": "'customer'"
         }
       },
       "indexes": {
@@ -89,29 +89,10 @@
           "isUnique": true
         }
       },
-      "foreignKeys": {
-        "USER_roleId_ROLE_roleId_fk": {
-          "name": "USER_roleId_ROLE_roleId_fk",
-          "tableFrom": "USER",
-          "tableTo": "ROLE",
-          "columnsFrom": [
-            "roleId"
-          ],
-          "columnsTo": [
-            "roleId"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
+      "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraints": {
-        "statusCheck": {
-          "name": "statusCheck",
-          "value": "\"USER\".\"status\" in (0, 1)"
-        }
-      }
+      "checkConstraints": {}
     },
     "ROLE": {
       "name": "ROLE",
@@ -911,6 +892,58 @@
           "value": "\"CONTENT_MANAGEMENT\".\"category\" in ('FAQ', 'Gallery', 'Landing Page', 'Terms and Conditions', 'About Us')"
         }
       }
+    },
+    "PERMISSION": {
+      "name": "PERMISSION",
+      "columns": {
+        "permissionId": {
+          "name": "permissionId",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "userId": {
+          "name": "userId",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "table": {
+          "name": "table",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "action": {
+          "name": "action",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "PERMISSION_userId_USER_userId_fk": {
+          "name": "PERMISSION_userId_USER_userId_fk",
+          "tableFrom": "PERMISSION",
+          "tableTo": "USER",
+          "columnsFrom": [
+            "userId"
+          ],
+          "columnsTo": [
+            "userId"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
     }
   },
   "views": {},

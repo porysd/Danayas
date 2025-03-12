@@ -3,23 +3,28 @@
   "module": "index.ts",
   "type": "module",
   "devDependencies": {
+    "@faker-js/faker": "^9.6.0",
     "@types/bun": "^1.2.2",
     "@types/node": "^22.13.1",
     "tsx": "^4.19.2"
   },
   "scripts": {
-    "dev": "bun src/server.ts"
+    "dev": "bun --hot src/server.ts"
   },
   "peerDependencies": {
     "typescript": "^5.7.3"
   },
   "dependencies": {
+    "@hono/zod-openapi": "^0.19.2",
     "@libsql/client": "^0.14.0",
+    "@scalar/hono-api-reference": "^0.5.184",
+    "@types/jsonwebtoken": "^9.0.9",
     "dotenv": "^16.4.7",
     "drizzle-kit": "^0.30.4",
     "drizzle-orm": "^0.39.2",
     "drizzle-seed": "^0.3.1",
     "hono": "^4.7.0",
+    "jsonwebtoken": "^9.0.2",
     "sqlite": "^5.1.1",
     "sqlite3": "^5.1.7",
     "zod": "^3.24.1"

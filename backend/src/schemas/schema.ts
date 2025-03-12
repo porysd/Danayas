@@ -1,13 +1,11 @@
-export * from './User.ts';
-export * from './Roles.ts';
-export * from './Booking.ts';
-export * from './Payment.ts';
-export * from './Billing.ts';
-export * from './Reports.ts';
-export * from './Packages.ts';
-export * from './Discounts.ts';
-export * from './BookingAddOns.ts';
-export * from './ContentManagement.ts';
-
-
-
+export * from "./User.ts";
+export * from "./Roles.ts";
+export * from "./Booking.ts";
+export * from "./Payment.ts";
+export * from "./Billing.ts";
+export * from "./Reports.ts";
+export * from "./Packages.ts";
+export * from "./Discounts.ts";
+export * from "./BookingAddOns.ts";
+export * from "./ContentManagement.ts";
+export * from "./Permission.ts";
