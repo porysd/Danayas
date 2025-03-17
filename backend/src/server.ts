@@ -1,34 +1,61 @@
-import { Hono } from "hono";
-import { serve } from "bun";
-import { db } from "./config/database";
-import { routes } from "./routes/routes";
-import { seedRoles } from "./config/seed";
+// Hono Imports
+import { routes } from './routes/routes'
+import { logger } from 'hono/logger'
+import { OpenAPIHono } from '@hono/zod-openapi'
+import { apiReference } from '@scalar/hono-api-reference'
+import seedRoles from "./config/seed";
+import authentication from './routes/authRoutes';
 
-const app = new Hono();
-
-// To create Admin, Staff, Customer roles (fake data)
-seedRoles().then(() => {
-    console.log('Roles seeded successfully.');
-  }).catch((err) => {
-    console.error('Error seeding roles:', err);
-  });
-
-// Route check if working or not
-app.get("/", (c) => {
-    return c.json({ message: "Working!" })
+const app = new OpenAPIHono()
+  .doc('/openapi', {
+    openapi: '3.0.0',
+    info: {
+      version: '1.0.0',
+      title: 'Reservation Danayas',
+    },
+  })
+  .use('*', logger())
+  .get(
+    '/scalar',
+    apiReference({
+      theme: 'saturn',
+      spec: { url: "/openapi" },
+      cdn: "https://cdn.jsdelivr.net/npm/@scalar/api-reference@1.25.80",
+    })
+  )
+  
+// routes
+routes.forEach(([path, handler]) => {
+  app.route(path, handler);
 });
 
+// try {
+//   await seedRoles();
+// } catch (err) {
+//   console.error("Error seeding roles:", err);
+// }
 
-// Main routes
-routes.forEach((route) => {
-    app.route("/", route);
-});
+// seedRoles().then(() => {
+//   console.log('Roles seeded successfully.');
+// }).catch((err) => {
+//   console.error('Error seeding roles:', err);
+// });
 
-Bun.serve({
-    fetch: app.fetch,
-    port: 3000,
-})
+app.get('/', (c) => c.text('Localhost:3000 works O:'));
+app.post;
+export default {
+  port: 3000,
+  fetch: app.fetch,
+};
 
-console.log(`Server running at http://localhost:4000/`);
+// app.use(
+//   "*", // Intercepts all incoming requests
+//   async (c: Context, next) => {
+//     if (c.req.path === "/login") {
+//       return next(); // Skip auth check for login
+//     }
+//     return jwtAuthMiddleware(c, next);
+//   }
+// );
 
 

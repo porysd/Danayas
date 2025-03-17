@@ -1,13 +1,7 @@
-import { Hono } from "hono";
+// reportRoutes.get("/" , async (c) => {
+//     return c.json({message: "All reports"});
+// });
 
-const reportRoutes = new Hono();
-
-reportRoutes.get("/" , async (c) => {
-    return c.json({message: "All reports"});
-});
-
-reportRoutes.post("/" , async (c) => {  
-    return c.json({message: "Report submitted"});
-});
-
-export default reportRoutes;
+// reportRoutes.post("/" , async (c) => {  
+//     return c.json({message: "Report submitted"});
+// });
