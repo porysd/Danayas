@@ -73,7 +73,7 @@ export default new OpenAPIHono()
     createRoute({
       tags: ["Authentication"],
       method: "get",
-      path: "/user/:id",
+      path: "/users/:id",
       responses: {
         200: {
           content: {

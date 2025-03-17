@@ -1,10 +1,11 @@
 import { db } from "./database";
-import { Role, User } from "../schemas/schema.ts";
+import { Role, User, Packages, Discounts, Booking } from "../schemas/schema.ts";
 import { faker } from "@faker-js/faker";
 import { grantPermission } from "../utils/permissionUtils.ts";
+import { eq } from "drizzle-orm";
 
 // Seed roles
-const roles = ["Admin", "Staff", "Customer"];
+const roles = ["admin", "staff", "customer"];
 
 export default async function seed() {
   // TODO: generate base users with permissions enabled
@@ -42,13 +43,75 @@ export default async function seed() {
       continue;
     }
   }
+
+  for (let i = 0; i < 100; i++){
+    try {
+      const row = await db.insert(Packages).values({
+        description: faker.word.words(20),
+        price: faker.helpers.rangeToNumber({ min: 1000, max: 12000 }),
+        name: faker.commerce.productName(),
+        status: faker.helpers.arrayElement(['active', 'inactive', 'coming-soon', 'sold-out'])
+      }).returning().execute();
+      //await grantPermission(row[0].userId, "PACKAGES", "read");
+    } catch (e) {
+      console.error(e);
+      continue;
+    }
+  }
+
+  for (let i = 0; i < 100; i++){
+    try {
+      const row = await db.insert(Discounts).values({
+        name: faker.commerce.product(),
+        percentage: faker.helpers.rangeToNumber({ min: 0.1, max: 1.0 }),
+        typeFor: faker.helpers.arrayElement(['pwd', 'student', 'senior']),
+      }).returning().execute();
+      //await grantPermission(row[0].userId, "PACKAGES", "read");
+    } catch (e) {
+      console.error(e);
+      continue;
+    }
+  }
+
+  const customers = (await db.query.User.findMany({where: eq(User.role, "customer")})).map((val) => val.userId)
+  const packages = (await db.query.Packages.findMany()).map((val) => val.packageId)
+  const admins = (await db.query.User.findMany({where: eq(User.role, "admin")})).map((val) => val.userId)
+  const discounts = (await db.query.Discounts.findMany()).map((val) => val.discountPromoId)
+
+  for (let i = 0; i < 1000; i++){
+    try {
+      const row = await db.insert(Booking).values({
+        userId: faker.helpers.arrayElement(customers),
+        createdBy: faker.helpers.arrayElement(admins),
+        checkInDate: faker.date.past().toISOString(),
+        checkOutDate: faker.date.future().toISOString(),
+        mode: faker.helpers.arrayElement(['day-time', 'night-time', 'whole-day']),
+        packageId: faker.helpers.arrayElement(packages),
+        firstName: faker.person.firstName(),
+        lastName: faker.person.lastName(),
+        arrivalTime: faker.date.recent().toISOString(),
+        eventType: faker.helpers.arrayElement(['wedding', 'birthday', 'conference']),
+        numberOfGuest: faker.helpers.rangeToNumber({ min: 10, max: 500 }),
+        catering: faker.helpers.rangeToNumber({ min: 1, max: 5 }),
+        contactNo: faker.phone.number(),
+        emailAddress: faker.internet.email(),
+        address: faker.location.streetAddress(),
+        discountPromoId: faker.helpers.arrayElement(discounts),
+        paymentTerms: faker.helpers.arrayElement(['installment', 'full-payment']),
+        totalAmountDue: faker.helpers.rangeToNumber({ min: 1000, max: 10000 }),
+        bookStatus: faker.helpers.arrayElement(['pending', 'confirmed', 'cancelled', 'completed']),
+        reservationType: faker.helpers.arrayElement(['online', 'walk-in']),
+        createdAt: faker.date.recent().toISOString()
+      }).execute();
+      //await grantPermission(row[0].userId, "PACKAGES", "read");
+    } catch (e) {
+      console.error(e);
+      continue;
+    }
+  }
 }
-
-// TODO: generate fake customers with permissions enabled
-
-// TODO: generate fake packages
-
-// TODO: generate fake booking
+//Note: remove seed() when not use.
+//seed() Call this function when seeding.
 
 // TODO: generate fake payments
 

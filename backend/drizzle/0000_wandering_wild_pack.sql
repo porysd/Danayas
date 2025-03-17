@@ -31,7 +31,7 @@ CREATE TABLE `BOOKING` (
 	`arrivalTime` text NOT NULL,
 	`eventType` text NOT NULL,
 	`numberOfGuest` integer NOT NULL,
-	`catering` text NOT NULL,
+	`catering` integer NOT NULL,
 	`contactNo` text,
 	`emailAddress` text,
 	`address` text,
@@ -44,9 +44,7 @@ CREATE TABLE `BOOKING` (
 	FOREIGN KEY (`userId`) REFERENCES `USER`(`userId`) ON UPDATE no action ON DELETE no action,
 	FOREIGN KEY (`createdBy`) REFERENCES `USER`(`userId`) ON UPDATE no action ON DELETE no action,
 	FOREIGN KEY (`packageId`) REFERENCES `PACKAGES`(`packageId`) ON UPDATE no action ON DELETE no action,
-	FOREIGN KEY (`discountPromoId`) REFERENCES `DISCOUNT_PROMOS`(`discountPromoId`) ON UPDATE no action ON DELETE no action,
-	CONSTRAINT "modeCheck" CHECK("BOOKING"."mode" in ('Day', 'Night', '22 hours')),
-	CONSTRAINT "statusCheck" CHECK("BOOKING"."bookStatus" in ('Pending', 'Confirmed', 'Cancelled', 'Completed'))
+	FOREIGN KEY (`discountPromoId`) REFERENCES `DISCOUNT_PROMOS`(`discountPromoId`) ON UPDATE no action ON DELETE no action
 );
 --> statement-breakpoint
 CREATE TABLE `PAYMENT` (
@@ -96,7 +94,7 @@ CREATE TABLE `PACKAGES` (
 	`name` text NOT NULL,
 	`price` real NOT NULL,
 	`description` text NOT NULL,
-	`status` integer NOT NULL,
+	`status` text NOT NULL,
 	`createdAt` text DEFAULT (current_timestamp) NOT NULL,
 	`updatedAt` text DEFAULT (current_timestamp) NOT NULL
 );

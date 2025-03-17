@@ -1,5 +1,6 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import authentication from "./authentication";
+import packages from "./packages";
 import type { BunSQLiteDatabase } from "drizzle-orm/bun-sqlite";
 import db from "../config/database";
 import { apiReference } from "@scalar/hono-api-reference";
@@ -26,7 +27,8 @@ const app = new OpenAPIHono<Env>()
       cdn: "https://cdn.jsdelivr.net/npm/@scalar/api-reference@1.25.80",
     }),
   )
-  .route("/auth", authentication);
+  .route("/auth", authentication)
+  .route("/packages", packages);
 
 Bun.serve({
   port: 3001,

@@ -7,9 +7,9 @@ export const Packages = sqliteTable('PACKAGES', {
   name: text('name').notNull(),
   price: real('price').notNull(),
   description: text('description').notNull(),
-  status: integer('status').notNull(),
+  status: text('status', {enum: ['active', 'inactive', 'coming-soon', 'sold-out']}).notNull(),
   createdAt: text('createdAt').notNull().default(sql`(current_timestamp)`),
-  updatedAt: text('updatedAt').notNull().default(sql`(current_timestamp)`),
+  updatedAt: text('updatedAt').notNull().default(sql`(current_timestamp)`).$onUpdateFn(() => new Date().toUTCString()),
 });
 
 // ZOD

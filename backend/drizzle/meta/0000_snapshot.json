@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "0c4d1990-0928-4812-a770-2ba247537ef5",
+  "id": "9d461d1f-4803-4e10-bf5e-e4d9e604df67",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "USER": {
@@ -215,7 +215,7 @@
         },
         "catering": {
           "name": "catering",
-          "type": "text",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -342,16 +342,7 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraints": {
-        "modeCheck": {
-          "name": "modeCheck",
-          "value": "\"BOOKING\".\"mode\" in ('Day', 'Night', '22 hours')"
-        },
-        "statusCheck": {
-          "name": "statusCheck",
-          "value": "\"BOOKING\".\"bookStatus\" in ('Pending', 'Confirmed', 'Cancelled', 'Completed')"
-        }
-      }
+      "checkConstraints": {}
     },
     "PAYMENT": {
       "name": "PAYMENT",
@@ -682,7 +673,7 @@
         },
         "status": {
           "name": "status",
-          "type": "integer",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false

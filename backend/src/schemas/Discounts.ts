@@ -5,7 +5,7 @@ export const Discounts = sqliteTable('DISCOUNT_PROMOS', {
   discountPromoId: integer('discountPromoId').primaryKey({ autoIncrement: true }),
   name: text('name').notNull(),
   percentage: real('percentage').notNull(),
-  type: text('type').notNull(),
+  typeFor: text('type', {enum: ['pwd', 'student', 'senior']}).notNull(),
 });
 
 
