@@ -1,6 +1,6 @@
 import db from "../config/database";
 import { and, eq } from "drizzle-orm";
-import { permissionTable } from "../schemas/Permission";
+import { PermissionsTable } from "../schemas/Permission";
 
 export enum Roles {
   ADMIN = "ADMIN",
@@ -15,7 +15,7 @@ export async function verifyPermission(
   table: string,
   action: typeof permissionsArray[number],
 ) {
-  const permissionRecord = await db.query.permissionTable.findFirst({
+  const permissionRecord = await db.query.PermissionsTable.findFirst({
     where: (fields, operators) =>
       operators.and(
         eq(fields.userId, userId),
@@ -33,7 +33,7 @@ export async function grantPermission(
   action: typeof permissionsArray[number],
 ) {
   try {
-    await db.insert(permissionTable).values({
+    await db.insert(PermissionsTable).values({
       userId,
       table,
       action,
@@ -51,11 +51,11 @@ export async function revokePermission(
   action: typeof permissionsArray[number],
 ) {
   try {
-    await db.delete(permissionTable).where(
+    await db.delete(PermissionsTable).where(
       and(
-        eq(permissionTable.userId, userId),
-        eq(permissionTable.table, table),
-        eq(permissionTable.action, action),
+        eq(PermissionsTable.userId, userId),
+        eq(PermissionsTable.table, table),
+        eq(PermissionsTable.action, action),
       ),
     ).execute();
     return true;

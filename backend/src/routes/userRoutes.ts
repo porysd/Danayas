@@ -2,8 +2,9 @@ import { createRoute, OpenAPIHono } from "@hono/zod-openapi";
 import { RegisterDTO } from "../dto/authDTO";
 import { UserDTO, UpdateUserDTO, GetUserDTO } from "../dto/userDTO";
 import db from "../config/database";
-import { usersTable } from "../schemas/User";
+import { UsersTable } from "../schemas/User";
 import { eq } from "drizzle-orm";
+
 
 export default new OpenAPIHono()
 
@@ -28,14 +29,15 @@ export default new OpenAPIHono()
     async (c) => {
       // TODO: Add error if user id don't exist
       const user = GetUserDTO.parse(
-        await db.query.usersTable.findFirst({
-          where: eq(usersTable.userId, Number(c.req.param("id"))),
+        await db.query.UsersTable.findFirst({
+          where: eq(UsersTable.userId, Number(c.req.param("id"))),
         })
       );
       return c.json(user);
     }
   )
 
+  //TODO: add page and limit
   .openapi(
     createRoute({
       tags: ["Users"],
@@ -54,7 +56,7 @@ export default new OpenAPIHono()
       },
     }),
     async (c) => {
-      const users = await db.query.usersTable.findMany();
+      const users = await db.query.UsersTable.findMany();
       const safeUsers = users.map((user) => GetUserDTO.parse(user));
       return c.json(safeUsers);
     }
@@ -84,12 +86,11 @@ export default new OpenAPIHono()
           },
           description: "User Created",
         },
-        // TODO: Add error if wrong data input 400:
       },
     }),
     async (c) => {
       const body = RegisterDTO.parse(await c.req.json());
-      await db.insert(usersTable).values(body).execute();
+      await db.insert(UsersTable).values(body).execute();
       return c.json(body);
     }
   )
@@ -113,8 +114,8 @@ export default new OpenAPIHono()
       const userId = Number(c.req.param("id"));
 
       await db
-        .delete(usersTable)
-        .where(eq(usersTable.userId, userId))
+        .delete(UsersTable)
+        .where(eq(UsersTable.userId, userId))
         .execute();
       return c.text("User Deleted!");
     }
@@ -153,12 +154,12 @@ export default new OpenAPIHono()
       const userId = Number(c.req.param("id"));
 
       await db
-        .update(usersTable)
+        .update(UsersTable)
         .set(UpdateUserDTO.parse(await c.req.json()))
-        .where(eq(usersTable.userId, userId))
+        .where(eq(UsersTable.userId, userId))
         .execute();
       return c.text("User Updated");
     }
   );
 
-// TODO: Add search user by email
+// TODO: Add search user by email, firstname, lastname

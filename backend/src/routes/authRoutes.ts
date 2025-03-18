@@ -1,7 +1,7 @@
 import { createRoute, OpenAPIHono } from "@hono/zod-openapi";
 import db from "../config/database";
 import { RegisterDTO, LoginDTO } from "../dto/authDTO";
-import { usersTable } from "../schemas/User";
+import { UsersTable } from "../schemas/User";
 import { eq } from "drizzle-orm";
 
 export default new OpenAPIHono()
@@ -28,7 +28,7 @@ export default new OpenAPIHono()
     async (c) => {
       const body = c.req.valid("json");
       await db
-        .insert(usersTable)
+        .insert(UsersTable)
         .values({
           ...body,
           password: await Bun.password.hash(body.password),
@@ -60,8 +60,8 @@ export default new OpenAPIHono()
     }),
     async (c) => {
       const body = c.req.valid("json");
-      const user = await db.query.usersTable.findFirst({
-        where: eq(usersTable.email, body.email)
+      const user = await db.query.UsersTable.findFirst({
+        where: eq(UsersTable.email, body.email)
       }).execute();
 
       if (!user) {
