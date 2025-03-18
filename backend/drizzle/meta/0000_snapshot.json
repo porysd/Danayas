@@ -1,150 +1,9 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "e753d1b8-50e6-4f46-b8a5-8013f516053f",
+  "id": "096b493c-9063-4750-9b7f-51ba04ec9a2f",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
-    "USER": {
-      "name": "USER",
-      "columns": {
-        "userId": {
-          "name": "userId",
-          "type": "integer",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": true
-        },
-        "firstName": {
-          "name": "firstName",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "lastName": {
-          "name": "lastName",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "contactNo": {
-          "name": "contactNo",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "address": {
-          "name": "address",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "dateReg": {
-          "name": "dateReg",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "(current_timestamp)"
-        },
-        "status": {
-          "name": "status",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false,
-          "default": 1
-        },
-        "email": {
-          "name": "email",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "password": {
-          "name": "password",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "roleId": {
-          "name": "roleId",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        }
-      },
-      "indexes": {
-        "USER_email_unique": {
-          "name": "USER_email_unique",
-          "columns": [
-            "email"
-          ],
-          "isUnique": true
-        }
-      },
-      "foreignKeys": {
-        "USER_roleId_ROLE_roleId_fk": {
-          "name": "USER_roleId_ROLE_roleId_fk",
-          "tableFrom": "USER",
-          "tableTo": "ROLE",
-          "columnsFrom": [
-            "roleId"
-          ],
-          "columnsTo": [
-            "roleId"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {
-        "statusCheck": {
-          "name": "statusCheck",
-          "value": "\"USER\".\"status\" in (0, 1)"
-        }
-      }
-    },
-    "ROLE": {
-      "name": "ROLE",
-      "columns": {
-        "roleId": {
-          "name": "roleId",
-          "type": "integer",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": true
-        },
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        }
-      },
-      "indexes": {
-        "ROLE_name_unique": {
-          "name": "ROLE_name_unique",
-          "columns": [
-            "name"
-          ],
-          "isUnique": true
-        }
-      },
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
     "BOOKING": {
       "name": "BOOKING",
       "columns": {
@@ -159,14 +18,14 @@
           "name": "userId",
           "type": "integer",
           "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
           "autoincrement": false
         },
         "createdBy": {
           "name": "createdBy",
           "type": "integer",
           "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
           "autoincrement": false
         },
         "checkInDate": {
@@ -201,14 +60,14 @@
           "name": "firstName",
           "type": "text",
           "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
           "autoincrement": false
         },
         "lastName": {
           "name": "lastName",
           "type": "text",
           "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
           "autoincrement": false
         },
         "arrivalTime": {
@@ -234,7 +93,7 @@
         },
         "catering": {
           "name": "catering",
-          "type": "text",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -243,28 +102,28 @@
           "name": "contactNo",
           "type": "text",
           "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
           "autoincrement": false
         },
         "emailAddress": {
           "name": "emailAddress",
           "type": "text",
           "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
           "autoincrement": false
         },
         "address": {
           "name": "address",
           "type": "text",
           "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
           "autoincrement": false
         },
         "discountPromoId": {
           "name": "discountPromoId",
           "type": "integer",
           "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
           "autoincrement": false
         },
         "paymentTerms": {
@@ -361,372 +220,6 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraints": {
-        "modeCheck": {
-          "name": "modeCheck",
-          "value": "\"BOOKING\".\"mode\" in ('Day', 'Night', '22 hours')"
-        },
-        "statusCheck": {
-          "name": "statusCheck",
-          "value": "\"BOOKING\".\"bookStatus\" in ('Pending', 'Confirmed', 'Cancelled', 'Completed')"
-        }
-      }
-    },
-    "PAYMENT": {
-      "name": "PAYMENT",
-      "columns": {
-        "paymentId": {
-          "name": "paymentId",
-          "type": "integer",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": true
-        },
-        "bookingId": {
-          "name": "bookingId",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "discountAmount": {
-          "name": "discountAmount",
-          "type": "real",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "downpaymentAmount": {
-          "name": "downpaymentAmount",
-          "type": "real",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "amountPaid": {
-          "name": "amountPaid",
-          "type": "real",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "totalAmountDue": {
-          "name": "totalAmountDue",
-          "type": "real",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "mode": {
-          "name": "mode",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "reference": {
-          "name": "reference",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "paymentStatus": {
-          "name": "paymentStatus",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "paidAt": {
-          "name": "paidAt",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "(current_timestamp)"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "PAYMENT_bookingId_BOOKING_bookingId_fk": {
-          "name": "PAYMENT_bookingId_BOOKING_bookingId_fk",
-          "tableFrom": "PAYMENT",
-          "tableTo": "BOOKING",
-          "columnsFrom": [
-            "bookingId"
-          ],
-          "columnsTo": [
-            "bookingId"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {
-        "modeCheck": {
-          "name": "modeCheck",
-          "value": "\"PAYMENT\".\"mode\" in ('gcash', 'cash')"
-        },
-        "paymentStatusCheck": {
-          "name": "paymentStatusCheck",
-          "value": "\"PAYMENT\".\"paymentStatus\" in ('pending', 'partially_paid', 'paid', 'failed')"
-        }
-      }
-    },
-    "BILLING": {
-      "name": "BILLING",
-      "columns": {
-        "billingId": {
-          "name": "billingId",
-          "type": "integer",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": true
-        },
-        "bookingId": {
-          "name": "bookingId",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "paymentId": {
-          "name": "paymentId",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "totalAmount": {
-          "name": "totalAmount",
-          "type": "real",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "status": {
-          "name": "status",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "createdAt": {
-          "name": "createdAt",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "(current_timestamp)"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "BILLING_bookingId_BOOKING_bookingId_fk": {
-          "name": "BILLING_bookingId_BOOKING_bookingId_fk",
-          "tableFrom": "BILLING",
-          "tableTo": "BOOKING",
-          "columnsFrom": [
-            "bookingId"
-          ],
-          "columnsTo": [
-            "bookingId"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "BILLING_paymentId_PAYMENT_paymentId_fk": {
-          "name": "BILLING_paymentId_PAYMENT_paymentId_fk",
-          "tableFrom": "BILLING",
-          "tableTo": "PAYMENT",
-          "columnsFrom": [
-            "paymentId"
-          ],
-          "columnsTo": [
-            "paymentId"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {
-        "statusCheck": {
-          "name": "statusCheck",
-          "value": "\"BILLING\".\"status\" in ('Unpaid', 'Partially Paid', 'Paid')"
-        }
-      }
-    },
-    "REPORTS": {
-      "name": "REPORTS",
-      "columns": {
-        "reportId": {
-          "name": "reportId",
-          "type": "integer",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": true
-        },
-        "generatedBy": {
-          "name": "generatedBy",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "reportType": {
-          "name": "reportType",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "bookingId": {
-          "name": "bookingId",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "paymentId": {
-          "name": "paymentId",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "totalRevenue": {
-          "name": "totalRevenue",
-          "type": "real",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "filterType": {
-          "name": "filterType",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "createdAt": {
-          "name": "createdAt",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "(current_timestamp)"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "REPORTS_generatedBy_USER_userId_fk": {
-          "name": "REPORTS_generatedBy_USER_userId_fk",
-          "tableFrom": "REPORTS",
-          "tableTo": "USER",
-          "columnsFrom": [
-            "generatedBy"
-          ],
-          "columnsTo": [
-            "userId"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "REPORTS_bookingId_BOOKING_bookingId_fk": {
-          "name": "REPORTS_bookingId_BOOKING_bookingId_fk",
-          "tableFrom": "REPORTS",
-          "tableTo": "BOOKING",
-          "columnsFrom": [
-            "bookingId"
-          ],
-          "columnsTo": [
-            "bookingId"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "REPORTS_paymentId_PAYMENT_paymentId_fk": {
-          "name": "REPORTS_paymentId_PAYMENT_paymentId_fk",
-          "tableFrom": "REPORTS",
-          "tableTo": "PAYMENT",
-          "columnsFrom": [
-            "paymentId"
-          ],
-          "columnsTo": [
-            "paymentId"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "PACKAGES": {
-      "name": "PACKAGES",
-      "columns": {
-        "packageId": {
-          "name": "packageId",
-          "type": "integer",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": true
-        },
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "price": {
-          "name": "price",
-          "type": "real",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "description": {
-          "name": "description",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "status": {
-          "name": "status",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "createdAt": {
-          "name": "createdAt",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "(current_timestamp)"
-        },
-        "updatedAt": {
-          "name": "updatedAt",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "(current_timestamp)"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
       "checkConstraints": {}
     },
     "DISCOUNT_PROMOS": {
@@ -767,33 +260,19 @@
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
-    "BOOKING_ADD_ONS": {
-      "name": "BOOKING_ADD_ONS",
+    "PACKAGES": {
+      "name": "PACKAGES",
       "columns": {
-        "addOnId": {
-          "name": "addOnId",
+        "packageId": {
+          "name": "packageId",
           "type": "integer",
           "primaryKey": true,
           "notNull": true,
           "autoincrement": true
         },
-        "bookingId": {
-          "name": "bookingId",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "itemName": {
-          "name": "itemName",
+        "name": {
+          "name": "name",
           "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "quantity": {
-          "name": "quantity",
-          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -805,78 +284,27 @@
           "notNull": true,
           "autoincrement": false
         },
-        "totalPrice": {
-          "name": "totalPrice",
-          "type": "real",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "BOOKING_ADD_ONS_bookingId_BOOKING_bookingId_fk": {
-          "name": "BOOKING_ADD_ONS_bookingId_BOOKING_bookingId_fk",
-          "tableFrom": "BOOKING_ADD_ONS",
-          "tableTo": "BOOKING",
-          "columnsFrom": [
-            "bookingId"
-          ],
-          "columnsTo": [
-            "bookingId"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "CONTENT_MANAGEMENT": {
-      "name": "CONTENT_MANAGEMENT",
-      "columns": {
-        "contentId": {
-          "name": "contentId",
-          "type": "integer",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": true
-        },
-        "category": {
-          "name": "category",
+        "description": {
+          "name": "description",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
-        "title": {
-          "name": "title",
+        "status": {
+          "name": "status",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
-        "content": {
-          "name": "content",
+        "createdAt": {
+          "name": "createdAt",
           "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "imageUrl": {
-          "name": "imageUrl",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "managedBy": {
-          "name": "managedBy",
-          "type": "integer",
           "primaryKey": false,
           "notNull": true,
-          "autoincrement": false
+          "autoincrement": false,
+          "default": "(current_timestamp)"
         },
         "updatedAt": {
           "name": "updatedAt",
@@ -888,13 +316,51 @@
         }
       },
       "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "permission_table": {
+      "name": "permission_table",
+      "columns": {
+        "permissionId": {
+          "name": "permissionId",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "userId": {
+          "name": "userId",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "table": {
+          "name": "table",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "action": {
+          "name": "action",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
       "foreignKeys": {
-        "CONTENT_MANAGEMENT_managedBy_USER_userId_fk": {
-          "name": "CONTENT_MANAGEMENT_managedBy_USER_userId_fk",
-          "tableFrom": "CONTENT_MANAGEMENT",
+        "permission_table_userId_USER_userId_fk": {
+          "name": "permission_table_userId_USER_userId_fk",
+          "tableFrom": "permission_table",
           "tableTo": "USER",
           "columnsFrom": [
-            "managedBy"
+            "userId"
           ],
           "columnsTo": [
             "userId"
@@ -905,12 +371,129 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraints": {
-        "categoryCheck": {
-          "name": "categoryCheck",
-          "value": "\"CONTENT_MANAGEMENT\".\"category\" in ('FAQ', 'Gallery', 'Landing Page', 'Terms and Conditions', 'About Us')"
+      "checkConstraints": {}
+    },
+    "ROLE": {
+      "name": "ROLE",
+      "columns": {
+        "roleId": {
+          "name": "roleId",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
         }
-      }
+      },
+      "indexes": {
+        "ROLE_name_unique": {
+          "name": "ROLE_name_unique",
+          "columns": [
+            "name"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "USER": {
+      "name": "USER",
+      "columns": {
+        "userId": {
+          "name": "userId",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "firstName": {
+          "name": "firstName",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "lastName": {
+          "name": "lastName",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "contactNo": {
+          "name": "contactNo",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "address": {
+          "name": "address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "dateReg": {
+          "name": "dateReg",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'active'"
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "password": {
+          "name": "password",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "role": {
+          "name": "role",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'customer'"
+        }
+      },
+      "indexes": {
+        "USER_email_unique": {
+          "name": "USER_email_unique",
+          "columns": [
+            "email"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
     }
   },
   "views": {},

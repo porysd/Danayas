@@ -1,24 +1,46 @@
-import { sqliteTable, text, integer, check } from 'drizzle-orm/sqlite-core';
-import { sql } from 'drizzle-orm';
-import { Role } from './Roles';
-import { z } from 'zod';
+import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
-export const User = sqliteTable('USER', {
-  userId: integer('userId').primaryKey({ autoIncrement: true}),
-  firstName: text('firstName').notNull(),
-  lastName: text('lastName').notNull(),
-  contactNo: text('contactNo').notNull(),
-  address: text('address').notNull(),
-  dateReg: text('dateReg').notNull().default(sql`(current_timestamp)`),
-  status: integer('status').default(1),
-  email: text('email').unique().notNull(),
-  password: text('password').notNull(),
-  roleId: integer('roleId').references(() => Role.roleId).notNull(),
-}, 
+export const UsersTable = sqliteTable("USER", {
+  userId: integer("userId").primaryKey({ autoIncrement: true }),
+  firstName: text("firstName").notNull(),
+  lastName: text("lastName").notNull(),
+  contactNo: text("contactNo").notNull(),
+  address: text("address").notNull(),
+  dateReg: text("dateReg")
+    .notNull()
+    .$defaultFn(() => new Date().toUTCString()),
+  status: text("status", { enum: ["active", "inactive"] })
+    .notNull()
+    .default("active"),
+  email: text("email").unique().notNull(),
+  password: text("password").notNull(),
+  role: text("role", { enum: ["admin", "staff", "customer"] })
+    .notNull()
+    .default("customer"),
+});
 
-(table) => [
-  check('statusCheck', sql`${table.status} in (0, 1)`)
-]);
+
+// import { sqliteTable, text, integer, check } from 'drizzle-orm/sqlite-core';
+// import { sql } from 'drizzle-orm';
+// import { Role } from './Roles';
+// import { z } from 'zod';
+
+// export const User = sqliteTable('USER', {
+//   userId: integer('userId').primaryKey({ autoIncrement: true}),
+//   firstName: text('firstName').notNull(),
+//   lastName: text('lastName').notNull(),
+//   contactNo: text('contactNo').notNull(),
+//   address: text('address').notNull(),
+//   dateReg: text('dateReg').notNull().default(sql`(current_timestamp)`),
+//   status: integer('status').default(1),
+//   email: text('email').unique().notNull(),
+//   password: text('password').notNull(),
+//   roleId: integer('roleId').references(() => Role.roleId).notNull(),
+// }, 
+
+// (table) => [
+//   check('statusCheck', sql`${table.status} in (0, 1)`)
+// ]);
 
 
 // ZOD
