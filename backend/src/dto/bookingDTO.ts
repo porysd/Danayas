@@ -65,8 +65,8 @@ export const BookingDTO = z.object({
         description: "The address of the person who made the booking",
         example: "123 Main St, City, Country",
     }),
-    discountPromoId: z.number().int().nullable().openapi({
-        description: "The ID of the discount applied, if any",
+    discountPromoId: z.number().int().openapi({
+        description: "The ID of the discount",
         example: 5,
     }),
     paymentTerms: z.enum(["installment", "full-payment"]).openapi({
@@ -109,7 +109,11 @@ export const CreateBookingDTO = BookingDTO.omit({
     createdBy: z.number().int().openapi({
         description: "The ID of the admin or staff creating the booking",
         example: 1,
-    })
+    }),
+    catering: z.coerce.number().openapi({
+        description: "Indicates whether catering is included (0 = No, 1 = Yes",
+        example: 1 
+    }),
 });
 
 export const GetBookingDTO = BookingDTO.extend({
