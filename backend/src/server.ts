@@ -24,11 +24,9 @@ const app = new OpenAPIHono()
     })
   )
   
-// routes
-routes.forEach(([path, handler]) => {
+routes.forEach(({ path, handler }) => {
   app.route(path, handler);
 });
-
 // try {
 //   await seedRoles();
 // } catch (err) {
