@@ -93,7 +93,7 @@ export default async function seed() {
         arrivalTime: faker.date.recent().toISOString(),
         eventType: faker.helpers.arrayElement(['wedding', 'birthday', 'conference']),
         numberOfGuest: faker.helpers.rangeToNumber({ min: 10, max: 500 }),
-        catering: faker.helpers.rangeToNumber({ min: 1, max: 5 }),
+        catering: faker.helpers.rangeToNumber({ min: 0, max: 1}),
         contactNo: faker.phone.number(),
         emailAddress: faker.internet.email(),
         address: faker.location.streetAddress(),
@@ -112,7 +112,7 @@ export default async function seed() {
   }
 }
 //Note: remove seed() when not use.
-// seed() //Call this function when seeding.
+//seed() //Call this function when seeding.
 
 // TODO: generate fake payments
 
