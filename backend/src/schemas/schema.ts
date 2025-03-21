@@ -3,7 +3,7 @@ export * from './Roles.ts';
 export * from "./Permission";
 
 export * from './Booking.ts';
-// export * from './Payment.ts';
+export * from './Payment.ts';
 // export * from './Billing.ts';
 // export * from './Reports.ts';
 export * from './Packages.ts';

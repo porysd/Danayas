@@ -14,7 +14,10 @@
     "typescript": "^5.7.3"
   },
   "dependencies": {
+    "@faker-js/faker": "^9.6.0",
+    "@hono/zod-openapi": "^0.19.2",
     "@libsql/client": "^0.14.0",
+    "@scalar/hono-api-reference": "0.5.184",
     "dotenv": "^16.4.7",
     "drizzle-kit": "^0.30.4",
     "drizzle-orm": "^0.39.2",
