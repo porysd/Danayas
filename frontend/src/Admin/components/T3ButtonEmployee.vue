@@ -1,0 +1,328 @@
+<script setup>
+import { ref, defineProps, defineEmits } from 'vue';
+
+const showMenu = ref(false);
+const showArchiveModal = ref(false);
+const showDeleteModal = ref(false);
+const showRoleModel = ref(false);
+const formData = ref({});
+
+const prop = defineProps(['employee']);
+const emit = defineEmits(['archiveEmployee', 'deleteEmployee', 'changeRole']);
+
+const openArchiveModal = () => {
+  formData.value = { ...prop.employee };
+  showArchiveModal.value = true;
+  showMenu.value = false;
+};
+
+const openDeleteModal = () => {
+  formData.value = { ...prop.employee };
+  showDeleteModal.value = true;
+  showMenu.value = false;
+};
+
+const openRoleModal = () => {
+  formData.value = { ...prop.employee };
+  showRoleModel.value = true;
+  showMenu.value = false;
+};
+
+const closeModals = () => {
+  showArchiveModal.value = false;
+  showDeleteModal.value = false;
+  showRoleModel.value = false;
+};
+
+const archiveEmployee = () => {
+  emit('archiveEmployee', formData.value);
+  closeModals();
+};
+
+const confirmDelete = () => {
+  emit('deleteEmployee', formData.value);
+  closeModals();
+};
+
+const changeRole = () => {
+  emit('changeRole', formData.value);
+  closeModals();
+};
+
+</script>
+
+<template>
+  <div class="relative menu-container inline-block">
+
+    <button @click.stop="showMenu = !showMenu" class="adminButton pi pi-ellipsis-v"></button>
+
+
+    <div v-if="showMenu" class="dropdown-menu">
+        <ul>
+            <li @click="openArchiveModal">Archive</li>
+            <li @click="openDeleteModal">Delete</li>
+            <li @click="openRoleModal">Roles</li>
+        </ul>
+    </div>
+  </div>
+
+
+  <div v-if="showArchiveModal" class="modal-overlay">
+    <div class="modal">
+      <h2 class="font-black text-2xl mb-10">Are you sure you want to ARCHIVE this user: {{ employee.firstName }} {{ employee.lastName }}</h2>
+
+        <div class="modal-actions-delete">
+            <button class="cancelBtn font-bold" @click="closeModals">Cancel</button>
+            <button class="saveBtn font-bold" @click="archiveEmployee">Archive</button>
+        </div>
+    </div>
+  </div>
+
+  
+  <div v-if="showDeleteModal" class="modal-overlay-delete">
+    <div class="modal-delete">
+      <h2 class="font-black text-2xl mb-10">Are you sure you want to DELETE this user: {{ employee.firstName }} {{ employee.lastName }}</h2>
+
+        <div class="modal-actions-delete">
+            <button class="cancelBtn font-bold" @click="closeModals">Cancel</button>
+            <button class="deleteBtn font-bold" @click="confirmDelete">Delete</button>
+        </div>
+    </div>
+  </div>
+
+  <div v-if="showRoleModel" class="modal-overlay-role">
+    <div class="modal-role">
+      <h2 class="font-black text-2xl mb-5">Employee Name: {{ employee.firstName }} {{ employee.lastName }}</h2>
+      <h2 class="font-black text-xl mb-5 w-[70%] text-left m-auto">Permissions:</h2>
+        
+      <div class="role-container">
+        <div class="role1">
+            <label class="switch"> Authorization
+                <input type="checkbox">
+                <span class="slider round"></span>
+            </label>
+
+            <label class="switch"> Employee Management
+                <input type="checkbox">
+                <span class="slider round"></span>
+            </label>
+            
+            <label class="switch"> Packages and Promos
+                <input type="checkbox">
+                <span class="slider round"></span>
+            </label>
+
+            <label class="switch"> Discount and Add Ons
+                <input type="checkbox">
+                <span class="slider round"></span>
+            </label>
+        </div>
+
+        <div class="role2">
+            <label class="switch"> Content Management
+                <input type="checkbox">
+                <span class="slider round"></span>
+            </label>
+
+            <label class="switch"> Booking Management
+                <input type="checkbox">
+                <span class="slider round"></span>
+            </label>
+
+            <label class="switch"> Transaction
+                <input type="checkbox">
+                <span class="slider round"></span>
+            </label>
+        </div>
+      </div>
+
+
+      <div class="modal-actions-role">
+        <button class="cancelBtn font-bold" @click="closeModals">Cancel</button>
+        <button class="saveBtn font-bold" @click="changeRole">Save</button>
+      </div>
+    </div>
+  </div>
+
+</template>
+
+<style scoped>
+
+.adminButton {
+  border: none;
+  border-radius: 5px;
+  padding: 5px;
+  cursor: pointer;
+  background: transparent;
+}
+
+.dropdown-menu {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  background: #FCF5F5;
+  color: #333;
+  border-radius: 5px;
+  padding: 5px;
+  width: 120px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  z-index: 100;
+}
+
+.dropdown-menu ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.dropdown-menu li {
+  padding: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.dropdown-menu li:hover {
+  background: #555;
+  color:#FCF5F5
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal {
+  background: white;
+  padding: 20px;
+  border-radius: 10px;
+  width: 400px;
+  text-align: center;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+
+}
+
+.cancelBtn {
+  width: 100px;
+  padding: 8px 15px;
+  background: #ccc;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.saveBtn {
+  width: 100px;
+  padding: 8px 15px;
+  background: #194D1D;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-left: 10px;
+}
+
+.modal-overlay-delete {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-delete{
+  background: white;
+  padding: 20px;
+  border-radius: 10px;
+  width: 400px;
+  text-align: center;
+}
+
+.modal-actions-delete {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.deleteBtn {
+  width: 100px;
+  padding: 8px 15px;
+  background: #d9534f;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-left: 10px;
+}
+
+
+.modal-overlay-role {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-role{
+  background: white;
+  padding: 20px;
+  border-radius: 10px;
+  width: 70%;
+  height: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border: 1px solid #333;
+}
+
+.role-container {
+  display: flex;
+  justify-content: space-between;
+  margin:auto;
+  gap: 90px;
+  width: 70%;
+  margin-bottom: 30px;
+}
+
+.role1, .role2 {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 30px; 
+}
+
+.switch {
+  display: flex;
+  justify-content: space-between; 
+  align-items: center; 
+  width: 100%; 
+}
+
+.switch input {
+  margin-left: auto;
+}
+
+
+</style>
