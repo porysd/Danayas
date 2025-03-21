@@ -38,8 +38,8 @@ export const BookingDTO = z.object({
         example: "Doe",
     }),
     arrivalTime: z.string().openapi({
-      description: "The arrival time of the booking (HH:MM AM/PM)",
-      example: "7:00 PM",
+        description: "The arrival time of the booking (HH:MM AM/PM)",
+        example: "7:00 PM",
     }),
     eventType: z.string().openapi({
         description: "The type of event for the booking",
@@ -49,7 +49,7 @@ export const BookingDTO = z.object({
         description: "The number of guests expected",
         example: 50,
     }),
-    catering: z.boolean().openapi({
+    catering: z.coerce.boolean().openapi({
         description: "Indicates whether catering is included",
         example: true,
     }),
@@ -95,27 +95,19 @@ export const UpdateBookingDTO = BookingDTO.omit({
     bookingId: true,
     createdAt: true,
     userId: true,
-    createdBy: true
-}).partial();
+    createdBy: true,
+}).partial().extend({
+    catering: z.union([z.boolean(), z.number().int().min(0).max(1)]).transform((val) => Number(val)),
+});
 
 export const CreateBookingDTO = BookingDTO.omit({
     bookingId: true,
     createdAt: true,
 }).extend({
-    userId: z.number().int().openapi({
-        description: "The ID of the user making the booking",
-        example: 2,
-    }),
-    createdBy: z.number().int().openapi({
-        description: "The ID of the admin or staff creating the booking",
-        example: 1,
-    }),
-    catering: z.coerce.number().openapi({
-        description: "Indicates whether catering is included (0 = No, 1 = Yes",
-        example: 1 
-    }),
-});
-
-export const GetBookingDTO = BookingDTO.extend({
-    catering: z.coerce.boolean()
+    createdBy: z.number().int(),
+    userId: z.number().int(),
+    catering: z.preprocess(
+        (val) => (val === null ? 0 : val), // Convert null to 0
+        z.union([z.boolean(), z.number().int().min(0).max(1)]).transform((val) => Number(val))
+    ),
 });
