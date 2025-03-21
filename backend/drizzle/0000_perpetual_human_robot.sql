@@ -44,6 +44,20 @@ CREATE TABLE `PACKAGES` (
 	`updatedAt` text DEFAULT (current_timestamp) NOT NULL
 );
 --> statement-breakpoint
+CREATE TABLE `PAYMENT` (
+	`paymentId` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`bookingId` integer NOT NULL,
+	`discountAmount` real,
+	`downpaymentAmount` real NOT NULL,
+	`amountPaid` real NOT NULL,
+	`totalAmountDue` real NOT NULL,
+	`mode` text NOT NULL,
+	`reference` text,
+	`paymentStatus` text DEFAULT 'pending' NOT NULL,
+	`paidAt` text DEFAULT (current_timestamp) NOT NULL,
+	FOREIGN KEY (`bookingId`) REFERENCES `BOOKING`(`bookingId`) ON UPDATE no action ON DELETE no action
+);
+--> statement-breakpoint
 CREATE TABLE `permission_table` (
 	`permissionId` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`userId` integer,
