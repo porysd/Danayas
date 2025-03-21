@@ -1,6 +1,12 @@
-
 import { db } from "./database";
-import { RolesTable, UsersTable, PackagesTable, DiscountsTable, BookingsTable } from "../schemas/schema.ts";
+import {
+  RolesTable,
+  UsersTable,
+  PackagesTable,
+  DiscountsTable,
+  BookingsTable,
+  PaymentsTable,
+} from "../schemas/schema.ts";
 import { faker } from "@faker-js/faker";
 import { grantPermission } from "../utils/permissionUtils.ts";
 import { eq } from "drizzle-orm";
@@ -12,15 +18,18 @@ export default async function seed() {
   // TODO: generate base users with permissions enabled
   for (const role of roles) {
     try {
-      await db.insert(UsersTable).values({
-        firstName: faker.person.firstName(),
-        lastName: faker.person.lastName(),
-        contactNo: faker.phone.number(),
-        address: faker.location.streetAddress(),
-        email: `${role}@email.com`,
-        password: await Bun.password.hash(`${role}-123`),
-        role: role as any,
-      }).execute();
+      await db
+        .insert(UsersTable)
+        .values({
+          firstName: faker.person.firstName(),
+          lastName: faker.person.lastName(),
+          contactNo: faker.phone.number(),
+          address: faker.location.streetAddress(),
+          email: `${role}@email.com`,
+          password: await Bun.password.hash(`${role}-123`),
+          role: role as any,
+        })
+        .execute();
     } catch (e) {
       console.error(e);
       continue;
@@ -29,15 +38,19 @@ export default async function seed() {
 
   for (let i = 0; i < 100; i++) {
     try {
-      const row = await db.insert(UsersTable).values({
-        firstName: faker.person.firstName(),
-        lastName: faker.person.lastName(),
-        contactNo: faker.phone.number(),
-        address: faker.location.streetAddress(),
-        email: faker.internet.email(),
-        password: await Bun.password.hash(faker.internet.password()),
-        role: "customer",
-      }).returning().execute();
+      const row = await db
+        .insert(UsersTable)
+        .values({
+          firstName: faker.person.firstName(),
+          lastName: faker.person.lastName(),
+          contactNo: faker.phone.number(),
+          address: faker.location.streetAddress(),
+          email: faker.internet.email(),
+          password: await Bun.password.hash(faker.internet.password()),
+          role: "customer",
+        })
+        .returning()
+        .execute();
       await grantPermission(row[0].userId, "PACKAGES", "read");
     } catch (e) {
       console.error(e);
@@ -45,14 +58,23 @@ export default async function seed() {
     }
   }
 
-  for (let i = 0; i < 100; i++){
+  for (let i = 0; i < 100; i++) {
     try {
-      const row = await db.insert(PackagesTable).values({
-        description: faker.word.words(20),
-        price: faker.helpers.rangeToNumber({ min: 1000, max: 12000 }),
-        name: faker.commerce.productName(),
-        status: faker.helpers.arrayElement(['active', 'inactive', 'coming-soon', 'sold-out'])
-      }).returning().execute();
+      const row = await db
+        .insert(PackagesTable)
+        .values({
+          description: faker.word.words(20),
+          price: faker.helpers.rangeToNumber({ min: 1000, max: 12000 }),
+          name: faker.commerce.productName(),
+          status: faker.helpers.arrayElement([
+            "active",
+            "inactive",
+            "coming-soon",
+            "sold-out",
+          ]),
+        })
+        .returning()
+        .execute();
       //await grantPermission(row[0].userId, "PACKAGES", "read");
     } catch (e) {
       console.error(e);
@@ -60,13 +82,17 @@ export default async function seed() {
     }
   }
 
-  for (let i = 0; i < 100; i++){
+  for (let i = 0; i < 100; i++) {
     try {
-      const row = await db.insert(DiscountsTable).values({
-        name: faker.commerce.product(),
-        percentage: faker.helpers.rangeToNumber({ min: 0.1, max: 1.0 }),
-        typeFor: faker.helpers.arrayElement(['pwd', 'student', 'senior']),
-      }).returning().execute();
+      const row = await db
+        .insert(DiscountsTable)
+        .values({
+          name: faker.commerce.product(),
+          percentage: faker.helpers.rangeToNumber({ min: 0.1, max: 1.0 }),
+          typeFor: faker.helpers.arrayElement(["pwd", "student", "senior"]),
+        })
+        .returning()
+        .execute();
       //await grantPermission(row[0].userId, "PACKAGES", "read");
     } catch (e) {
       console.error(e);
@@ -74,36 +100,106 @@ export default async function seed() {
     }
   }
 
-  const customers = (await db.query.UsersTable.findMany({where: eq(UsersTable.role, "customer")})).map((val) => val.userId)
-  const packages = (await db.query.PackagesTable.findMany()).map((val) => val.packageId)
-  const admins = (await db.query.UsersTable.findMany({where: eq(UsersTable.role, "admin")})).map((val) => val.userId)
-  const discounts = (await db.query.DiscountsTable.findMany()).map((val) => val.discountPromoId)
+  const customers = (
+    await db.query.UsersTable.findMany({
+      where: eq(UsersTable.role, "customer"),
+    })
+  ).map((val) => val.userId);
+  const packages = (await db.query.PackagesTable.findMany()).map(
+    (val) => val.packageId
+  );
+  const admins = (
+    await db.query.UsersTable.findMany({ where: eq(UsersTable.role, "admin") })
+  ).map((val) => val.userId);
+  const discounts = (await db.query.DiscountsTable.findMany()).map(
+    (val) => val.discountPromoId
+  );
 
-  for (let i = 0; i < 1000; i++){
+  for (let i = 0; i < 1000; i++) {
     try {
-      const row = await db.insert(BookingsTable).values({
-        userId: faker.helpers.arrayElement(customers),
-        createdBy: faker.helpers.arrayElement(admins),
-        checkInDate: faker.date.past().toISOString(),
-        checkOutDate: faker.date.future().toISOString(),
-        mode: faker.helpers.arrayElement(['day-time', 'night-time', 'whole-day']),
-        packageId: faker.helpers.arrayElement(packages),
-        firstName: faker.person.firstName(),
-        lastName: faker.person.lastName(),
-        arrivalTime: faker.date.recent().toISOString(),
-        eventType: faker.helpers.arrayElement(['wedding', 'birthday', 'conference']),
-        numberOfGuest: faker.helpers.rangeToNumber({ min: 10, max: 500 }),
-        catering: faker.helpers.rangeToNumber({ min: 0, max: 1}),
-        contactNo: faker.phone.number(),
-        emailAddress: faker.internet.email(),
-        address: faker.location.streetAddress(),
-        discountPromoId: faker.helpers.arrayElement(discounts),
-        paymentTerms: faker.helpers.arrayElement(['installment', 'full-payment']),
-        totalAmountDue: faker.helpers.rangeToNumber({ min: 1000, max: 10000 }),
-        bookStatus: faker.helpers.arrayElement(['pending', 'confirmed', 'cancelled', 'completed']),
-        reservationType: faker.helpers.arrayElement(['online', 'walk-in']),
-        createdAt: faker.date.recent().toISOString()
-      }).execute();
+      const row = await db
+        .insert(BookingsTable)
+        .values({
+          userId: faker.helpers.arrayElement(customers),
+          createdBy: faker.helpers.arrayElement(admins),
+          checkInDate: faker.date.past().toISOString(),
+          checkOutDate: faker.date.future().toISOString(),
+          mode: faker.helpers.arrayElement([
+            "day-time",
+            "night-time",
+            "whole-day",
+          ]),
+          packageId: faker.helpers.arrayElement(packages),
+          firstName: faker.person.firstName(),
+          lastName: faker.person.lastName(),
+          arrivalTime: faker.date.recent().toISOString(),
+          eventType: faker.helpers.arrayElement([
+            "wedding",
+            "birthday",
+            "conference",
+          ]),
+          numberOfGuest: faker.helpers.rangeToNumber({ min: 10, max: 500 }),
+          catering: faker.helpers.rangeToNumber({ min: 0, max: 1 }),
+          contactNo: faker.phone.number(),
+          emailAddress: faker.internet.email(),
+          address: faker.location.streetAddress(),
+          discountPromoId: faker.helpers.arrayElement(discounts),
+          paymentTerms: faker.helpers.arrayElement([
+            "installment",
+            "full-payment",
+          ]),
+          totalAmountDue: faker.helpers.rangeToNumber({
+            min: 1000,
+            max: 10000,
+          }),
+          bookStatus: faker.helpers.arrayElement([
+            "pending",
+            "confirmed",
+            "cancelled",
+            "completed",
+          ]),
+          reservationType: faker.helpers.arrayElement(["online", "walk-in"]),
+          createdAt: faker.date.recent().toISOString(),
+        })
+        .execute();
+      //await grantPermission(row[0].userId, "PACKAGES", "read");
+    } catch (e) {
+      console.error(e);
+      continue;
+    }
+  }
+
+  const bookingId = (await db.query.BookingsTable.findMany()).map(
+    (val) => val.bookingId
+  );
+
+  for (let i = 0; i < 100; i++) {
+    try {
+      const row = await db
+        .insert(PaymentsTable)
+        .values({
+          bookingId: faker.helpers.arrayElement(bookingId),
+          discountAmount: faker.helpers.rangeToNumber({ min: 0, max: 500 }),
+          downpaymentAmount: faker.helpers.rangeToNumber({
+            min: 1000,
+            max: 2000,
+          }),
+          amountPaid: faker.helpers.rangeToNumber({ min: 100, max: 5000 }),
+          totalAmountDue: faker.helpers.rangeToNumber({
+            min: 1000,
+            max: 10000,
+          }),
+          mode: faker.helpers.arrayElement(["gcash", "cash"]),
+          reference: faker.string.uuid(),
+          paymentStatus: faker.helpers.arrayElement([
+            "pending",
+            "partially-paid",
+            "paid",
+            "failed",
+          ]),
+          paidAt: faker.date.recent().toISOString(),
+        })
+        .execute();
       //await grantPermission(row[0].userId, "PACKAGES", "read");
     } catch (e) {
       console.error(e);
@@ -112,7 +208,7 @@ export default async function seed() {
   }
 }
 //Note: remove seed() when not use.
-//seed() //Call this function when seeding.
+seed() //Call this function when seeding.
 
 // TODO: generate fake payments
 

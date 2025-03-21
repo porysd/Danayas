@@ -95,10 +95,7 @@ export default new OpenAPIHono()
       },
       responses: {
         200: {
-          description: "Successful registration, redirecting to /login",
-        },
-        404: {
-          description: "Successful registration, redirecting to /login",
+          description: "Successful package retrieval",
         },
       },
     }),
