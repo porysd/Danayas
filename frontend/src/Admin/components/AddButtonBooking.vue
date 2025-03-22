@@ -4,7 +4,11 @@ import { ref, defineProps, defineEmits } from 'vue';
 defineProps(['data'])
 
 const showAddBookingModal = ref(false);
+const showPaymentModal = ref(false);
+
 const newBooking = ref({
+    userId: '',
+    createdBy: '',
     firstName: '',
     lastName: '',
     contactNo: '',
@@ -20,7 +24,15 @@ const newBooking = ref({
     numberOfGuest: '',
     discountPromoId: '',
     bookingAddOns: '',
-})
+});
+
+const paymentDetails = ref({
+    paymentTerms: '',
+    totalPaid: '',
+    totalAmountDue: '',
+    bookStatus: '',
+    reservationType: '',
+});
 
 const emit = defineEmits(['addBooking']);
 
@@ -30,30 +42,44 @@ const openAddBookingModal = () => {
 
 const closeAddBookingModal = () => {
     showAddBookingModal.value = false;
+    showPaymentModal.value = false;
 }
 
 const addBooking = () => {
-    emit('addBooking', {
-        firstName: newBooking.value.firstName,
-        lastName: newBooking.value.lastName,
-        contactNo: newBooking.value.contactNo,
-        emailAddress: newBooking.value.emailAddress,
-        address: newBooking.value.address,
-        packageId: newBooking.value.packageId,
-        eventType: newBooking.value.eventType,
-        checkInDate: newBooking.value.chechInDate,
-        checkOutDate: newBooking.value.checkOutDate,
-        mode: newBooking.value.mode,
-        arrivalTime: newBooking.value.arrivalTime,
-        catering: newBooking.value.catering,
-        numberOfGuest: newBooking.value.numberOfGuest,
-        discountPromoId: newBooking.value.discountPromoId,
-        bookingAddOns: newBooking.value.bookingAddOns
-    })
-
-    closeAddBookingModal();
+    showAddBookingModal.value = false;
+    showPaymentModal.value = true;
 }
 
+const backToBooking = () => {
+    showAddBookingModal.value = true;
+    showPaymentModal.value = false;
+}
+
+const confirmBooking = () => {
+    if (!newBooking.value.firstName || !newBooking.value.lastName || !newBooking.value.contactNo) {
+        alert('Please fill in all required fields.');
+        return;
+    }
+
+    emit('addBooking', { ...newBooking.value, ...paymentDetails.value });
+
+    // newBooking.value = {
+    //     userId: '', createdBy: '', firstName: '', lastName: '', contactNo: '',
+    //     emailAddress: '', address: '', packageId: '', eventType: '',
+    //     checkInDate: '', checkOutDate: '', mode: '', arrivalTime: '',
+    //     catering: '', numberOfGuest: '', discountPromoId: '', bookingAddOns: ''
+    // };
+    
+    // paymentDetails.value = {
+    //     paymentTerms: '', totalPaid: '', totalAmountDue: '',
+    //     bookStatus: '', reservationType: ''
+    // };
+
+    closeAddBookingModal();
+};
+
+
+console.log('Booking Data:', newBooking.value, paymentDetails.value);
 </script>
 
 <template>
@@ -147,11 +173,48 @@ const addBooking = () => {
 
                 <div class="modal-actions">
                     <button class="cancelBtn font-bold" @click="closeAddBookingModal">Cancel</button>
-                    <button class="saveBtn font-bold" @click="addBooking">Save</button>
+                    <button class="saveBtn font-bold" @click="addBooking">Next</button>
                 </div>
             </div>
         </div>
 
+        <div v-if="showPaymentModal" class="modal-overlay">
+            <div class="modal">
+                <h2 class="font-black text-2xl mb-5 text-center">Payment Details:</h2>
+                <div class="packEvent">
+                    <label>Payment Terms:</label>
+                    <input v-model="paymentDetails.paymentTerms" placeholder="Payment Terms" />
+                </div>
+                <div class="packEvent">
+                    <label>Total Amount Paid:</label>
+                    <input v-model="paymentDetails.totalPaid" placeholder="Total Amount Paid" />
+                </div>
+                <div class="packEvent">
+                    <label>Total Amount Due:</label>
+                    <input v-model="paymentDetails.totalAmountDue" placeholder="Total Amount Due" />
+                </div>
+                <div class="packEvent">
+                    <label>Book Status:</label>
+                    <input v-model="paymentDetails.bookStatus" placeholder="Book Status" />
+                </div>
+                <div class="packEvent">
+                    <label>Reservation Type:</label>
+                    <input v-model="paymentDetails.reservationType" placeholder="Reservation Type" />
+                </div>
+                <div class="packEvent">
+                    <label>userId:</label>
+                    <input v-model="paymentDetails.userId" placeholder="userId" />
+                </div>
+                <div class="packEvent">
+                    <label>createdBy:</label>
+                    <input v-model="paymentDetails.createdBy" placeholder="createdby" />
+                </div>
+                <div class="modal-actions">
+                    <button class="cancelBtn font-bold" @click="backToBooking">Back</button>
+                    <button class="saveBtn font-bold" @click="confirmBooking">Confirm</button>
+                </div>
+            </div>
+        </div>
     </div>
     
 </template>

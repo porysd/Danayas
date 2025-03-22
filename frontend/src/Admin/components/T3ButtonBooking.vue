@@ -4,13 +4,14 @@ import { ref, defineProps, defineEmits } from 'vue';
 const showMenu = ref(false);
 const showEditModal = ref(false);
 const showDeleteModal = ref(false);
+const showStatusModal = ref(false);
 const formData = ref({});
 
-const props = defineProps(['booking']);
-const emit = defineEmits(['updateBooking', 'deleteBooking']);
+const props = defineProps(['booking', 'packageName']);
+const emit = defineEmits(['updateBooking', 'deleteBooking', 'updateStatus']);
 
 const openEditModal = () => {
-  formData.value = { ...props.booking }; 
+  formData.value = { ...props.booking, packageName: props.packageName }; 
   showEditModal.value = true;
   showMenu.value = false; 
 };
@@ -21,9 +22,22 @@ const openDeleteModal = () => {
   showMenu.value = false;
 };
 
+const openStatusModal = () => {
+  formData.value = { ...props.booking };
+  showStatusModal.value = true;
+  showMenu.value = false;
+};
+
 const closeModals = () => {
   showEditModal.value = false;
   showDeleteModal.value = false;
+  showStatusModal.value = false;
+};
+
+const confirmStatusUpdate = () => {
+  emit('updateStatus', formData.value);
+  console.log(formData.value);
+  closeModals();
 };
 
 const saveChanges = () => {
@@ -44,7 +58,7 @@ const confirmDelete = () => {
 
     <div v-if="showMenu" class="dropdown-menu">
       <ul>
-        <li>Confirm</li>
+        <li @click="openStatusModal">Status</li>
         <li @click="openEditModal">Update</li>
         <li>Cancel</li>
         <li @click="openDeleteModal">Delete</li>
@@ -52,14 +66,35 @@ const confirmDelete = () => {
     </div>
   </div>
 
+  <div v-if="showStatusModal" class="modal-overlay">
+    <div class="modal">
+      <h2 class="font-black text-2xl mb-5">Update Booking Status</h2>
+
+      <div class="mb-4">
+        <label class="block text-lg font-semibold mb-2">Booking Status</label>
+        <select v-model="formData.bookStatus" class="border p-2 rounded w-full">
+          <option value="pending">Pending</option>
+          <option value="confirmed">Confirmed</option>
+          <option value="completed">Completed</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
+      </div>
+
+      <div class="modal-actions">
+        <button class="cancelBtn font-bold" @click="closeModals">Cancel</button>
+        <button class="saveBtn font-bold" @click="confirmStatusUpdate">Update</button>
+      </div>
+    </div>
+  </div>
+
   <div v-if="showEditModal" class="modal-overlay">
     <div class="modal">
-      <h2 class="font-black text-2xl mb-10">UPDATE BOOKING NO. {{ bookingId }}</h2>
+      <h2 class="font-black text-2xl mb-10">UPDATE BOOKING NO. {{ booking.bookingId }} by {{ booking.firstName }} {{ booking.lastName }}</h2>
 
       <div class="packEvent">
         <div>
           <label>Package Name:</label>
-          <input class="packEvents" v-model="formData.packageId" placeholder="Package Name" />
+          <input class="packEvents" v-model="formData.packageName" placeholder="Package Name" />
         </div>
         <div>
           <label>Event Type:</label>
@@ -118,7 +153,7 @@ const confirmDelete = () => {
 
   <div v-if="showDeleteModal" class="modal-overlay-delete">
     <div class="modal-delete">
-      <h2 class="font-black text-2xl mb-10">Are you sure you want to DELETE this booking no. {{ bookingId }}?</h2>
+      <h2 class="font-black text-2xl mb-10">Are you sure you want to DELETE this booking no. {{ booking.bookingId }} by {{ booking.firstName }} {{ booking.lastName }}?</h2>
 
       <div class="modal-actions-delete">
         <button class="cancelBtn font-bold" @click="closeModals">Cancel</button>
