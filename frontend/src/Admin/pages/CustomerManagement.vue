@@ -45,8 +45,14 @@ const addCustomerHandler = async (customer) => {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                ...customer
-        })
+            firstName: customer.firstName,
+            lastName: customer.lastName,
+            contactNo: customer.contactNo,
+            address: customer.address,
+            email: customer.email,
+            password: customer.password,
+            role: customer.role
+      })
     });
 
     if (!response.ok) {
@@ -60,7 +66,7 @@ const addCustomerHandler = async (customer) => {
 };
 
 
-// Customer Details Modal
+// Customer Details
 
 const selectedCustomer = ref(null);
 const customerDetails = ref(false);

@@ -9,7 +9,7 @@ const newCustomer = ref({
     contactNo: '',
     address: '',
     password: '',
-    role: "customer"
+    role: "staff"
 });
 
 defineProps(['data']);
@@ -30,7 +30,13 @@ const addCustomer = () => {
     }
     console.log('Sending Customer Data:', newCustomer.value); 
     emit('addCustomer', { 
-        ...newCustomer.value
+        firstName: newCustomer.value.firstName,
+        lastName: newCustomer.value.lastName,
+        email: newCustomer.value.email,
+        contactNo: newCustomer.value.contactNo,
+        address: newCustomer.value.address,
+        password: newCustomer.value.password,
+        role: newCustomer.value.role || 'staff'
     });
 
     closeAddCustomerModal();
