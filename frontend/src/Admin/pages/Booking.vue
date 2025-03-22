@@ -9,10 +9,12 @@ import SideBar from '../components/SideBar.vue'
 const bookings = ref([]);
 const packages = ref([]);
 
+// Get All Booking with pagination
 onMounted(async () => {
 
     const limit = 50;
-    const bResponse = await fetch('http://localhost:3000/bookings/bookings');
+    const page = 1;
+    const bResponse = await fetch(`http://localhost:3000/bookings/bookings?limit=${limit}&page=${page}`);
     if(!bResponse.ok) throw new Error('Failed to fetch bookings');
     const bookingData = await bResponse.json();
 
@@ -26,27 +28,91 @@ onMounted(async () => {
     bookings.value = bookingData.items;
 });
 
-const totalBookings = computed(() => bookings.value.length)
+const totalBookings = computed(() => bookings.value.length);
 
+// Delete Booking by ID
+const deleteBookingHandler = async (booking) => {
+    try {
+        const response = await fetch (`http://localhost:3000/bookings/${booking.bookingId}`, {
+            method: 'delete',
+        });
+        if (!response.ok) throw new Error('Failed to delete booking');
+        bookings.value = bookings.value.filter(c => c.bookingId !== booking.bookingId);
+    } catch (error){
+        console.error('Error deleting booking', error);
+    }
+};
+
+const addBookingHandler = async (booking) => {
+    const formattedBooking = {
+        ...booking,
+        userId: booking.userId ? Number(booking.userId) : null,
+        createdBy: booking.createdBy ? Number(booking.createdBy) : null,
+        packageId: Number(booking.packageId),
+        numberOfGuest: Number(booking.numberOfGuest),
+        discountPromoId: Number(booking.discountPromoId),
+        totalAmountDue: booking.totalAmountDue ? Number(booking.totalAmountDue) : 0,
+        catering: booking.catering === 'true' ? true : booking.catering === 'false' ? false : Boolean(booking.catering),
+    };
+
+    try {
+        const response = await fetch('http://localhost:3000/bookings/booking', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(formattedBooking),
+        });
+
+        const text = await response.text(); 
+        console.log('Raw response:', text);
+
+        const data = JSON.parse(text);
+        
+        if (!response.ok) throw new Error(`Failed to add booking: ${JSON.stringify(data)}`);
+        console.log('Booking added successfully:', data);
+    } catch (error) {
+        console.error('Error adding booking:', error);
+    }
+};
+
+// Upadte Booking Status by ID
+const updateBookingHandler = async (booking) => {
+  try {
+    const response = await fetch(`http://localhost:3000/bookings/${booking.bookingId}/status`, { 
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ bookStatus: booking.bookStatus }), 
+    });
+
+    if (!response.ok) throw new Error('Failed to update booking');
+
+    const updatedBooking = await response.json();
+    const index = bookings.value.findIndex(b => b.bookingId === booking.bookingId);
+    if (index !== -1) {
+        bookings.value[index].bookStatus = booking.bookStatus; 
+    }
+  } catch (error) {
+    console.error('Error updating booking:', error);
+  }
+};
+
+// Get Package Name using packageId
 const getPackageName = (packageId) => {
     const pkg = packages.value.find(p => p.packageId === packageId);
     return pkg ? pkg.name : 'Unknown Package';
 };
 
+// Booking Details Modal
 const selectedBooking = ref(null);
 const bookingDetails = ref(false);
 
 const openBookingDetails = (booking) => {
-    selectedBooking.value = booking
+    selectedBooking.value = booking;
     bookingDetails.value = true;
 }
 
 const closeModal = () => {
     bookingDetails.value = false;
 }
-
-const addBookingHandler = async (booking) => {
-};
 
 //Change logic
 </script>
@@ -87,7 +153,7 @@ const addBookingHandler = async (booking) => {
             </thead>
             <tbody>
                 <tr class="bRow" v-for="booking in bookings" :key="booking.id" @click="openBookingDetails(booking)">
-                    <tr>{{ booking.bookingId }}</tr>
+                    <td>{{ booking.bookingId }}</td>
                     <td>{{ booking.firstName }} {{ booking.lastName }} <br/> {{ booking.email }}</td>
                     <td>{{ booking.contactNo }}</td>
                     <td>{{ getPackageName(booking.packageId) }} <br/> {{ booking.mode }}</td>
@@ -97,7 +163,11 @@ const addBookingHandler = async (booking) => {
                     <td>{{ booking.totalAmountDue }}</td>
                     <td>{{ booking.bookStatus }}</td>
                     <td>{{ booking.createdAt }}</td>
-                    <td @click.stop><T3ButtonBooking :booking="booking"/></td>
+                    <td @click.stop><T3ButtonBooking 
+                        :booking="booking"
+                        :packageName="getPackageName(booking.packageId)"
+                        @deleteBooking="deleteBookingHandler" 
+                        @updateStatus="updateBookingHandler" /></td>
                 </tr>
             </tbody>
         </table>
