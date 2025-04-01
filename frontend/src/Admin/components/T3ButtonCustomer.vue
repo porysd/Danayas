@@ -36,6 +36,7 @@ const confirmDelete = () => {
   closeModals();
 };
 
+
 </script>
 
 <template>

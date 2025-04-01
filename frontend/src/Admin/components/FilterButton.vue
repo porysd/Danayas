@@ -3,7 +3,7 @@
 </script>
 
 <template>
-    <button class="adminButton text-white font-bold bg-[#194D1D] hover:bg-[#2B6D30]">Filter <i class="fIcon pi pi-filter"></i></button>
+    <button class="adminButton text-white font-bold bg-[#194D1D] dark:bg-[#18181b] hover:bg-[#2B6D30]">Filter <i class="fIcon pi pi-filter"></i></button>
 
 </template>
 

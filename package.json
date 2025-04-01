@@ -9,12 +9,13 @@
     "tsx": "^4.19.2"
   },
   "scripts": {
-  "dev": "concurrently \"cd backend && bun run dev\" \"cd frontend && bun run dev\""
+    "dev": "concurrently \"cd backend && bun run dev\" \"cd frontend && bun run dev\""
   },
   "peerDependencies": {
     "typescript": "^5.7.3"
   },
   "dependencies": {
+    "cally": "^0.8.0",
     "dotenv": "^16.4.7",
     "drizzle-orm": "^0.39.2",
     "hono": "^4.7.0",

@@ -85,7 +85,7 @@ console.log('Booking Data:', newBooking.value, paymentDetails.value);
 <template>
 
     <div>
-        <button class="adminButton text-white font-bold bg-[#194D1D] hover:bg-[#2B6D30]" @click="openAddBookingModal"><i class="aIcon pi pi-plus"></i> Add {{ data }}</button>
+        <button class="adminButton text-white font-bold  bg-[#194D1D] dark:bg-[#18181b] hover:bg-[#2B6D30]" @click="openAddBookingModal"><i class="aIcon pi pi-plus"></i> Add {{ data }}</button>
 
         <div v-if="showAddBookingModal" class="modal-overlay">
             <div class="modal">

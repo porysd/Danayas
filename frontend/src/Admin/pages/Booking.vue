@@ -5,6 +5,9 @@ import T3ButtonBooking from '../components/T3ButtonBooking.vue';
 import AddButtonBooking from '../components/AddButtonBooking.vue';
 import FilterButton from '../components/FilterButton.vue';
 import SideBar from '../components/SideBar.vue'
+import Tag from 'primevue/tag';
+import Notification from '../components/Notification.vue';
+import DarkModeButton from '../components/DarkModeButton.vue';
 
 const bookings = ref([]);
 const packages = ref([]);
@@ -13,19 +16,28 @@ const packages = ref([]);
 onMounted(async () => {
 
     const limit = 50;
-    const page = 1;
-    const bResponse = await fetch(`http://localhost:3000/bookings/bookings?limit=${limit}&page=${page}`);
-    if(!bResponse.ok) throw new Error('Failed to fetch bookings');
-    const bookingData = await bResponse.json();
+    let page = 1;
+    let hasMoreData = true;
 
+    while (hasMoreData) {
+        const bResponse = await fetch(`http://localhost:3000/bookings/bookings?limit=${limit}&page=${page}`);
+        if(!bResponse.ok) throw new Error('Failed to fetch bookings');
+        const bookingData = await bResponse.json();
+
+        if (bookingData.items.length === 0) {
+            hasMoreData = false;
+        } else{
+            bookings.value.push(...bookingData.items);
+            page++;
+        }
+    }
+   
     const pResponse = await fetch(`http://localhost:3000/packages/packages?limit=${limit}`);
     if (!pResponse.ok) throw new Error('Failed to fetch packages');
         
     const packagesData = await pResponse.json();
 
     packages.value = packagesData.items;
-
-    bookings.value = bookingData.items;
 });
 
 const totalBookings = computed(() => bookings.value.length);
@@ -114,31 +126,44 @@ const closeModal = () => {
     bookingDetails.value = false;
 }
 
-//Change logic
+// Checks Severity of Status of the Booking
+const getStatusSeverity = (status) => {
+    switch (status) {
+    case 'pending': return 'warn';     
+    case 'confirmed': return 'info';    
+    case 'completed': return 'success'; 
+    case 'cancelled': return 'danger';  
+    default: return 'secondary';       
+  }
+};
+
+//             <h2 class="text-xl font-medium">Total bookings: {{ totalBookings }}</h2>
 </script>
 
 <template>
     
-<main class="bkM">
+<main class="bkM bg-[#EEF9EB] dark:bg-[#09090b]">
     <SideBar/>
      <div class="container">
         <div class="headers"> 
             <h1 class="text-5xl font-black">Booking</h1>
-            <h2 class="text-xl font-medium">Total bookings: {{ totalBookings }}</h2>
+            <div class="flex items-center gap-4">
+                <DarkModeButton />
+                <Notification/>
+            </div>
         </div>
         <div class="searchB">
             <SearchBar class="sBar"/>
             <div class="bkBtns">
                 <FilterButton/>
-                <AddButtonBooking class="addBtn" data="Booking" @addBooking="addBookingHandler"/>
+                <AddButtonBooking class="addBtn" data="Booking" @addBooking="addBookingHandler" />
             </div>
         </div>
 
         <div class="tableContainer">
-            <table class="dTable">
+            <table class="dTable border-x-1 border-y-1 border-[#194D1D] dark:border-[#FCFCFC]">
             <thead>
-                <tr class="header-style">
-                    <th>BOOKING ID:</th>
+                <tr class="header-style bg-[#194D1D] dark:bg-[#18181b] border-[#194D1D] dark:border-[#18181b]">
                     <th>NAME</th>
                     <th>CONTACT NO.</th>
                     <th>PACKAGE</th>
@@ -152,8 +177,7 @@ const closeModal = () => {
                 </tr>
             </thead>
             <tbody>
-                <tr class="bRow" v-for="booking in bookings" :key="booking.id" @click="openBookingDetails(booking)">
-                    <td>{{ booking.bookingId }}</td>
+                <tr class="bRow border-[#194D1D] dark:border-[#18181b]" v-for="booking in bookings" :key="booking.id" @click="openBookingDetails(booking)">
                     <td>{{ booking.firstName }} {{ booking.lastName }} <br/> {{ booking.email }}</td>
                     <td>{{ booking.contactNo }}</td>
                     <td>{{ getPackageName(booking.packageId) }} <br/> {{ booking.mode }}</td>
@@ -161,7 +185,12 @@ const closeModal = () => {
                     <td>{{ booking.checkInDate }}</td>
                     <td>{{ booking.checkOutDate }}</td>
                     <td>{{ booking.totalAmountDue }}</td>
-                    <td>{{ booking.bookStatus }}</td>
+                    <td>
+                        <Tag
+                        :severity="getStatusSeverity(booking.bookStatus)"
+                        :value="booking.bookStatus"
+                        />
+                    </td>
                     <td>{{ booking.createdAt }}</td>
                     <td @click.stop><T3ButtonBooking 
                         :booking="booking"
@@ -208,9 +237,7 @@ const closeModal = () => {
 
 <style scoped>
 
-.bkM{
-    background-color: #EEF9EB;
-}
+
 
 .headers{
     display: flex;
@@ -274,12 +301,12 @@ const closeModal = () => {
     font-weight: bold;
     font-size: 15px;
     height:40px;
-    background-color: #194D1D;
+
     color: white;
     text-align: center;
     top: 0;
     z-index: 1;
-    border-right: 1px solid #194D1D;
+
 }
 
 .bRow{
@@ -289,6 +316,10 @@ const closeModal = () => {
     text-align: center;
     border: 1px solid #194D1D;
     cursor: pointer;
+}
+
+.my-app-dark .bRow{
+    border: 1px solid #FCFCFC;
 }
 
 .bRow:hover {
@@ -301,6 +332,18 @@ const closeModal = () => {
 
 .bRow:nth-child(odd) {
   background-color: #C7E3B6;
+}
+
+.bRow:nth-child(even) {
+  background-color: #eaf6e9;
+}
+
+.bRow:nth-child(odd) {
+    background-color: #C7E3B6;
+}
+
+.my-app-dark .bRow {
+  background-color: #1E1E1E;
 }
 
 .modal {

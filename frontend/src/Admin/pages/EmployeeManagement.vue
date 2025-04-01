@@ -5,6 +5,9 @@ import T3ButtonEmployee from '../components/T3ButtonEmployee.vue';
 import AddButtonEmployee from '../components/AddButtonEmployee.vue';
 import FilterButton from '../components/FilterButton.vue';
 import SideBar from '../components/SideBar.vue';
+import Tag from 'primevue/tag';
+import Notification from '../components/Notification.vue';
+import DarkModeButton from '../components/DarkModeButton.vue';
 
 const employees = ref([]);
 
@@ -80,18 +83,27 @@ const closeModal = () => {
     employeeDetails.value = false;
 }
 
+// Checks Severity of Status of each Users
+const getStatusSeverity = (status) => {
+  return status === 'active' ? 'success' : 'danger';
+};
+
+
 
 </script>
 
 <template>
     
-<main class="employeeM">
+<main class="employeeM  bg-[#EEF9EB] dark:bg-[#09090b]">
     <SideBar/>
      <div class="container">
         <div class="headers"> 
             <h1 class="text-5xl font-black">Employee Management</h1>
-            <h2 class="text-xl font-medium">Total employees: {{ totalEmployees }}</h2>
-        </div>
+                <div class="flex items-center gap-4">
+                    <DarkModeButton />
+                    <Notification/>
+                </div>
+            </div>
         <div class="searchB">
             <SearchBar class="sBar"/>
             <div class="empBtns">
@@ -101,9 +113,9 @@ const closeModal = () => {
         </div>
 
         <div class="tableContainer">
-            <table class="dTable">
+            <table class="dTable border-x-1 border-y-1 border-[#194D1D] dark:border-[#FCFCFC]">
             <thead>
-                <tr class="header-style">
+                <tr class="header-style bg-[#194D1D] dark:bg-[#18181b] border-[#194D1D] dark:border-[#18181b]">
                     <th>EMPLOYEE ID</th>
                     <th>NAME</th>
                     <th>CONTACT NO.</th>
@@ -114,12 +126,17 @@ const closeModal = () => {
                 </tr>
             </thead>
             <tbody>
-                <tr class="eRow" v-for="employee in employees" :key="employee.userId" @click="openEmployeeDetails(employee)">
+                <tr class="eRow border-[#194D1D] dark:border-[#18181b]" v-for="employee in employees" :key="employee.userId" @click="openEmployeeDetails(employee)">
                     <td>{{ employee.userId }}</td>
                     <td>{{ employee.firstName }} {{ employee.lastName }}<br/> {{ employee.email }}</td>
                     <td>{{ employee.contactNo }}</td>
                     <td>{{ employee.role}}</td>
-                    <td>{{ employee.status }}</td>
+                    <td>
+                        <Tag 
+                        :severity="getStatusSeverity(employee.status)" 
+                        :value="employee.status === 'active' ? 'Active' : 'Inactive'"
+                        />
+                    </td>
                     <td>{{ employee.dateReg }}</td>
                     <td @click.stop><T3ButtonEmployee :employee="employee" @deleteEmployee="deleteEmployeeHandler"/></td>
                 </tr>
@@ -147,9 +164,7 @@ const closeModal = () => {
 
 <style scoped>
 
-.employeeM{
-    background-color: #EEF9EB;
-}
+
 
 .headers{
     display: flex;
@@ -194,7 +209,6 @@ const closeModal = () => {
 .tableContainer{
     max-height: 75%; 
     overflow-y: auto;
-    border: 1px solid #194D1D;
     border-radius: 7px;
 }
 
@@ -213,13 +227,12 @@ const closeModal = () => {
     font-weight: bold;
     font-size: 15px;
     height:40px;
-    background-color: #194D1D;
+
     color: white;
     text-align: center;
-
     top: 0;
     z-index: 1;
-    border-right: 1px solid #194D1D;
+
 }
 
 .eRow{
@@ -227,8 +240,13 @@ const closeModal = () => {
     font-size: 15px;
     height: auto;
     text-align: center;
-    border: 1px solid #194D1D;
+    border-top: 1px solid #194D1D;
+    border-bottom: 1px solid #194D1D;
     cursor: pointer;
+}
+
+.my-app-dark .eRow{
+    border: 1px solid #FCFCFC;
 }
 
 .eRow:hover {
@@ -242,6 +260,11 @@ const closeModal = () => {
 .eRow:nth-child(odd) {
     background-color: #C7E3B6;
 }
+
+.my-app-dark .eRow {
+  background-color: #1E1E1E;
+}
+
 
 .modal {
     position: fixed;

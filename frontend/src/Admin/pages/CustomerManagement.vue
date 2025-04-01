@@ -29,11 +29,11 @@ const totalCustomers = computed(() => customers.value.length);
 
 const deleteCustomerHandler = async (customer) => {
   try {
-    const response = await fetch(`http://localhost:3000/users/${customer.userId}`, {
-      method: 'delete',
-    });
+    const response = await fetch(`http://localhost:3000/users/${customer.userId}`);
     if (!response.ok) throw new Error('Failed to delete customer');
     customers.value = customers.value.filter(c => c.userId !== customer.userId);
+    customers.value.disabled = true;
+
   } catch (error) {
     console.error('Error deleting customer:', error);
   }

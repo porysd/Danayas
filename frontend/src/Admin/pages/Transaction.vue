@@ -5,6 +5,7 @@ import AddButtonCustomer from '../components/AddButtonCustomer.vue';
 import FilterButton from '../components/FilterButton.vue';
 import T3ButtonTransaction from '../components/T3ButtonTransaction.vue';
 import SideBar from '../components/SideBar.vue'
+import Tag from 'primevue/tag';
 
 const payments = ref([]);
 
@@ -79,6 +80,16 @@ const closeModal = () =>{
     paymentDetails.value = false;
 }
 
+// Checks Severity of Status of the Payment
+const getStatusSeverity = (status) => {
+    switch(status){
+        case 'pending': return 'warn';
+        case 'partially-paid': return 'info';
+        case 'paid': return 'success';
+        case 'failed': return 'danger';
+        default: return 'secondary';
+    }
+}
 
 
 </script>
@@ -103,8 +114,6 @@ const closeModal = () =>{
             <table class="dTable">
             <thead>
                 <tr class="header-style">
-                    <th>PAYMENT ID</th>
-                    <th>BOOKING ID</th>
                     <th>DISCOUNT AMOUNT</th>
                     <th>DOWNPAYMENT AMOUNT</th>
                     <th>AMOUNT PAID</th>
@@ -118,15 +127,18 @@ const closeModal = () =>{
             </thead>
             <tbody>
                 <tr class="cRow" v-for="payment in payments" :key="payment.paymentId" @click="openPaymentDetails(payment)">
-                    <td>{{ payment.paymentId }}</td>
-                    <td>{{ payment.bookingId }}</td>
                     <td>{{ payment.discountAmount }}</td>
                     <td>{{ payment.downpaymentAmount }}</td>
                     <td>{{ payment.amountPaid }}</td>
                     <td>{{ payment.totalAmountDue }}</td>
                     <td>{{ payment.mode }}</td>
                     <td>{{ payment.reference }}</td>
-                    <td>{{ payment.paymentStatus }}</td>
+                    <td>
+                        <Tag
+                        :severity="getStatusSeverity(payment.paymentStatus)"
+                        :value="payment.paymentStatus"
+                        />
+                    </td>
                     <td>{{ payment.paidAt }}</td>
                     <td @click.stop><T3ButtonTransaction :payment="payment" @updatePayment="updatePaymentHandler"/></td>
                 </tr>

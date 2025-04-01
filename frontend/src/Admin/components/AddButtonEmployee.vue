@@ -46,7 +46,7 @@ const addEmployee = () => {
 <template>
 
     <div>
-        <button class="adminButton text-white font-bold bg-[#194D1D] hover:bg-[#2B6D30]" @click="openAddEmployeeModal"><i class="aIcon pi pi-plus"></i> Add {{ data }}</button>
+        <button class="adminButton text-white font-bold bg-[#194D1D] dark:bg-[#18181b] hover:bg-[#2B6D30]" @click="openAddEmployeeModal"><i class="aIcon pi pi-plus"></i> Add {{ data }}</button>
 
 
     
