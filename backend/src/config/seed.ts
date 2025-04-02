@@ -208,7 +208,7 @@ export default async function seed() {
   }
 }
 //Note: remove seed() when not use.
-seed() //Call this function when seeding.
+seed(); //Call this function when seeding.
 
 // TODO: generate fake payments
 
