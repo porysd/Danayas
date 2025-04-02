@@ -49,6 +49,15 @@ export const UpdateUserDTO = UserDTO.omit({
   userId: true
 }).partial();
 
+export const CreateUserDTO = UserDTO.pick({
+  firstName: true,
+  lastName: true,
+  contactNo: true,
+  address: true,
+  email: true,
+  password: true,
+});
+
 // Delete User DTO just in case if needed
 // export const DeleteUserDTO = z.object({
 //     userId: z.number().positive().openapi({

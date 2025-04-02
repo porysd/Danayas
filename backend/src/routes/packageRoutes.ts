@@ -10,17 +10,17 @@ export default new OpenAPIHono()
       tags: ["Packages"],
       summary: "Get all packages",
       method: "get",
-      path: "/",
+      path: "/packages",
       request: {
         query: z.object({
           limit: z.coerce.number().nonnegative().openapi({
             example: 50,
             description: "Limit that the server will give",
           }),
-          page: z.coerce
-            .number()
-            .nonnegative()
-            .openapi({ example: 0, description: "Page to get" }),
+          page: z.coerce.number().nonnegative().min(1).default(1).openapi({
+            example: 0, 
+            description: "Page to get starts from 1" 
+          }),
         }),
       },
       responses: {
@@ -95,10 +95,7 @@ export default new OpenAPIHono()
       },
       responses: {
         200: {
-          description: "Successful registration, redirecting to /login",
-        },
-        404: {
-          description: "Successful registration, redirecting to /login",
+          description: "Successful package retrieval",
         },
       },
     }),
