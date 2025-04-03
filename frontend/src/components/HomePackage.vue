@@ -1,32 +1,34 @@
 <script setup>
-import { ref } from "vue";
+import { ref, defineProps } from "vue";
+
+defineProps(["data"]);
 </script>
 
 <template>
   <div class="Packages">
     <div class="Package1">
-      <img src="../assets/danayas_day.jpg" alt="card1" class="card1" />
-      <div id="titlePackage">Package 1</div>
+      <img src="../assets/danayas_day.jpg" alt="card2" class="card1" />
+      <div class="titlePackage">Package {{ data }}</div>
       <div class="P1">
         I'm a paragraph. Click here to add your own text and edit me I’m a great
         place for you to tell a story and let your users know a little more
         about you.
       </div>
       <div class="detailsBtn">
-        <button id="detailsBtn">See all details</button>
+        <button id="detailsBtn">AVAIL</button>
       </div>
     </div>
 
     <div class="Package2">
-      <img src="../assets/danayas_day.jpg" alt="card2" class="card2" />
-      <div id="titlePackage">Package 1</div>
+      <img src="../assets/danayas_day.jpg" alt="card2" class="card1" />
+      <div class="titlePackage">Package 1</div>
       <div class="P1">
         I'm a paragraph. Click here to add your own text and edit me I’m a great
         place for you to tell a story and let your users know a little more
         about you.
       </div>
       <div class="detailsBtn">
-        <button id="detailsBtn">See all details</button>
+        <button id="detailsBtn">AVAIL</button>
       </div>
     </div>
   </div>
@@ -34,16 +36,20 @@ import { ref } from "vue";
 
 <style scoped>
 .Packages {
+  display: flex;
+  justify-content: center;
+  align-items: center;
   margin: auto;
-  margin-left: 10rem;
+  font-family: "fraunces", serif;
+  color: #000;
 }
 
-#titlePackage {
+.titlePackage {
   text-align: center;
   margin-bottom: 10px;
   font-weight: bolder;
   margin: auto;
-  font-size: 60px;
+  font-size: 40px;
   color: #000;
   font-family: "Fraunces", serif;
 }
@@ -71,48 +77,38 @@ import { ref } from "vue";
 }
 .Package1 {
   background: #fcfcfc;
-  width: 350px;
+  width: 400px;
+
+  height: auto;
   border-radius: 20px;
   filter: drop-shadow(0px 4px 4px rgb(47, 46, 46));
   align-items: center;
-  margin-top: 100px;
   display: inline-block;
 }
 .Package2 {
   background: #fcfcfc;
-  width: 350px;
-  height: 460px;
+  width: 400px;
+  height: auto;
   border-radius: 20px;
   filter: drop-shadow(0px 4px 4px rgb(47, 46, 46));
   align-items: center;
   display: inline-block;
   margin-left: 15rem;
-  margin-top: 100px;
 }
-
 .card1 {
-  width: 350px;
-  height: 300px;
-  border-top-left-radius: 10px;
-  border-top-right-radius: 10px;
-  margin-top: 10%;
-}
-.card2 {
-  width: 350px;
-  height: 300px;
-  border-top-left-radius: 10px;
-  border-top-right-radius: 10px;
-  margin-top: 10%;
+  width: auto;
+  height: auto;
+  border-radius: 30px;
 }
 .P1 {
   color: rgb(21, 21, 21);
   font-weight: regular;
   font-family: "fraunces", serif;
-  font-size: 14px;
+  font-size: 20px;
   word-wrap: break-word;
 }
 .detailsBtn {
-  width: 350px;
+  width: 400px;
   margin: none;
   height: 40px;
   border: none;
@@ -121,7 +117,7 @@ import { ref } from "vue";
   background-color: #194d1d;
   border-bottom-left-radius: 10px;
   border-bottom-right-radius: 10px;
-  margin-top: 10%;
+  margin-top: 10px;
 }
 #detailsBtn {
   background: transparent;
@@ -130,6 +126,7 @@ import { ref } from "vue";
   margin-top: 10px;
   font-size: 15px;
 }
+.card1,
 .P1 {
   padding-left: 10px;
   padding-right: 10px;

@@ -1,174 +1,155 @@
+<script setup>
+import { ref } from "vue";
+import SignIn from "../components/SignIn.vue";
+import SignUp from "./SignUp.vue";
 
-<template>
-  
-  <nav section class="nav-bar">
-    <div class="logo">
-      <img src="../assets/logo.png" alt="logo" id="logo" />
-    </div>
-    <div class="nav-links"> 
+const isMenuOpen = ref(false);
 
-      <ul>
-        <li>
-          <router-link to="/">Home</router-link>
-        </li>
-        <li>
-          <router-link to="/packages">Packages</router-link>
-        </li>
-        <li>
-          <router-link to="/booking">Booking</router-link>
-        </li>
-        <li>
-          <router-link to="/faqs">FAQs</router-link>
-        </li>
-        <li>
-          <router-link to="/gallery">Gallery</router-link>
-        </li>
-        <li>
-          <router-link to="/aboutUs">About Us</router-link>
-        </li>
-        <li>
-          <router-link to="/contactUs">Contact Us</router-link>
-        </li>
-       
-        <div class ="signup-btn-container">
-          <button class = "Login-btn">Login</button>
-          <button class="signup-btn" style="background-color: lightgreen;">Sign Up</button>
-        </div>
-        
-      </ul>
-    </div>
-
-  </nav>
-  <main>
-    <router-view />
-  </main>
-
-</template>
-
-<script>
-import { RouterView} from 'vue-router';
-import img from '../assets/logo.png';
-export default {
-    name: 'NavBar',
-    img,
-    components: {
-      RouterView,
-    },
+const toggleMenu = () => {
+  isMenuOpen.value = !isMenuOpen.value;
 };
 </script>
 
+<template>
+  <nav class="nav-bar">
+    <div class="logo">
+      <img src="../assets/logo.png" alt="logo" id="logo" />
+    </div>
 
+    <!-- Mobile Menu Toggle -->
+    <button class="menu-toggle" @click="toggleMenu">☰</button>
+
+    <div class="nav-links" :class="{ active: isMenuOpen }">
+      <ul>
+        <li><router-link to="/">Home</router-link></li>
+        <li><router-link to="/packages">Packages</router-link></li>
+        <li><router-link to="/booking">Booking</router-link></li>
+        <li><router-link to="/faqs">FAQs</router-link></li>
+        <li><router-link to="/gallery">Gallery</router-link></li>
+        <li><router-link to="/aboutUs">About Us</router-link></li>
+        <li><router-link to="/contactUs">Contact Us</router-link></li>
+      </ul>
+    </div>
+
+    <div class="signup-btn-container">
+      <SignIn />
+      <SignUp />
+    </div>
+  </nav>
+
+  <main>
+    <router-view />
+  </main>
+</template>
 
 <style scoped>
+/* Navigation bar */
+.nav-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px;
+  border: none;
+  position: relative;
+}
 
-  #logo {
-    width: 150px;
-    height: 150px;
-    display:flex;
-    float:right;
-    margin-top: 10px;
-    margin-right: 75rem;
-  
+/* Logo */
+#logo {
+  width: 120px;
+  height: auto;
+  display: block;
+  margin-left: 5rem;
+}
 
+/* Navigation links */
+.nav-links ul {
+  display: flex;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
 
-  }
-  .nav-bar {
-    background-color: none;
-    list-style:none;
-    margin-left:30rem;
-    margin-right: 2rem;
-  }
-  a:hover {
-  background-image: linear-gradient(
-  to right,
-  #54d6a4,
-  #54d6ab 50%,
-  #000 50%
-);
-    background-size: 200% 100%;
-    background-position: 100%;
-    padding: 5px 0;
-    position: relative;
-    background-clip: text;
-    -webkit-background-clip: text;
-   -webkit-text-fill-color: transparent;
-    transition: all 0.3s ease-out; 
-  }
-  
-  
+.nav-links ul li {
+  margin-right: 20px;
+}
 
-  .signup-btn {
-  color: white;
+.nav-links ul li a {
+  text-decoration: none;
+  color: black;
+  font-size: 18px;
+  transition: color 0.3s;
+}
+
+.nav-links ul li a:hover {
+  color: #54d6a4;
+}
+
+.nav-links ul li a:focus {
+  color: #54d6a4;
+}
+
+/* Signup & Login buttons */
+.signup-btn-container {
+  display: flex;
+  gap: 10px;
+  margin-right: 100px;
+}
+
+.Login-btn,
+.signup-btn {
   padding: 10px 20px;
   border: none;
   border-radius: 5px;
   cursor: pointer;
   font-weight: bold;
-  font-family: 'Fraunces', serif;
-  border-radius: 6px;
-  display:flex;
-  filter: drop-shadow(0px 4px 4px rgb(47,46,46));
-  align-items: center;
-  justify-content: center;
-  height: auto;
-  white-space: nowrap;
-  margin-left: 10px;
+}
 
+.Login-btn {
+  background: none;
+  color: black;
+}
+
+.signup-btn {
+  background: #319033;
+  color: white;
+}
+
+/* Mobile Menu Button */
+.menu-toggle {
+  display: none;
+  font-size: 24px;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+/* Responsive Design */
+@media screen and (max-width: 768px) {
+  .nav-links {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    background: white;
+    padding: 10px 0;
   }
-  .signup-btn-container {
-    display: flex;
-    justify-content: center;
+
+  .nav-links.active {
+    display: block;
+  }
+
+  .nav-links ul {
+    flex-direction: column;
     align-items: center;
-    margin-top: 4.3rem;
-    gap: 10px;
-    margin-right: 10rem;
-  }
-  .Login-btn {
-    background:none; /* Adjust button color */
-    color: rgb(4, 4, 4);
-    padding: 10px 20px;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    font-weight: bold;
-    font-family: 'Fraunces', serif;
-    border-radius: 6px;
-    display:flex;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    height: auto;
-    white-space: nowrap;
-    margin-left: 3rem;
-  }
-  nav ul {
-    display: flex;
-    list-style: none;
-    padding: 0;
-  
-
-  }
-  nav ul li {
-    margin-right: 1px;
-
   }
 
-  nav ul li a {
-    text-decoration: none;
-    color: black;
-    display: flex;
-    font-family: 'Fraunces', serif;
-    align-items: left;
-    font-size: 18px;
-    margin-right: 100%;
-    margin:0rem;
-    height: 22px;
-    width: 6rem;
-    margin-top:5rem;
-    justify-content: space-evenly;
+  .nav-links ul li {
+    margin-bottom: 10px;
+  }
 
+  .menu-toggle {
+    display: block;
   }
-  main {
-    padding: 1em;
-  }
+}
 </style>
