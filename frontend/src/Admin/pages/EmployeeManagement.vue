@@ -15,9 +15,11 @@ import Paginator from "primevue/paginator";
 const employees = ref([]);
 
 onMounted(async () => {
-  try {
-    const limit = 50;
-    const page = 1;
+  const limit = 50;
+  let page = 1;
+  let hasMoreData = true;
+
+  while (hasMoreData) {
     const response = await fetch(
       `http://localhost:3000/users?limit=${limit}&page=${page}`
     );
@@ -25,15 +27,23 @@ onMounted(async () => {
 
     const users = await response.json();
 
-    employees.value = users.items.filter(
-      (user) => user.role === "staff" || user.role === "admin"
-    );
-  } catch (error) {
-    console.error("Error fetching users:", error);
+    if (users.items && users.items.length > 0) {
+      const employeeData = users.items.filter(
+        (user) => user.role === "staff" || user.role === "admin"
+      );
+      if (employeeData.length === 0) {
+        hasMoreData = false;
+      } else {
+        employees.value.push(...employeeData);
+        page++;
+      }
+    } else {
+      hasMoreData = false;
+    }
   }
 });
 
-const totalEmployees = computed(() => employees.value.length);
+const totalEmployees = computed(() => filteredEmployee.value.length);
 
 const deleteEmployeeHandler = async (employee) => {
   try {
@@ -108,13 +118,23 @@ const first = ref(0);
 const rows = ref(10);
 
 const paginatedEmployees = computed(() => {
-  return employees.value.slice(first.value, first.value + rows.value);
+  return filteredEmployee.value.slice(first.value, first.value + rows.value);
 });
 
 const onPageChange = (event) => {
   first.value = event.first;
   rows.value = event.rows;
 };
+
+// Search Bar logic
+const searchQuery = ref("");
+const filteredEmployee = computed(() => {
+  return employees.value.filter((employee) =>
+    Object.values(employee).some((val) =>
+      String(val).toLowerCase().includes(searchQuery.value.toLowerCase())
+    )
+  );
+});
 </script>
 
 <template>
@@ -130,7 +150,7 @@ const onPageChange = (event) => {
         </div>
       </div>
       <div class="searchB">
-        <SearchBar class="sBar" />
+        <SearchBar class="sBar" v-model="searchQuery" />
         <div class="empBtns">
           <FilterButton />
           <AddButtonEmployee

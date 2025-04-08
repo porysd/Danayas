@@ -25,20 +25,27 @@ const toast = useToast();
 const packages = ref([]);
 
 const getAllPackages = async () => {
-  try {
-    const limit = 50;
+  const limit = 50;
+  let page = 1;
+  let hasMoreData = true;
+
+  while (hasMoreData) {
     const response = await fetch(
-      `http://localhost:3000/packages/packages?limit=${limit}`
+      `http://localhost:3000/packages/packages?limit=${limit}&page=${page}`
     );
     if (!response.ok) throw new Error("Failed to fetch packages");
 
     const packagesData = await response.json();
-    packages.value = packagesData.items;
-  } catch (error) {
-    console.error("Error fetching packages:", error);
+
+    if (packagesData.items.length === 0) {
+      hasMoreData = false;
+    } else {
+      packages.value.push(...packagesData.items);
+      page++;
+    }
   }
 };
-const totalPackages = computed(() => packages.value.length);
+const totalPackages = computed(() => filteredPackages.value.length);
 
 onMounted(() => {
   getAllPackages();
@@ -205,7 +212,7 @@ const firstPack = ref(0);
 const rowsPack = ref(10);
 
 const paginatedPackages = computed(() => {
-  return packages.value.slice(
+  return filteredPackages.value.slice(
     firstPack.value,
     firstPack.value + rowsPack.value
   );
@@ -228,6 +235,16 @@ const onPageChangePro = (event) => {
   firstPro.value = event.first;
   rowsPro.value = event.rows;
 };
+
+// Search logic
+const searchQuery = ref("");
+const filteredPackages = computed(() => {
+  return packages.value.filter((packageT) =>
+    Object.values(packageT).some((val) =>
+      String(val).toLowerCase().includes(searchQuery.value.toLowerCase())
+    )
+  );
+});
 </script>
 
 <template>

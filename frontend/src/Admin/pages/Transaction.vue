@@ -20,23 +20,27 @@ import TabPanel from "primevue/tabpanel";
 const payments = ref([]);
 
 onMounted(async () => {
-  try {
-    const limit = 50;
-    const page = 1;
+  const limit = 50;
+  let page = 1;
+  let hasMoreData = true;
 
+  while (hasMoreData) {
     const response = await fetch(
       `http://localhost:3000/payments?limit=${limit}&page=${page}`
     );
     if (!response.ok) throw new Error("Failed to fetch payments");
     const paymentData = await response.json();
 
-    payments.value = paymentData.items;
-  } catch (error) {
-    console.error("Error fetching payments:", error);
+    if (paymentData.items.length === 0) {
+      hasMoreData = false;
+    } else {
+      payments.value.push(...paymentData.items);
+      page++;
+    }
   }
 });
 
-const totalPayments = computed(() => payments.value.length);
+const totalPayments = computed(() => filteredPayment.value.length);
 
 // Delete Payment by Id
 // const deletePaymentHandler = async (payment) => {
@@ -120,13 +124,23 @@ const first = ref(0);
 const rows = ref(10);
 
 const paginatedPayments = computed(() => {
-  return payments.value.slice(first.value, first.value + rows.value);
+  return filteredPayment.value.slice(first.value, first.value + rows.value);
 });
 
 const onPageChange = (event) => {
   first.value = event.first;
   rows.value = event.rows;
 };
+
+//Search logic
+const searchQuery = ref("");
+const filteredPayment = computed(() => {
+  return payments.value.filter((payment) =>
+    Object.values(payment).some((val) =>
+      String(val).toLowerCase().includes(searchQuery.value.toLowerCase())
+    )
+  );
+});
 </script>
 
 <template>
@@ -142,7 +156,7 @@ const onPageChange = (event) => {
         </div>
       </div>
       <div class="searchB">
-        <SearchBar class="sBar" />
+        <SearchBar class="sBar" v-model="searchQuery" />
         <div class="cusBtns">
           <FilterButton />
         </div>

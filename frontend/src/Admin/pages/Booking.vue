@@ -46,7 +46,7 @@ onMounted(async () => {
   packages.value = packagesData.items;
 });
 
-const totalBookings = computed(() => bookings.value.length);
+const totalBookings = computed(() => filteredBooking.value.length);
 
 // Delete Booking by ID
 const deleteBookingHandler = async (booking) => {
@@ -176,13 +176,23 @@ const first = ref(0);
 const rows = ref(10);
 
 const paginatedBookings = computed(() => {
-  return bookings.value.slice(first.value, first.value + rows.value);
+  return filteredBooking.value.slice(first.value, first.value + rows.value);
 });
 
 const onPageChange = (event) => {
   first.value = event.first;
   rows.value = event.rows;
 };
+
+// Search Bar logic
+const searchQuery = ref("");
+const filteredBooking = computed(() => {
+  return bookings.value.filter((booking) =>
+    Object.values(booking).some((val) =>
+      String(val).toLowerCase().includes(searchQuery.value.toLowerCase())
+    )
+  );
+});
 
 //             <h2 class="text-xl font-medium">Total bookings: {{ totalBookings }}</h2>
 </script>
@@ -200,7 +210,7 @@ const onPageChange = (event) => {
         </div>
       </div>
       <div class="searchB">
-        <SearchBar class="sBar" />
+        <SearchBar class="sBar" v-model="searchQuery" />
         <div class="bkBtns">
           <FilterButton />
           <AddButtonBooking

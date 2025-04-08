@@ -1,12 +1,10 @@
 <script setup>
-import { ref, defineEmits } from "vue";
+import { ref, defineEmits, defineModel } from "vue";
 
 const searchQuery = ref("");
 const emit = defineEmits();
 
-const handleSearch = () => {
-  emit("search", searchQuery.value);
-};
+const modelValue = defineModel();
 </script>
 
 <template>
@@ -15,7 +13,7 @@ const handleSearch = () => {
   >
     <input
       class="searchPlaceholder ml-2 w-125 text-black dark:text-white"
-      @input="handleSearch"
+      v-model="modelValue"
       type="text"
       placeholder="Search..."
     />

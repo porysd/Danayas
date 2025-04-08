@@ -14,24 +14,38 @@ import Paginator from "primevue/paginator";
 
 const customers = ref([]);
 
+// Get all Users with pagination
 onMounted(async () => {
-  try {
-    const limit = 50;
-    const page = 1;
+  const limit = 50;
+  let page = 1;
+  let hasMoreData = true;
 
+  while (hasMoreData) {
     const response = await fetch(
       `http://localhost:3000/users?limit=${limit}&page=${page}`
     );
     if (!response.ok) throw new Error("Failed to fetch users");
     const users = await response.json();
 
-    customers.value = users.items.filter((user) => user.role === "customer");
-  } catch (error) {
-    console.error("Error fetching users:", error);
+    if (users.items && users.items.length > 0) {
+      const customerData = users.items.filter(
+        (user) => user.role === "customer"
+      );
+
+      if (customerData.length === 0) {
+        hasMoreData = false;
+      } else {
+        customers.value.push(...customerData);
+        page++;
+      }
+    } else {
+      // If 'items' is missing or empty, stop the loop
+      hasMoreData = false;
+    }
   }
 });
 
-const totalCustomers = computed(() => customers.value.length);
+const totalCustomers = computed(() => filteredCustomer.value.length);
 
 const deleteCustomerHandler = async (customer) => {
   try {
@@ -98,13 +112,23 @@ const first = ref(0);
 const rows = ref(10);
 
 const paginatedCustomers = computed(() => {
-  return customers.value.slice(first.value, first.value + rows.value);
+  return filteredCustomer.value.slice(first.value, first.value + rows.value);
 });
 
 const onPageChange = (event) => {
   first.value = event.first;
   rows.value = event.rows;
 };
+
+// Search Bar logic
+const searchQuery = ref("");
+const filteredCustomer = computed(() => {
+  return customers.value.filter((customer) =>
+    Object.values(customer).some((val) =>
+      String(val).toLowerCase().includes(searchQuery.value.toLowerCase())
+    )
+  );
+});
 </script>
 
 <template>
@@ -120,7 +144,7 @@ const onPageChange = (event) => {
         </div>
       </div>
       <div class="searchB">
-        <SearchBar class="sBar" />
+        <SearchBar class="sBar" v-model="searchQuery" />
         <div class="cusBtns">
           <FilterButton />
           <AddButtonCustomer
