@@ -1,14 +1,35 @@
 <script setup>
-import { ref, defineProps, defineEmits } from 'vue';
+import { ref, defineProps, defineEmits, onMounted, onUnmounted } from "vue";
+import ToggleSwitch from "primevue/toggleswitch";
+import Button from "primevue/button";
+import Dialog from "primevue/dialog";
+import Toast from "primevue/toast";
+import { useToast } from "primevue/usetoast";
 
+const toast = useToast();
 const showMenu = ref(false);
+const hideMenu = ref(false);
 const showArchiveModal = ref(false);
 const showDeleteModal = ref(false);
 const showRoleModel = ref(false);
 const formData = ref({});
 
-const prop = defineProps(['employee']);
-const emit = defineEmits(['archiveEmployee', 'deleteEmployee', 'changeRole']);
+const closeMenu = (event) => {
+  if (hideMenu.value && !hideMenu.value.contains(event.target)) {
+    showMenu.value = false;
+  }
+};
+
+onMounted(() => {
+  document.addEventListener("click", closeMenu);
+});
+
+onUnmounted(() => {
+  document.addEventListener("click", closeMenu);
+});
+
+const prop = defineProps(["employee"]);
+const emit = defineEmits(["archiveEmployee", "deleteEmployee", "changeRole"]);
 
 const openArchiveModal = () => {
   formData.value = { ...prop.employee };
@@ -35,119 +56,201 @@ const closeModals = () => {
 };
 
 const archiveEmployee = () => {
-  emit('archiveEmployee', formData.value);
+  emit("archiveEmployee", formData.value);
+  toast.add({
+    severity: "warn",
+    summary: "Archive",
+    detail: "Archived User",
+    life: 3000,
+  });
   closeModals();
 };
 
-const confirmDelete = () => {
-  emit('deleteEmployee', formData.value);
+const confirmDisable = () => {
+  emit("deleteEmployee", formData.value);
+  toast.add({
+    severity: "error",
+    summary: "Disable",
+    detail: "Disable User",
+    life: 3000,
+  });
   closeModals();
 };
 
 const changeRole = () => {
-  emit('changeRole', formData.value);
+  emit("changeRole", formData.value);
   closeModals();
 };
-
 </script>
 
 <template>
   <div class="relative menu-container inline-block">
+    <button
+      @click.stop="showMenu = !showMenu"
+      class="adminButton pi pi-ellipsis-v"
+    ></button>
 
-    <button @click.stop="showMenu = !showMenu" class="adminButton pi pi-ellipsis-v"></button>
-
-
-    <div v-if="showMenu" class="dropdown-menu">
-        <ul>
-            <li @click="openArchiveModal">Archive</li>
-            <li @click="openDeleteModal">Delete</li>
-            <li @click="openRoleModal">Roles</li>
-        </ul>
+    <div v-if="showMenu" ref="hideMenu" class="dropdown-menu">
+      <ul>
+        <li @click="openRoleModal">Roles</li>
+        <li @click="openArchiveModal">Archive</li>
+        <li @click="openDeleteModal">Disable</li>
+      </ul>
     </div>
   </div>
 
+  <Dialog v-model:visible="showArchiveModal" modal :style="{ width: '30rem' }">
+    <template #header>
+      <div class="flex flex-col items-center justify-center w-full">
+        <h2 class="text-xl font-bold font-[Poppins]">Archive User</h2>
+      </div>
+    </template>
 
-  <div v-if="showArchiveModal" class="modal-overlay">
-    <div class="modal">
-      <h2 class="font-black text-2xl mb-10">Are you sure you want to ARCHIVE this user: {{ employee.firstName }} {{ employee.lastName }}</h2>
+    <span
+      class="text-lg text-surface-700 dark:text-surface-400 block mb-8 text-center font-[Poppins]"
+    >
+      Are you sure you want to
+      <strong class="text-orange-500">ARCHIVE</strong> this user:
+      <span class="font-black font-[Poppins]"
+        >{{ employee.firstName }} {{ employee.lastName }}</span
+      >?
+    </span>
 
-        <div class="modal-actions-delete">
-            <button class="cancelBtn font-bold" @click="closeModals">Cancel</button>
-            <button class="saveBtn font-bold" @click="archiveEmployee">Archive</button>
-        </div>
+    <div class="flex justify-center gap-2 font-[Poppins]">
+      <Button
+        type="button"
+        label="Cancel"
+        severity="secondary"
+        @click="closeModals"
+        class="font-bold w-full"
+      />
+      <Button
+        type="button"
+        label="Archive"
+        severity="warn"
+        @click="archiveEmployee"
+        class="font-bold w-full"
+      />
     </div>
-  </div>
+  </Dialog>
 
-  
-  <div v-if="showDeleteModal" class="modal-overlay-delete">
-    <div class="modal-delete">
-      <h2 class="font-black text-2xl mb-10">Are you sure you want to DELETE this user: {{ employee.firstName }} {{ employee.lastName }}</h2>
+  <Dialog v-model:visible="showDeleteModal" modal :style="{ width: '30rem' }">
+    <template #header>
+      <div class="flex flex-col items-center justify-center w-full">
+        <h2 class="text-xl font-bold font-[Poppins]">Disable User</h2>
+      </div>
+    </template>
 
-        <div class="modal-actions-delete">
-            <button class="cancelBtn font-bold" @click="closeModals">Cancel</button>
-            <button class="deleteBtn font-bold" @click="confirmDelete">Delete</button>
-        </div>
+    <span
+      class="text-lg text-surface-700 dark:text-surface-400 block mb-8 text-center font-[Poppins]"
+    >
+      Are you sure you want to
+      <strong class="text-red-500">DISABLE</strong> this user:
+      <span class="font-black font-[Poppins]"
+        >{{ employee.firstName }} {{ employee.lastName }}</span
+      >?
+    </span>
+
+    <div class="flex justify-center gap-2 font-[Poppins]">
+      <Button
+        type="button"
+        label="Cancel"
+        severity="secondary"
+        @click="closeModals"
+        class="font-bold w-full"
+      />
+      <Button
+        type="button"
+        label="Disable"
+        severity="danger"
+        @click="confirmDisable"
+        class="font-bold w-full"
+      />
     </div>
-  </div>
+  </Dialog>
 
-  <div v-if="showRoleModel" class="modal-overlay-role">
-    <div class="modal-role">
-      <h2 class="font-black text-2xl mb-5">Employee Name: {{ employee.firstName }} {{ employee.lastName }}</h2>
-      <h2 class="font-black text-xl mb-5 w-[70%] text-left m-auto">Permissions:</h2>
-        
-      <div class="role-container">
-        <div class="role1">
-            <label class="switch"> Authorization
-                <input type="checkbox">
-                <span class="slider round"></span>
-            </label>
+  <Dialog v-model:visible="showRoleModel" modal :style="{ width: '60rem' }">
+    <template #header>
+      <div class="flex flex-col items-center justify-center w-full">
+        <h2 class="text-2xl font-bold font-[Poppins]">ROLE SETTINGS</h2>
+      </div>
+    </template>
 
-            <label class="switch"> Employee Management
-                <input type="checkbox">
-                <span class="slider round"></span>
-            </label>
-            
-            <label class="switch"> Packages and Promos
-                <input type="checkbox">
-                <span class="slider round"></span>
-            </label>
+    <div class="text-lg font-[Poppins] text-center mb-9">
+      Employee Name:
+      <span class="font-black"
+        >{{ employee.firstName }} {{ employee.lastName }}</span
+      >
+    </div>
 
-            <label class="switch"> Discount and Add Ons
-                <input type="checkbox">
-                <span class="slider round"></span>
-            </label>
-        </div>
+    <div
+      class="text-xl font-black w-[90%] text-left m-auto font-[Poppins] mb-10"
+    >
+      Permissions:
+    </div>
 
-        <div class="role2">
-            <label class="switch"> Content Management
-                <input type="checkbox">
-                <span class="slider round"></span>
-            </label>
+    <div class="role-container">
+      <div class="role1">
+        <label class="switch">
+          Authorization
+          <ToggleSwitch v-model="checked" />
+        </label>
 
-            <label class="switch"> Booking Management
-                <input type="checkbox">
-                <span class="slider round"></span>
-            </label>
+        <label class="switch">
+          Employee Management
+          <ToggleSwitch v-model="checked" />
+        </label>
 
-            <label class="switch"> Transaction
-                <input type="checkbox">
-                <span class="slider round"></span>
-            </label>
-        </div>
+        <label class="switch">
+          Packages and Promos
+          <ToggleSwitch v-model="checked" />
+        </label>
+
+        <label class="switch">
+          Discount and Add Ons
+          <ToggleSwitch v-model="checked" />
+        </label>
       </div>
 
+      <div class="role2">
+        <label class="switch">
+          Content Management
+          <ToggleSwitch v-model="checked" />
+        </label>
 
-      <div class="modal-actions-role">
-        <button class="cancelBtn font-bold" @click="closeModals">Cancel</button>
-        <button class="saveBtn font-bold" @click="changeRole">Save</button>
+        <label class="switch">
+          Booking Management
+          <ToggleSwitch v-model="checked" />
+        </label>
+
+        <label class="switch">
+          Transaction
+          <ToggleSwitch v-model="checked" />
+        </label>
       </div>
     </div>
-  </div>
 
+    <div class="flex justify-center gap-2 mt-6">
+      <Button
+        type="button"
+        label="Cancel"
+        severity="secondary"
+        @click="closeModals"
+        class="font-bold w-full"
+      />
+      <Button
+        type="button"
+        label="Save"
+        @click="changeRole"
+        class="font-bold w-full"
+        severity="primary"
+      />
+    </div>
+  </Dialog>
+  <Toast />
 </template>
 
 <style scoped>
-
 .adminButton {
   border: none;
   border-radius: 5px;
@@ -160,7 +263,7 @@ const changeRole = () => {
   position: absolute;
   right: 0;
   top: 100%;
-  background: #FCF5F5;
+  background: #fcf5f5;
   color: #333;
   border-radius: 5px;
   padding: 5px;
@@ -185,144 +288,34 @@ const changeRole = () => {
 
 .dropdown-menu li:hover {
   background: #555;
-  color:#FCF5F5
-}
-
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.modal {
-  background: white;
-  padding: 20px;
-  border-radius: 10px;
-  width: 400px;
-  text-align: center;
-}
-
-.modal-actions {
-  display: flex;
-  justify-content: center;
-  margin-top: 20px;
-
-}
-
-.cancelBtn {
-  width: 100px;
-  padding: 8px 15px;
-  background: #ccc;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-}
-
-.saveBtn {
-  width: 100px;
-  padding: 8px 15px;
-  background: #194D1D;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  margin-left: 10px;
-}
-
-.modal-overlay-delete {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.modal-delete{
-  background: white;
-  padding: 20px;
-  border-radius: 10px;
-  width: 400px;
-  text-align: center;
-}
-
-.modal-actions-delete {
-  display: flex;
-  justify-content: center;
-  margin-top: 20px;
-}
-
-.deleteBtn {
-  width: 100px;
-  padding: 8px 15px;
-  background: #d9534f;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  margin-left: 10px;
-}
-
-
-.modal-overlay-role {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.modal-role{
-  background: white;
-  padding: 20px;
-  border-radius: 10px;
-  width: 70%;
-  height: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  border: 1px solid #333;
+  color: #fcf5f5;
 }
 
 .role-container {
   display: flex;
   justify-content: space-between;
-  margin:auto;
-  gap: 90px;
-  width: 70%;
-  margin-bottom: 30px;
+  margin: auto;
+  gap: 70px;
+  width: 90%;
+  margin-bottom: 50px;
 }
 
-.role1, .role2 {
+.role1,
+.role2 {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 30px; 
+  gap: 40px;
 }
 
 .switch {
   display: flex;
-  justify-content: space-between; 
-  align-items: center; 
-  width: 100%; 
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
 }
 
 .switch input {
   margin-left: auto;
 }
-
-
 </style>

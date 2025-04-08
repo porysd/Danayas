@@ -68,8 +68,8 @@ const confirmDisablePackage = () => {
   emit("disablePackage", formData.value);
   toast.add({
     severity: "success",
-    summary: "Disable Package",
-    detail: "Successfully Disable Package",
+    summary: "Updated Package",
+    detail: "Successfully Updated Package",
     life: 3000,
   });
   closeModals();
@@ -161,7 +161,7 @@ const confirmDisablePackage = () => {
     <Dialog v-model:visible="showDeleteModal" modal :style="{ width: '30rem' }">
       <template #header>
         <div class="flex flex-col items-center justify-center w-full">
-          <h2 class="text-xl font-bold font-[Poppins]">Delete Package</h2>
+          <h2 class="text-xl font-bold font-[Poppins]">Archive User</h2>
         </div>
       </template>
 
@@ -191,7 +191,6 @@ const confirmDisablePackage = () => {
         />
       </div>
     </Dialog>
-    <Toast />
   </div>
 </template>
 

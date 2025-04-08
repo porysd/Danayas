@@ -38,7 +38,7 @@ const addPackage = () => {
   closeAddPackageModal();
 };
 
-//name, price, description, status
+//name, price, description, status, timestamp (limit)
 </script>
 
 <template>
@@ -56,7 +56,7 @@ const addPackage = () => {
   >
     <template #header>
       <div class="flex flex-col items-center justify-center w-full">
-        <h2 class="text-2xl font-bold font-[Poppins]">ADD PACKAGE:</h2>
+        <h2 class="text-2xl font-bold font-[Poppins]">ADD PROMO:</h2>
       </div>
     </template>
 

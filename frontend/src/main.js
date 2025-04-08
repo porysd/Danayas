@@ -5,6 +5,7 @@ import router from './router'
 import PrimeVue from 'primevue/config';
 import Aura from '@primeuix/themes/aura';
 import Tooltip from 'primevue/tooltip';
+import ToastService from 'primevue/toastservice';
 
 createApp(App)
   .use(router)
@@ -16,5 +17,6 @@ createApp(App)
       }
     }
   })
+  .use(ToastService)
   .directive('tooltip', Tooltip)
   .mount('#app')

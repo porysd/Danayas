@@ -1,13 +1,13 @@
 <script setup>
-import { ref, defineProps, defineEmits } from 'vue';
+import { ref, defineProps, defineEmits } from "vue";
 
 const showMenu = ref(false);
 const showArchiveModal = ref(false);
 const showDeleteModal = ref(false);
 const formData = ref({});
 
-const prop = defineProps(['customer']);
-const emit = defineEmits(['archiveCustomer', 'deleteCustomer']);
+const prop = defineProps(["customer"]);
+const emit = defineEmits(["archiveCustomer", "deleteCustomer"]);
 
 const openArchiveModal = () => {
   formData.value = { ...prop.customer };
@@ -27,59 +27,65 @@ const closeModals = () => {
 };
 
 const archiveCustomer = () => {
-  emit('archiveCustomer', formData.value);
+  emit("archiveCustomer", formData.value);
   closeModals();
 };
 
 const confirmDelete = () => {
-  emit('deleteCustomer', formData.value);
+  emit("deleteCustomer", formData.value);
   closeModals();
 };
-
-
 </script>
 
 <template>
   <div class="relative menu-container inline-block">
-
-    <button @click.stop="showMenu = !showMenu" class="adminButton pi pi-ellipsis-v"></button>
-
+    <button
+      @click.stop="showMenu = !showMenu"
+      class="adminButton pi pi-ellipsis-v"
+    ></button>
 
     <div v-if="showMenu" class="dropdown-menu">
       <ul>
         <li @click="openArchiveModal">Archive</li>
-        <li @click="openDeleteModal">Delete</li>
+        <li @click="openDeleteModal">Disable</li>
       </ul>
     </div>
   </div>
 
-
   <div v-if="showArchiveModal" class="modal-overlay">
     <div class="modal">
-      <h2 class="font-black text-2xl mb-10">Are you sure you want to ARCHIVE this user: {{ customer.firstName }} {{ customer.lastName }}</h2>
+      <h2 class="font-black text-2xl mb-10">
+        Are you sure you want to ARCHIVE this user: {{ customer.firstName }}
+        {{ customer.lastName }}
+      </h2>
 
       <div class="modal-actions-delete">
         <button class="cancelBtn font-bold" @click="closeModals">Cancel</button>
-        <button class="saveBtn font-bold" @click="archiveCustomer">Archive</button>
+        <button class="saveBtn font-bold" @click="archiveCustomer">
+          Archive
+        </button>
       </div>
     </div>
   </div>
 
-  
   <div v-if="showDeleteModal" class="modal-overlay-delete">
     <div class="modal-delete">
-      <h2 class="font-black text-2xl mb-10">Are you sure you want to DELETE this user: {{ customer.firstName }} {{ customer.lastName }}</h2>
+      <h2 class="font-black text-2xl mb-10">
+        Are you sure you want to DELETE this user: {{ customer.firstName }}
+        {{ customer.lastName }}
+      </h2>
 
       <div class="modal-actions-delete">
         <button class="cancelBtn font-bold" @click="closeModals">Cancel</button>
-        <button class="deleteBtn font-bold" @click="confirmDelete">Delete</button>
+        <button class="deleteBtn font-bold" @click="confirmDelete">
+          Delete
+        </button>
       </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-
 .adminButton {
   border: none;
   border-radius: 5px;
@@ -92,7 +98,7 @@ const confirmDelete = () => {
   position: absolute;
   right: 0;
   top: 100%;
-  background: #FCF5F5;
+  background: #fcf5f5;
   color: #333;
   border-radius: 5px;
   padding: 5px;
@@ -117,7 +123,7 @@ const confirmDelete = () => {
 
 .dropdown-menu li:hover {
   background: #555;
-  color:#FCF5F5
+  color: #fcf5f5;
 }
 
 .modal-overlay {
@@ -144,7 +150,6 @@ const confirmDelete = () => {
   display: flex;
   justify-content: center;
   margin-top: 20px;
-
 }
 
 .cancelBtn {
@@ -159,7 +164,7 @@ const confirmDelete = () => {
 .saveBtn {
   width: 100px;
   padding: 8px 15px;
-  background: #194D1D;
+  background: #194d1d;
   color: white;
   border: none;
   border-radius: 5px;
@@ -179,7 +184,7 @@ const confirmDelete = () => {
   justify-content: center;
 }
 
-.modal-delete{
+.modal-delete {
   background: white;
   padding: 20px;
   border-radius: 10px;
@@ -203,5 +208,4 @@ const confirmDelete = () => {
   cursor: pointer;
   margin-left: 10px;
 }
-
 </style>

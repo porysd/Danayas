@@ -1,24 +1,23 @@
 <script setup>
-import { ref, defineProps, defineEmits } from 'vue';
+import { ref, defineProps, defineEmits } from "vue";
+import Button from "primevue/button";
+import Dialog from "primevue/dialog";
+import Toast from "primevue/toast";
+import { useToast } from "primevue/usetoast";
+
+const toast = useToast();
 
 const showMenu = ref(false);
 const showEditModal = ref(false);
-const showDeleteModal = ref(false);
 const showStatusModal = ref(false);
 const formData = ref({});
 
-const props = defineProps(['booking', 'packageName']);
-const emit = defineEmits(['updateBooking', 'deleteBooking', 'updateStatus']);
+const props = defineProps(["booking", "packageName"]);
+const emit = defineEmits(["updateBooking", "deleteBooking", "updateStatus"]);
 
 const openEditModal = () => {
-  formData.value = { ...props.booking, packageName: props.packageName }; 
+  formData.value = { ...props.booking, packageName: props.packageName };
   showEditModal.value = true;
-  showMenu.value = false; 
-};
-
-const openDeleteModal = () => {
-  formData.value = { ...props.booking };
-  showDeleteModal.value = true;
   showMenu.value = false;
 };
 
@@ -30,141 +29,205 @@ const openStatusModal = () => {
 
 const closeModals = () => {
   showEditModal.value = false;
-  showDeleteModal.value = false;
   showStatusModal.value = false;
 };
 
 const confirmStatusUpdate = () => {
-  emit('updateStatus', formData.value);
-  console.log(formData.value);
+  emit("updateStatus", formData.value);
+  toast.add({
+    severity: "success",
+    summary: "Updated Status",
+    detail: "Successfully Updated Status",
+    life: 3000,
+  });
   closeModals();
 };
 
 const saveChanges = () => {
-  emit('updateBooking', formData.value);
-  closeModals();
-};
-
-const confirmDelete = () => {
-  emit('deleteBooking', formData.value);
+  emit("updateBooking", formData.value);
+  toast.add({
+    severity: "success",
+    summary: "Updated Booking",
+    detail: "Successfully Updated Booking",
+    life: 3000,
+  });
   closeModals();
 };
 </script>
 
 <template>
   <div class="relative menu-container inline-block">
-
-    <button @click.stop="showMenu = !showMenu" class="adminButton pi pi-ellipsis-v"></button>
+    <button
+      @click.stop="showMenu = !showMenu"
+      class="adminButton pi pi-ellipsis-v"
+    ></button>
 
     <div v-if="showMenu" class="dropdown-menu">
       <ul>
         <li @click="openStatusModal">Status</li>
         <li @click="openEditModal">Update</li>
-        <li>Cancel</li>
-        <li @click="openDeleteModal">Delete</li>
       </ul>
     </div>
   </div>
 
-  <div v-if="showStatusModal" class="modal-overlay">
-    <div class="modal">
-      <h2 class="font-black text-2xl mb-5">Update Booking Status</h2>
-
-      <div class="mb-4">
-        <label class="block text-lg font-semibold mb-2">Booking Status</label>
-        <select v-model="formData.bookStatus" class="border p-2 rounded w-full">
-          <option value="pending">Pending</option>
-          <option value="confirmed">Confirmed</option>
-          <option value="completed">Completed</option>
-          <option value="cancelled">Cancelled</option>
-        </select>
+  <Dialog v-model:visible="showStatusModal" modal :style="{ width: '30rem' }">
+    <template #header>
+      <div class="flex flex-col items-center justify-center w-full">
+        <h2 class="text-xl font-bold font-[Poppins]">Update Booking Status</h2>
       </div>
+    </template>
 
-      <div class="modal-actions">
-        <button class="cancelBtn font-bold" @click="closeModals">Cancel</button>
-        <button class="saveBtn font-bold" @click="confirmStatusUpdate">Update</button>
+    <div class="mb-4">
+      <label class="block text-lg font-semibold mb-2">Booking Status</label>
+      <select v-model="formData.bookStatus" class="border p-2 rounded w-full">
+        <option value="pending">Pending</option>
+        <option value="confirmed">Confirmed</option>
+        <option value="completed">Completed</option>
+        <option value="cancelled">Cancelled</option>
+      </select>
+    </div>
+
+    <div class="flex justify-center gap-2 font-[Poppins]">
+      <Button
+        type="button"
+        label="Cancel"
+        severity="secondary"
+        @click="closeModals"
+        class="font-bold w-full"
+      />
+      <Button
+        type="button"
+        label="Save"
+        severity="primary"
+        @click="confirmStatusUpdate"
+        class="font-bold w-full"
+      />
+    </div>
+  </Dialog>
+
+  <Dialog
+    v-model:visible="showEditModal"
+    modal
+    :style="{ width: '60rem', minHeight: '30rem' }"
+  >
+    <template #header>
+      <div class="flex flex-col items-center justify-center w-full">
+        <h2 class="text-xl font-bold font-[Poppins]">
+          UPDATE BOOKING NO. {{ booking.bookingId }} by {{ booking.firstName }}
+          {{ booking.lastName }}
+        </h2>
+      </div>
+    </template>
+
+    <div class="packEvent">
+      <div>
+        <label>Package Name:</label>
+        <input
+          class="packEvents"
+          v-model="formData.packageName"
+          placeholder="Package Name"
+        />
+      </div>
+      <div>
+        <label>Event Type:</label>
+        <input
+          class="packEvents"
+          v-model="formData.eventType"
+          placeholder="Event Type"
+        />
       </div>
     </div>
-  </div>
 
-  <div v-if="showEditModal" class="modal-overlay">
-    <div class="modal">
-      <h2 class="font-black text-2xl mb-10">UPDATE BOOKING NO. {{ booking.bookingId }} by {{ booking.firstName }} {{ booking.lastName }}</h2>
-
-      <div class="packEvent">
-        <div>
-          <label>Package Name:</label>
-          <input class="packEvents" v-model="formData.packageName" placeholder="Package Name" />
-        </div>
-        <div>
-          <label>Event Type:</label>
-          <input class="packEvents" v-model="formData.eventType" placeholder="Event Type" />
-        </div>
+    <div class="cDate">
+      <div>
+        <label>Check-In Date:</label>
+        <input
+          class="cDates"
+          v-model="formData.checkInDate"
+          placeholder="Check-In"
+        />
       </div>
-
-      <div class="cDate">
-        <div>
-          <label>Check-In Date:</label>
-          <input class="cDates" v-model="formData.checkInDate" placeholder="Check-In" />
-        </div>
-        <div>
+      <div>
         <label>Check-Out Date:</label>
-        <input class="cDates" v-model="formData.checkOutDate" placeholder="Check-Out" />
-        </div>
-        <div>        
-          <label>Mode:</label>
-          <input class="cDates" v-model="formData.mode" placeholder="Mode" />
-        </div>
+        <input
+          class="cDates"
+          v-model="formData.checkOutDate"
+          placeholder="Check-Out"
+        />
       </div>
-
-      <div class="atcng">
-        <div>
-          <label>Arrival Time:</label>
-          <input class="atcngs"v-model="formData.arrivalTime" placeholder="Arival Time" />
-        </div>
-        <div>
-          <label>Catering:</label>
-          <input class="atcngs"v-model="formData.catering" placeholder="Catering" />
-        </div>
-        <div>        
-          <label>Number of Guest:</label>
-          <input class="atcngs"v-model="formData.numberOfGuest" placeholder="Number of Guest" />
-        </div>
-      </div>
-
-      <div class="dAdd">
-        <div>
-          <label>Discount:</label>
-          <input class="dAdds" v-model="formData.discountPromoId" placeholder="Discount" />
-        </div>
-        <div>
-          <label>Add Ons:</label>
-          <input class="dAdds" v-model="formData.bookingAddOn" placeholder="Add Ons" />
-        </div>
-      </div>
-
-      <div class="modal-actions">
-        <button class="cancelBtn font-bold" @click="closeModals">Cancel</button>
-        <button class="saveBtn font-bold" @click="saveChanges">Save</button>
+      <div>
+        <label>Mode:</label>
+        <input class="cDates" v-model="formData.mode" placeholder="Mode" />
       </div>
     </div>
-  </div>
 
-
-  <div v-if="showDeleteModal" class="modal-overlay-delete">
-    <div class="modal-delete">
-      <h2 class="font-black text-2xl mb-10">Are you sure you want to DELETE this booking no. {{ booking.bookingId }} by {{ booking.firstName }} {{ booking.lastName }}?</h2>
-
-      <div class="modal-actions-delete">
-        <button class="cancelBtn font-bold" @click="closeModals">Cancel</button>
-        <button class="deleteBtn font-bold" @click="confirmDelete">Delete</button>
+    <div class="atcng">
+      <div>
+        <label>Arrival Time:</label>
+        <input
+          class="atcngs"
+          v-model="formData.arrivalTime"
+          placeholder="Arival Time"
+        />
+      </div>
+      <div>
+        <label>Catering:</label>
+        <input
+          class="atcngs"
+          v-model="formData.catering"
+          placeholder="Catering"
+        />
+      </div>
+      <div>
+        <label>Number of Guest:</label>
+        <input
+          class="atcngs"
+          v-model="formData.numberOfGuest"
+          placeholder="Number of Guest"
+        />
       </div>
     </div>
-  </div>
+
+    <div class="dAdd">
+      <div>
+        <label>Discount:</label>
+        <input
+          class="dAdds"
+          v-model="formData.discountPromoId"
+          placeholder="Discount"
+        />
+      </div>
+      <div>
+        <label>Add Ons:</label>
+        <input
+          class="dAdds"
+          v-model="formData.bookingAddOn"
+          placeholder="Add Ons"
+        />
+      </div>
+    </div>
+
+    <div class="flex justify-center gap-2 font-[Poppins] mt-10">
+      <Button
+        type="button"
+        label="Cancel"
+        severity="secondary"
+        @click="closeModals"
+        class="font-bold w-full"
+      />
+      <Button
+        type="button"
+        label="Save"
+        severity="primary"
+        @click="saveChanges"
+        class="font-bold w-full"
+      />
+    </div>
+  </Dialog>
+  <Toast />
 </template>
 
 <style scoped>
-
 .adminButton {
   border: none;
   border-radius: 5px;
@@ -177,7 +240,7 @@ const confirmDelete = () => {
   position: absolute;
   right: 0;
   top: 100%;
-  background: #FCF5F5;
+  background: #fcf5f5;
   color: #333;
   border-radius: 5px;
   padding: 5px;
@@ -202,129 +265,46 @@ const confirmDelete = () => {
 
 .dropdown-menu li:hover {
   background: #555;
-  color:#FCF5F5
+  color: #fcf5f5;
 }
 
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.modal {
-  background: white;
-  padding: 20px;
-  border-radius: 10px;
-  width: 70%;
-  height: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  border: 1px solid #333;
-}
-
-.packEvent, .cDate, .atcng, .dAdd {
+.packEvent,
+.cDate,
+.atcng,
+.dAdd {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px; 
+  gap: 10px;
   justify-content: center;
 }
 
-.packEvent div, .cDate div, .atcng div, .dAdd div {
+.packEvent div,
+.cDate div,
+.atcng div,
+.dAdd div {
   display: flex;
-  flex-direction: column; 
+  flex-direction: column;
   width: 40%;
 }
 
-.cDate div, .atcng div {
-  width: 26.3%; 
+.cDate div,
+.atcng div {
+  width: 26.3%;
 }
 
 label {
-  display: block; 
-  text-align: left; 
+  display: block;
+  text-align: left;
   font-size: 16px;
   font-weight: 400;
-  margin-bottom: 2px; 
+  margin-bottom: 2px;
 }
 
 input {
   padding: 8px;
   border: 1px solid #ccc;
-  background-color: #FCF5F5;
+  background-color: #fcfcfc;
   border-radius: 10px;
   margin-top: 10px;
 }
-
-.modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 30px;
-  margin-right: 100px;
-  margin-bottom: 20px;
-}
-
-.cancelBtn {
-  width: 100px;
-  padding: 8px 15px;
-  background: #ccc;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-}
-
-.saveBtn {
-  width: 100px;
-  padding: 8px 15px;
-  background: #194D1D;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  margin-left: 10px;
-}
-
-.modal-overlay-delete {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.modal-delete{
-  background: white;
-  padding: 20px;
-  border-radius: 10px;
-  width: 400px;
-  text-align: center;
-}
-
-.modal-actions-delete {
-  display: flex;
-  justify-content: center;
-  margin-top: 20px;
-}
-
-.deleteBtn {
-  width: 100px;
-  padding: 8px 15px;
-  background: #d9534f;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  margin-left: 10px;
-}
-
 </style>
