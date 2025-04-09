@@ -32,7 +32,7 @@ const toggleContentMenu = () => {
       class="flex flex-col space-y-2 w-full px-3 text-[#FCFCFC] dark:text-[#FCFCFC]"
     >
       <router-link
-        to="/AdminDashboard"
+        to="/admin/admin-dashboard"
         class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
         active-class="active-route"
       >
@@ -40,7 +40,7 @@ const toggleContentMenu = () => {
         Dashboard</router-link
       >
       <router-link
-        to="/EmployeeManagement"
+        to="/admin/employee-management"
         class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
         active-class="active-route"
       >
@@ -48,7 +48,7 @@ const toggleContentMenu = () => {
         Employee Management</router-link
       >
       <router-link
-        to="/Booking"
+        to="/admin/booking"
         class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
         active-class="active-route"
       >
@@ -56,7 +56,7 @@ const toggleContentMenu = () => {
         Booking</router-link
       >
       <router-link
-        to="/Transaction"
+        to="/admin/transaction"
         class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
         active-class="active-route"
       >
@@ -64,7 +64,7 @@ const toggleContentMenu = () => {
         Transaction</router-link
       >
       <router-link
-        to="/Reports"
+        to="/admin/reports"
         class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
         active-class="active-route"
       >
@@ -72,7 +72,7 @@ const toggleContentMenu = () => {
         Reports</router-link
       >
       <router-link
-        to="/PackagesAndPromos"
+        to="/admin/packages-amd-promos"
         class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
         active-class="active-route"
       >
@@ -80,7 +80,7 @@ const toggleContentMenu = () => {
         Packages and Promos</router-link
       >
       <router-link
-        to="/DiscountAndAddOns"
+        to="/admin/discount-and-add-ons"
         class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
         active-class="active-route"
       >
@@ -88,7 +88,7 @@ const toggleContentMenu = () => {
         Discount and Add Ons</router-link
       >
       <router-link
-        to="/CustomerManagement"
+        to="/admin/customer-management"
         class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
         active-class="active-route"
       >
@@ -111,7 +111,7 @@ const toggleContentMenu = () => {
 
       <div v-show="isContentOpen" class="flex flex-col space-y-2 w-full pl-6">
         <router-link
-          to="/Homepage"
+          to="/admin/homepage"
           class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
           active-class="active-route"
         >
@@ -119,7 +119,7 @@ const toggleContentMenu = () => {
           Homepage</router-link
         >
         <router-link
-          to="/Reviews"
+          to="/admin/reviews"
           class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
           active-class="active-route"
         >
@@ -127,7 +127,7 @@ const toggleContentMenu = () => {
           Reviews</router-link
         >
         <router-link
-          to="/Gallery"
+          to="/admin/gallery"
           class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
           active-class="active-route"
         >
@@ -135,7 +135,7 @@ const toggleContentMenu = () => {
           Gallery</router-link
         >
         <router-link
-          to="/FAQs"
+          to="/admin/faqs"
           class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
           active-class="active-route"
         >
@@ -143,7 +143,7 @@ const toggleContentMenu = () => {
           FAQs</router-link
         >
         <router-link
-          to="/AboutUs"
+          to="/admin/about-us"
           class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
           active-class="active-route"
         >
@@ -151,7 +151,7 @@ const toggleContentMenu = () => {
           About Us</router-link
         >
         <router-link
-          to="/Footer"
+          to="/admin/footer"
           class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
           active-class="active-route"
         >
@@ -159,7 +159,7 @@ const toggleContentMenu = () => {
           Footer</router-link
         >
         <router-link
-          to="/TermsAndCondition"
+          to="/admin/terms-and-condition"
           class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
           active-class="active-route"
         >
@@ -169,7 +169,7 @@ const toggleContentMenu = () => {
       </div>
 
       <router-link
-        to="/Archived"
+        to="/admin/archived"
         class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
         active-class="active-route"
       >

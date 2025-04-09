@@ -1,8 +1,14 @@
 import { createRouter, createWebHistory } from 'vue-router';
-import Home from '../pages/Home.vue';
-import About from '../pages/About.vue';
+//Public Pages
+// import Home from "../pages/Home.vue";
+// import AboutUs from "../pages/aboutUs.vue";
+// import PackageSection from "../pages/PackageSection.vue";
+// import booking from "../pages/booking.vue";
+// import gallery from "../pages/gallery.vue";
+// import faqs from "../pages/faqs.vue";
+// import ContactUs from "../pages/contactUs.vue";
 
-//Admin
+//Admin Pages
 import AdminDashboard from '../Admin/pages/AdminDashboard.vue';
 import AdminLogin from '../Admin/pages/AdminLogin.vue'
 import EmployeeManagement from '../Admin/pages/EmployeeManagement.vue';
@@ -20,32 +26,43 @@ import AboutUs from '../Admin/pages/AboutUs.vue';
 import Footer from '../Admin/pages/Footer.vue';
 import TermsAndCondition from '../Admin/pages/TermsAndCondition.vue';
 import Archived from '../Admin/pages/Archived.vue';
+import Profile from '../Admin/pages/Profile.vue';
 
 const routes = [
-  { path: '/', component: AdminLogin},
-  { path : '/AdminDashboard', component: AdminDashboard },
-  { path : '/EmployeeManagement', component: EmployeeManagement },
-  { path : '/Booking', component: Booking },
-  { path : '/Transaction', component: Transaction },
-  { path : '/Reports', component: Reports },
-  { path : '/PackagesAndPromos', component: PackagesAndPromos },
-  { path : '/DiscountAndAddOns', component: DiscountAndAddOns },
-  { path : '/CustomerManagement', component: CustomerManagement },
-  { path : '/Homepage', component: Homepage },
-  { path : '/Reviews', component: Reviews },
-  { path : '/Gallery', component: Gallery },
-  { path : '/FAQs', component: FAQs },
-  { path : '/AboutUs', component: AboutUs },
-  { path : '/Footer', component: Footer },
-  { path : '/TermsAndCondition', component: TermsAndCondition },
-  { path : '/Archived', component: Archived },
+
+  //Public Pages
+  // { path: "/", component: Home },
+  // { path: "/packages", component: PackageSection },
+  // { path: "/booking", component: booking },
+  // { path: "/faqs", component: faqs },
+  // { path: "/gallery", component: gallery },
+  // { path: "/about-us", component: AboutUs },
+  // { path: "/contact-us", component: ContactUs },
+
+  //Admin Pages
+  { path: '/admin/admin-login', component: AdminLogin},
+  { path : '/admin/admin-dashboard', component: AdminDashboard },
+  { path : '/admin/employee-management', component: EmployeeManagement },
+  { path : '/admin/booking', component: Booking },
+  { path : '/admin/transaction', component: Transaction },
+  { path : '/admin/reports', component: Reports },
+  { path : '/admin/packages-amd-promos', component: PackagesAndPromos },
+  { path : '/admin/discount-and-add-ons', component: DiscountAndAddOns },
+  { path : '/admin/customer-management', component: CustomerManagement },
+  { path : '/admin/homepage', component: Homepage },
+  { path : '/admin/reviews', component: Reviews },
+  { path : '/admin/gallery', component: Gallery },
+  { path : '/admin/faqs', component: FAQs },
+  { path : '/admin/about-us', component: AboutUs },
+  { path : '/admin/footer', component: Footer },
+  { path : '/admin/terms-and-condition', component: TermsAndCondition },
+  { path : '/admin/archived', component: Archived },
+  { path: '/admin/profile', component: Profile },
 ];
 
 const router = createRouter({
   history: createWebHistory(),
   routes,
 });
-
-console.log('Registered Routes:', router.getRoutes());
 
 export default router;

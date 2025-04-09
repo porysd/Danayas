@@ -185,13 +185,73 @@ const onPageChange = (event) => {
 };
 
 // Search Bar logic
+const showMenu = ref(false);
 const searchQuery = ref("");
+
+const filterStatuses = ref({
+  pending: false,
+  confirmed: false,
+  completed: false,
+  cancelled: false,
+});
+const filterPaymentTerms = ref({
+  installment: false,
+  "full-payment": false,
+});
+const filterMode = ref({
+  "day-time": false,
+  "night-time": false,
+  "whole-day": false,
+});
+const filterReservationType = ref({
+  online: false,
+  "walk-in": false,
+});
 const filteredBooking = computed(() => {
-  return bookings.value.filter((booking) =>
-    Object.values(booking).some((val) =>
-      String(val).toLowerCase().includes(searchQuery.value.toLowerCase())
-    )
+  let result = bookings.value;
+
+  if (searchQuery.value !== "") {
+    result = result.filter((booking) =>
+      Object.values(booking).some((val) =>
+        String(val).toLowerCase().includes(searchQuery.value.toLowerCase())
+      )
+    );
+  }
+  const selectedStatuses = Object.keys(filterStatuses.value).filter(
+    (status) => filterStatuses.value[status]
   );
+  if (selectedStatuses.length > 0) {
+    result = result.filter((booking) =>
+      selectedStatuses.includes(booking.bookStatus)
+    );
+  }
+
+  const selectedPaymentTerms = Object.keys(filterPaymentTerms.value).filter(
+    (terms) => filterPaymentTerms.value[terms]
+  );
+  if (selectedPaymentTerms.length > 0) {
+    result = result.filter((booking) =>
+      selectedPaymentTerms.includes(booking.paymentTerms)
+    );
+  }
+
+  const selectedMode = Object.keys(filterMode.value).filter(
+    (mode) => filterMode.value[mode]
+  );
+  if (selectedMode.length > 0) {
+    result = result.filter((booking) => selectedMode.includes(booking.mode));
+  }
+
+  const selectedReservationType = Object.keys(
+    filterReservationType.value
+  ).filter((type) => filterReservationType.value[type]);
+  if (selectedReservationType.length > 0) {
+    result = result.filter((booking) =>
+      selectedReservationType.includes(booking.reservationType)
+    );
+  }
+
+  return result;
 });
 
 //             <h2 class="text-xl font-medium">Total bookings: {{ totalBookings }}</h2>
@@ -212,7 +272,124 @@ const filteredBooking = computed(() => {
       <div class="searchB">
         <SearchBar class="sBar" v-model="searchQuery" />
         <div class="bkBtns">
-          <FilterButton />
+          <div class="relative inline-block">
+            <FilterButton @click.stop="showMenu = !showMenu" />
+
+            <div
+              v-if="showMenu"
+              class="absolute -left-30 mt-2 w-[21rem] shadow-md z-50 bg-[#fcf5f5] p-4 rounded"
+            >
+              <div class="flex flex-row">
+                <div class="flex-1">
+                  <h2 class="font-bold mb-1">Status</h2>
+                  <ul>
+                    <li class="hover:bg-gray-100 flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="pending"
+                        v-model="filterStatuses.pending"
+                      />
+                      <label class="" for="pending">Pending</label>
+                    </li>
+                    <li class="hover:bg-gray-100 flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="confirmed"
+                        v-model="filterStatuses.confirmed"
+                      />
+                      <label for="confirmed">Confirmed</label>
+                    </li>
+                    <li class="hover:bg-gray-100 flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="completed"
+                        v-model="filterStatuses.completed"
+                      />
+                      <label for="completed">Completed</label>
+                    </li>
+                    <li class="hover:bg-gray-100 flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="cancelled"
+                        v-model="filterStatuses.cancelled"
+                      />
+                      <label for="cancelled">Cancelled</label>
+                    </li>
+                  </ul>
+                  <Divider />
+                  <h2 class="font-bold mb-1">Payment Terms</h2>
+                  <ul>
+                    <li class="hover:bg-gray-100 flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="installment"
+                        v-model="filterPaymentTerms.installment"
+                      />
+                      <label for="installment">Installment</label>
+                    </li>
+                    <li class="hover:bg-gray-100 flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="fullpayment"
+                        v-model="filterPaymentTerms['full-payment']"
+                      />
+                      <label for="fullpayment">Full Payment</label>
+                    </li>
+                  </ul>
+                </div>
+                <Divider layout="vertical" />
+                <div class="flex-1">
+                  <h2 class="font-bold mb-1">Mode</h2>
+                  <ul>
+                    <li class="hover:bg-gray-100 flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="night"
+                        v-model="filterMode['day-time']"
+                      />
+                      <label for="night">Day</label>
+                    </li>
+                    <li class="hover:bg-gray-100 flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="night"
+                        v-model="filterMode['night-time']"
+                      />
+                      <label for="night">Night</label>
+                    </li>
+                    <li class="hover:bg-gray-100 flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="whole-day"
+                        v-model="filterMode['whole-day']"
+                      />
+                      <label for="whole-day">Whole Day</label>
+                    </li>
+                  </ul>
+                  <Divider />
+                  <h2 class="font-bold mb-1">Reservation Type</h2>
+                  <ul>
+                    <li class="hover:bg-gray-100 flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="online"
+                        v-model="filterReservationType.online"
+                      />
+                      <label for="online">Online</label>
+                    </li>
+                    <li class="hover:bg-gray-100 flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="walk-in"
+                        v-model="filterReservationType['walk-in']"
+                      />
+                      <label for="walk-in">Walk In</label>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
           <AddButtonBooking
             class="addBtn"
             data="Booking"

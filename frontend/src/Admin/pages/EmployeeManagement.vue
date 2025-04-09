@@ -106,6 +106,7 @@ const openEmployeeDetails = (employee) => {
 
 const closeModal = () => {
   employeeDetails.value = false;
+  showFilterModal.value = false;
 };
 
 // Checks Severity of Status of each Users
@@ -126,14 +127,63 @@ const onPageChange = (event) => {
   rows.value = event.rows;
 };
 
-// Search Bar logic
+// Search and Filter Button Logic
+const showMenu = ref(false);
 const searchQuery = ref("");
+
+const filterRoles = ref({
+  admin: false,
+  staff: false,
+});
+const filterStatuses = ref({
+  active: false,
+  inactive: false,
+});
+const filterState = ref({
+  enable: false,
+  disable: false,
+});
+
 const filteredEmployee = computed(() => {
-  return employees.value.filter((employee) =>
-    Object.values(employee).some((val) =>
-      String(val).toLowerCase().includes(searchQuery.value.toLowerCase())
-    )
+  let result = employees.value;
+
+  if (searchQuery.value !== "") {
+    result = result.filter((employee) =>
+      Object.values(employee).some((val) =>
+        String(val).toLowerCase().includes(searchQuery.value.toLowerCase())
+      )
+    );
+  }
+
+  // Filter Btn for Roles
+  const selectedRoles = Object.keys(filterRoles.value).filter(
+    (role) => filterRoles.value[role]
   );
+  if (selectedRoles.length > 0) {
+    result = result.filter((emp) => selectedRoles.includes(emp.role));
+  }
+
+  // Filter Btn for Status
+  const selectedStatuses = Object.keys(filterStatuses.value).filter(
+    (status) => filterStatuses.value[status]
+  );
+  if (selectedStatuses.length > 0) {
+    result = result.filter((emp) =>
+      selectedStatuses.includes(emp.status.toLowerCase())
+    );
+  }
+
+  // Filter Btn for State
+  // const state = Object.keys(filterStatuses.value).filter(
+  //   (status) => filterStatuses.value[status]
+  // );
+  // if (state.length > 0) {
+  //   result = result.filter((emp) =>
+  //     state.includes(emp.status.toLowerCase())
+  //   );
+  // }
+
+  return result;
 });
 </script>
 
@@ -152,7 +202,67 @@ const filteredEmployee = computed(() => {
       <div class="searchB">
         <SearchBar class="sBar" v-model="searchQuery" />
         <div class="empBtns">
-          <FilterButton />
+          <div class="relative inline-block">
+            <FilterButton @click.stop="showMenu = !showMenu" />
+
+            <div
+              v-if="showMenu"
+              class="absolute -left-20 mt-2 w-35 shadow-md z-50 bg-[#fcf5f5] p-4 rounded"
+            >
+              <h2 class="font-bold mb-1">Roles</h2>
+              <ul>
+                <li class="hover:bg-gray-100 flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="admin"
+                    v-model="filterRoles.admin"
+                  />
+                  <label for="admin">Admin</label>
+                </li>
+                <li class="hover:bg-gray-100 flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="staff"
+                    v-model="filterRoles.staff"
+                  />
+                  <label for="staff">Staff</label>
+                </li>
+              </ul>
+              <Divider />
+              <h2 class="font-bold mb-1">Status</h2>
+              <ul>
+                <li class="hover:bg-gray-100 flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="active"
+                    v-model="filterStatuses.active"
+                  />
+                  <label class="" for="active">Active</label>
+                </li>
+                <li class="hover:bg-gray-100 flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="inactive"
+                    v-model="filterStatuses.inactive"
+                  />
+                  <label for="inactive">Inactive</label>
+                </li>
+              </ul>
+              <Divider />
+              <h2 class="font-bold mb-1">State</h2>
+              <ul>
+                <li class="hover:bg-gray-100 flex items-center gap-2">
+                  <input type="checkbox" id="enable" />
+                  <label for="enable">Enable</label>
+                </li>
+                <li class="hover:bg-gray-100 flex items-center gap-2">
+                  <input type="checkbox" id="disable" />
+                  <label for="disable">Disable</label>
+                </li>
+              </ul>
+            </div>
+          </div>
+
           <AddButtonEmployee
             class="addBtn"
             data="Staff"

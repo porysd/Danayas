@@ -120,14 +120,48 @@ const onPageChange = (event) => {
   rows.value = event.rows;
 };
 
-// Search Bar logic
+// Search and Filter Button Logic
+const showMenu = ref(false);
 const searchQuery = ref("");
+
+const filterStatuses = ref({
+  active: false,
+  inactive: false,
+});
+const filterState = ref({
+  enable: false,
+  disable: false,
+});
+
 const filteredCustomer = computed(() => {
-  return customers.value.filter((customer) =>
-    Object.values(customer).some((val) =>
-      String(val).toLowerCase().includes(searchQuery.value.toLowerCase())
-    )
+  let result = customers.value;
+
+  if (searchQuery.value !== "") {
+    result = result.filter((customer) =>
+      Object.values(customer).some((val) =>
+        String(val).toLowerCase().includes(searchQuery.value.toLowerCase())
+      )
+    );
+  }
+
+  const selectedStatuses = Object.keys(filterStatuses.value).filter(
+    (status) => filterStatuses.value[status]
   );
+  if (selectedStatuses.length > 0) {
+    result = result.filter((customer) =>
+      selectedStatuses.includes(customer.status.toLowerCase())
+    );
+  }
+
+  // const selectedStates = Object.keys(filterState.value).filter(
+  //   (status) => filterState.value[state]
+  // );
+  // if (selectedStates.length > 0) {
+  //   result = result.filter((customer) =>
+  //     selectedStates.inclues(customer.state.toLowerCase())
+  //   );
+  // }
+  return result;
 });
 </script>
 
@@ -146,7 +180,46 @@ const filteredCustomer = computed(() => {
       <div class="searchB">
         <SearchBar class="sBar" v-model="searchQuery" />
         <div class="cusBtns">
-          <FilterButton />
+          <div class="relative inline-block">
+            <FilterButton @click.stop="showMenu = !showMenu" />
+
+            <div
+              v-if="showMenu"
+              class="absolute -left-20 mt-2 w-35 shadow-md z-50 bg-[#fcf5f5] p-4 rounded"
+            >
+              <h2 class="font-bold mb-1">Status</h2>
+              <ul>
+                <li class="hover:bg-gray-100 flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="active"
+                    v-model="filterStatuses.active"
+                  />
+                  <label class="" for="active">Active</label>
+                </li>
+                <li class="hover:bg-gray-100 flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="inactive"
+                    v-model="filterStatuses.inactive"
+                  />
+                  <label for="inactive">Inactive</label>
+                </li>
+              </ul>
+              <Divider />
+              <h2 class="font-bold mb-1">State</h2>
+              <ul>
+                <li class="hover:bg-gray-100 flex items-center gap-2">
+                  <input type="checkbox" id="enable" />
+                  <label for="enable">Enable</label>
+                </li>
+                <li class="hover:bg-gray-100 flex items-center gap-2">
+                  <input type="checkbox" id="disable" />
+                  <label for="disable">Disable</label>
+                </li>
+              </ul>
+            </div>
+          </div>
           <AddButtonCustomer
             class="addBtn"
             data="Customer"

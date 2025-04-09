@@ -32,7 +32,7 @@ const login = () => {
       loginStatus.value = "success";
       setTimeout(() => {
         showModal.value = false;
-        router.replace("/AdminDashboard");
+        router.replace("/admin/admin-dashboard");
       }, 1500);
     } else {
       loginStatus.value = "error";

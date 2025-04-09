@@ -133,13 +133,49 @@ const onPageChange = (event) => {
 };
 
 //Search logic
+const showMenu = ref(false);
 const searchQuery = ref("");
+
+const filterStatuses = ref({
+  "partially-paid": false,
+  paid: false,
+  failed: false,
+  // refund: false,
+});
+const filterMode = ref({
+  cash: false,
+  gcash: false,
+});
 const filteredPayment = computed(() => {
-  return payments.value.filter((payment) =>
-    Object.values(payment).some((val) =>
-      String(val).toLowerCase().includes(searchQuery.value.toLowerCase())
-    )
+  let result = payments.value;
+
+  if (searchQuery.value !== "") {
+    result = result.filter((payment) =>
+      Object.values(payment).some((val) =>
+        String(val).toLowerCase().includes(searchQuery.value.toLowerCase())
+      )
+    );
+  }
+
+  const selectedStatuses = Object.keys(filterStatuses.value).filter(
+    (status) => filterStatuses.value[status]
   );
+  if (selectedStatuses.length > 0) {
+    result = result.filter((payment) =>
+      selectedStatuses.includes(payment.paymentStatus.toLowerCase())
+    );
+  }
+
+  const selectedMode = Object.keys(filterMode.value).filter(
+    (mode) => filterMode.value[mode]
+  );
+  if (selectedMode.length > 0) {
+    result = result.filter((mode) =>
+      selectedMode.includes(mode.mode.toLowerCase())
+    );
+  }
+
+  return result;
 });
 </script>
 
@@ -158,7 +194,62 @@ const filteredPayment = computed(() => {
       <div class="searchB">
         <SearchBar class="sBar" v-model="searchQuery" />
         <div class="cusBtns">
-          <FilterButton />
+          <div class="relative inline-block">
+            <FilterButton @click.stop="showMenu = !showMenu" />
+
+            <div
+              v-if="showMenu"
+              class="absolute -left-20 mt-2 w-35 shadow-md z-50 bg-[#fcf5f5] p-4 rounded"
+            >
+              <h2 class="font-bold mb-1">Status</h2>
+              <ul>
+                <li class="hover:bg-gray-100 flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="partiallypaid"
+                    v-model="filterStatuses['partially-paid']"
+                  />
+                  <label class="" for="partiallypaid">Partially Paid</label>
+                </li>
+                <li class="hover:bg-gray-100 flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="paid"
+                    v-model="filterStatuses.paid"
+                  />
+                  <label for="paid">Paid</label>
+                </li>
+                <li class="hover:bg-gray-100 flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="failed"
+                    v-model="filterStatuses.failed"
+                  />
+                  <label for="failed">Failed</label>
+                </li>
+                <li class="hover:bg-gray-100 flex items-center gap-2">
+                  <input type="checkbox" id="refund" />
+                  <label for="refund">Refund</label>
+                </li>
+              </ul>
+              <Divider />
+              <h2 class="font-bold mb-1">Mode</h2>
+              <ul>
+                <li class="hover:bg-gray-100 flex items-center gap-2">
+                  <input type="checkbox" id="cash" v-model="filterMode.cash" />
+                  <label for="cash">Cash</label>
+                </li>
+                <li class="hover:bg-gray-100 flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="gcash"
+                    v-model="filterMode.gcash"
+                  />
+                  <label for="gcash">GCash</label>
+                </li>
+              </ul>
+            </div>
+          </div>
         </div>
       </div>
 

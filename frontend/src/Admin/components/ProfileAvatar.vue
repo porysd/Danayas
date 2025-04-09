@@ -6,7 +6,7 @@ const router = useRouter();
 
 const logout = () => {
   localStorage.removeItem("isLoggedIn");
-  router.replace("/");
+  router.replace("/admin/admin-login");
 };
 
 // Show menu in Avatar
@@ -38,7 +38,7 @@ onUnmounted(() => {
   />
   <div v-if="showMenu" ref="hideMenu" class="dropdown-menu">
     <ul>
-      <li>My Profile</li>
+      <li><router-link to="/admin/profile">My Profile</router-link></li>
       <li @click="logout">Log Out</li>
     </ul>
   </div>

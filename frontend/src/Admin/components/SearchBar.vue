@@ -1,9 +1,6 @@
 <script setup>
 import { ref, defineEmits, defineModel } from "vue";
 
-const searchQuery = ref("");
-const emit = defineEmits();
-
 const modelValue = defineModel();
 </script>
 
