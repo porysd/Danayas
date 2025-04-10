@@ -12,10 +12,10 @@ CREATE TABLE `BOOKING` (
 	`eventType` text NOT NULL,
 	`numberOfGuest` integer NOT NULL,
 	`catering` integer NOT NULL,
-	`contactNo` text NOT NULL,
-	`emailAddress` text NOT NULL,
-	`address` text NOT NULL,
-	`discountPromoId` integer NOT NULL,
+	`contactNo` text,
+	`emailAddress` text,
+	`address` text,
+	`discountId` integer,
 	`paymentTerms` text NOT NULL,
 	`totalAmountDue` real NOT NULL,
 	`bookStatus` text NOT NULL,
@@ -24,14 +24,15 @@ CREATE TABLE `BOOKING` (
 	FOREIGN KEY (`userId`) REFERENCES `USER`(`userId`) ON UPDATE no action ON DELETE no action,
 	FOREIGN KEY (`createdBy`) REFERENCES `USER`(`userId`) ON UPDATE no action ON DELETE no action,
 	FOREIGN KEY (`packageId`) REFERENCES `PACKAGES`(`packageId`) ON UPDATE no action ON DELETE no action,
-	FOREIGN KEY (`discountPromoId`) REFERENCES `DISCOUNT_PROMOS`(`discountPromoId`) ON UPDATE no action ON DELETE no action
+	FOREIGN KEY (`discountId`) REFERENCES `DISCOUNTS`(`discountId`) ON UPDATE no action ON DELETE no action
 );
 --> statement-breakpoint
-CREATE TABLE `DISCOUNT_PROMOS` (
-	`discountPromoId` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+CREATE TABLE `DISCOUNTS` (
+	`discountId` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`name` text NOT NULL,
 	`percentage` real NOT NULL,
-	`type` text NOT NULL
+	`type` text NOT NULL,
+	`status` text NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE `PACKAGES` (

@@ -10,7 +10,7 @@ export default new OpenAPIHono()
       tags: ["Packages"],
       summary: "Get all packages",
       method: "get",
-      path: "/packages",
+      path: "/",
       request: {
         query: z.object({
           limit: z.coerce.number().nonnegative().openapi({
@@ -196,7 +196,7 @@ export default new OpenAPIHono()
       tags: ["Packages"],
       summary: "Create Package",
       method: "post",
-      path: "/package",
+      path: "/",
       request: {
         body: {
           content: {
