@@ -5,10 +5,13 @@ import Home from "./pages/Home.vue";
 
 <template>
   <router-view />
+
 </template>
 
 <style>
 body {
+
   background-color: #eef9eb;
+
 }
 </style>

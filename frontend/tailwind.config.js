@@ -1,3 +1,4 @@
+
 import PrimeUI from 'tailwindcss-primeui';
 
 module.exports = {
@@ -15,3 +16,4 @@ module.exports = {
         // preflight: false,
     }
   }
+

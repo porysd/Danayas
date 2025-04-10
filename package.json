@@ -2,7 +2,10 @@
   "name": "drevs-system",
   "module": "index.ts",
   "type": "module",
-  "workspaces": ["Frontend", "Backend"],
+  "workspaces": [
+    "Frontend",
+    "Backend"
+  ],
   "devDependencies": {
     "@types/bun": "latest",
     "@types/node": "^22.13.1",
