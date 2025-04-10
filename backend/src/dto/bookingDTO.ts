@@ -96,6 +96,15 @@ export const UpdateBookingDTO = BookingDTO.omit({
     createdAt: true,
     userId: true,
     createdBy: true,
+    firstName: true,
+    lastName: true,
+    contactNo: true,
+    emailAddress: true,
+    address: true,
+    paymentTerms: true,
+    totalAmountDue: true,
+    bookStatus: true,
+    reservationType: true
 }).partial().extend({
     catering: z.union([z.boolean(), z.number().int().min(0).max(1)]).transform((val) => Number(val)),
 });

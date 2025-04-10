@@ -1,16 +1,17 @@
 <script setup lang="ts">
+import { RouterView } from "vue-router";
 import Home from "./pages/Home.vue";
-import NavBar from "./components/NavBar.vue";
-import Footer from "./components/Footer.vue";
 </script>
 
 <template>
-  <NavBar />
-  <Footer />
+  <router-view />
+
 </template>
 
 <style>
 body {
-  background-color: #fcfcfc;
+
+  background-color: #eef9eb;
+
 }
 </style>

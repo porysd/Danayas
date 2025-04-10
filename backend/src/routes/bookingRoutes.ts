@@ -42,29 +42,16 @@ export default new OpenAPIHono()
       },
     }),
     async (c) => {
-      try {
-        const { limit, page } = c.req.valid("query");
+      const { limit, page } = c.req.valid("query");
 
-        const bookings = await db.query.BookingsTable.findMany({
-          limit,
-          offset: (page - 1) * limit,
-        });
+      const bookings = await db.query.BookingsTable.findMany({
+        limit,
+        offset: (page - 1) * limit,
+      });
 
-        const allBookings = bookings.map((booking) => {
-          try {
-            return BookingDTO.parse(booking);
-          } catch (parseError) {
-            console.error("Error parsing booking data:", parseError, "Data:", booking);
-            throw new Error("Failed to process booking data.");
-          }
-        });
+      const allBookings = bookings.map((booking) => BookingDTO.parse(booking));
 
-        return c.json({ total: bookings.length, items: allBookings });
-      } catch (error) {
-        console.error("Error fetching bookings:", error);
-        const errorMessage = error instanceof Error ? error.message : "Internal server error";
-        return c.json({ error: errorMessage }, 500);
-      }
+      return c.json({ total: bookings.length, items: allBookings });
     }
   )
   .openapi(
@@ -188,6 +175,52 @@ export default new OpenAPIHono()
           .where(eq(BookingsTable.bookingId, bookingId))
           .execute();
         return c.text("Booking Updated");
+      }
+    )
+    .openapi(
+      createRoute({
+        tags: ["Bookings"],
+        method: "patch",
+        path: "/:id/status",
+        summary: "Update Booking Status by ID",
+        request: {
+          body: {
+            description: "Update Booking Status",
+            required: true,
+            content: {
+              "application/json": {
+                schema: z.object({
+                  bookStatus: z.enum(["pending", "confirmed", "cancelled", "completed"]),
+                }),
+              },
+            },
+          },
+        },
+        responses: {
+          200: {
+            content: {
+              "application/json": {
+                schema: BookingDTO.pick({ bookStatus: true }),
+              },
+            },
+            description: "Booking Status Updated",
+          },
+          400: {
+            description: "Invalid booking ID or status",
+          },
+        },
+      }),
+      async (c) => {
+        const bookingId = Number(c.req.param("id"));
+        const { bookStatus } = await c.req.json();
+        
+        await db
+          .update(BookingsTable)
+          .set({ bookStatus })
+          .where(eq(BookingsTable.bookingId, bookingId))
+          .execute();
+        
+        return c.json({ message: "Booking status updated", bookStatus });
       }
     )
     .openapi(
