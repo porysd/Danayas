@@ -3,10 +3,11 @@ import { CreateUserDTO, UpdateUserDTO, GetUserDTO } from "../dto/userDTO";
 import db from "../config/database";
 import { UsersTable } from "../schemas/User";
 import { eq, like, or } from "drizzle-orm";
+import { BadRequestError, NotFoundError, ConflictError } from "../utils/errors";
+import { errorHandler } from "../middlewares/errorHandler";
 
 export default new OpenAPIHono()
 
-  // TODO: Verify if user id exists
   .openapi(
     createRoute({
       tags: ["Users"],
@@ -20,7 +21,7 @@ export default new OpenAPIHono()
             description: "Limit that the server will give",
           }),
           query: z.string().openapi({
-            example: "Cruz Package",
+            example: "Cecile",
             description: "Search Users",
           }),
         }),
@@ -29,32 +30,53 @@ export default new OpenAPIHono()
         200: {
           description: "Successful search",
         },
+        400: {
+          description: "Invalid search",
+        },
+        404: {
+          description: "User not found",
+        },
+        500: {
+          description: "Internal server error",
+        },
       },
     }),
-    async (c) => {
-      const { limit, query } = c.req.valid("query");
+    async (c) => { 
+      try{
+        const { limit, query } = c.req.valid("query");
 
-      const users = await db.query.UsersTable.findMany({
-        limit,
-        where: or(
-          like(UsersTable.email, `%${query}%`),
-          like(UsersTable.firstName, `%${query}%`),
-          like(UsersTable.lastName, `%${query}%`)
-        ),
-      });
+        if(query.trim() === ""){
+          throw new BadRequestError("Query string cannot be empty");
+        }
 
-      return c.json({
-        total: users.length,
-        items: users,
-      });
+        const users = await db.query.UsersTable.findMany({
+          limit,
+          where: or(
+            like(UsersTable.email, `%${query}%`),
+            like(UsersTable.firstName, `%${query}%`),
+            like(UsersTable.lastName, `%${query}%`)
+          ),
+        });
+
+        if(users.length === 0){
+          throw new NotFoundError("User not found");
+        }
+
+        return c.json({
+          total: users.length,
+          items: users,
+        });
+      } catch(err){
+        return errorHandler(err, c);
+      }
     }
   )
   .openapi(
     createRoute({
       tags: ["Users"],
+      summary: "Retrieve User by ID",
       method: "get",
       path: "/:id",
-      summary: "Retrieve the user by ID",
       responses: {
         200: {
           content: {
@@ -64,24 +86,50 @@ export default new OpenAPIHono()
           },
           description: "Retrieve the user",
         },
+        400: {
+          description: "Invalid user ID",
+        },
+        404: {
+          description: "User not found",
+        },
+        500: {
+          description: "Internal server error",
+        },
       },
     }),
     async (c) => {
-      // TODO: Add error if user id don't exist
-      const user = GetUserDTO.parse(
-        await db.query.UsersTable.findFirst({
-          where: eq(UsersTable.userId, Number(c.req.param("id"))),
+      try{
+        const userId = Number(c.req.param("id"));
+
+        if(isNaN(userId)){
+          throw new BadRequestError("Invalid user ID");
+        }
+  
+        const user = await db.query.UsersTable.findFirst({
+          where: eq(UsersTable.userId, userId),
         })
-      );
-      return c.json(user);
+  
+        if(!user){
+          throw new NotFoundError("User not found");
+        }
+  
+        try {
+          const validatedUser = GetUserDTO.parse(user);
+          return c.json(validatedUser);
+        } catch(error){
+          throw new BadRequestError("Invalid user data structure");
+        }
+      } catch(err){
+        return errorHandler(err, c);
+      }
     }
   )
   .openapi(
     createRoute({
       tags: ["Users"],
+      summary: "Update User by ID",
       method: "patch",
       path: "/:id",
-      summary: "Update the user by ID",
       request: {
         body: {
           description: "Update User",
@@ -98,53 +146,101 @@ export default new OpenAPIHono()
               schema: GetUserDTO,
             },
           },
-          description: "User Updated",
+          description: "User Updated Successfully",
         },
         400: {
           description: "Invalid user ID",
         },
+        404: {
+          description: "User not found",
+        },
+        500: {
+          description: "Internal server error",
+        },
       },
     }),
     async (c) => {
-      const userId = Number(c.req.param("id"));
+      try{
+        const userId = Number(c.req.param("id"));
 
-      await db
-        .update(UsersTable)
-        .set(UpdateUserDTO.parse(await c.req.json()))
-        .where(eq(UsersTable.userId, userId))
-        .execute();
-      return c.text("User Updated");
+        if(isNaN(userId)){
+          throw new BadRequestError("Invalid user ID");
+        }
+  
+        const user = await db.query.UsersTable.findFirst({
+          where: eq(UsersTable.userId, userId)
+        });
+  
+        if(!user){
+          throw new NotFoundError("User not found");
+        }
+  
+        const updatedUser = UpdateUserDTO.parse(await c.req.json());
+  
+        await db
+          .update(UsersTable)
+          .set(updatedUser)
+          .where(eq(UsersTable.userId, userId))
+          .execute();
+        
+        return c.json(updatedUser);
+      } catch(err){
+        return errorHandler(err, c);
+      }
     }
   )
   .openapi(
     createRoute({
       tags: ["Users"],
+      summary: "Delete User by ID",
       method: "delete",
       path: "/:id",
-      summary: "Delete the user by ID",
       responses: {
         200: {
-          description: "User Deleted",
+          description: "User Deleted Successfully",
         },
         400: {
           description: "Invalid user ID",
         },
+        404: {
+          description: "User not found",
+        }
       },
     }),
     async (c) => {
-      const userId = Number(c.req.param("id"));
+      try{
+        const userId = Number(c.req.param("id"));
 
-      await db
-        .delete(UsersTable)
-        .where(eq(UsersTable.userId, userId))
-        .execute();
-      return c.text("User Deleted!");
+        if(isNaN(userId)){
+          throw new BadRequestError("Invalid user ID");
+        }
+
+        const deletedUser = await db.query.UsersTable.findFirst({
+          where: eq(UsersTable.userId, userId),
+        });
+
+        if(!deletedUser){
+          throw new NotFoundError("User not found");
+        }
+
+        await db
+          .delete(UsersTable)
+          .where(eq(UsersTable.userId, userId))
+          .execute();
+      
+        return c.json({
+          message: "User deleted successfully",
+          user: deletedUser,
+      });
+      } catch(err){
+        return errorHandler(err, c);
+      }
     }
   )
-  //TODO: add page and limit
   .openapi(
     createRoute({
       tags: ["Users"],
+      summary: "Retrieve all the user",
       method: "get",
       path: "/",
       request: {
@@ -153,45 +249,61 @@ export default new OpenAPIHono()
             example: 50,
             description: "Limit that the server will give",
           }),
-          page: z.coerce
-            .number()
-            .nonnegative()
-            .openapi({ example: 0, description: "Page to get" }),
+          page: z.coerce.number().nonnegative().openapi({
+            example: 0, 
+            description: "Page to get" 
+          }),
         }),
       },
-      summary: "Retrieve all the user",
       responses: {
         200: {
-          // content: {
-          //   "application/json": {
-          //     schema: GetUserDTO.array(),
-          //   },
-          // },
           description: "Retrieve all the user",
+        },
+        400: {
+          description: "Invalid page or limit",
+        },
+        404: {
+          description: "User not found",
+        },
+        500: {
+          description: "Internal server error",
         },
       },
     }),
     async (c) => {
-      const { limit, page } = c.req.valid("query");
+      try{
+        const { limit, page } = c.req.valid("query");
 
-      const users = await db.query.UsersTable.findMany({
-        limit,
-        offset: (page - 1) * limit,
-      });
-      const safeUsers = users.map((user) => GetUserDTO.parse(user));
-      return c.json({
-        total: safeUsers.length,
-        items: safeUsers,
-      });
+        if (limit < 0 || page < 0) {
+          throw new BadRequestError("Invalid page or limit");
+        }
+
+        const users = await db.query.UsersTable.findMany({
+          limit,
+          offset: (page - 1) * limit,
+        });
+
+        if (users.length === 0) {
+          throw new NotFoundError("User not found");
+        }
+
+        const safeUsers = users.map((user) => GetUserDTO.parse(user));
+
+        return c.json({
+          total: safeUsers.length,
+          items: safeUsers,
+        });
+      } catch(err){
+        return errorHandler(err, c);
+      }
     }
   )
-
   .openapi(
     createRoute({
       tags: ["Users"],
+      summary: "Create a new user",
       method: "post",
       path: "/",
-      summary: "Create a new user",
       request: {
         body: {
           description: "User login credentials",
@@ -208,24 +320,46 @@ export default new OpenAPIHono()
               schema: GetUserDTO,
             },
           },
-          description: "User Created",
+          description: "User Created Sucessfully",
+        },
+        400: {
+          description: "Invalid user data",
+        },
+        409: {
+          description: "User already exists",
+        },
+        500: {
+          description: "Internal server error",
         },
       },
     }),
     async (c) => {
-      const body = c.req.valid("json");
-      const dbUser = (
-        await db
-          .insert(UsersTable)
-          .values({
-            ...body,
-            password: await Bun.password.hash(body.password),
-          }).returning()
-          .execute()
-      )[0];
+      try{
+        const body = c.req.valid("json");
 
-      const { password, ...userWithoutPassword } = dbUser;
+        const existingUser = await db.query.UsersTable.findFirst({
+          where: eq(UsersTable.email, body.email),
+        });
 
-      return c.json(userWithoutPassword);
+        if(existingUser){
+          throw new ConflictError("User already exists");
+        }
+
+        const dbUser = (
+          await db
+            .insert(UsersTable)
+            .values({
+              ...body,
+              password: await Bun.password.hash(body.password),
+            }).returning()
+            .execute()
+        )[0];
+
+        const { password, ...userWithoutPassword } = dbUser;
+
+        return c.json(userWithoutPassword);
+      } catch(err){
+        return errorHandler(err, c);
+      }
     }
   );

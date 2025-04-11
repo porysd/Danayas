@@ -5,6 +5,7 @@ import { OpenAPIHono } from '@hono/zod-openapi'
 import { apiReference } from '@scalar/hono-api-reference'
 import { authMiddleware } from './middlewares/authMiddleware';
 import { cors } from 'hono/cors';
+import { errorHandler } from './middlewares/errorHandler';
 
 const app = new OpenAPIHono()
   .doc('/openapi', {
@@ -30,6 +31,7 @@ const app = new OpenAPIHono()
       allowHeaders: ['Content-Type', 'Authorization'],
     })
   )
+  .onError(errorHandler)
   .get("/", (c) => {
     return c.json({ message: "Working!" });
   }
@@ -47,6 +49,6 @@ Bun.serve({
   fetch: app.fetch,
 });
 
-console.log("INFO", "listening to port: http://localhost:3000");
+console.log("INFO", "listening to port: http://localhost:3000/scalar");
 
 
