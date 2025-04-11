@@ -12,15 +12,26 @@ import image3 from "../assets/feedback3.jpg";
 import image4 from "../assets/danayas.jpg";
 import "cally";
 import HomePackage from "../components/HomePackage.vue";
+import NavBar from "../components/NavBar.vue";
+import Footer from "../components/Footer.vue";
 
 let images = [img, img1, img2, img3];
+const texts = [
+  "Danayas Resort",
+  "Danayas Resort",
+  "Events & Venues",
+  "Events & Venues",
+];
+
 const currentIndex = ref(0);
 const currentImage = ref(images[currentIndex.value]);
+const currentText = ref(texts[currentIndex.value]);
 let interval = null;
 
 const changeImage = () => {
   currentIndex.value = (currentIndex.value + 1) % images.length;
   currentImage.value = images[currentIndex.value];
+  currentText.value = texts[currentIndex.value];
 };
 
 onMounted(() => {
@@ -107,6 +118,18 @@ onUnmounted(() => {
 
 const date = ref("");
 const showDatePicker = ref(false);
+
+// Dark mode
+const isDarkMode = ref(false);
+
+onMounted(() => {
+  isDarkMode.value = document.documentElement.classList.contains("my-app-dark");
+});
+
+function toggleDarkMode() {
+  document.documentElement.classList.toggle("my-app-dark");
+  isDarkMode.value = !isDarkMode.value;
+}
 </script>
 
 <template>
@@ -117,139 +140,76 @@ const showDatePicker = ref(false);
         class="danayas-slide"
         :style="{ backgroundImage: `url(${currentImage})` }"
       >
-        <h1 class="homeText">Danayas Resorts</h1>
-        <h1 class="homeText">Events Venue</h1>
+        <h2 class="homeText slide-text">{{ currentText }}</h2>
       </div>
     </div>
     <div class="datePickerbackground">
-      <FloatLabel variant="on" class="bg-white">
-        <DatePicker
-          v-model="checkInDate"
-          inputId="checkIn"
-          showIcon
-          iconDisplay="input"
-          class="custom-date-picker"
-        />
+      <div class="booking-container">
+        <span class="label" style="font-size: 20px; font-weight: 700"
+          >FROM</span
+        >
+        <div class="date-picker-wrapper">
+          <FloatLabel variant="on">
+            <DatePicker
+              v-model="checkInDate"
+              inputId="checkIn"
+              showIcon
+              iconDisplay="input"
+              class="custom-date-picker"
+              style="width: 20rem; height: 3rem; border: none"
+            />
+            <label for="checkIn">CHECK-IN</label>
+          </FloatLabel>
+        </div>
+        <span class="label" style="font-size: 20px; font-weight: 700">TO</span>
 
-        <label for="checkIn">CHECK-IN</label>
-      </FloatLabel>
+        <div class="date-picker-wrapper">
+          <FloatLabel variant="on">
+            <DatePicker
+              v-model="checkOutDate"
+              inputId="checkOut"
+              showIcon
+              iconDisplay="input"
+              class="custom-date-picker"
+              style="width: 20rem; height: 3rem; border: none"
+            />
+            <label for="checkOut">CHECKOUT</label>
+          </FloatLabel>
+        </div>
 
-      <FloatLabel variant="on">
-        <DatePicker
-          v-model="checkOutDate"
-          inputId="checkOut"
-          showIcon
-          iconDisplay="input"
-          class="custom-date-picker"
-        />
-        <label for="checkOut">CHECKOUT</label>
-      </FloatLabel>
-      <label for="checkOut" id="to">TO</label>
-
-      <button
-        @click="showDatePicker = !showDatePicker"
-        class="Availability"
-        style="
-          margin: auto 0 auto 30px;
-          width: 200px;
-          height: 55px;
-          border-radius: 18px;
-          color: white;
-          text-align: center;
-          background-color: #194d1d;
-        "
-      >
-        Check Availability
-      </button>
+        <button
+          @click="showDatePicker = !showDatePicker"
+          class="availability-btn"
+        >
+          Check Availability
+        </button>
+      </div>
     </div>
 
     <div
+      v-if="showDatePicker"
       class="datePicker"
       style="
         background-color: #c7e3b6;
         width: 1065px;
+        height: 23rem;
         border-radius: 20px;
         display: flex;
         margin: auto;
         align-items: center;
       "
     >
-      <calendar-date
-        v-if="showDatePicker"
-        class="cally"
-        style="
-          background-color: white;
-          border: 1px solid #d1d5db;
-          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-          border-radius: 8px;
-          padding: 10px;
-        "
-      >
-        <svg
-          aria-label="Previous"
-          slot="previous"
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          width="16"
-          height="16"
-          fill="currentColor"
-        >
-          <path d="M15.75 19.5 8.25 12l7.5-7.5"></path>
-        </svg>
-        <svg
-          aria-label="Next"
-          slot="next"
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          width="16"
-          height="16"
-          fill="currentColor"
-        >
-          <path d="m8.25 4.5 7.5 7.5-7.5 7.5"></path>
-        </svg>
+      <DatePicker
+        v-model="date"
+        inline
+        class="w-full sm:w-[20rem] mr-10 ml-10"
+      />
+      <DatePicker v-model="date" inline class="w-full sm:w-[20rem]" />
 
-        <calendar-month></calendar-month>
-      </calendar-date>
-
-      <calendar-date
-        v-if="showDatePicker"
-        class="cally"
-        style="
-          background-color: white;
-          border: 1px solid #d1d5db;
-          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-          border-radius: 8px;
-          padding: 10px;
-        "
-      >
-        <svg
-          aria-label="Previous"
-          slot="previous"
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          width="16"
-          height="16"
-          fill="currentColor"
-        >
-          <path d="M15.75 19.5 8.25 12l7.5-7.5"></path>
-        </svg>
-        <svg
-          aria-label="Next"
-          slot="next"
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          width="16"
-          height="16"
-          fill="currentColor"
-        >
-          <path d="m8.25 4.5 7.5 7.5-7.5 7.5"></path>
-        </svg>
-
-        <calendar-month></calendar-month>
-      </calendar-date>
-
-      <div v-if="showDatePicker" class="Status">
-        <h1 style="text-align: center">Status</h1>
+      <div class="Status">
+        <h1 style="text-align: center; font-size: 20px; font-weight: 600">
+          Status
+        </h1>
         <span class="dot" id="Available" style="background-color: #4bb344">
           <label for="dot" style="margin-left: 50px"> AVAILABLE</label></span
         >
@@ -277,7 +237,7 @@ const showDatePicker = ref(false);
         <button
           id="Availablity"
           style="
-            background-color: #194d1d;
+            background-color: #41ab5d;
             text-align: center;
             color: white;
             border-radius: 20px;
@@ -291,15 +251,33 @@ const showDatePicker = ref(false);
       </div>
     </div>
 
-    <div class="textWrap">
-      <p id="p.text" class="text-black" style="font-size: 20px">
+    <!-- Spacer to allow scrolling -->
+    <div style="height: 10px"></div>
+
+    <div
+      class="textWrap"
+      v-animateonscroll="{
+        enterClass:
+          'animate-enter fade-in-10 slide-in-from-l-8 animate-duration-1000',
+        leaveClass: 'animate-leave fade-out-0',
+      }"
+    >
+      <p id="p-text" class="text-black" style="font-size: 20px">
         The ordinary and experience the best comfort zone at Danayas Resort
         <br />
-        where every sunrise bring serenity and tells every story.”
+        where every sunrise brings serenity and tells every story.”
       </p>
     </div>
+    <div style="height: 12x"></div>
 
-    <div class="features-background">
+    <div
+      class="features-background bg-[#C1F2B0] dark:bg-[#333] !important"
+      v-animateonscroll="{
+        enterClass:
+          'animate-enter fade-in-10 slide-in-from-l-8 animate-duration-1000',
+        leaveClass: 'animate-leave fade-out-0',
+      }"
+    >
       <div
         class="featureSection content-center justify-center m-auto flex flex-auto border-xl"
       >
@@ -310,19 +288,24 @@ const showDatePicker = ref(false);
             style="width: 75rem; height: 480px; border-radius: 30px"
           />
         </div>
-        <div class="text">
+        <div class="text text-black dark:text-white">
           <h1
+            class="dark:text-white"
             style="
-              color: #000;
               font-weight: bold;
               font-family: Libre Baskerville;
               font-size: 40px;
+              color: #194d1d;
+              text-shadow: 0px 4px 4px rgb(255, 255, 255);
             "
           >
             FEATURES
           </h1>
-          <hr class="line" style="width: 500px; margin-bottom: 2rem" />
-          <p style="font-size: 22px">
+          <hr
+            class="line dark:bg-white"
+            style="width: 500px; margin-bottom: 2rem"
+          />
+          <p style="font-size: 22px; font-family: 'poppins'">
             Relax and rejuvenate your body and soul experience the best of
             luxury and comfort Immerse yourself in the seamless fusion of
             timeless architecture and modern design, where each home tells a
@@ -330,7 +313,7 @@ const showDatePicker = ref(false);
           </p>
           <button
             style="
-              background-color: #194d1d;
+              background-color: #41ab5d;
               color: #ffffff;
               border-radius: 6px;
               width: 200px;
@@ -345,6 +328,7 @@ const showDatePicker = ref(false);
               text-align: center;
               word-wrap: break-word;
             "
+            @click="toggleDarkMode"
           >
             Learn more
           </button>
@@ -352,7 +336,14 @@ const showDatePicker = ref(false);
       </div>
     </div>
 
-    <div class="DiscountBackground">
+    <div
+      class="DiscountBackground"
+      v-animateonscroll="{
+        enterClass:
+          'animate-enter fade-in-10 slide-in-from-l-8 animate-duration-1000',
+        leaveClass: 'animate-leave fade-out-0',
+      }"
+    >
       <div class="DiscountSection flex content-center justify-center m-auto">
         <div class="discount-text mr-180">
           <h1 id="title">DISCOUNT FOR HOLIDAY AND EVENTS?</h1>
@@ -370,11 +361,10 @@ const showDatePicker = ref(false);
         <H1
           style="
             font-size: 70px;
-            font-weight: black;
-            font-family: 'Poppins';
+            font-weight: Bold;
             text-align: center;
-            margin-bottom: 20px;
-            text-shadow: 0px 1px, 1px 0px, 1px 1px;
+            color: #194d1d;
+            text-shadow: 0px 2px 2px rgb(40, 135, 21);
           "
           >Danayas Packages</H1
         >
@@ -393,32 +383,19 @@ const showDatePicker = ref(false);
           and<br />
           modern design, where each home tells a story of its own”
         </p>
-        <div
-          class="SeeAllBtn content-center justify-center m-auto"
-          style="
-            background-color: #194d1d;
-            color: #ffffff;
-            border-radius: 6px;
-            width: 300px;
-            height: 50px;
-            text-align: center;
-            font-size: 20px;
-            font-weight: 400;
-            padding: 10px;
-            word-wrap: break-word;
-            margin-bottom: 50px;
-          "
-        >
+        <div class="SeeAllBtn content-center justify-center m-auto">
           <button>SEE ALL PACKAGES</button>
         </div>
-        <HomePackage />
+        <div class="packageComponent">
+          <HomePackage />
+        </div>
       </div>
     </section>
 
-    <section
+    <div
       class="DanayasAddress"
       style="
-        background-color: #c7e3b6;
+        background-color: #c1f2b0;
         margin: 0;
         left: 0;
         right: 0;
@@ -435,11 +412,12 @@ const showDatePicker = ref(false);
           style="
             font-family: 'Poppins';
             font-weight: bold;
-            font-size: 70px;
+            font-size: 65px;
+            color: #194d1d;
             text-align: center;
             margin-bottom: 1rem;
             margin-top: 1px;
-            text-shadow: 0px 1px, 1px 0px, 1px 1px;
+            text-shadow: 0px 4px 4px rgb(255, 255, 255);
           "
         >
           Danayas Address
@@ -451,7 +429,16 @@ const showDatePicker = ref(false);
           #27 Jones St. Extension Dulong Bayan 2, San Mateo <br />
           Rizal Philippines
         </div>
-        <div id="googleMap" style="margin-bottom: 30px">
+        <div style="height: 5px"></div>
+        <div
+          class="googleMap"
+          v-animateonscroll="{
+            enterClass:
+              'animate-enter fade-in-10 slide-in-from-l-8 animate-duration-1000',
+            leaveClass: 'animate-leave fade-out-0',
+          }"
+          style="margin-bottom: 30px"
+        >
           <iframe
             src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d1929.608118783353!2d121
             .12431473799222!3d14.7003600939651!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3397bb19868e1b37%3A0x429ae5ae7c94d0f2!2s7%20Jones%20Dulong%20Bayan
@@ -468,8 +455,7 @@ const showDatePicker = ref(false);
           VIEW LARGE MAP
         </button>
       </div>
-    </section>
-
+    </div>
     <div id="wrapper">
       <div
         class="reviewHeader content-center align-center m-auto w-[50%] h-auto"
@@ -481,8 +467,10 @@ const showDatePicker = ref(false);
             font-size: 65px;
             font-family: 'Poppins';
             margin-top: 3rem;
+            color: #194d1d;
+
             margin-bottom: 20px;
-            text-shadow: 0px 1px, 1px 0px, 1px 1px;
+            text-shadow: 0px 2px 2px rgb(40, 135, 21);
           "
         >
           Guest Reviews
@@ -493,7 +481,6 @@ const showDatePicker = ref(false);
             font-size: 20px;
             font-weight: 400;
             margin-bottom: 50px;
-            word-wrap: break-word;
             margin-top: 10px;
           "
         >
@@ -521,6 +508,39 @@ const showDatePicker = ref(false);
 </template>
 
 <style scoped>
+.packageComponent {
+  margin-top: 30px;
+}
+.SeeAllBtn {
+  background-color: #41ab5d;
+  color: #ffffff;
+  border-radius: 6px;
+  width: 300px;
+  height: 50px;
+  text-align: center;
+  font-size: 20px;
+  font-weight: 400;
+  padding: 10px;
+  word-wrap: break-word;
+}
+.SeeAllBtn:hover {
+  background-color: #194d1d;
+}
+.MapBtn {
+  background-color: #41ab5d;
+  color: #ffffff;
+  border-radius: 6px;
+  width: 300px;
+  height: 50px;
+  text-align: center;
+  font-size: 20px;
+  font-weight: 400;
+  padding: 10px;
+  word-wrap: break-word;
+}
+.MapBtn:hover {
+  background-color: #194d1d;
+}
 .homeSlider {
   position: relative;
   display: flex;
@@ -546,6 +566,7 @@ const showDatePicker = ref(false);
 .homeText {
   position: absolute;
   top: 50%;
+  left: 50%;
   transform: translate(-50%, -50%);
   font-size: 80px;
   font-weight: bold;
@@ -582,7 +603,6 @@ const showDatePicker = ref(false);
 
 #carousel {
   position: relative;
-  width: 200px;
   height: 300px;
   transform-style: preserve-3d;
   transition: transform 0.5s;
@@ -594,7 +614,7 @@ const showDatePicker = ref(false);
 
 .carousel-item {
   position: absolute;
-  width: 200px;
+  width: 300px;
   height: 300px;
   border-radius: 2rem;
   display: flex;
@@ -643,7 +663,7 @@ const showDatePicker = ref(false);
 #BtnControls2 {
   font-size: 50px;
   cursor: pointer;
-  color: #101010;
+  color: #194d1d;
   background: none;
   border: none;
   pointer-events: auto;
@@ -684,7 +704,8 @@ h1 {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  margin-left: 70px;
+  margin-left: 40px;
+  margin-right: 20px;
 }
 
 .datePickerbackground {
@@ -720,7 +741,6 @@ h1 {
   width: 85rem;
   margin: auto;
   border-radius: 25px;
-  background-color: #b4d6a3;
   position: relative;
   top: -6rem;
   padding: 20px;
@@ -737,33 +757,33 @@ h1 {
   border-radius: 10px;
   margin-right: 9rem;
   margin-left: 6rem;
-  font-family: "Fraunces", serif;
-  font-weight: semi-bold;
-  color: #000000;
   text-align: justify;
   line-height: 1.9;
   width: 1500px;
 }
 .DiscountBackground {
-  background-color: #c7e3b6;
+  background-color: #c1f2b0;
   height: 250px;
   margin-top: 5rem;
+  color: #194d1d;
+
   margin-bottom: 5rem;
 }
 .discount-text {
-  color: #000;
+  color: #194d1d;
   line-height: 1.2;
   padding: 4rem;
   width: 687px;
 }
 #title {
-  font-weight: semi-bold;
-  color: #000;
+  color: #194d1d;
   width: 811px;
+  font-weight: bold;
   font-size: 29px;
-  font-family: "Fraunces", serif;
+  font-family: "Poppins";
   margin-top: 2px;
   margin-bottom: 20px;
+  text-shadow: 0px 4px 4px rgb(255, 255, 255);
 }
 #discountText {
   font-weight: normal;
@@ -794,25 +814,43 @@ hr {
   height: 5px;
 }
 
-.custom-date-picker {
+.booking-container {
+  display: flex;
   align-items: center;
   justify-content: center;
-  margin: auto;
-  width: 200px;
-  height: 50px;
-  border-radius: 20px;
+  padding: 0px;
   gap: 10px;
+  position: relative;
+  right: 1.5rem;
 }
-.MapBtn {
-  width: 350px;
-  margin: none;
-  height: 40px;
+
+.date-picker-wrapper {
+  display: flex;
+  flex-direction: column;
+}
+
+.label {
+  font-size: 14px;
+  font-weight: 500;
+  margin: 0 8px;
+}
+
+.availability-btn {
+  background-color: #41ab5d;
+  color: white;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 18px;
+  font-weight: bold;
   text-align: center;
-  word-wrap: break-word;
-  background-color: #194d1d;
-  border-radius: 6px;
-  margin-top: 10%;
+  width: 180px;
+  height: 50px;
+  cursor: pointer;
 }
+.availability-btn:hover {
+  background-color: #194d1d;
+}
+
 #MapBtn {
   border: none;
   color: rgb(247, 247, 247);
@@ -853,6 +891,13 @@ hr {
   .carousel {
     flex-wrap: wrap;
     justify-content: center;
+  }
+}
+
+:deep(.date-picker-wrapper) {
+  .p-datepicker-input {
+    border: none;
+    background-color: #c7e3b6;
   }
 }
 </style>

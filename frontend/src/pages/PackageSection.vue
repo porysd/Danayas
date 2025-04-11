@@ -1,9 +1,12 @@
 <script setup>
 import HomePackage from "../components/HomePackage.vue";
 import Packages from "../components/Packages.vue";
+import NavBar from "../components/NavBar.vue";
+import Footer from "../components/Footer.vue";
 </script>
 
 <template>
+  <NavBar />
   <section class="PACKAGES">
     <div class="containerPackages">
       <img
@@ -20,6 +23,7 @@ import Packages from "../components/Packages.vue";
       <HomePackage />
     </div>
   </section>
+  <Footer />
 </template>
 
 <style scoped>

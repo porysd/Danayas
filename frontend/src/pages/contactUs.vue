@@ -1,6 +1,10 @@
-<script setup></script>
+<script setup>
+import NavBar from "../components/NavBar.vue";
+import Footer from "../components/Footer.vue";
+</script>
 
 <template>
+  <NavBar />
   <div class="contactContainer">
     <img
       src="../assets/danayas_day.jpg"
@@ -87,6 +91,7 @@
       ></iframe>
     </div>
   </div>
+  <Footer />
 </template>
 
 <style scoped>

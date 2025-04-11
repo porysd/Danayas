@@ -1,58 +1,56 @@
 <script setup>
-import image1 from '../assets/img1.jpg';
-
-
+import NavBar from "../components/NavBar.vue";
+import Footer from "../components/Footer.vue";
 </script>
 
-
 <template>
-<div class="row">
-<div class="column">
-  <img src="../assets/img1.jpg" alt="">
-  <img src="../assets/img2.jpg" alt="">
-  <img src="../assets/img3.jpg "alt="">
-  <img src="../assets/img4.jpg"alt="">
-  <img src="../assets/img5.jpg"alt="">
-  <img src="../assets/img6.jpg" alt="">
-  <img src="../assets/img7.jpg" alt="">
-  <img src="../assets/img8.jpg" alt="">
-  <img src="../assets/img9.jpg"alt="">
-  <img src="../assets/img10.jpg" alt="">
-</div>
-<div class="column">
-  <img src="../assets/img10.jpg" alt="">
-  <img src="../assets/img3.jpg "alt="">
-  <img src="../assets/img6.jpg" alt="">
-  <img src="../assets/img9.jpg"alt="">
-  <img src="../assets/img5.jpg"alt="">
-  <img src="../assets/img2.jpg" alt="">
-  <img src="../assets/img4.jpg"alt="">
-  <img src="../assets/img7.jpg" alt="">
-  <img src="../assets/img8.jpg" alt="">
-  <img src="../assets/img1.jpg" alt="">
-
-</div>
-<div class="column">
-  <img src="../assets/img1.jpg" alt="">
-  <img src="../assets/img2.jpg" alt="">
-  <img src="../assets/img3.jpg "alt="">
-  <img src="../assets/img4.jpg"alt="">
-  <img src="../assets/img5.jpg"alt="">
-  <img src="../assets/img6.jpg" alt="">
-  <img src="../assets/img7.jpg" alt="">
-  <img src="../assets/img8.jpg" alt="">
-  <img src="../assets/img9.jpg"alt="">
-  <img src="../assets/img10.jpg" alt="">
-</div>
-
-</div>
+  <NavBar />
+  <div class="row">
+    <div class="column">
+      <img src="../assets/img1.jpg" alt="" />
+      <img src="../assets/img2.jpg" alt="" />
+      <img src="../assets/img3.jpg " alt="" />
+      <img src="../assets/img4.jpg" alt="" />
+      <img src="../assets/img5.jpg" alt="" />
+      <img src="../assets/img6.jpg" alt="" />
+      <img src="../assets/img7.jpg" alt="" />
+      <img src="../assets/img8.jpg" alt="" />
+      <img src="../assets/img9.jpg" alt="" />
+      <img src="../assets/img10.jpg" alt="" />
+    </div>
+    <div class="column">
+      <img src="../assets/img10.jpg" alt="" />
+      <img src="../assets/img3.jpg " alt="" />
+      <img src="../assets/img6.jpg" alt="" />
+      <img src="../assets/img9.jpg" alt="" />
+      <img src="../assets/img5.jpg" alt="" />
+      <img src="../assets/img2.jpg" alt="" />
+      <img src="../assets/img4.jpg" alt="" />
+      <img src="../assets/img7.jpg" alt="" />
+      <img src="../assets/img8.jpg" alt="" />
+      <img src="../assets/img1.jpg" alt="" />
+    </div>
+    <div class="column">
+      <img src="../assets/img1.jpg" alt="" />
+      <img src="../assets/img2.jpg" alt="" />
+      <img src="../assets/img3.jpg " alt="" />
+      <img src="../assets/img4.jpg" alt="" />
+      <img src="../assets/img5.jpg" alt="" />
+      <img src="../assets/img6.jpg" alt="" />
+      <img src="../assets/img7.jpg" alt="" />
+      <img src="../assets/img8.jpg" alt="" />
+      <img src="../assets/img9.jpg" alt="" />
+      <img src="../assets/img10.jpg" alt="" />
+    </div>
+  </div>
+  <Footer />
 </template>
 
 <style scoped>
 .row {
-  display: -ms-flexbox; /* IE10 */
+  display: -ms-flexbox;
   display: flex;
-  -ms-flex-wrap: wrap; /* IE10 */
+  -ms-flex-wrap: wrap;
   flex-wrap: wrap;
   padding: 0 4px;
   width: 100%;
@@ -60,7 +58,6 @@ import image1 from '../assets/img1.jpg';
   justify-content: center;
   align-items: center;
   margin: 15px;
-
 }
 
 /* Create four equal columns that sits next to each other */
@@ -77,12 +74,10 @@ import image1 from '../assets/img1.jpg';
   vertical-align: middle;
   width: 100%;
   border-radius: 8px;
-
 }
- img:hover{
+img:hover {
   transition: box-shadow 0.3s ease-in-out; /* Adds a smooth transition */
   box-shadow: 0px 4px 11px #000;
-
 }
 
 /* Responsive layout - makes a two column-layout instead of four columns */
@@ -102,5 +97,4 @@ import image1 from '../assets/img1.jpg';
     max-width: 100%;
   }
 }
-
 </style>

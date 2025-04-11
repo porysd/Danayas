@@ -4,59 +4,56 @@ import { useRouter } from "vue-router";
 
 const router = useRouter();
 const newUser = ref({
-  username: "",
   firstName: "",
   lastName: "",
-  contactNo: "",
   email: "",
+  contactNo: "",
   address: "",
   password: "",
-  confirmPass: "",
+  role: "customer",
 });
 
 const showSignUpModal = ref(false);
 
 const SignUp = () => {
   if (
-    !newUser.value.username ||
     !newUser.value.firstName ||
     !newUser.value.lastName ||
     !newUser.value.contactNo ||
     !newUser.value.email ||
     !newUser.value.address ||
-    !newUser.value.password ||
-    !newUser.value.confirmPass
+    !newUser.value.password
   ) {
     alert("Please fill up all fields.");
     return;
   }
 
-  if (newUser.value.password !== newUser.value.confirmPass) {
-    alert("Your password does not match.");
-    return;
-  }
+  // if (newUser.value.password !== newUser.value.confirmPass) {
+  //   alert("Your password does not match.");
+  //   return;
+  // }
+
+  addNewUser(newUser.value);
 };
 
 const addNewUser = async (newUser) => {
-  // cosnt userData = {
-
-  // }
+  const signUpUser = { ...newUser };
   try {
     const response = await fetch("http://localhost:3000/users/user", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ...newUser,
-      }),
+      body: JSON.stringify(signUpUser),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
       throw new Error(`Failed to add customer: ${errorText}`);
     }
+
     console.log("Customer added successfully");
     showSignUpModal.value = false;
-    router.push("/login");
+
+    router.push("/home");
   } catch (error) {
     console.error("Error adding customer:", error);
     alert(error.message);
@@ -75,102 +72,115 @@ const CloseSignUpModal = () => {
   <button class="SignUp-btn" @click="OpenSignUpModal">Sign Up</button>
 
   <div v-if="showSignUpModal" class="modal">
-    <div class="loginBox">
-      <div class="sigup">
-        <h1 class="signUp">Sign Up</h1>
+    <div class="SignUpBox">
+      <div class="signup">
+        <i
+          class="pi pi-times"
+          @click="CloseSignUpModal"
+          style="
+            color: green;
+            align-self: flex-end;
+            margin-left: 49rem;
+            font-size: 1.5rem;
+            cursor: pointer;
+            margin-right: 10px;
+          "
+        ></i>
+        <div class="SignCred">
+          <h1 class="signUp text-5xl" style="text-align: center">SIGN UP</h1>
+          <p
+            style="
+              text-align: center;
+              color: green;
+              margin-top: -30px;
+              margin-bottom: 10px;
+            "
+          >
+            Create an account to enjoy all the features of our website.
+            <br />
+          </p>
+        </div>
+
         <form @submit.prevent="SignUp">
-          <div class="SignCred" id="username">
-            <input
-              v-model="newUser.username"
-              type="text"
-              id="username"
-              placeholder="Username"
-              required
-            />
-          </div>
-
-          <div class="SignCred" id="firstname">
-            <input
-              v-model="newUser.firstName"
-              type="text"
-              id="firstname"
-              placeholder="Firstname"
-              required
-            />
-          </div>
-
-          <div class="SignCred" id="lastname">
-            <input
-              v-model="newUser.lastName"
-              type="text"
-              id="lastname"
-              placeholder="Lastname"
-              required
-            />
-          </div>
-
-          <div>
-            <div class="SignCred" id="contactNo">
-              <input
-                v-model="newUser.contactNo"
-                type="text"
-                id="contactNo"
-                placeholder="Contact No."
-                required
-              />
-            </div>
-            <div class="SignCred" id="Address">
-              <input
-                v-model="newUser.email"
-                type="text"
-                id="emailAddress"
-                placeholder="Email Address"
-                required
-              />
-            </div>
-          </div>
-
           <div class="SignCred">
-            <input
-              v-model="newUser.address"
-              type="text"
-              id="address"
-              placeholder="Address"
-              required
-            />
-          </div>
+            <div class="bookAddress">
+              <div>
+                <label>Username:</label>
+                <input
+                  class="packEvents"
+                  v-model="newUser.username"
+                  placeholder="Username"
+                />
+              </div>
+            </div>
+            <div class="packEvent">
+              <div>
+                <label>First Name:</label>
+                <input
+                  class="packEvents"
+                  v-model="newUser.firstName"
+                  placeholder="First Name"
+                />
+              </div>
+              <div>
+                <label>Last Name:</label>
+                <input
+                  class="packEvents"
+                  v-model="newUser.lastName"
+                  placeholder="Last Name"
+                />
+              </div>
+              <div>
+                <label>Contact No.:</label>
+                <input
+                  class="packEvents"
+                  v-model="newUser.contactNo"
+                  placeholder="Contact No"
+                />
+              </div>
+              <div>
+                <label>Email Address</label>
+                <input
+                  class="packEvents"
+                  v-model="newUser.email"
+                  placeholder="Email Address"
+                />
+              </div>
+            </div>
 
-          <div>
-            <div class="SignCred" id="password">
-              <input
-                v-model="newUser.password"
-                type="password"
-                id="password"
-                placeholder="Password"
-                required
-              />
+            <div class="bookAddress">
+              <div>
+                <label>Address:</label>
+                <input
+                  class="packEvents"
+                  v-model="newUser.address"
+                  placeholder="Address"
+                />
+              </div>
             </div>
-            <div class="SignCred" id="confirmPass">
-              <input
-                v-model="newUser.confirmPass"
-                type="password"
-                id="confirmPass"
-                placeholder="Confirm Password"
-                required
-              />
+
+            <div class="packEvent">
+              <div>
+                <label>Password:</label>
+                <input
+                  class="packEvents"
+                  v-model="newUser.password"
+                  placeholder="Password"
+                />
+              </div>
+              <div>
+                <label>Confirm Password:</label>
+                <input class="packEvents" placeholder="Confirm Password" />
+              </div>
             </div>
+
             <div class="checkbox">
               <input type="checkbox" id="signupCheck" />
               <label for="signupCheck">I accept all terms & conditions</label>
             </div>
 
             <div class="modal-actions">
-              <button class="cancelBtn" type="button" @click="CloseSignUpModal">
-                Close
-              </button>
-              <button class="submitBtn" type="submit" @click="addNewUser">
-                Sign Up
-              </button>
+              <button class="submitBtn" type="submit">Sign Up</button>
             </div>
           </div>
         </form>
@@ -191,14 +201,14 @@ const CloseSignUpModal = () => {
   align-items: center;
   gap: 10px;
   margin-top: 20px;
-  margin-left: 21rem;
+  margin-left: 32rem;
 }
 .signUp {
-  font-size: 2rem;
   font-weight: bold;
   color: #194d1d;
   text-align: center;
   margin-bottom: 3rem;
+  text-shadow: 0px 1px, 1px 0px, 1px 1px;
 }
 
 .SignUp-btn {
@@ -207,11 +217,19 @@ const CloseSignUpModal = () => {
   border-radius: 5px;
   cursor: pointer;
   font-weight: bold;
+  background-color: #41ab5d;
+
+  color: white;
+}
+.SignUp-btn:hover {
   background-color: #194d1d;
   color: white;
+
+  transition: all 0.3s ease-in-out;
 }
 
 .modal {
+  z-index: 9999;
   position: fixed;
   top: 0;
   left: 0;
@@ -223,12 +241,12 @@ const CloseSignUpModal = () => {
   justify-content: center;
 }
 
-.loginBox {
+.SignUpBox {
   padding: 20px;
-  display: flex;
-  height: auto;
   filter: drop-shadow(0px 0px 10px rgba(97, 95, 95, 0.5));
   background: #eef9eb;
+  box-shadow: 0px 0px 10px rgba(28, 216, 34, 0.5);
+  border: 1px solid #38dc87;
   border-radius: 10px;
 }
 
@@ -269,12 +287,24 @@ const CloseSignUpModal = () => {
 }
 
 .SignCred {
-  padding: 8px;
-  margin-top: 25px;
-  background-color: #fcf5f5;
-  display: flex;
+  padding: 0px;
+  width: 100%;
+  justify-content: center;
   border-radius: 10px;
   filter: drop-shadow(0px 4px 4px rgba(97, 95, 95, 0.5));
+}
+label {
+  display: block;
+  text-align: left;
+  color: green;
+}
+input {
+  width: 100%;
+  padding: 8px;
+  background-color: #f0f0f0;
+  border-radius: 5px;
+  margin-top: 5px;
+  border: 1px solid #38dc87;
 }
 
 .modal-actions {
@@ -282,11 +312,11 @@ const CloseSignUpModal = () => {
   justify-content: center;
   margin-top: 20px;
   gap: 30px;
+  margin-bottom: 20px;
 }
 
 .cancelBtn {
   width: 200px;
-
   padding: 10px;
   background: #ccc;
   border: none;
@@ -296,8 +326,11 @@ const CloseSignUpModal = () => {
 }
 
 .submitBtn {
-  width: 200px;
-  padding: 10px;
+  width: 15rem;
+  height: auto;
+  padding: 15px;
+  font-size: 1.2rem;
+  font-family: "Poppins";
   background: #194d1d;
   color: white;
   border: none;
@@ -305,5 +338,26 @@ const CloseSignUpModal = () => {
   border-radius: 5px;
   cursor: pointer;
   margin-left: 10px;
+}
+
+.packEvent,
+.bookAddress {
+  margin-top: 7px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+}
+
+.packEvent div {
+  display: flex;
+  flex-direction: column;
+  width: 40%;
+}
+
+.bookAddress div {
+  display: flex;
+  flex-direction: column;
+  width: 81%;
 }
 </style>

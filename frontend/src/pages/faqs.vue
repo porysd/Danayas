@@ -1,6 +1,10 @@
-<script setup></script>
+<script setup>
+import NavBar from "../components/NavBar.vue";
+import Footer from "../components/Footer.vue";
+</script>
 
 <template>
+  <NavBar />
   <section class="FAQs">
     <div class="containerFAQs">
       <img
@@ -52,6 +56,7 @@
       </ol>
     </div>
   </section>
+  <Footer />
 </template>
 <style scoped>
 ol li {

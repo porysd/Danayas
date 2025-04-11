@@ -1,4 +1,7 @@
-<script setup></script>
+<script setup>
+// import TermsCondition from "./TermsCondition.vue";
+</script>
+
 <template>
   <footer>
     <div>
@@ -14,7 +17,7 @@
             <router-link to="/faqs">FAQs</router-link>
           </li>
           <li>
-            <router-link to="/terms&condition">TERMS & CONDITIONS</router-link>
+            <TermsCondition />
           </li>
         </ul>
       </div>
@@ -64,7 +67,6 @@
 <style scoped>
 li {
   text-decoration: none;
-  list-style: none;
   text-align: center;
   display: inline-block;
 }
@@ -80,6 +82,7 @@ ul li a {
   font-family: Poppins;
   font-weight: bold;
 }
+
 .text ul {
   gap: 6rem;
   display: flex;
@@ -115,6 +118,8 @@ a {
 footer {
   background-color: #194d1d;
   color: white;
+  border-top-left-radius: 40px;
+  border-top-right-radius: 40px;
   padding: 1rem 0;
   margin-top: 10rem;
   font-family: "Fraunces", serif;

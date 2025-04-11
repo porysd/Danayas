@@ -1,7 +1,7 @@
 <script setup>
 import { ref } from "vue";
-import SignIn from "../components/SignIn.vue";
-import SignUp from "./SignUp.vue";
+import Login from "../components/Login.vue";
+import SignUp from "../components/SignUp.vue";
 
 const isMenuOpen = ref(false);
 
@@ -13,26 +13,54 @@ const toggleMenu = () => {
 <template>
   <nav class="nav-bar">
     <div class="logo">
-      <img src="../assets/logo.png" alt="logo" id="logo" />
+      <a href="/">
+        <img src="../assets/logo.png" alt="logo" id="logo" />
+      </a>
     </div>
 
-    <!-- Mobile Menu Toggle -->
     <button class="menu-toggle" @click="toggleMenu">☰</button>
 
     <div class="nav-links" :class="{ active: isMenuOpen }">
       <ul>
-        <li><router-link to="/">Home</router-link></li>
-        <li><router-link to="/packages">Packages</router-link></li>
-        <li><router-link to="/booking">Booking</router-link></li>
-        <li><router-link to="/faqs">FAQs</router-link></li>
-        <li><router-link to="/gallery">Gallery</router-link></li>
-        <li><router-link to="/aboutUs">About Us</router-link></li>
-        <li><router-link to="/contactUs">Contact Us</router-link></li>
+        <li>
+          <router-link to="/" active-class="active-route">Home</router-link>
+        </li>
+        <li>
+          <router-link to="/packages" active-class="active-route"
+            >Packages</router-link
+          >
+        </li>
+        <li>
+          <router-link to="/booking" active-class="active-route"
+            >Booking</router-link
+          >
+        </li>
+        <li>
+          <router-link to="/faqs" active-class="active-route">FAQs</router-link>
+        </li>
+        <li>
+          <router-link to="/gallery" active-class="active-route"
+            >Gallery</router-link
+          >
+        </li>
+        <li>
+          <router-link to="/about-us" active-class="active-route"
+            >About Us</router-link
+          >
+        </li>
+        <li>
+          <router-link to="/contact-us" active-class="active-route"
+            >Contact Us</router-link
+          >
+        </li>
+        <li>
+          <router-link to="/logs" active-class="active-route">Logs</router-link>
+        </li>
       </ul>
     </div>
 
     <div class="signup-btn-container">
-      <SignIn />
+      <Login />
       <SignUp />
     </div>
   </nav>
@@ -43,7 +71,6 @@ const toggleMenu = () => {
 </template>
 
 <style scoped>
-/* Navigation bar */
 .nav-bar {
   display: flex;
   align-items: center;
@@ -53,7 +80,6 @@ const toggleMenu = () => {
   position: relative;
 }
 
-/* Logo */
 #logo {
   width: 120px;
   height: auto;
@@ -61,7 +87,6 @@ const toggleMenu = () => {
   margin-left: 5rem;
 }
 
-/* Navigation links */
 .nav-links ul {
   display: flex;
   list-style: none;
@@ -81,14 +106,14 @@ const toggleMenu = () => {
 }
 
 .nav-links ul li a:hover {
+  color: #00ab5e;
+  text-decoration: underline;
+}
+
+.active-route {
   color: #54d6a4;
 }
 
-.nav-links ul li a:focus {
-  color: #54d6a4;
-}
-
-/* Signup & Login buttons */
 .signup-btn-container {
   display: flex;
   gap: 10px;
@@ -111,10 +136,8 @@ const toggleMenu = () => {
 
 .signup-btn {
   background: #319033;
-  color: white;
 }
 
-/* Mobile Menu Button */
 .menu-toggle {
   display: none;
   font-size: 24px;

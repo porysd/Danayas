@@ -1,8 +1,10 @@
 <script setup>
-import Divider from "primevue/divider";
+import NavBar from "../components/NavBar.vue";
+import Footer from "../components/Footer.vue";
 </script>
 
 <template>
+  <NavBar />
   <div class="ContainerAbout">
     <img
       src="../assets/danayas_day.jpg"
@@ -14,41 +16,37 @@ import Divider from "primevue/divider";
   </div>
 
   <div class="AboutSection">
-    <article>
+    <div class="mb-10 mt-10">
       <h2
-        class="Vission font-[Poppine] flex flex-auto m-auto justify-center content-center text-5xl font-black relative m-top[20px]"
+        class="font-[Poppins] font-black text-center top-[-2 rem] font-bold relative text-5xl mb-3"
       >
         Vision & Mission
       </h2>
       <hr
-        class="line w-40 border-4 relative top-[-0.2rem] flex flex-auto m-auto justify-center content-center"
+        class="line w-40 border-3 relative top-[-0rem] flex flex-auto m-auto justify-center content-center mb-4"
       />
-      <p class="text1 m-auto mb-15 text-center w-200">
+      <p class="m-auto text-center w-200 mt-10">
         Established in the historic quarter, where cultural legacy meets the
         sought-after culinary scene, Brook St. is the best kept secret of town,
         just across the sea front. Its urban renaissance is infusing new vibes
         and brings back creatives, trend setters and smart investors.
       </p>
-    </article>
-    <div class="imgbr">
-      <img
-        class="m-0 mr-[-2rem] left-0 right-0 h-[383px] w-full mb-20"
-        src="../assets/aboutbr.jpg"
-        alt=""
-      />
     </div>
-    <article>
+    <div class="imgbr">
+      <img class="h-[383px] w-full" src="../assets/aboutbr.jpg" alt="" />
+    </div>
+    <div class="mb-20 mt-20">
       <h2
-        class="font-[Poppins] font-black text-center top-[-3rem] font-bold relative text-5xl"
+        class="font-[Poppins] font-black text-center top-[-2 rem] font-bold relative text-5xl mb-3"
       >
         Our Story
       </h2>
 
       <hr
-        class="line w-40 border-4 relative top-[-2rem] flex flex-auto m-auto justify-center content-center"
+        class="line w-40 border-4 relative top-[-0rem] flex flex-auto m-auto justify-center content-center mb-4"
       />
 
-      <p class="text2 m-auto mb-15 text-center w-200">
+      <p class="text2 m-auto mt-10 text-center w-200">
         Every website has a story, and your visitors want to hear yours. This
         space is a great opportunity to give a full background on who you are,
         what your team does, and what your site has to offer. Double click on
@@ -58,7 +56,7 @@ import Divider from "primevue/divider";
         your core values, your commitment to customers, and how you stand out
         from the crowd. Add a photo, gallery, or video for even more engagement.
       </p>
-    </article>
+    </div>
     <div class="location">
       <article>
         <div class="location-text">
@@ -143,12 +141,25 @@ import Divider from "primevue/divider";
       </div>
     </div>
   </div>
+  <Footer />
 </template>
 
 <style scoped>
-.AboutSection {
-  margin-top: 3rem;
-  margin-bottom: 3rem;
+.ContainerAbout {
+  position: relative;
+  width: 85rem;
+  justify-content: center;
+  align-items: center;
+  height: 400px;
+  margin: auto;
+  border-radius: 25px;
+  overflow: hidden;
+}
+
+.aboutUs {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .AboutText {
@@ -161,22 +172,6 @@ import Divider from "primevue/divider";
   color: white;
   text-shadow: 0px 4px 4px rgb(12, 70, 39);
   text-align: center;
-}
-
-.ContainerAbout {
-  position: relative;
-  width: 85rem;
-  justify-content: center;
-  align-items: center;
-  height: 400px;
-  margin: auto;
-  border-radius: 25px;
-  overflow: hidden;
-}
-.aboutUs {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
 }
 
 #Gmap {
