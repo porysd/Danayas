@@ -4,6 +4,7 @@ import packageRoutes from "./packageRoutes";
 import bookingRoutes from "./bookingRoutes";
 import paymentRoutes from "./paymentRoutes";
 import discountRoutes from "./discountRoutes";
+import catalogAddOnRoutes from "./catalogAddOnRoutes";
 
 // Define all routes with distinct paths
 export const routes = [
@@ -12,7 +13,8 @@ export const routes = [
   { path: "/packages", handler: packageRoutes },
   { path: "/bookings", handler: bookingRoutes },
   { path: "/payments", handler: paymentRoutes },
-  { path: "/discounts", handler: discountRoutes}
+  { path: "/discounts", handler: discountRoutes},
+  { path: "/catalogaddon", handler: catalogAddOnRoutes}
 ] as const;
 
 export type AppRoutes = (typeof routes)[number];

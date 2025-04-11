@@ -7,7 +7,8 @@ export * from './Packages.ts';
 export * from './Discounts.ts';
 // export * from './Billing.ts';
 // export * from './Reports.ts';
-// export * from './BookingAddOns.ts';
+export * from './BookingAddOns.ts';
+export * from './CatalogAddOns.ts';
 // export * from './ContentManagement.ts';
 
 
