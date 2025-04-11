@@ -3,7 +3,7 @@ import { routes } from './routes/routes'
 import { logger } from 'hono/logger'
 import { OpenAPIHono } from '@hono/zod-openapi'
 import { apiReference } from '@scalar/hono-api-reference'
-import authentication from './routes/authRoutes';
+import { authMiddleware } from './middlewares/authMiddleware';
 import { cors } from 'hono/cors';
 
 const app = new OpenAPIHono()
@@ -25,7 +25,7 @@ const app = new OpenAPIHono()
   )  
   .use(
     cors({
-      origin: 'http://localhost:5174', 
+      origin: 'http://localhost:4000', 
       allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'], 
       allowHeaders: ['Content-Type', 'Authorization'],
     })
@@ -34,7 +34,10 @@ const app = new OpenAPIHono()
     return c.json({ message: "Working!" });
   }
 );
-  
+
+//For authentication
+//app.use('/users/*', authMiddleware);
+
 routes.forEach(({ path, handler }) => {
   app.route(path, handler);
 });
@@ -47,12 +50,3 @@ Bun.serve({
 console.log("INFO", "listening to port: http://localhost:3000");
 
 
-// app.use(
-//   "*", // Intercepts all incoming requests
-//   async (c: Context, next) => {
-//     if (c.req.path === "/login") {
-//       return next(); // Skip auth check for login
-//     }
-//     return jwtAuthMiddleware(c, next);
-//   }
-// );

@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "bd2eef6b-5a60-4ba3-8e26-2e404f70ecc8",
+  "id": "d28b5383-08f5-4075-bd71-4758a95475b0",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "BOOKING": {
@@ -102,28 +102,28 @@
           "name": "contactNo",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
+          "notNull": false,
           "autoincrement": false
         },
         "emailAddress": {
           "name": "emailAddress",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
+          "notNull": false,
           "autoincrement": false
         },
         "address": {
           "name": "address",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
+          "notNull": false,
           "autoincrement": false
         },
-        "discountPromoId": {
-          "name": "discountPromoId",
+        "discountId": {
+          "name": "discountId",
           "type": "integer",
           "primaryKey": false,
-          "notNull": true,
+          "notNull": false,
           "autoincrement": false
         },
         "paymentTerms": {
@@ -204,15 +204,15 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "BOOKING_discountPromoId_DISCOUNT_PROMOS_discountPromoId_fk": {
-          "name": "BOOKING_discountPromoId_DISCOUNT_PROMOS_discountPromoId_fk",
+        "BOOKING_discountId_DISCOUNTS_discountId_fk": {
+          "name": "BOOKING_discountId_DISCOUNTS_discountId_fk",
           "tableFrom": "BOOKING",
-          "tableTo": "DISCOUNT_PROMOS",
+          "tableTo": "DISCOUNTS",
           "columnsFrom": [
-            "discountPromoId"
+            "discountId"
           ],
           "columnsTo": [
-            "discountPromoId"
+            "discountId"
           ],
           "onDelete": "no action",
           "onUpdate": "no action"
@@ -222,11 +222,11 @@
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
-    "DISCOUNT_PROMOS": {
-      "name": "DISCOUNT_PROMOS",
+    "DISCOUNTS": {
+      "name": "DISCOUNTS",
       "columns": {
-        "discountPromoId": {
-          "name": "discountPromoId",
+        "discountId": {
+          "name": "discountId",
           "type": "integer",
           "primaryKey": true,
           "notNull": true,
@@ -248,6 +248,13 @@
         },
         "type": {
           "name": "type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
           "type": "text",
           "primaryKey": false,
           "notNull": true,

@@ -190,7 +190,7 @@ export default new OpenAPIHono()
     createRoute({
       tags: ["Users"],
       method: "post",
-      path: "/user",
+      path: "/",
       summary: "Create a new user",
       request: {
         body: {

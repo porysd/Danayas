@@ -29,11 +29,11 @@ export const BookingDTO = z.object({
         description: "The ID of the package selected",
         example: 3,
     }),
-    firstName: z.string().openapi({
+    firstName: z.string().nullable().optional().openapi({
         description: "The first name of the person who made the booking",
         example: "John",
     }),
-    lastName: z.string().openapi({
+    lastName: z.string().nullable().optional().openapi({
         description: "The last name of the person who made the booking",
         example: "Doe",
     }),
@@ -53,31 +53,31 @@ export const BookingDTO = z.object({
         description: "Indicates whether catering is included",
         example: true,
     }),
-    contactNo: z.string().openapi({
+    contactNo: z.string().nullable().optional().openapi({
         description: "The contact number of the person who made the booking",
         example: "+639351573422",
     }),
-    emailAddress: z.string().email().openapi({
+    emailAddress: z.string().email().nullable().optional().openapi({
         description: "The email address of the person who made the booking",
         example: "johndoe@example.com",
     }),
-    address: z.string().openapi({
+    address: z.string().nullable().optional().openapi({
         description: "The address of the person who made the booking",
         example: "123 Main St, City, Country",
     }),
-    discountPromoId: z.number().int().openapi({
+    discountId: z.number().int().nullable().optional().openapi({
         description: "The ID of the discount",
-        example: 5,
+        example: 2,
     }),
     paymentTerms: z.enum(["installment", "full-payment"]).openapi({
         description: "The payment terms of the booking",
         example: "installment",
     }),
-    totalAmountDue: z.number().openapi({
+    totalAmount: z.number().openapi({
         description: "The total amount due for the booking",
         example: 12000,
     }),
-    bookStatus: z.enum(["pending", "confirmed", "cancelled", "completed"]).openapi({
+    bookStatus: z.enum(["pending", "confirmed", "cancelled", "completed", "rescheduled"]).openapi({
         description: "The status of the booking",
         example: "pending",
     }),
@@ -102,8 +102,7 @@ export const UpdateBookingDTO = BookingDTO.omit({
     emailAddress: true,
     address: true,
     paymentTerms: true,
-    totalAmountDue: true,
-    bookStatus: true,
+    totalAmount: true,
     reservationType: true
 }).partial().extend({
     catering: z.union([z.boolean(), z.number().int().min(0).max(1)]).transform((val) => Number(val)),
@@ -112,9 +111,8 @@ export const UpdateBookingDTO = BookingDTO.omit({
 export const CreateBookingDTO = BookingDTO.omit({
     bookingId: true,
     createdAt: true,
+    totalAmount: true,
 }).extend({
-    createdBy: z.number().int(),
-    userId: z.number().int(),
     catering: z.preprocess(
         (val) => (val === null ? 0 : val), // Convert null to 0
         z.union([z.boolean(), z.number().int().min(0).max(1)]).transform((val) => Number(val))
