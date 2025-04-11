@@ -93,6 +93,8 @@ export const BookingDTO = z.object({
 
 export const UpdateBookingDTO = BookingDTO.omit({
     bookingId: true,
+    packageId: true,
+    discountId: true,
     createdAt: true,
     userId: true,
     createdBy: true,

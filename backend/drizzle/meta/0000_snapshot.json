@@ -1,9 +1,75 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "d28b5383-08f5-4075-bd71-4758a95475b0",
+  "id": "83528d84-ecb1-4963-a0c1-0b42b582f06b",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
+    "BOOKING_ADD_ONS": {
+      "name": "BOOKING_ADD_ONS",
+      "columns": {
+        "addOnId": {
+          "name": "addOnId",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "bookingId": {
+          "name": "bookingId",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "totalPrice": {
+          "name": "totalPrice",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(current_timestamp)"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "BOOKING_ADD_ONS_bookingId_BOOKING_bookingId_fk": {
+          "name": "BOOKING_ADD_ONS_bookingId_BOOKING_bookingId_fk",
+          "tableFrom": "BOOKING_ADD_ONS",
+          "tableTo": "BOOKING",
+          "columnsFrom": [
+            "bookingId"
+          ],
+          "columnsTo": [
+            "bookingId"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "BOOKING_ADD_ONS_bookingId_CATALOG_ADD_ONS_addOnId_fk": {
+          "name": "BOOKING_ADD_ONS_bookingId_CATALOG_ADD_ONS_addOnId_fk",
+          "tableFrom": "BOOKING_ADD_ONS",
+          "tableTo": "CATALOG_ADD_ONS",
+          "columnsFrom": [
+            "bookingId"
+          ],
+          "columnsTo": [
+            "addOnId"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
     "BOOKING": {
       "name": "BOOKING",
       "columns": {
@@ -60,14 +126,14 @@
           "name": "firstName",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
+          "notNull": false,
           "autoincrement": false
         },
         "lastName": {
           "name": "lastName",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
+          "notNull": false,
           "autoincrement": false
         },
         "arrivalTime": {
@@ -222,6 +288,52 @@
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
+    "CATALOG_ADD_ONS": {
+      "name": "CATALOG_ADD_ONS",
+      "columns": {
+        "addOnId": {
+          "name": "addOnId",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "itemName": {
+          "name": "itemName",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "totalPrice": {
+          "name": "totalPrice",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(current_timestamp)"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
     "DISCOUNTS": {
       "name": "DISCOUNTS",
       "columns": {
@@ -259,6 +371,14 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(current_timestamp)"
         }
       },
       "indexes": {},

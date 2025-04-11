@@ -7,7 +7,7 @@
 
 import { z } from "@hono/zod-openapi";
 
-export const CatalogAddOnDTO = z.object({
+export const BookingAddOnDTO = z.object({
   bookingAddOnId: z.number().int().openapi({
     description: "The ID of the catalog add-on",
     example: 1,
@@ -20,13 +20,9 @@ export const CatalogAddOnDTO = z.object({
     description: "The ID of the catalog add-on",
     example: 1,
   }),
-  quantity: z.number().openapi({
-    description: "Quantity of the add-on",
-    example: 5,
-  }),
-  status: z.enum(["active", "inactive"]).openapi({
-    description: "Status of the discount",
-    example: "active",
+  price: z.number().openapi({
+    description: "Price of the add on",
+    example: 500,
   }),
   createdAt: z.string().openapi({
     description: "The date when the booking was created",
@@ -34,12 +30,14 @@ export const CatalogAddOnDTO = z.object({
   }),
 });
 
-export const CreateCatalogAddOnDTO = CatalogAddOnDTO.omit({
+export const CreateBookingAddOnDTO = BookingAddOnDTO.omit({
   bookingAddOnId: true,
   createdAt: true,
+  price: true,
 });
 
-export const UpdateCatalogAddOnDTO = CatalogAddOnDTO.omit({
+export const UpdateBookingAddOnDTO = BookingAddOnDTO.omit({
   bookingAddOnId: true,
   createdAt: true,
+  price: true,
 }).partial();

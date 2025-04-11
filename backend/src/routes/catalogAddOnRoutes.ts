@@ -54,13 +54,13 @@ export default new OpenAPIHono()
         offset: (page - 1) * limit,
       });
 
-      const allDiscounts = catalogAddOns.map((catalogAddOn) =>
+      const allCatalogAddOns = catalogAddOns.map((catalogAddOn) =>
         CatalogAddOnDTO.parse(catalogAddOn)
       );
 
       return c.json({
         total: catalogAddOns.length,
-        items: allDiscounts,
+        items: allCatalogAddOns,
       });
     }
   )
@@ -178,7 +178,7 @@ export default new OpenAPIHono()
   .openapi(
     createRoute({
       tags: ["Catalog Add-Ons"],
-      summary: "Delete catalogAddOn by ID",
+      summary: "Delete Catalog Add-On by ID",
       method: "delete",
       path: "/:id",
       request: {
