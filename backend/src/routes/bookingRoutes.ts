@@ -11,6 +11,8 @@ import { eq } from "drizzle-orm";
 import { processBookingData } from "../utils/dateHelpers";
 import { PackagesTable } from "../schemas/Packages";
 import { fi } from "@faker-js/faker";
+import { BadRequestError, NotFoundError } from "../utils/errors";
+import { errorHandler } from "../middlewares/errorHandler";
 
 export default new OpenAPIHono()
   .openapi(
@@ -43,30 +45,55 @@ export default new OpenAPIHono()
         400: {
           description: "Bad request!",
         },
+        404: {
+          description: "No bookings found",
+        },
         500: {
           description: "Internal server error",
         },
       },
     }),
     async (c) => {
-      const { limit, page } = c.req.valid("query");
+      try {
+        const { limit, page } = c.req.valid("query");
 
-      const bookings = await db.query.BookingsTable.findMany({
-        limit,
-        offset: (page - 1) * limit,
-      });
+        if(limit < 1 || page < 1){
+          throw new BadRequestError("Limit and page must be greater than 0.");
+        }
 
-      const allBookings = bookings.map((booking) => BookingDTO.parse(booking));
+        const bookings = await db.query.BookingsTable.findMany({
+          limit,
+          offset: (page - 1) * limit,
+        });
 
-      return c.json({ total: bookings.length, items: allBookings });
+        if(!bookings || bookings.length === 0){
+          throw new NotFoundError("No bookings found.");
+        }
+
+        const allBookings = bookings.map((booking) => {
+          try {
+            return BookingDTO.parse(booking);
+          } catch (error) {
+            throw new BadRequestError("Invalid booking data format.");
+          }
+        });
+
+        return c.json({ 
+          total: bookings.length,
+          items: allBookings 
+        });
+
+      } catch (err){
+        return errorHandler(err, c);
+      }
     }
   )
   .openapi(
     createRoute({
       tags: ["Bookings"],
+      summary: "Retrieve Booking by ID",
       method: "get",
       path: "/:id",
-      summary: "Retrieve Booking by ID",
       request: {
         params: z.object({
           id: z.coerce.number().openapi({ description: "Booking ID" }),
@@ -84,25 +111,34 @@ export default new OpenAPIHono()
         404: {
           description: "Booking not found",
         },
+        500: {
+          description: "Internal server error",
+        },
       },
     }),
     async (c) => {
-      const { id } = c.req.valid("param");
-      const booking = await db.query.BookingsTable.findFirst({
-        where: eq(BookingsTable.bookingId, id),
-      });
-      if (!booking) {
-        return c.json({ error: "Booking not found" }, 404);
+      try {
+        const { id } = c.req.valid("param");
+        const booking = await db.query.BookingsTable.findFirst({
+          where: eq(BookingsTable.bookingId, id),
+        });
+
+        if (!booking){
+          throw new NotFoundError("Booking not found.");
+        }
+
+        return c.json(BookingDTO.parse(booking));
+      } catch (err){
+        return errorHandler(err, c);
       }
-      return c.json(BookingDTO.parse(booking));
     }
   )
   .openapi(
     createRoute({
       tags: ["Bookings"],
+      summary: "Create Booking",
       method: "post",
       path: "/",
-      summary: "Create Booking",
       request: {
         body: {
           description: "Booking credentials",
@@ -113,64 +149,78 @@ export default new OpenAPIHono()
         },
       },
       responses: {
-        200: {
+        201: {
           content: {
             "application/json": {
-              schema: BookingDTO,
+              schema: CreateBookingDTO,
             },
           },
           description: "Booking Created",
         },
+        400: {
+          description: "Invalid booking data",
+        },
+        500: {
+          description: "Internal server error",
+        },
       },
     }),
     async (c) => {
-      const body = c.req.valid("json");
-      const { discountId, packageId } = body;
-      // Getting Package Price
-      const selectedPackage = await db
-        .select({ price: PackagesTable.price })
-        .from(PackagesTable)
-        .where(eq(PackagesTable.packageId, packageId))
-        .then((rows) => rows[0]);
-      
-      let discountPercent = 0;
-      
-      if (discountId){
-        const SelectedDiscount = await db
-          .select({ percentage: DiscountsTable.percentage })
-          .from(DiscountsTable)
-          .where(eq(DiscountsTable.discountId, discountId))
+      try{
+        const body = c.req.valid("json");
+        const { discountId, packageId } = body;
+        // Getting Package Price
+        const selectedPackage = await db
+          .select({ price: PackagesTable.price })
+          .from(PackagesTable)
+          .where(eq(PackagesTable.packageId, packageId))
           .then((rows) => rows[0]);
+      
+        if(!selectedPackage){
+          throw new BadRequestError("Invalid package ID");
+        }
 
-        discountPercent = SelectedDiscount.percentage ?? 0;
-      }
+        let discountPercent = 0;
+      
+        if (discountId){
+          const SelectedDiscount = await db
+            .select({ percentage: DiscountsTable.percentage })
+            .from(DiscountsTable)
+            .where(eq(DiscountsTable.discountId, discountId))
+            .then((rows) => rows[0]);
 
-      const totalAmount = selectedPackage.price - selectedPackage.price * discountPercent;
+          discountPercent = SelectedDiscount.percentage ?? 0;
+        }
 
-      const processedBody = {
-        ...processBookingData(body),
-        totalAmount,
-        catering: body.catering ? 1 : 0,
-      };
+        const totalAmount = selectedPackage.price - selectedPackage.price * discountPercent;
 
-      const insertedBooking = (await db.insert(BookingsTable).values(processedBody).returning().execute())[0];
-      return c.json({
-        ...insertedBooking,
+        const processedBody = {
+          ...processBookingData(body),
+          totalAmount,
+          catering: body.catering ? 1 : 0,
+        };
+
+        const insertedBooking = (await db.insert(BookingsTable).values(processedBody).returning().execute())[0];
+        return c.json({
+          ...insertedBooking,
         // mode: insertedBooking.mode as "day-time" | "night-time" | "whole-day",
         // paymentTerms: insertedBooking.paymentTerms as "installment" | "full-payment",
         // bookStatus: insertedBooking.bookStatus as "pending" | "confirmed" | "cancelled" | "completed" | "rescheduled",
         // reservationType: insertedBooking.reservationType as "online" | "walk-in",
-        catering: insertedBooking.catering === 1,
+          catering: insertedBooking.catering === 1,
         // catering: insertedBooking.catering === 1 ? 1 : 0 as 0 | 1,
-      });
+        });
+      } catch(err){
+        return errorHandler(err, c);
+      }
     }
   )
   .openapi(
     createRoute({
       tags: ["Bookings"],
+      summary: "Update Booking by ID",
       method: "patch",
       path: "/:id",
-      summary: "Update Booking by ID",
       request: {
         body: {
           description: "Update Booking",
@@ -187,33 +237,57 @@ export default new OpenAPIHono()
               schema: BookingDTO,
             },
           },
-          description: "User Updated",
+          description: "Booking Updated Successfully",
         },
         400: {
-          description: "Invalid user ID",
+          description: "Invalid booking ID",
+        },
+        404: {
+          description: "Booking not found",
+        },
+        500: {
+          description: "Internal server error",
         },
       },
     }),
     async (c) => {
-      const bookingId = Number(c.req.param("id"));
+      try{
+        const bookingId = Number(c.req.param("id"));
 
-      const requestData = UpdateBookingDTO.parse(await c.req.json());
-      const processedData = processBookingData(requestData);
+        if(isNaN(bookingId)) {
+          throw new BadRequestError("Invalid booking ID.");
+        }
 
-      await db
-        .update(BookingsTable)
-        .set(processedData)
-        .where(eq(BookingsTable.bookingId, bookingId))
-        .execute();
-      return c.text("Booking Updated");
+        const requestData = UpdateBookingDTO.parse(await c.req.json());
+        const processedData = processBookingData(requestData);
+
+        const updatedBooking = await db
+          .update(BookingsTable)
+          .set(processedData)
+          .where(eq(BookingsTable.bookingId, bookingId))
+          .returning()
+          .execute();
+
+        if(updatedBooking.length === 0){
+          throw new NotFoundError("Booking not found.");
+        }
+
+        return c.json({
+          status: "success",
+          message: "Booking updated successfully.",
+          updatedBooking: updatedBooking[0],
+        });
+      } catch (err) {
+        return errorHandler(err, c);
+      }
     }
   )
-  .openapi(
+  .openapi( 
     createRoute({
       tags: ["Bookings"],
+      summary: "Update Booking Status by ID",
       method: "patch",
       path: "/:id/status",
-      summary: "Update Booking Status by ID",
       request: {
         body: {
           description: "Update Booking Status",
@@ -244,42 +318,93 @@ export default new OpenAPIHono()
         400: {
           description: "Invalid booking ID or status",
         },
+        404: {
+          description: "Booking Not Found",
+        },
+        500: {
+          description: "Internal Server Error",
+        },
       },
     }),
     async (c) => {
-      const bookingId = Number(c.req.param("id"));
-      const { bookStatus } = await c.req.json();
-
-      await db
-        .update(BookingsTable)
-        .set({ bookStatus })
-        .where(eq(BookingsTable.bookingId, bookingId))
-        .execute();
-
-      return c.json({ message: "Booking status updated", bookStatus });
+      try {
+        const bookingId = Number(c.req.param("id"));
+        const { bookStatus } = await c.req.json();
+        
+        const existingBooking = await db
+          .select()
+          .from(BookingsTable)
+          .where(eq(BookingsTable.bookingId, bookingId))
+          .execute();
+  
+        if (!existingBooking || existingBooking.length === 0) {
+          throw new NotFoundError("Booking not found");
+        }
+  
+        const updatedBooking = await db
+          .update(BookingsTable)
+          .set({ bookStatus })
+          .where(eq(BookingsTable.bookingId, bookingId))
+          .returning()
+          .execute();
+  
+        return c.json({
+          message: "Booking status updated",
+          bookStatus: updatedBooking[0].bookStatus,
+        }, 200);
+      } catch (error) {
+        return errorHandler(error, c);
+      }
     }
-  )
+  )    
   .openapi(
     createRoute({
       tags: ["Bookings"],
+      summary: "Delete booking by ID",
       method: "delete",
       path: "/:id",
-      summary: "Delete booking by ID",
       responses: {
         200: {
           description: "Booking Deleted",
         },
         400: {
-          description: "Invalid bookingId",
+          description: "Invalid booking ID",
+        },
+        404: {
+          description: "Booking not found",
+        },
+        500: {
+          description: "Internal server error",
         },
       },
     }),
     async (c) => {
-      const bookingId = Number(c.req.param("id"));
-      await db
-        .delete(BookingsTable)
-        .where(eq(BookingsTable.bookingId, bookingId))
-        .execute();
-      return c.text("Booking Deleted!");
+      try{
+        const bookingId = Number(c.req.param("id"));
+
+        if(isNaN(bookingId)){
+          throw new BadRequestError("Invalid bookingId.");
+        }
+
+        const deletedBooking = await db.query.BookingsTable.findFirst({
+          where: eq(BookingsTable.bookingId, bookingId),
+        });
+
+        if(!deletedBooking){
+          throw new NotFoundError("Booking not found.");
+        }
+
+        await db
+          .delete(BookingsTable)
+          .where(eq(BookingsTable.bookingId, bookingId))
+          .execute();
+
+        return c.json({
+          status: "success",
+          message: "Booking deleted successfully.",
+        });
+      } catch(err){
+        return errorHandler(err, c);
+      }
     }
   );
