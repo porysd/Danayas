@@ -6,6 +6,8 @@ import {
   DiscountsTable,
   BookingsTable,
   PaymentsTable,
+  CatalogAddOnsTable,
+  BookingAddOnsTable,
 } from "../schemas/schema.ts";
 import { faker } from "@faker-js/faker";
 import { grantPermission } from "../utils/permissionUtils.ts";
@@ -36,7 +38,7 @@ export default async function seed() {
     }
   }
   // customers
-  for (let i = 0; i < 100; i++) {
+  for (let i = 0; i < 10; i++) {
     try {
       const row = await db
         .insert(UsersTable)
@@ -58,7 +60,7 @@ export default async function seed() {
     }
   }
   // packages
-  for (let i = 0; i < 100; i++) {
+  for (let i = 0; i < 10; i++) {
     try {
       const row = await db
         .insert(PackagesTable)
@@ -250,7 +252,26 @@ export default async function seed() {
       continue;
     }
   }
+
+  for(let i = 0; i < 10; i++){
+    try {
+      const row = await db.insert(CatalogAddOnsTable).values({
+        itemName: faker.commerce.productName(),
+        price: faker.helpers.rangeToNumber({ min: 100, max: 500 }),
+        status: faker.helpers.arrayElement([
+          "active",
+          "inactive",
+        ]),
+        createdAt: faker.date.recent().toISOString(),
+      }).execute();
+    }
+    catch(e){
+      console.error(e);
+      continue;
+    }
+  }
 }
+
 //Note: remove seed() when not use.
 seed(); //Call this function when seeding.
 

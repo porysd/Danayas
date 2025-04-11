@@ -21,12 +21,18 @@ export const DiscountDTO = z.object({
     description: "Status of the discount",
     example: "active",
   }),
+  createdAt: z.string().openapi({
+    description: "The date when the booking was created",
+    example: new Date().toISOString(),
+  }),
 });
 
 export const CreateDiscountDTO = DiscountDTO.omit({
   discountId: true,
+  createdAt: true,
 });
 
 export const UpdateDiscountDTO = DiscountDTO.omit({
   discountId: true,
+  createdAt: true,
 }).partial();

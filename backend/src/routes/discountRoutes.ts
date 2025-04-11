@@ -1,9 +1,3 @@
-//     .get('/discountpromo', getDiscountPromo)
-//     .post('/discountpromo', createDiscountPromo)
-//     .get('/discountpromo/:id', getDiscountPromoById)
-//     .put('/discountpromo/:id', updateDiscountPromo)
-//     .delete('/discountpromo/:id', deleteDiscountPromo);
-
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { db } from "../config/database";
 import { DiscountsTable } from "../schemas/Discounts";

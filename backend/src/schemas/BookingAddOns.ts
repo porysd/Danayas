@@ -1,22 +1,12 @@
-// import { sqliteTable, integer, text, real } from 'drizzle-orm/sqlite-core';
-// import { BookingsTable } from './Booking';
+import { sqliteTable, integer, text, real } from 'drizzle-orm/sqlite-core';
+import { BookingsTable } from './Booking';
+import { CatalogAddOnsTable } from './CatalogAddOns';
+import { sql } from 'drizzle-orm';
 
-
-// export const bookingAddOn = sqliteTable('BOOKING_ADD_ONS', {
-//   addOnId: integer('addOnId').primaryKey({ autoIncrement: true }),
-//   bookingId: integer('bookingId').references(() => BookingsTable.bookingId).notNull(),
-//   itemName: text('itemName').notNull(), // Airconditioned Room, Extra Chairs, Nipa Hut, etc.
-//   quantity: integer('quantity').notNull(),
-//   price: real('price').notNull(),
-//   totalPrice: real('totalPrice').notNull(),
-//   status: text('status').notNull() // active, inactive
-// });
-
-// // Zod Schema
-// // export const BookingAddOnSchema = z.object({
-// //   addOnId: z.number().int().optional(),
-// //   bookingId: z.number().int(),
-// //   itemName: z.string(),
-// //   quantity: z.number().int(),
-// //   price: z.number(),
-// // });
+export const BookingAddOnsTable = sqliteTable('BOOKING_ADD_ONS', {
+  bookingAddOnId: integer('addOnId').primaryKey({ autoIncrement: true }),
+  bookingId: integer('bookingId').references(() => BookingsTable.bookingId).notNull(),
+  catalogAddOnId: integer('bookingId').references(() => CatalogAddOnsTable.catalogAddOnId).notNull(),
+  totalPrice: real('totalPrice').notNull(),
+  createdAt: text('createdAt').notNull().default(sql`(current_timestamp)`),
+});
