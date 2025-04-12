@@ -18,7 +18,7 @@ import Footer from "../components/Footer.vue";
       <h1 class="packageText" style="text-align: center">Packages</h1>
     </div>
 
-    <div class="pSec">
+    <div class="pSec flex flex-col gap-20">
       <HomePackage />
       <HomePackage />
     </div>
@@ -57,7 +57,7 @@ import Footer from "../components/Footer.vue";
 }
 
 .pSec {
-  margin-top: 3rem;
-  margin-bottom: 3rem;
+  margin-top: 5rem;
+  margin-bottom: 2rem;
 }
 </style>

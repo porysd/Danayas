@@ -1,45 +1,71 @@
 <script setup>
 import { ref } from "vue";
 import { useRouter } from "vue-router";
+import ProgressSpinner from "primevue/progressspinner";
 
 const router = useRouter();
+
 const newUser = ref({
+  username: "",
   firstName: "",
   lastName: "",
   email: "",
   contactNo: "",
   address: "",
   password: "",
+  confirmPass: "",
   role: "customer",
 });
 
+const errorMessage = ref("");
+const loading = ref(false);
+const showModal = ref(false);
+const signUpStatus = ref(null);
 const showSignUpModal = ref(false);
 
 const SignUp = () => {
+  errorMessage.value = "";
+
+  const {
+    username,
+    firstName,
+    lastName,
+    contactNo,
+    email,
+    address,
+    password,
+    confirmPass,
+  } = newUser.value;
+
   if (
-    !newUser.value.firstName ||
-    !newUser.value.lastName ||
-    !newUser.value.contactNo ||
-    !newUser.value.email ||
-    !newUser.value.address ||
-    !newUser.value.password
+    !firstName ||
+    !lastName ||
+    !contactNo ||
+    !email ||
+    !address ||
+    !password
   ) {
     alert("Please fill up all fields.");
     return;
   }
 
-  // if (newUser.value.password !== newUser.value.confirmPass) {
-  //   alert("Your password does not match.");
+  // if (password !== confirmPass) {
+  //   alert("Passwords do not match.");
   //   return;
   // }
 
-  addNewUser(newUser.value);
+  addNewUser({ ...newUser.value });
 };
 
-const addNewUser = async (newUser) => {
-  const signUpUser = { ...newUser };
+const addNewUser = async (userData) => {
+  const { confirmPass, ...signUpUser } = userData;
+
+  showModal.value = true;
+  loading.value = true;
+  signUpStatus.value = null;
+
   try {
-    const response = await fetch("http://localhost:3000/users/user", {
+    const response = await fetch("http://localhost:3000/users", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(signUpUser),
@@ -47,22 +73,38 @@ const addNewUser = async (newUser) => {
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`Failed to add customer: ${errorText}`);
+      throw new Error(errorText || "Failed to sign up");
     }
 
-    console.log("Customer added successfully");
-    showSignUpModal.value = false;
-
-    router.push("/home");
+    setTimeout(() => {
+      if (response.ok) {
+        signUpStatus.value = "success";
+        setTimeout(() => {
+          showModal.value = false;
+          router.replace("/home");
+        }, 1500);
+      } else {
+        signUpStatus.value = "error";
+        errorMessage.value = "Invalid username or password.";
+        setTimeout(() => {
+          showModal.value = false;
+        }, 1500);
+      }
+      loading.value = false;
+    }, 2000);
   } catch (error) {
-    console.error("Error adding customer:", error);
-    alert(error.message);
+    console.error("Error", err);
+    errorMessage.value = "Something went wrong. Try again later.";
+    showModal.value = false;
+    loading.value = false;
   }
+  showSignUpModal.value = false;
 };
 
 const OpenSignUpModal = () => {
   showSignUpModal.value = true;
 };
+
 const CloseSignUpModal = () => {
   showSignUpModal.value = false;
 };
@@ -185,6 +227,36 @@ const CloseSignUpModal = () => {
           </div>
         </form>
       </div>
+    </div>
+  </div>
+
+  <div
+    v-if="showModal"
+    class="loadModal fixed top-0 left-0 w-full h-full bg-opacity-50 flex justify-center items-center"
+  >
+    <div
+      class="bg-white p-6 rounded-lg text-center w-80 h-80 justify-center flex flex-col m-auto"
+    >
+      <ProgressSpinner v-if="loading" style="width: 80px; height: 80px" />
+      <i
+        v-else-if="signUpStatus === 'success'"
+        class="pi pi-check-circle text-green-600"
+        style="font-size: 4rem"
+      ></i>
+      <i
+        v-else-if="signUpStatus === 'error'"
+        class="pi pi-times-circle text-red-600"
+        style="font-size: 4rem"
+      ></i>
+      <p
+        v-if="signUpStatus === 'success'"
+        class="text-green-600 font-bold text-xl"
+      >
+        Sign Up Successful! Welcome to Danayas Resorts Events Venue
+      </p>
+      <p v-if="signUpStatus === 'error'" class="text-red-600 font-bold text-xl">
+        Invalid Credentials
+      </p>
     </div>
   </div>
 </template>
@@ -359,5 +431,9 @@ input {
   display: flex;
   flex-direction: column;
   width: 81%;
+}
+
+.loadModal {
+  z-index: 999;
 }
 </style>

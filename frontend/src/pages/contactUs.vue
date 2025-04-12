@@ -13,9 +13,7 @@ import Footer from "../components/Footer.vue";
     />
     <h1 class="ContactText">Contact Us</h1>
   </div>
-  <h2
-    class="font-[Poppins] font-black text-center mt-10 font-bold relative text-5xl"
-  >
+  <h2 class="font-[Poppins] font-black text-center mt-10 relative text-5xl">
     Connect With Us!
   </h2>
   <p class="text1 m-auto mb-15 text-center w-200 mt-5">
@@ -157,15 +155,15 @@ import Footer from "../components/Footer.vue";
 
 .bookAddress input {
   padding: 8px;
-  border: 1px solid #ccc;
-  background-color: #fcf5f5;
+  border: 1px solid #41ab5d;
+  background-color: #fcfcfc;
   border-radius: 10px;
   height: 40px;
 }
 
 .bookAddress1 input {
-  border: 1px solid #ccc;
-  background-color: #fcf5f5;
+  border: 1px solid #41ab5d;
+  background-color: #fcfcfc;
   border-radius: 10px;
   height: 100%;
   padding: 8px;

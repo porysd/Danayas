@@ -1,5 +1,5 @@
 <script setup>
-// import TermsCondition from "./TermsCondition.vue";
+import TermsCondition from "./TermsCondition.vue";
 </script>
 
 <template>
@@ -118,8 +118,8 @@ a {
 footer {
   background-color: #194d1d;
   color: white;
-  border-top-left-radius: 40px;
-  border-top-right-radius: 40px;
+  border-top-left-radius: 20px;
+  border-top-right-radius: 20px;
   padding: 1rem 0;
   margin-top: 10rem;
   font-family: "Fraunces", serif;

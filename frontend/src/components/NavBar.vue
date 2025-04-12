@@ -14,7 +14,7 @@ const toggleMenu = () => {
   <nav class="nav-bar">
     <div class="logo">
       <a href="/">
-        <img src="../assets/logo.png" alt="logo" id="logo" />
+        <img src="../assets/logo.png" alt="logo" id="logo" class="drevsLogo" />
       </a>
     </div>
 
@@ -85,6 +85,11 @@ const toggleMenu = () => {
   height: auto;
   display: block;
   margin-left: 5rem;
+}
+
+.drevsLogo {
+  display: block;
+  filter: drop-shadow(0 0 2px #000000);
 }
 
 .nav-links ul {

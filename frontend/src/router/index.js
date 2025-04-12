@@ -7,7 +7,7 @@ import booking from "../pages/booking.vue";
 import gallery from "../pages/gallery.vue";
 import faqs from "../pages/faqs.vue";
 import ContactUs from "../pages/contactUs.vue";
-// import Logs from "../pages/Logs.vue";
+import Logs from "../pages/Logs.vue";
 
 //Admin Pages
 import AdminDashboard from "../Admin/pages/AdminDashboard.vue";
@@ -29,6 +29,9 @@ import TermsAndCondition from "../Admin/pages/TermsAndCondition.vue";
 import Archived from "../Admin/pages/Archived.vue";
 import Profile from "../Admin/pages/Profile.vue";
 
+// Not Found
+import NotFound from '../pages/NotFound.vue'
+
 const routes = [
   //Public Pages
   { path: "/", component: Home },
@@ -39,7 +42,7 @@ const routes = [
   { path: "/gallery", component: gallery },
   { path: "/about-us", component: AboutUs },
   { path: "/contact-us", component: ContactUs },
-  // { path: "/logs", component: Logs },
+  { path: "/logs", component: Logs },
 
   //Admin Pages
   { path: "/admin/admin-login", component: AdminLogin },
@@ -61,7 +64,7 @@ const routes = [
   { path: "/admin/archived", component: Archived },
   { path: "/admin/profile", component: Profile },
 
-    // { path: '/:pathMatch(.*)*', component: NotFound },
+    { path: '/:pathMatch(.*)*', component: NotFound },
 ];
 
 const router = createRouter({

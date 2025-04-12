@@ -116,6 +116,79 @@ const addBookingHandler = async (booking) => {
     console.error("Error adding booking:", error);
   }
 };
+
+// FOR CALENDAR
+const bookings = ref([]);
+
+onMounted(async () => {
+  const limit = 50;
+  let page = 1;
+  let hasMoreData = true;
+
+  while (hasMoreData) {
+    const bResponse = await fetch(
+      `http://localhost:3000/bookings?limit=${limit}&page=${page}`
+    );
+    if (!bResponse.ok) throw new Error("Failed to fetch bookings");
+    const bookingData = await bResponse.json();
+
+    if (bookingData.items.length === 0) {
+      hasMoreData = false;
+    } else {
+      bookings.value.push(...bookingData.items);
+      page++;
+    }
+  }
+});
+
+const getBookingStyle = (slotDate) => {
+  const jsDate = new Date(slotDate.year, slotDate.month - 1, slotDate.day);
+
+  const formattedDate = jsDate.toISOString().split("T")[0];
+
+  const booking = bookings.value.find((b) =>
+    b.checkInDate.startsWith(formattedDate)
+  );
+
+  if (!booking) {
+    return {
+      backgroundColor: "#4BB344",
+      color: "white",
+      width: "40px",
+      height: "40px",
+      display: "inline-flex",
+      justifyContent: "center",
+      alignItems: "center",
+      borderRadius: "50%",
+    };
+  }
+
+  let backgroundColor;
+  switch (booking.mode) {
+    case "day-time":
+      backgroundColor = "#3EDFFF";
+      break;
+    case "night-time":
+      backgroundColor = "#1714BA";
+      break;
+    case "whole-day":
+      backgroundColor = "#FF2D55";
+      break;
+    default:
+      backgroundColor = "#4BB344";
+  }
+
+  return {
+    backgroundColor,
+    color: "white",
+    width: "40px",
+    height: "40px",
+    display: "inline-flex",
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: "50%",
+  };
+};
 </script>
 
 <template>
@@ -178,18 +251,16 @@ const addBookingHandler = async (booking) => {
         <StepPanels>
           <StepPanel v-slot="{ activateCallback }" value="1">
             <div class="flex h-auto">
-              <div class="date rounded m-auto h-auto">
+              <div class="date m-auto h-auto">
                 <div
                   class="datePicker"
                   style="
                     background-color: none;
-                    width: 90%;
+                    width: 100%;
                     margin: auto;
-                    border-radius: 20px;
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    margin: auto;
                     margin-bottom: 2rem;
                     margin-top: 5rem;
                     gap: 5rem;
@@ -198,13 +269,35 @@ const addBookingHandler = async (booking) => {
                   <DatePicker
                     v-model="date"
                     inline
-                    class="w-full sm:w-[30rem]"
-                  />
+                    class="dateChart w-full sm:w-[30rem]"
+                  >
+                    <template #date="slotProps">
+                      <span>
+                        <strong
+                          :style="getBookingStyle(slotProps.date)"
+                          class="date-box"
+                        >
+                          {{ slotProps.date.day }}
+                        </strong>
+                      </span>
+                    </template>
+                  </DatePicker>
                   <DatePicker
                     v-model="date"
                     inline
-                    class="w-full sm:w-[30rem]"
-                  />
+                    class="dateChart w-full sm:w-[30rem]"
+                  >
+                    <template #date="slotProps">
+                      <span>
+                        <strong
+                          :style="getBookingStyle(slotProps.date)"
+                          class="date-box"
+                        >
+                          {{ slotProps.date.day }}
+                        </strong>
+                      </span>
+                    </template>
+                  </DatePicker>
                 </div>
 
                 <div
@@ -522,7 +615,7 @@ const addBookingHandler = async (booking) => {
                           inputId="installment"
                           name="paymentTerm"
                           value="installment"
-                          size="small"
+                          size="large"
                         />
                         <label for="dayMode" class="text-xl font-[Poppins]"
                           >Installment</label
@@ -583,10 +676,10 @@ const addBookingHandler = async (booking) => {
                       <p>Package Name:</p>
                       <p>Price</p>
                     </div>
-                    <div class="bg-[#fcfcfc] p-1 rounded-sm">
+                    <div class="bg-[#CDDA54] p-1 rounded-sm">
                       <p>VAT Charged:</p>
                     </div>
-                    <div class="bg-[#fcfcfc] p-1 rounded-sm">
+                    <div class="bg-[#4BB344] p-1 rounded-sm">
                       <p>TOTAL CHARGED:</p>
                     </div>
                     <div>
@@ -598,7 +691,7 @@ const addBookingHandler = async (booking) => {
                       <h1 class="text-lg font-bold font-[Poppins]">
                         Payment Terms:
                       </h1>
-                      <div class="bg-[#fcfcfc]">
+                      <div class="bg-[#4BB344]">
                         <p>TOTAL CHARGED:</p>
                       </div>
                       <h1 class="text-m font-[Poppins]">
@@ -714,10 +807,10 @@ const addBookingHandler = async (booking) => {
                     <p>Package Name:</p>
                     <p>Price</p>
                   </div>
-                  <div class="bg-[#fcfcfc] p-1 rounded-sm">
+                  <div class="bg-[#CDDA54] p-1 rounded-sm">
                     <p>VAT Charged:</p>
                   </div>
-                  <div class="bg-[#fcfcfc] p-1 rounded-sm">
+                  <div class="bg-[#4BB344] p-1 rounded-sm">
                     <p>TOTAL CHARGED:</p>
                   </div>
                 </div>
@@ -762,7 +855,7 @@ const addBookingHandler = async (booking) => {
       :style="{ width: '70rem' }"
       :breakpoints="{ '1199px': '75vw', '575px': '90vw' }"
     >
-      <div class="border 1 mb-6">
+      <div class="mb-6">
         <p class="mb-8">
           "Sed ut perspiciatis unde omnis iste natus error sit voluptatem
           accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae

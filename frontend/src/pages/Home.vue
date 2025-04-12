@@ -14,6 +14,7 @@ import "cally";
 import HomePackage from "../components/HomePackage.vue";
 import NavBar from "../components/NavBar.vue";
 import Footer from "../components/Footer.vue";
+import Dialog from "primevue/dialog";
 
 let images = [img, img1, img2, img3];
 const texts = [
@@ -130,6 +131,86 @@ function toggleDarkMode() {
   document.documentElement.classList.toggle("my-app-dark");
   isDarkMode.value = !isDarkMode.value;
 }
+
+// FOR CALENDAR
+const bookings = ref([]);
+
+onMounted(async () => {
+  const limit = 50;
+  let page = 1;
+  let hasMoreData = true;
+
+  while (hasMoreData) {
+    const bResponse = await fetch(
+      `http://localhost:3000/bookings?limit=${limit}&page=${page}`
+    );
+    if (!bResponse.ok) throw new Error("Failed to fetch bookings");
+    const bookingData = await bResponse.json();
+
+    if (bookingData.items.length === 0) {
+      hasMoreData = false;
+    } else {
+      bookings.value.push(...bookingData.items);
+      page++;
+    }
+  }
+});
+
+const getBookingStyle = (slotDate) => {
+  const jsDate = new Date(slotDate.year, slotDate.month - 1, slotDate.day);
+
+  const formattedDate = jsDate.toISOString().split("T")[0];
+
+  const booking = bookings.value.find((b) =>
+    b.checkInDate.startsWith(formattedDate)
+  );
+
+  if (!booking) {
+    return {
+      backgroundColor: "#4BB344",
+      color: "white",
+      width: "40px",
+      height: "40px",
+      display: "inline-flex",
+      justifyContent: "center",
+      alignItems: "center",
+      borderRadius: "50%",
+    };
+  }
+
+  let backgroundColor;
+  switch (booking.mode) {
+    case "day-time":
+      backgroundColor = "#3EDFFF";
+      break;
+    case "night-time":
+      backgroundColor = "#1714BA";
+      break;
+    case "whole-day":
+      backgroundColor = "#FF2D55";
+      break;
+    default:
+      backgroundColor = "#4BB344";
+  }
+
+  return {
+    backgroundColor,
+    color: "white",
+    width: "40px",
+    height: "40px",
+    display: "inline-flex",
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: "50%",
+  };
+};
+
+// VIEW MAP
+const showViewMap = ref(false);
+
+const openViewMap = () => {
+  showViewMap.value = true;
+};
 </script>
 
 <template>
@@ -202,17 +283,37 @@ function toggleDarkMode() {
       <DatePicker
         v-model="date"
         inline
-        class="w-full sm:w-[20rem] mr-10 ml-10"
-      />
-      <DatePicker v-model="date" inline class="w-full sm:w-[20rem]" />
+        class="dateChart w-full sm:w-[20rem] mr-10 ml-10"
+      >
+        <template #date="slotProps">
+          <span>
+            <strong :style="getBookingStyle(slotProps.date)" class="date-box">
+              {{ slotProps.date.day }}
+            </strong>
+          </span>
+        </template>
+      </DatePicker>
+      <DatePicker
+        v-model="date"
+        inline
+        class="dateChart w-full sm:w-[20rem] mr-10 ml-10"
+      >
+        <template #date="slotProps">
+          <span>
+            <strong :style="getBookingStyle(slotProps.date)" class="date-box">
+              {{ slotProps.date.day }}
+            </strong>
+          </span>
+        </template>
+      </DatePicker>
 
       <div class="Status">
         <h1 style="text-align: center; font-size: 20px; font-weight: 600">
           Status
         </h1>
         <span class="dot" id="Available" style="background-color: #4bb344">
-          <label for="dot" style="margin-left: 50px"> AVAILABLE</label></span
-        >
+          <label for="dot" style="margin-left: 50px"> AVAILABLE</label>
+        </span>
         <span class="dot" id="FullyBooked" style="background-color: #ff2d55">
           <label
             for="dot"
@@ -230,11 +331,11 @@ function toggleDarkMode() {
           <label
             for="dot"
             style="margin-left: 50px; text-align: center; width: 145px"
-          >
-            NIGHT AVAILABLE</label
+            >NIGHT AVAILABLE</label
           ></span
         >
         <button
+          @click="$router.push('/booking')"
           id="Availablity"
           style="
             background-color: #41ab5d;
@@ -244,6 +345,7 @@ function toggleDarkMode() {
             font-size: 16px;
             width: 200px;
             height: 50px;
+            cursor: pointer;
           "
         >
           CHECK AVAILABILITY
@@ -384,7 +486,7 @@ function toggleDarkMode() {
           modern design, where each home tells a story of its own”
         </p>
         <div class="SeeAllBtn content-center justify-center m-auto">
-          <button>SEE ALL PACKAGES</button>
+          <button @click="$router.push('/packages')">SEE ALL PACKAGES</button>
         </div>
         <div class="packageComponent">
           <HomePackage />
@@ -429,7 +531,6 @@ function toggleDarkMode() {
           #27 Jones St. Extension Dulong Bayan 2, San Mateo <br />
           Rizal Philippines
         </div>
-        <div style="height: 5px"></div>
         <div
           class="googleMap"
           v-animateonscroll="{
@@ -451,11 +552,34 @@ function toggleDarkMode() {
             referrerpolicy="no-referrer-when-downgrade"
           ></iframe>
         </div>
-        <button onclick="ViewMap" class="MapBtn" id="MapBtn">
+        <button @click="openViewMap" class="MapBtn cursor-pointer" id="MapBtn">
           VIEW LARGE MAP
         </button>
       </div>
     </div>
+    <Dialog v-model:visible="showViewMap" modal>
+      <div
+        class="googleMap"
+        v-animateonscroll="{
+          enterClass:
+            'animate-enter fade-in-10 slide-in-from-l-8 animate-duration-1000',
+          leaveClass: 'animate-leave fade-out-0',
+        }"
+        style="margin-bottom: 30px"
+      >
+        <iframe
+          src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d1929.608118783353!2d121
+            .12431473799222!3d14.7003600939651!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3397bb19868e1b37%3A0x429ae5ae7c94d0f2!2s7%20Jones%20Dulong%20Bayan
+            %202%2C%20San%20Mateo%2C%20Rizal%20Philippines!5e0!3m2!1sen!2sph!4v1741699299438!5m2!1sen!2sph"
+          width="1108"
+          height="700"
+          style="border: 0; border-radius: 10px; margin-top: 40px"
+          allowfullscreen=""
+          loading="lazy"
+          referrerpolicy="no-referrer-when-downgrade"
+        ></iframe>
+      </div>
+    </Dialog>
     <div id="wrapper">
       <div
         class="reviewHeader content-center align-center m-auto w-[50%] h-auto"
