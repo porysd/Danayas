@@ -217,15 +217,14 @@ export default new OpenAPIHono()
 
         const dbPayment = UpdatePaymentDTO.parse(await c.req.json());
 
-        const updatedPayment = (await db
+        const updatedPayment = await db
           .update(PaymentsTable)
           .set(dbPayment)
           .where(eq(PaymentsTable.paymentId, paymentId))
           .returning()
-	        .execute()
-        )[0];
+	        .execute();
 
-        if(!updatedPayment){
+        if(updatedPayment.length === 0){
           throw new NotFoundError("Payment not found.");
         }
 

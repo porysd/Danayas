@@ -7,16 +7,12 @@
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { db } from "../config/database";
 import { BookingAddOnsTable } from "../schemas/BookingAddOns";
-import {
-  BookingAddOnDTO,
-  CreateBookingAddOnDTO,
-  UpdateBookingAddOnDTO,
-} from "../dto/BookingAddOnDTO";
+import { BookingAddOnDTO, CreateBookingAddOnDTO, UpdateBookingAddOnDTO } from "../dto/BookingAddOnDTO";
 import { eq } from "drizzle-orm";
 import { BookingsTable } from "../schemas/Booking";
 import { CatalogAddOnsTable } from "../schemas/CatalogAddOns";
 import { errorHandler } from "../middlewares/errorHandler";
-import { BadRequestError } from "../utils/errors";
+import { BadRequestError, NotFoundError } from "../utils/errors";
 import { CatalogAddOnDTO } from "../dto/catalogAddOnDTO";
 
 export default new OpenAPIHono()
@@ -47,26 +43,49 @@ export default new OpenAPIHono()
           },
           description: "Retrieve all booking add-ons",
         },
-        400: { description: "Bad request!" },
-        500: { description: "Internal server error" },
+        400: { 
+          description: "Invalid request"
+        },
+        404: {
+          description: "Booking add-ons not found",
+        },
+        500: { 
+          description: "Internal server error" 
+        },
       },
     }),
     async (c) => {
-      const { limit, page } = c.req.valid("query");
+      try{
+        const { limit, page } = c.req.valid("query");
 
-      const bookingAddOns = await db.query.BookingAddOnsTable.findMany({
-        limit,
-        offset: (page - 1) * limit,
-      });
-
-      const allBookingAddOns = bookingAddOns.map((bookingAddOn) =>
-        BookingAddOnDTO.parse(bookingAddOn)
-      );
-
-      return c.json({
-        total: bookingAddOns.length,
-        items: allBookingAddOns,
-      });
+        if(limit < 1 || page < 1){
+          throw new BadRequestError("Limit and page must be greater than 0.");
+        }      
+  
+        const bookingAddOns = await db.query.BookingAddOnsTable.findMany({
+          limit,
+          offset: (page - 1) * limit,
+        });
+  
+        if(!bookingAddOns || bookingAddOns.length === 0){
+          throw new NotFoundError("No booking add-ons found.");
+        }
+  
+        const allBookingAddOns = bookingAddOns.map((bookingAddOn) => {
+          try{
+            return BookingAddOnDTO.parse(bookingAddOn);
+          } catch(err) {
+            throw new BadRequestError("Invalid booking add-on data.");
+          }
+        });
+  
+        return c.json({
+          total: bookingAddOns.length,
+          items: allBookingAddOns,
+        });
+      } catch(err){
+        return errorHandler(err, c);
+      }
     }
   )
   .openapi(
@@ -77,6 +96,7 @@ export default new OpenAPIHono()
       path: "/",
       request: {
         body: {
+          description: "Booking add-on data",
           required: true,
           content: {
             "application/json": {
@@ -86,7 +106,7 @@ export default new OpenAPIHono()
         },
       },
       responses: {
-        200: {
+        201: {
           description: "Booking add-on created successfully",
           content: {
             "application/json": {
@@ -94,48 +114,66 @@ export default new OpenAPIHono()
             },
           },
         },
+        400: {
+          description: "Invalid booking add-on data",
+        },
+        404: {
+          description: "Booking or catalog add-on not found",
+        },
+        500: {
+          description: "Internal server error",
+        },
       },
     }),
     async (c) => {
-      const parsed = CreateBookingAddOnDTO.parse(await c.req.json());
-      const { bookingId, catalogAddOnId } = parsed;
-
-      //TODO: add error if booking is not located
-      const selectedBooking = await db
-        .select({ totalAmount: BookingsTable.totalAmount })
-        .from(BookingsTable)
-        .where(eq(BookingsTable.bookingId, bookingId))
-        .then((rows) => rows[0]);
-
-      //TODO: add error if catalog add-on is not located
-      const selectedCatalogAddOn = await db
-        .select({ price: CatalogAddOnsTable.price })
-        .from(CatalogAddOnsTable)
-        .where(eq(CatalogAddOnsTable.catalogAddOnId, catalogAddOnId))
-        .then((rows) => rows[0]);
-
-      const price = selectedCatalogAddOn.price;
-
-      const created = (
+      try{
+        const parsed = CreateBookingAddOnDTO.parse(await c.req.json());
+        const { bookingId, catalogAddOnId } = parsed;
+  
+        const selectedBooking = await db
+          .select({ totalAmount: BookingsTable.totalAmount })
+          .from(BookingsTable)
+          .where(eq(BookingsTable.bookingId, bookingId))
+          .then((rows) => rows[0]);
+  
+        if(!selectedBooking){
+          throw new NotFoundError("Booking not found.");
+        }
+  
+        const selectedCatalogAddOn = await db
+          .select({ price: CatalogAddOnsTable.price })
+          .from(CatalogAddOnsTable)
+          .where(eq(CatalogAddOnsTable.catalogAddOnId, catalogAddOnId))
+          .then((rows) => rows[0]);
+        
+        if (!selectedCatalogAddOn) {
+          throw new NotFoundError("Catalog add-on not found.");
+        }
+  
+        const price = selectedCatalogAddOn.price;      
+  
+        const created = (
+          await db
+            .insert(BookingAddOnsTable)
+            .values({
+              ...parsed,
+              price: price,
+            })
+            .returning()
+            .execute()
+        )[0];
+  
+        const updatedTotalAmount = selectedBooking.totalAmount + price;
+  
         await db
-          .insert(BookingAddOnsTable)
-          .values({
-            ...parsed,
-            price: price,
-          })
-          .returning()
-          .execute()
-      )[0];
-
-      const updatedTotalAmount = selectedBooking.totalAmount + price;
-
-      const updatedBooking = await db
-        .update(BookingsTable)
-        .set({ totalAmount: updatedTotalAmount })
-        .where(eq(BookingsTable.bookingId, bookingId))
-        .returning()
-        .execute();
-
-      return c.json(BookingAddOnDTO.parse(created));
+          .update(BookingsTable)
+          .set({ totalAmount: updatedTotalAmount })
+          .where(eq(BookingsTable.bookingId, bookingId))
+          .execute();
+  
+        return c.json(BookingAddOnDTO.parse(created), 201);
+      } catch(err){
+        return errorHandler(err, c);
+      }
     }
   );
