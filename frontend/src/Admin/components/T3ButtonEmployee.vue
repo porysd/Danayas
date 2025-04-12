@@ -192,33 +192,33 @@ const changeRole = () => {
     <div class="role-container">
       <div class="role1">
         <label class="switch">
-          Authorization
+          Admin
           <ToggleSwitch v-model="checked" />
         </label>
 
-        <label class="switch">
-          Employee Management
-          <ToggleSwitch v-model="checked" />
-        </label>
+        <!--<label class="switch">
+            Employee Management
+            <ToggleSwitch v-model="checked" />
+          </label>
 
-        <label class="switch">
-          Packages and Promos
-          <ToggleSwitch v-model="checked" />
-        </label>
+          <label class="switch">
+            Packages and Promos
+            <ToggleSwitch v-model="checked" />
+          </label>
 
-        <label class="switch">
-          Discount and Add Ons
-          <ToggleSwitch v-model="checked" />
-        </label>
+          <label class="switch">
+            Discount and Add Ons
+            <ToggleSwitch v-model="checked" />
+          </label>-->
       </div>
 
       <div class="role2">
         <label class="switch">
-          Content Management
+          Staff
           <ToggleSwitch v-model="checked" />
         </label>
 
-        <label class="switch">
+        <!--<label class="switch">
           Booking Management
           <ToggleSwitch v-model="checked" />
         </label>
@@ -226,7 +226,7 @@ const changeRole = () => {
         <label class="switch">
           Transaction
           <ToggleSwitch v-model="checked" />
-        </label>
+        </label>-->
       </div>
     </div>
 

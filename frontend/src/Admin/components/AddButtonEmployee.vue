@@ -73,7 +73,7 @@ const addEmployee = () => {
     <Dialog
       v-model:visible="showAddEmployeeModal"
       modal
-      :style="{ width: '60rem', minHeight: '41rem' }"
+      :style="{ width: '60rem', minHeight: '33rem' }"
     >
       <template #header>
         <div class="flex flex-col items-center justify-center w-full">
@@ -121,7 +121,6 @@ const addEmployee = () => {
           <input
             v-model="newEmployee.contactNo"
             id="contactNo"
-            type="number"
             placeholder="Contact Number"
           />
         </div>
@@ -163,11 +162,11 @@ const addEmployee = () => {
       <div class="role-container">
         <div class="role1">
           <label class="switch">
-            Authorization
+            Admin
             <ToggleSwitch v-model="checked" />
           </label>
 
-          <label class="switch">
+          <!--<label class="switch">
             Employee Management
             <ToggleSwitch v-model="checked" />
           </label>
@@ -180,24 +179,24 @@ const addEmployee = () => {
           <label class="switch">
             Discount and Add Ons
             <ToggleSwitch v-model="checked" />
-          </label>
+          </label>-->
         </div>
 
         <div class="role2">
           <label class="switch">
-            Content Management
+            Staff
             <ToggleSwitch v-model="checked" />
           </label>
 
-          <label class="switch">
-            Booking Management
-            <ToggleSwitch v-model="checked" />
-          </label>
+          <!--<label class="switch">
+          Booking Management
+          <ToggleSwitch v-model="checked" />
+        </label>
 
-          <label class="switch">
-            Transaction
-            <ToggleSwitch v-model="checked" />
-          </label>
+        <label class="switch">
+          Transaction
+          <ToggleSwitch v-model="checked" />
+        </label>-->
         </div>
       </div>
 

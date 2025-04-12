@@ -3,9 +3,7 @@ import { ref, defineProps, defineEmits } from "vue";
 import Button from "primevue/button";
 import Dialog from "primevue/dialog";
 import Toast from "primevue/toast";
-import Textarea from "primevue/textarea";
 import { useToast } from "primevue/usetoast";
-import FileUpload from "primevue/fileupload";
 
 const toast = useToast();
 
@@ -15,23 +13,27 @@ const showDeleteModal = ref(false);
 const showDisableModal = ref(false);
 const formData = ref({});
 
-const props = defineProps(["packageT"]);
-const emit = defineEmits(["updatePackage", "deletePackage", "disablePackage"]);
+const props = defineProps(["discount"]);
+const emit = defineEmits([
+  "updateDiscount",
+  "deleteDiscount",
+  "disableDiscount",
+]);
 
 const openEditModal = () => {
-  formData.value = { ...props.packageT };
+  formData.value = { ...props.discount };
   showEditModal.value = true;
   showMenu.value = false;
 };
 
 const openDeleteModal = () => {
-  formData.value = { ...props.packageT };
+  formData.value = { ...props.discount };
   showDeleteModal.value = true;
   showMenu.value = false;
 };
 
 const openDisableModal = () => {
-  formData.value = { ...props.packageT };
+  formData.value = { ...props.discount };
   showDisableModal.value = true;
   showMenu.value = false;
 };
@@ -42,34 +44,34 @@ const closeModals = () => {
   showDisableModal.value = false;
 };
 
-const confirmEditPackage = () => {
-  emit("updatePackage", formData.value);
+const confirmEdit = () => {
+  emit("updateDiscount", formData.value);
   toast.add({
     severity: "success",
-    summary: "Updated Package",
-    detail: "Successfully Updated Package",
+    summary: "Updated Discount",
+    detail: "Successfully Updated Discount",
     life: 3000,
   });
   closeModals();
 };
 
-const confirmDeletePackage = () => {
-  emit("deletePackage", formData.value);
+const confirmDelete = () => {
+  emit("deleteDiscount", formData.value);
   toast.add({
     severity: "success",
-    summary: "Deleted Package",
-    detail: "Successfully Deleted Package",
+    summary: "Deleted Discount",
+    detail: "Successfully Deleted Discount",
     life: 3000,
   });
   closeModals();
 };
 
-const confirmDisablePackage = () => {
-  emit("disablePackage", formData.value);
+const confirmDisable = () => {
+  emit("disableDiscount", formData.value);
   toast.add({
     severity: "success",
-    summary: "Disable Package",
-    detail: "Successfully Disable Package",
+    summary: "Disable Discount",
+    detail: "Successfully Disable Discount",
     life: 3000,
   });
   closeModals();
@@ -93,7 +95,7 @@ const confirmDisablePackage = () => {
     <Dialog v-model:visible="showEditModal" modal :style="{ width: '25rem' }">
       <template #header>
         <div class="flex flex-col items-center justify-center w-full">
-          <h2 class="text-2xl font-bold font-[Poppins]">EDIT PACKAGE:</h2>
+          <h2 class="text-2xl font-bold font-[Poppins]">EDIT DISCOUNT:</h2>
         </div>
       </template>
 
@@ -104,38 +106,19 @@ const confirmDisablePackage = () => {
             <input v-model="formData.name" placeholder="Package Name" />
           </div>
           <div class="addPackInput">
-            <label>Price:</label>
-            <input v-model="formData.price" placeholder="Price" />
+            <label>Percentage:</label>
+            <input v-model="formData.percentage" placeholder="Price" />
           </div>
           <div class="addPackInput">
-            <label>Description:</label>
-            <Textarea
-              v-model="formData.description"
-              autoResize
-              rows="3"
-              cols="30"
-              placeholder="Description"
-            />
+            <label>Type:</label>
+            <input v-model="formData.typeFor" placeholder="Type" />
           </div>
           <div class="addPackInput">
             <label>Status:</label>
             <select v-model="formData.status" class="border p-2 rounded w-full">
               <option value="active">Active</option>
               <option value="inactive">Inactive</option>
-              <option value="coming-soon">Coming Soon</option>
-              <option value="sold-out">Sold Out</option>
             </select>
-          </div>
-          <div class="addPackInput">
-            <label>Image URL:</label>
-            <FileUpload
-              ref="fileupload"
-              mode="basic"
-              name="demo[]"
-              url="/api/upload"
-              accept="image/*"
-              :maxFileSize="1000000"
-            />
           </div>
         </div>
       </div>
@@ -152,7 +135,7 @@ const confirmDisablePackage = () => {
           type="button"
           label="Save"
           severity="primary"
-          @click="confirmEditPackage"
+          @click="confirmEdit"
           class="font-bold w-full"
         />
       </div>
@@ -161,7 +144,7 @@ const confirmDisablePackage = () => {
     <Dialog v-model:visible="showDeleteModal" modal :style="{ width: '30rem' }">
       <template #header>
         <div class="flex flex-col items-center justify-center w-full">
-          <h2 class="text-xl font-bold font-[Poppins]">Delete Package</h2>
+          <h2 class="text-xl font-bold font-[Poppins]">Delete Discount</h2>
         </div>
       </template>
 
@@ -169,8 +152,8 @@ const confirmDisablePackage = () => {
         class="text-lg text-surface-700 dark:text-surface-400 block mb-8 text-center font-[Poppins]"
       >
         Are you sure you want to
-        <strong class="text-red-500">DELETE</strong> this Package:
-        <span class="font-black font-[Poppins]">{{ packageT.name }}</span
+        <strong class="text-red-500">DELETE</strong> this Discount:
+        <span class="font-black font-[Poppins]">{{ discount.name }}</span
         >?
       </span>
 
@@ -186,7 +169,7 @@ const confirmDisablePackage = () => {
           type="button"
           label="Delete"
           severity="danger"
-          @click="confirmDeletePackage"
+          @click="confirmDelete"
           class="font-bold w-full"
         />
       </div>

@@ -4,6 +4,7 @@ import Button from "primevue/button";
 import Dialog from "primevue/dialog";
 import Toast from "primevue/toast";
 import { useToast } from "primevue/usetoast";
+import DatePicker from "primevue/datepicker";
 
 const toast = useToast();
 defineProps(["data"]);
@@ -34,7 +35,7 @@ const newBooking = ref({
 const paymentDetails = ref({
   paymentTerms: "",
   totalPaid: "",
-  totalAmountDue: "",
+  totalAmount: "",
   bookStatus: "",
   reservationType: "",
 });
@@ -60,6 +61,15 @@ const backToBooking = () => {
   showPaymentModal.value = false;
 };
 
+const formatDate = (date) => {
+  if (!date) return "";
+  const d = new Date(date);
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  const year = d.getFullYear();
+  return `${month}-${day}-${year}`;
+};
+
 const confirmBooking = () => {
   if (
     !newBooking.value.firstName ||
@@ -70,7 +80,13 @@ const confirmBooking = () => {
     return;
   }
 
-  emit("addBooking", { ...newBooking.value, ...paymentDetails.value });
+  const bookingData = {
+    ...newBooking.value,
+    checkInDate: formatDate(newBooking.value.checkInDate),
+    checkOutDate: formatDate(newBooking.value.checkOutDate),
+  };
+
+  emit("addBooking", { ...bookingData, ...paymentDetails.value });
 
   // newBooking.value = {
   //     userId: '', createdBy: '', firstName: '', lastName: '', contactNo: '',
@@ -183,18 +199,25 @@ console.log("Booking Data:", newBooking.value, paymentDetails.value);
         <div class="cDate">
           <div>
             <label>Check-In Date:</label>
-            <input
-              class="cDates"
+            <DatePicker
               v-model="newBooking.checkInDate"
               placeholder="Check-In"
+              showIcon
+              fluid
+              iconDisplay="input"
+              dateFormat="mm-dd-yy"
             />
           </div>
           <div>
             <label>Check-Out Date:</label>
-            <input
-              class="cDates"
+
+            <DatePicker
               v-model="newBooking.checkOutDate"
               placeholder="Check-Out"
+              showIcon
+              fluid
+              iconDisplay="input"
+              dateFormat="mm-dd-yy"
             />
           </div>
           <div>
@@ -223,14 +246,15 @@ console.log("Booking Data:", newBooking.value, paymentDetails.value);
               v-model="newBooking.catering"
               class="border p-2 rounded w-full"
             >
-              <option value="yes">Yes</option>
-              <option value="no">No</option>
+              <option value="true">Yes</option>
+              <option value="false">No</option>
             </select>
           </div>
           <div>
             <label>Number of Guest:</label>
             <input
               class="atcngs"
+              type="number"
               v-model="newBooking.numberOfGuest"
               placeholder="Number of Guest"
             />
@@ -249,7 +273,7 @@ console.log("Booking Data:", newBooking.value, paymentDetails.value);
           <div>
             <label>Add Ons:</label>
             <select
-              v-model="newBooking.bookingAddOn"
+              v-model="newBooking.bookingAddOns"
               class="border p-2 rounded w-full"
             >
               <option value="karaoke">Karaoke</option>
@@ -295,10 +319,14 @@ console.log("Booking Data:", newBooking.value, paymentDetails.value);
         <div class="packEvent">
           <div>
             <label>Payment Terms:</label>
-            <input
+            <select
               v-model="paymentDetails.paymentTerms"
               placeholder="Payment Terms"
-            />
+              class="border p-2 rounded w-full"
+            >
+              <option value="installment">Installment</option>
+              <option value="full-payment">Full Payment</option>
+            </select>
           </div>
           <div>
             <label>Total Amount Paid:</label>
@@ -312,26 +340,37 @@ console.log("Booking Data:", newBooking.value, paymentDetails.value);
           <div>
             <label>Total Amount Due:</label>
             <input
-              v-model="paymentDetails.totalAmountDue"
+              v-model="paymentDetails.totalAmount"
               placeholder="Total Amount Due"
             />
           </div>
           <div>
             <label>Book Status:</label>
-            <input
+
+            <select
               v-model="paymentDetails.bookStatus"
               placeholder="Book Status"
-            />
+              class="border p-2 rounded w-full"
+            >
+              <option value="pending">Pending</option>
+              <option value="confirmed">Confirmed</option>
+              <option value="cancelled">Cancelled</option>
+              <option value="completed">Completed</option>
+            </select>
           </div>
         </div>
 
         <div class="packEvent">
           <div>
             <label>Reservation Type:</label>
-            <input
+            <select
               v-model="paymentDetails.reservationType"
               placeholder="Reservation Type"
-            />
+              class="border p-2 rounded w-full"
+            >
+              <option value="online">Online</option>
+              <option value="walk-in">Walk In</option>
+            </select>
           </div>
           <div>
             <label>userId:</label>
@@ -422,9 +461,14 @@ console.log("Booking Data:", newBooking.value, paymentDetails.value);
 
 .modal input {
   padding: 8px;
-  border: 1px solid grey;
-  background-color: #fcfcfc;
+  border: 1px solid #e2e8f0;
+  background-color: #ffffff;
   border-radius: 5px;
   height: 40px;
+}
+
+.modal select {
+  border: 1px solid #e2e8f0;
+  background-color: #ffffff;
 }
 </style>

@@ -4,6 +4,7 @@ import Button from "primevue/button";
 import Dialog from "primevue/dialog";
 import Toast from "primevue/toast";
 import { useToast } from "primevue/usetoast";
+import DatePicker from "primevue/datepicker";
 
 const toast = useToast();
 
@@ -141,18 +142,24 @@ const saveChanges = () => {
     <div class="cDate">
       <div>
         <label>Check-In Date:</label>
-        <input
-          class="cDates"
+        <DatePicker
           v-model="formData.checkInDate"
           placeholder="Check-In"
+          showIcon
+          fluid
+          iconDisplay="input"
+          dateFormat="mm-dd-yy"
         />
       </div>
       <div>
         <label>Check-Out Date:</label>
-        <input
-          class="cDates"
+        <DatePicker
           v-model="formData.checkOutDate"
           placeholder="Check-Out"
+          showIcon
+          fluid
+          iconDisplay="input"
+          dateFormat="mm-dd-yy"
         />
       </div>
       <div>
@@ -172,16 +179,20 @@ const saveChanges = () => {
       </div>
       <div>
         <label>Catering:</label>
-        <input
-          class="atcngs"
+        <select
           v-model="formData.catering"
           placeholder="Catering"
-        />
+          class="border p-2 rounded w-full"
+        >
+          <option value="true">Yes</option>
+          <option value="false">No</option>
+        </select>
       </div>
       <div>
         <label>Number of Guest:</label>
         <input
           class="atcngs"
+          type="number"
           v-model="formData.numberOfGuest"
           placeholder="Number of Guest"
         />
@@ -297,14 +308,14 @@ label {
   text-align: left;
   font-size: 16px;
   font-weight: 400;
-  margin-bottom: 2px;
+  margin-bottom: 10px;
+  margin-top: 10px;
 }
 
 input {
   padding: 8px;
-  border: 1px solid #ccc;
-  background-color: #fcfcfc;
-  border-radius: 10px;
-  margin-top: 10px;
+  border: 1px solid #e2e8f0;
+  background-color: #ffffff;
+  border-radius: 5px;
 }
 </style>

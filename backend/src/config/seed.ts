@@ -153,7 +153,7 @@ export default async function seed() {
     ])
   );
 
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < 100; i++) {
     try {
       const selectedPackageId = faker.helpers.arrayElement(packages)
       const packagePrice = packageMap.get(selectedPackageId) || 0;

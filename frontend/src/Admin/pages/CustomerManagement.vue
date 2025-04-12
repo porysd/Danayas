@@ -15,7 +15,8 @@ import Paginator from "primevue/paginator";
 const customers = ref([]);
 
 // Get all Users with pagination
-onMounted(async () => {
+const getAllCustomer = async () => {
+  customers.value = [];
   const limit = 50;
   let page = 1;
   let hasMoreData = true;
@@ -43,7 +44,9 @@ onMounted(async () => {
       hasMoreData = false;
     }
   }
-});
+};
+
+onMounted(() => getAllCustomer());
 
 const totalCustomers = computed(() => filteredCustomer.value.length);
 
@@ -57,6 +60,7 @@ const deleteCustomerHandler = async (customer) => {
       (c) => c.userId !== customer.userId
     );
     customers.value.disabled = true;
+    getAllCustomer();
   } catch (error) {
     console.error("Error deleting customer:", error);
   }
@@ -76,6 +80,7 @@ const addCustomerHandler = async (customer) => {
       const errorText = await response.text();
       throw new Error(`Failed to add customer: ${errorText}`);
     }
+    getAllCustomer();
     console.log("Customer added successfully");
   } catch (error) {
     console.error("Error adding customer:", error);
@@ -284,7 +289,7 @@ const filteredCustomer = computed(() => {
 
     <div v-if="customerDetails" class="modal">
       <div class="modal-content font-[Poppins]">
-        <h2 class="text-xl font-bold m-auto justify-center align-center flex">
+        <h2 class="text-xl font-bold m-auto justify-center flex">
           Customer Details
         </h2>
         <Divider />
@@ -318,7 +323,9 @@ table,
 th,
 td {
 }
-
+.customerM {
+  background-color: #eef9eb;
+}
 .headers {
   display: flex;
   justify-content: space-between;

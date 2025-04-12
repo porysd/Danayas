@@ -1,6 +1,11 @@
 <script setup>
 import { ref, defineProps, defineEmits } from "vue";
+import Button from "primevue/button";
+import Dialog from "primevue/dialog";
+import Toast from "primevue/toast";
+import { useToast } from "primevue/usetoast";
 
+const toast = useToast();
 const showMenu = ref(false);
 const showArchiveModal = ref(false);
 const showDeleteModal = ref(false);
@@ -28,11 +33,23 @@ const closeModals = () => {
 
 const archiveCustomer = () => {
   emit("archiveCustomer", formData.value);
+  toast.add({
+    severity: "warn",
+    summary: "Archive",
+    detail: "Archived User",
+    life: 3000,
+  });
   closeModals();
 };
 
 const confirmDelete = () => {
   emit("deleteCustomer", formData.value);
+  toast.add({
+    severity: "error",
+    summary: "Disable",
+    detail: "Disable User",
+    life: 3000,
+  });
   closeModals();
 };
 </script>
@@ -52,37 +69,77 @@ const confirmDelete = () => {
     </div>
   </div>
 
-  <div v-if="showArchiveModal" class="modal-overlay">
-    <div class="modal">
-      <h2 class="font-black text-2xl mb-10">
-        Are you sure you want to ARCHIVE this user: {{ customer.firstName }}
-        {{ customer.lastName }}
-      </h2>
-
-      <div class="modal-actions-delete">
-        <button class="cancelBtn font-bold" @click="closeModals">Cancel</button>
-        <button class="saveBtn font-bold" @click="archiveCustomer">
-          Archive
-        </button>
+  <Dialog v-model:visible="showArchiveModal" modal :style="{ width: '30rem' }">
+    <template #header>
+      <div class="flex flex-col items-center justify-center w-full">
+        <h2 class="text-xl font-bold font-[Poppins]">Archive User</h2>
       </div>
+    </template>
+
+    <span
+      class="text-lg text-surface-700 dark:text-surface-400 block mb-8 text-center font-[Poppins]"
+    >
+      Are you sure you want to
+      <strong class="text-orange-500">ARCHIVE</strong> this user:
+      <span class="font-black font-[Poppins]"
+        >{{ customer.firstName }} {{ customer.lastName }}</span
+      >?
+    </span>
+
+    <div class="flex justify-center gap-2 font-[Poppins]">
+      <Button
+        type="button"
+        label="Cancel"
+        severity="secondary"
+        @click="closeModals"
+        class="font-bold w-full"
+      />
+      <Button
+        type="button"
+        label="Archive"
+        severity="warn"
+        @click="archiveCustomer"
+        class="font-bold w-full"
+      />
     </div>
-  </div>
+  </Dialog>
 
-  <div v-if="showDeleteModal" class="modal-overlay-delete">
-    <div class="modal-delete">
-      <h2 class="font-black text-2xl mb-10">
-        Are you sure you want to DELETE this user: {{ customer.firstName }}
-        {{ customer.lastName }}
-      </h2>
-
-      <div class="modal-actions-delete">
-        <button class="cancelBtn font-bold" @click="closeModals">Cancel</button>
-        <button class="deleteBtn font-bold" @click="confirmDelete">
-          Delete
-        </button>
+  <Dialog v-model:visible="showDeleteModal" modal :style="{ width: '30rem' }">
+    <template #header>
+      <div class="flex flex-col items-center justify-center w-full">
+        <h2 class="text-xl font-bold font-[Poppins]">Disable User</h2>
       </div>
+    </template>
+
+    <span
+      class="text-lg text-surface-700 dark:text-surface-400 block mb-8 text-center font-[Poppins]"
+    >
+      Are you sure you want to
+      <strong class="text-red-500">DISABLE</strong> this user:
+      <span class="font-black font-[Poppins]"
+        >{{ customer.firstName }} {{ customer.lastName }}</span
+      >?
+    </span>
+
+    <div class="flex justify-center gap-2 font-[Poppins]">
+      <Button
+        type="button"
+        label="Cancel"
+        severity="secondary"
+        @click="closeModals"
+        class="font-bold w-full"
+      />
+      <Button
+        type="button"
+        label="Disable"
+        severity="danger"
+        @click="confirmDelete"
+        class="font-bold w-full"
+      />
     </div>
-  </div>
+  </Dialog>
+
+  <Toast />
 </template>
 
 <style scoped>

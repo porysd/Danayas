@@ -24,7 +24,7 @@ onMounted(async () => {
 
   while (hasMoreData) {
     const bResponse = await fetch(
-      `http://localhost:3000/bookings/bookings?limit=${limit}&page=${page}`
+      `http://localhost:3000/bookings?limit=${limit}&page=${page}`
     );
     if (!bResponse.ok) throw new Error("Failed to fetch bookings");
     const bookingData = await bResponse.json();

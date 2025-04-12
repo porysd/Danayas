@@ -16,14 +16,15 @@ const bookings = ref([]);
 const packages = ref([]);
 
 // Get All Booking with pagination
-onMounted(async () => {
+const getAllBooking = async () => {
+  bookings.value = [];
   const limit = 50;
   let page = 1;
   let hasMoreData = true;
 
   while (hasMoreData) {
     const bResponse = await fetch(
-      `http://localhost:3000/bookings/bookings?limit=${limit}&page=${page}`
+      `http://localhost:3000/bookings?limit=${limit}&page=${page}`
     );
     if (!bResponse.ok) throw new Error("Failed to fetch bookings");
     const bookingData = await bResponse.json();
@@ -37,14 +38,16 @@ onMounted(async () => {
   }
 
   const pResponse = await fetch(
-    `http://localhost:3000/packages/packages?limit=${limit}`
+    `http://localhost:3000/packages?limit=${limit}`
   );
   if (!pResponse.ok) throw new Error("Failed to fetch packages");
 
   const packagesData = await pResponse.json();
 
   packages.value = packagesData.items;
-});
+};
+
+onMounted(() => getAllBooking());
 
 const totalBookings = computed(() => filteredBooking.value.length);
 
@@ -61,6 +64,7 @@ const deleteBookingHandler = async (booking) => {
     bookings.value = bookings.value.filter(
       (c) => c.bookingId !== booking.bookingId
     );
+    getAllBooking();
   } catch (error) {
     console.error("Error deleting booking", error);
   }
@@ -84,7 +88,7 @@ const addBookingHandler = async (booking) => {
   };
 
   try {
-    const response = await fetch("http://localhost:3000/bookings/booking", {
+    const response = await fetch("http://localhost:3000/bookings", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(formattedBooking),
@@ -98,6 +102,7 @@ const addBookingHandler = async (booking) => {
     if (!response.ok)
       throw new Error(`Failed to add booking: ${JSON.stringify(data)}`);
     console.log("Booking added successfully:", data);
+    getAllBooking();
   } catch (error) {
     console.error("Error adding booking:", error);
   }
@@ -124,6 +129,7 @@ const updateBookingHandler = async (booking) => {
     if (index !== -1) {
       bookings.value[index].bookStatus = booking.bookStatus;
     }
+    getAllBooking();
   } catch (error) {
     console.error("Error updating booking:", error);
   }
@@ -437,7 +443,7 @@ const filteredBooking = computed(() => {
                 {{ formatDate(booking.checkInDate) }} to
                 {{ formatDate(booking.checkOutDate) }}
               </td>
-              <td class="w-[8%]">{{ booking.totalAmountDue }}</td>
+              <td class="w-[8%]">{{ booking.totalAmount }}</td>
               <td class="w-[10%]">
                 <Tag
                   :severity="getStatusSeverity(booking.bookStatus)"
@@ -595,7 +601,7 @@ td {
   font-weight: bold;
   font-size: 15px;
   height: 40px;
-
+  position: sticky;
   color: white;
   text-align: center;
   top: 0;
@@ -634,6 +640,7 @@ td {
   display: flex;
   align-items: center;
   justify-content: center;
+  z-index: 999;
 }
 .modal-content {
   background: white;

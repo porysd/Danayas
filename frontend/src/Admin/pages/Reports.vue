@@ -6,6 +6,9 @@ import FilterButton from "../components/FilterButton.vue";
 import T3ButtonTransaction from "../components/T3ButtonTransaction.vue";
 import SideBar from "../components/SideBar.vue";
 import Tag from "primevue/tag";
+import Notification from "../components/Notification.vue";
+import DarkModeButton from "../components/DarkModeButton.vue";
+import ProfileAvatar from "../components/ProfileAvatar.vue";
 
 const payments = ref([]);
 
@@ -106,7 +109,11 @@ const getStatusSeverity = (status) => {
     <div class="container">
       <div class="headers">
         <h1 class="text-5xl font-black">Reports</h1>
-        <h2 class="text-xl font-medium">Total payments: {{ totalPayments }}</h2>
+        <div class="flex items-center gap-5">
+          <DarkModeButton />
+          <Notification />
+          <ProfileAvatar />
+        </div>
       </div>
       <div class="searchB">
         <SearchBar class="sBar" />

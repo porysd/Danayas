@@ -19,7 +19,8 @@ import TabPanel from "primevue/tabpanel";
 
 const payments = ref([]);
 
-onMounted(async () => {
+const getAllPayment = async () => {
+  payments.value = [];
   const limit = 50;
   let page = 1;
   let hasMoreData = true;
@@ -38,7 +39,9 @@ onMounted(async () => {
       page++;
     }
   }
-});
+};
+
+onMounted(() => getAllPayment());
 
 const totalPayments = computed(() => filteredPayment.value.length);
 
@@ -78,6 +81,7 @@ const updatePaymentHandler = async (payment) => {
     if (index !== -1) {
       Object.assign(payments.value[index], payment);
     }
+    getAllPayment();
   } catch (error) {
     console.error("Error updating payment:", error);
   }

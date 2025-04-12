@@ -14,7 +14,8 @@ import Paginator from "primevue/paginator";
 
 const employees = ref([]);
 
-onMounted(async () => {
+const getAllEmployee = async () => {
+  employees.value = [];
   const limit = 50;
   let page = 1;
   let hasMoreData = true;
@@ -41,7 +42,8 @@ onMounted(async () => {
       hasMoreData = false;
     }
   }
-});
+};
+onMounted(() => getAllEmployee());
 
 const totalEmployees = computed(() => filteredEmployee.value.length);
 
@@ -57,6 +59,7 @@ const deleteEmployeeHandler = async (employee) => {
     employees.value = employees.value.filter(
       (e) => e.userId !== employee.userId
     );
+    getAllEmployee();
   } catch (error) {
     console.error("Error deleting employee:", error);
   }
@@ -64,7 +67,7 @@ const deleteEmployeeHandler = async (employee) => {
 
 const addEmployeeHandler = async (employee) => {
   try {
-    const response = await fetch("http://localhost:3000/user", {
+    const response = await fetch("http://localhost:3000/users", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -82,6 +85,7 @@ const addEmployeeHandler = async (employee) => {
       const errorText = await response.text();
       throw new Error(`Failed to add employee: ${errorText}`);
     }
+    getAllEmployee();
     console.log("Employee added successfully");
   } catch (error) {
     console.error("Error adding employee:", error);

@@ -4,96 +4,72 @@ import Button from "primevue/button";
 import Dialog from "primevue/dialog";
 import Toast from "primevue/toast";
 import { useToast } from "primevue/usetoast";
-import Textarea from "primevue/textarea";
-import FileUpload from "primevue/fileupload";
 
 const toast = useToast();
-const showAddPackageModal = ref(false);
-const newPackage = ref({
+const showDiscountModal = ref(false);
+const newDiscount = ref({
   name: "",
-  price: "",
-  description: "",
+  percentage: "",
+  typeFor: "",
   status: "",
 });
 
 defineProps(["data"]);
-const emit = defineEmits(["addPackage"]);
+const emit = defineEmits(["addDiscount"]);
 
-const openAddPackageModal = () => {
-  showAddPackageModal.value = true;
+const openDiscountModal = () => {
+  showDiscountModal.value = true;
 };
 
-const closeAddPackageModal = () => {
-  showAddPackageModal.value = false;
+const closeModals = () => {
+  showDiscountModal.value = false;
 };
 
-const addPackage = () => {
-  emit("addPackage", { ...newPackage.value });
+const addDiscount = () => {
+  emit("addDiscount", { ...newDiscount.value });
 
-  closeAddPackageModal();
+  closeModals();
 };
-
-//name, price, description, status
 </script>
 
 <template>
   <button
     class="adminButton text-white font-bold bg-[#194D1D] hover:bg-[#2B6D30]"
-    @click="openAddPackageModal"
+    @click="openDiscountModal"
   >
     <i class="aIcon pi pi-plus"></i> Add {{ data }}
   </button>
 
-  <Dialog
-    v-model:visible="showAddPackageModal"
-    modal
-    :style="{ width: '25rem' }"
-  >
+  <Dialog v-model:visible="showDiscountModal" modal :style="{ width: '25rem' }">
     <template #header>
       <div class="flex flex-col items-center justify-center w-full">
-        <h2 class="text-2xl font-bold font-[Poppins]">ADD PACKAGE:</h2>
+        <h2 class="text-2xl font-bold font-[Poppins]">ADD DISCOUNT:</h2>
       </div>
     </template>
 
     <div class="packageDetails">
       <div class="addPack flex flex-col justify-center m-auto content-center">
         <div class="addPackInput">
-          <label>Name:</label>
-          <input v-model="newPackage.name" placeholder="Package Name" />
+          <label>Discount Name:</label>
+          <input v-model="newDiscount.name" placeholder="Discount Name" />
         </div>
         <div class="addPackInput">
-          <label>Price:</label>
-          <input v-model="newPackage.price" placeholder="Price" />
+          <label>Percentage:</label>
+          <input v-model="newDiscount.percentage" placeholder="Percentage" />
         </div>
         <div class="addPackInput">
-          <label>Description:</label>
-          <Textarea
-            v-model="newPackage.description"
-            autoResize
-            rows="3"
-            cols="30"
-            placeholder="Description"
-          />
+          <label>Type:</label>
+          <input v-model="newDiscount.typeFor" placeholder="Type" />
         </div>
         <div class="addPackInput">
           <label>Status:</label>
-          <select v-model="newPackage.status" class="border p-2 rounded w-full">
+          <select
+            v-model="newDiscount.status"
+            class="border p-2 rounded w-full"
+          >
             <option value="active">Active</option>
             <option value="inactive">Inactive</option>
-            <option value="coming-soon">Coming Soon</option>
-            <option value="sold-out">Sold Out</option>
           </select>
-        </div>
-        <div class="addPackInput">
-          <label>Image URL:</label>
-          <FileUpload
-            ref="fileupload"
-            mode="basic"
-            name="demo[]"
-            url="/api/upload"
-            accept="image/*"
-            :maxFileSize="1000000"
-          />
         </div>
       </div>
     </div>
@@ -103,14 +79,14 @@ const addPackage = () => {
         type="button"
         label="Cancel"
         severity="secondary"
-        @click="closeAddPackageModal"
+        @click="closeModals"
         class="font-bold w-full"
       />
       <Button
         type="button"
         label="Save"
         severity="primary"
-        @click="addPackage"
+        @click="addDiscount"
         class="font-bold w-full"
       />
     </div>

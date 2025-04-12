@@ -25,13 +25,14 @@ const toast = useToast();
 const packages = ref([]);
 
 const getAllPackages = async () => {
+  packages.value = [];
   const limit = 50;
   let page = 1;
   let hasMoreData = true;
 
   while (hasMoreData) {
     const response = await fetch(
-      `http://localhost:3000/packages/packages?limit=${limit}&page=${page}`
+      `http://localhost:3000/packages?limit=${limit}&page=${page}`
     );
     if (!response.ok) throw new Error("Failed to fetch packages");
 
@@ -103,7 +104,7 @@ const addPackageHandler = async (packageT) => {
     price: packageT.price ? Number(packageT.price) : null,
   };
   try {
-    const response = await fetch("http://localhost:3000/packages/package", {
+    const response = await fetch("http://localhost:3000/packages", {
       method: "POST",
       headers: { "Content-type": "application/json" },
       body: JSON.stringify(formatPackage),
@@ -112,6 +113,7 @@ const addPackageHandler = async (packageT) => {
       const errorText = await response.text();
       throw new Error(`Failed to add package: ${errorText}`);
     }
+    getAllPackages();
   } catch (error) {
     console.error("Error adding package:", error);
   }
@@ -132,6 +134,7 @@ const deletePackageHandler = async (packageT) => {
       (c) => c.packageId !== packageT.packageId
     );
     getAllPackages();
+    getAllPackages();
   } catch (error) {
     console.error("Error deleting packages", error);
   }
@@ -140,11 +143,6 @@ const deletePackageHandler = async (packageT) => {
 // Update the Package by ID
 
 const updatePackageHandler = async (updatedPackage) => {
-  const formatEdit = {
-    updatedPackage,
-    price: updatedPackage.price ? Number(updatedPackage.price) : null,
-  };
-
   try {
     const response = await fetch(
       `http://localhost:3000/packages/${updatedPackage.packageId}`,
@@ -156,9 +154,10 @@ const updatePackageHandler = async (updatedPackage) => {
         body: JSON.stringify(updatedPackage),
       }
     );
+
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`Failed to add package: ${errorText}`);
+      throw new Error(`Failed to edit package: ${errorText}`);
     }
     getAllPackages();
   } catch (error) {
