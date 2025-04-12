@@ -1,11 +1,7 @@
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { db } from "../config/database";
 import { BookingsTable } from "../schemas/Booking";
-import {
-  BookingDTO,
-  CreateBookingDTO,
-  UpdateBookingDTO,
-} from "../dto/bookingDTO";
+import { BookingDTO, CreateBookingDTO, UpdateBookingDTO, } from "../dto/bookingDTO";
 import { DiscountsTable } from "../schemas/Discounts";
 import { eq } from "drizzle-orm";
 import { processBookingData } from "../utils/dateHelpers";
@@ -43,7 +39,7 @@ export default new OpenAPIHono()
           description: "Retrieve all bookings",
         },
         400: {
-          description: "Bad request!",
+          description: "Invalid request",
         },
         404: {
           description: "No bookings found",
@@ -73,7 +69,7 @@ export default new OpenAPIHono()
         const allBookings = bookings.map((booking) => {
           try {
             return BookingDTO.parse(booking);
-          } catch (error) {
+          } catch (err) {
             throw new BadRequestError("Invalid booking data format.");
           }
         });
@@ -144,7 +140,9 @@ export default new OpenAPIHono()
           description: "Booking credentials",
           required: true,
           content: {
-            "application/json": { schema: CreateBookingDTO },
+            "application/json": { 
+              schema: CreateBookingDTO 
+            },
           },
         },
       },
@@ -155,7 +153,7 @@ export default new OpenAPIHono()
               schema: CreateBookingDTO,
             },
           },
-          description: "Booking Created",
+          description: "Booking Created Successfully",
         },
         400: {
           description: "Invalid booking data",
@@ -209,7 +207,7 @@ export default new OpenAPIHono()
         // reservationType: insertedBooking.reservationType as "online" | "walk-in",
           catering: insertedBooking.catering === 1,
         // catering: insertedBooking.catering === 1 ? 1 : 0 as 0 | 1,
-        });
+        }, 201);
       } catch(err){
         return errorHandler(err, c);
       }

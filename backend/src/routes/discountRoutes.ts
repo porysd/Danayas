@@ -66,10 +66,7 @@ export default new OpenAPIHono()
       path: "/:id",
       request: {
         params: z.object({
-          id: z.coerce
-            .number()
-            .int()
-            .openapi({ description: "Discount ID" }),
+          id: z.coerce.number().int().openapi({ description: "Discount ID" }),
         }),
       },
       responses: {
@@ -122,7 +119,9 @@ export default new OpenAPIHono()
     }),
     async (c) => {
       const parsed = CreateDiscountDTO.parse(await c.req.json());
-      const created = (await db.insert(DiscountsTable).values(parsed).returning().execute())[0];
+      const created = (
+        await db.insert(DiscountsTable).values(parsed).returning().execute()
+      )[0];
       return c.json(DiscountDTO.parse(created));
     }
   )
@@ -161,8 +160,14 @@ export default new OpenAPIHono()
       const { id } = c.req.valid("param");
       const updates = UpdateDiscountDTO.parse(await c.req.json());
 
-      await db.update(DiscountsTable).set(updates).where(eq(DiscountsTable.discountId, id)).execute();
-      const updated = await db.query.DiscountsTable.findFirst({ where: eq(DiscountsTable.discountId, id) });
+      await db
+        .update(DiscountsTable)
+        .set(updates)
+        .where(eq(DiscountsTable.discountId, id))
+        .execute();
+      const updated = await db.query.DiscountsTable.findFirst({
+        where: eq(DiscountsTable.discountId, id),
+      });
 
       if (!updated) return c.json({ error: "Discount not found" }, 404);
       return c.json(DiscountDTO.parse(updated));
@@ -187,7 +192,10 @@ export default new OpenAPIHono()
     }),
     async (c) => {
       const { id } = c.req.valid("param");
-      await db.delete(DiscountsTable).where(eq(DiscountsTable.discountId, id)).execute();
+      await db
+        .delete(DiscountsTable)
+        .where(eq(DiscountsTable.discountId, id))
+        .execute();
       return c.text("Discount deleted!");
     }
   );

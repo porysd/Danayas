@@ -1,18 +1,10 @@
-//     .get('/booking/addons', getBookingAddOn)
-//     .post('/booking/addons', createBookingAddOn)
-//     .get('/booking/addons/:id', getBookingAddOnById)
-//     .put('/booking/addons/:id', updateBookingAddOn)
-//     .delete('/booking/addons/:id', deleteBookingAddON);
-
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { db } from "../config/database";
 import { CatalogAddOnsTable } from "../schemas/CatalogAddOns";
-import {
-    CatalogAddOnDTO,
-  CreateCatalogAddOnDTO,
-  UpdateCatalogAddOnDTO,
-} from "../dto/catalogAddOnDTO";
+import { CatalogAddOnDTO, CreateCatalogAddOnDTO, UpdateCatalogAddOnDTO } from "../dto/catalogAddOnDTO";
 import { eq } from "drizzle-orm";
+import { BadRequestError, NotFoundError } from "../utils/errors";
+import { errorHandler } from "../middlewares/errorHandler";
 
 export default new OpenAPIHono()
   .openapi(
@@ -42,26 +34,49 @@ export default new OpenAPIHono()
           },
           description: "Retrieve all catalog add-ons",
         },
-        400: { description: "Bad request!" },
-        500: { description: "Internal server error" },
+        400: { 
+          description: "Invalid request" 
+        },
+        404: {
+          description: "Catalog add-ons not found",
+        },
+        500: { 
+          description: "Internal server error" 
+        },
       },
     }),
     async (c) => {
-      const { limit, page } = c.req.valid("query");
+      try{
+        const { limit, page } = c.req.valid("query");
 
-      const catalogAddOns = await db.query.CatalogAddOnsTable.findMany({
-        limit,
-        offset: (page - 1) * limit,
-      });
+        if(limit < 1 || page < 1){
+          throw new BadRequestError("Limit and page must be greater than 0.");
+        }
 
-      const allDiscounts = catalogAddOns.map((catalogAddOn) =>
-        CatalogAddOnDTO.parse(catalogAddOn)
-      );
+        const catalogAddOns = await db.query.CatalogAddOnsTable.findMany({
+          limit,
+          offset: (page - 1) * limit,
+        });
 
-      return c.json({
-        total: catalogAddOns.length,
-        items: allDiscounts,
-      });
+        if(!catalogAddOns || catalogAddOns.length === 0) { 
+          throw new NotFoundError("Catalog Add-Ons not found.");
+        }
+
+        const allCatalogAddOns = catalogAddOns.map((catalogAddOn) => {
+          try{
+            return CatalogAddOnDTO.parse(catalogAddOn);
+          } catch(err){
+            throw new BadRequestError("Invalid Catalog Add-On data.");
+          }
+        });
+
+        return c.json({
+          total: catalogAddOns.length,
+          items: allCatalogAddOns,
+        });
+      } catch(err){
+        return errorHandler(err, c);
+      }
     }
   )
   .openapi(
@@ -87,16 +102,29 @@ export default new OpenAPIHono()
           },
           description: "Catalog Add-On found",
         },
-        404: { description: "Catalog Add-On not found" },
+        404: { 
+          description: "Catalog Add-On not found" 
+        },
+        500: {
+          description: "Internal server error",
+        },
       },
     }),
     async (c) => {
-      const { id } = c.req.valid("param");
-      const catalogAddOn = await db.query.CatalogAddOnsTable.findFirst({
-        where: eq(CatalogAddOnsTable.catalogAddOnId, id),
-      });
-      if (!catalogAddOn) return c.json({ error: "Catalog Add-On not found" }, 404);
-      return c.json(CatalogAddOnDTO.parse(catalogAddOn));
+      try{
+        const { id } = c.req.valid("param");
+        const catalogAddOn = await db.query.CatalogAddOnsTable.findFirst({
+          where: eq(CatalogAddOnsTable.catalogAddOnId, id),
+        });
+
+        if (!catalogAddOn){
+          throw new NotFoundError("Catalog Add-On not found.");
+        }
+
+        return c.json(CatalogAddOnDTO.parse(catalogAddOn));
+      } catch(err){
+        return errorHandler(err, c);
+      }
     }
   )
   .openapi(
@@ -107,6 +135,7 @@ export default new OpenAPIHono()
       path: "/",
       request: {
         body: {
+          description: "Create Catalog Add-On",
           required: true,
           content: {
             "application/json": {
@@ -116,7 +145,7 @@ export default new OpenAPIHono()
         },
       },
       responses: {
-        200: {
+        201: {
           description: "Catalog Add-On created",
           content: {
             "application/json": {
@@ -124,12 +153,29 @@ export default new OpenAPIHono()
             },
           },
         },
+        400: {
+          description: "Invalid Catalog Add-On data",
+        },
+        500: {
+          description: "Internal server error",
+        },
       },
     }),
     async (c) => {
-      const parsed = CreateCatalogAddOnDTO.parse(await c.req.json());
-      const created = (await db.insert(CatalogAddOnsTable).values(parsed).returning().execute())[0];
-      return c.json(CatalogAddOnDTO.parse(created));
+      try{
+        const parsed = CreateCatalogAddOnDTO.parse(await c.req.json());
+
+        const created = (await db
+          .insert(CatalogAddOnsTable)
+          .values(parsed)
+          .returning()
+          .execute()
+        )[0];
+
+        return c.json(CatalogAddOnDTO.parse(created), 201);
+      } catch(err){
+        return errorHandler(err, c);
+      }
     }
   )
   .openapi(
@@ -143,6 +189,7 @@ export default new OpenAPIHono()
           id: z.coerce.number().int().openapi({ description: "Catalog Add-On ID" }),
         }),
         body: {
+          description: "Update Catalog Add-On",
           required: true,
           content: {
             "application/json": {
@@ -160,25 +207,47 @@ export default new OpenAPIHono()
             },
           },
         },
-        404: { description: "Catalog Add-On not found" },
+        404: { 
+          description: "Catalog Add-On not found" 
+        },
       },
     }),
     async (c) => {
-      const { id } = c.req.valid("param");
-      const updates = UpdateCatalogAddOnDTO.parse(await c.req.json());
+      try {
+        const { id } = c.req.valid("param");
+  
+        const existingCatalogAddOn = await db
+          .query.CatalogAddOnsTable.findFirst({ 
+            where: eq(CatalogAddOnsTable.catalogAddOnId, id) 
+          });
+  
+        if (!existingCatalogAddOn) {
+          throw new NotFoundError("Catalog Add-On not found.");
+        }
+  
+        const updates = UpdateCatalogAddOnDTO.parse(await c.req.json());
 
-      await db.update(CatalogAddOnsTable).set(updates).where(eq(CatalogAddOnsTable.catalogAddOnId, id)).execute();
-      const updated = await db.query.CatalogAddOnsTable.findFirst({ where: eq(CatalogAddOnsTable.catalogAddOnId, id) });
-
-      if (!updated) return c.json({ error: "Catalog Add-On not found" }, 404);
-      return c.json(CatalogAddOnDTO.parse(updated));
+        await db
+          .update(CatalogAddOnsTable)
+          .set(updates)
+          .where(eq(CatalogAddOnsTable.catalogAddOnId, id))
+          .execute();
+  
+        const updatedCatalog = await db
+          .query.CatalogAddOnsTable.findFirst({ 
+            where: eq(CatalogAddOnsTable.catalogAddOnId, id) 
+          });
+  
+        return c.json(CatalogAddOnDTO.parse(updatedCatalog));
+      } catch (err) {
+        return errorHandler(err, c);
+      }
     }
-  )
-  // TODO: check if catalogaddonid exist first
+  )  
   .openapi(
     createRoute({
       tags: ["Catalog Add-Ons"],
-      summary: "Delete catalogAddOn by ID",
+      summary: "Delete Catalog Add-On by ID",
       method: "delete",
       path: "/:id",
       request: {
@@ -187,13 +256,43 @@ export default new OpenAPIHono()
         }),
       },
       responses: {
-        200: { description: "Catalog Add-On deleted" },
-        404: { description: "Catalog Add-On not found" },
+        200: { 
+          description: "Catalog Add-On deleted", 
+        },
+        400:{
+          description: "Invalid request",
+        },
+        404: { 
+          description: "Catalog Add-On not found", 
+        },
+        500: {
+          description: "Internal server error",
+        }
       },
     }),
     async (c) => {
-      const { id } = c.req.valid("param");
-      await db.delete(CatalogAddOnsTable).where(eq(CatalogAddOnsTable.catalogAddOnId, id)).execute();
-      return c.text("Catalog Add-On deleted!");
+      try{
+        const { id } = c.req.valid("param");
+
+        const deletedCatalog = await db.query.CatalogAddOnsTable.findFirst({
+          where: eq(CatalogAddOnsTable.catalogAddOnId, id),
+        });
+
+        if(!deletedCatalog){
+          throw new NotFoundError("Catalog Add-On not found.");
+        }
+
+        await db
+          .delete(CatalogAddOnsTable)
+          .where(eq(CatalogAddOnsTable.catalogAddOnId, id))
+          .execute();
+
+        return c.json({
+          status: "success",
+          message: "Catalog Add-On deleted successfully",
+        });
+      } catch(err){
+        return errorHandler(err, c);
+      }
     }
   );
