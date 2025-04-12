@@ -1,11 +1,12 @@
 import { db } from "./database";
 import {
-  RolesTable,
   UsersTable,
   PackagesTable,
   DiscountsTable,
   BookingsTable,
   PaymentsTable,
+  CatalogAddOnsTable,
+  BookingAddOnsTable,
 } from "../schemas/schema.ts";
 import { faker } from "@faker-js/faker";
 import { grantPermission } from "../utils/permissionUtils.ts";
@@ -35,8 +36,8 @@ export default async function seed() {
       continue;
     }
   }
-
-  for (let i = 0; i < 100; i++) {
+  // customers
+  for (let i = 0; i < 10; i++) {
     try {
       const row = await db
         .insert(UsersTable)
@@ -57,8 +58,8 @@ export default async function seed() {
       continue;
     }
   }
-
-  for (let i = 0; i < 100; i++) {
+  // packages
+  for (let i = 0; i < 10; i++) {
     try {
       const row = await db
         .insert(PackagesTable)
@@ -81,19 +82,41 @@ export default async function seed() {
       continue;
     }
   }
+  // discounts
+  // for (let i = 0; i < 100; i++) {
+  //   try {
+  //     const row = await db
+  //       .insert(DiscountsTable)
+  //       .values({
+  //         name: faker.commerce.product(),
+  //         percentage: faker.helpers.rangeToNumber({ min: 0.1, max: 1.0 }),
+  //         typeFor: faker.helpers.arrayElement(["pwd", "student", "senior"]),
+  //       })
+  //       .returning()
+  //       .execute();
+  //     //await grantPermission(row[0].userId, "PACKAGES", "read");
+  //   } catch (e) {
+  //     console.error(e);
+  //     continue;
+  //   }
+  // }
 
-  for (let i = 0; i < 100; i++) {
+  const uniqueDiscounts: {
+    typeFor: "pwd" | "student" | "senior" | "birthday";
+    name: string;
+    percentage: number;
+    status: "active" | "inactive";
+  }[] = [
+    { typeFor: "pwd", name: "PWD Discount", percentage: 0.2, status: "active" },
+    { typeFor: "student", name: "Student Discount", percentage: 0.15, status: "active" },
+    { typeFor: "senior", name: "Senior Citizen Discount", percentage: 0.25, status: "active" },
+    { typeFor: "birthday", name: "Birthday Discount", percentage: 0.1, status: "active" }
+  ];
+
+  for (const discount of uniqueDiscounts) {
     try {
-      const row = await db
-        .insert(DiscountsTable)
-        .values({
-          name: faker.commerce.product(),
-          percentage: faker.helpers.rangeToNumber({ min: 0.1, max: 1.0 }),
-          typeFor: faker.helpers.arrayElement(["pwd", "student", "senior"]),
-        })
-        .returning()
-        .execute();
-      //await grantPermission(row[0].userId, "PACKAGES", "read");
+      const row = await db.insert(DiscountsTable).values(discount).execute();
+      // console.log(`Inserted discount for ${discount.typeFor}`);
     } catch (e) {
       console.error(e);
       continue;
@@ -105,18 +128,43 @@ export default async function seed() {
       where: eq(UsersTable.role, "customer"),
     })
   ).map((val) => val.userId);
+
   const packages = (await db.query.PackagesTable.findMany()).map(
     (val) => val.packageId
   );
+
   const admins = (
     await db.query.UsersTable.findMany({ where: eq(UsersTable.role, "admin") })
   ).map((val) => val.userId);
   const discounts = (await db.query.DiscountsTable.findMany()).map(
-    (val) => val.discountPromoId
+    (val) => val.discountId
   );
 
-  for (let i = 0; i < 1000; i++) {
+  const discountMap = new Map(
+    (await db.query.DiscountsTable.findMany()).map((d) => [
+      d.discountId,
+      d.percentage,
+    ])
+  );
+  const packageMap = new Map(
+    (await db.query.PackagesTable.findMany()).map((p) => [
+      p.packageId,
+      p.price,
+    ])
+  );
+
+  for (let i = 0; i < 100; i++) {
     try {
+      const selectedPackageId = faker.helpers.arrayElement(packages)
+      const packagePrice = packageMap.get(selectedPackageId) || 0;
+
+      const selectedDiscountId = faker.helpers.arrayElement(discounts);
+      const discountPercent = discountMap.get(selectedDiscountId) || 0;
+
+      const discountAmount = packagePrice * discountPercent;
+      const finalAmount = packagePrice - discountAmount;
+
+
       const row = await db
         .insert(BookingsTable)
         .values({
@@ -129,7 +177,7 @@ export default async function seed() {
             "night-time",
             "whole-day",
           ]),
-          packageId: faker.helpers.arrayElement(packages),
+          packageId: selectedPackageId,
           firstName: faker.person.firstName(),
           lastName: faker.person.lastName(),
           arrivalTime: faker.date.recent().toISOString(),
@@ -143,15 +191,12 @@ export default async function seed() {
           contactNo: faker.phone.number(),
           emailAddress: faker.internet.email(),
           address: faker.location.streetAddress(),
-          discountPromoId: faker.helpers.arrayElement(discounts),
+          discountId: selectedDiscountId,
           paymentTerms: faker.helpers.arrayElement([
             "installment",
             "full-payment",
           ]),
-          totalAmountDue: faker.helpers.rangeToNumber({
-            min: 1000,
-            max: 10000,
-          }),
+          totalAmount: finalAmount,
           bookStatus: faker.helpers.arrayElement([
             "pending",
             "confirmed",
@@ -206,9 +251,28 @@ export default async function seed() {
       continue;
     }
   }
+
+  for(let i = 0; i < 10; i++){
+    try {
+      const row = await db.insert(CatalogAddOnsTable).values({
+        itemName: faker.commerce.productName(),
+        price: faker.helpers.rangeToNumber({ min: 100, max: 500 }),
+        status: faker.helpers.arrayElement([
+          "active",
+          "inactive",
+        ]),
+        createdAt: faker.date.recent().toISOString(),
+      }).execute();
+    }
+    catch(e){
+      console.error(e);
+      continue;
+    }
+  }
 }
+
 //Note: remove seed() when not use.
-seed() //Call this function when seeding.
+seed(); //Call this function when seeding.
 
 // TODO: generate fake payments
 

@@ -11,11 +11,3 @@ export const PackagesTable = sqliteTable('PACKAGES', {
   createdAt: text('createdAt').notNull().default(sql`(current_timestamp)`),
   updatedAt: text('updatedAt').notNull().default(sql`(current_timestamp)`).$onUpdateFn(() => new Date().toUTCString()),
 });
-
-// // ZOD
-// // export const PackageSchema = z.object({
-// //   packageId: z.number().int().optional(),
-// //   name: z.string(),
-// //   price: z.number(),
-// //   description: z.string(),
-// // });

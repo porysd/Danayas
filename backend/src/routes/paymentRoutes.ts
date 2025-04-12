@@ -3,48 +3,74 @@ import { PaymentDTO, CreatePaymentDTO, UpdatePaymentDTO } from "../dto/paymentDT
 import db from "../config/database";
 import { PaymentsTable } from "../schemas/schema";
 import { eq, like, or } from "drizzle-orm";
+import { BadRequestError, NotFoundError } from "../utils/errors";
+import { errorHandler } from "../middlewares/errorHandler";
 
 export default new OpenAPIHono()
   .openapi(
     createRoute({
       tags: ["Payments"],
+      summary: "Retrieve all the payments",
       method: "get",
       path: "/",
       request: {
         query: z.object({
           limit: z.coerce.number().nonnegative().openapi({
-            example: 50,
-            description: "Limit that the server will give",
+            example: 10,
+            description: "Number of records per page",
           }),
-          page: z.coerce
-            .number()
-            .nonnegative()
-            .openapi({ example: 0, description: "Page to get" }),
+          page: z.coerce.number().nonnegative().openapi({ 
+            example: 1, 
+            description: "Page number to retrieve" }),
         }),
       },
-      summary: "Retrieve all the payments",
       responses: {
         200: {
-          // content: {
-          //   "application/json": {
-          //     schema: PaymentDTO.array(),
-          //   },
-          // },
           description: "Retrieved all the payments",
+          content: {
+            "application/json": {
+              schema: z.object({
+                total: z.number(),
+                items: PaymentDTO.array(),
+              }),
+            },
+          }
+        },
+        400: {
+          description: "Invalid request"
+        },
+        404: {
+          description: "No payments found",
+        },
+        500: {
+          description: "Internal server error",
         },
       },
     }),
     async (c) => {
-      const { limit, page } = c.req.valid("query");
+      try{
+        const { limit, page } = c.req.valid("query");
 
-      const payments = await db.query.PaymentsTable.findMany({
-        limit,
-        offset: (page - 1) * limit,
-      });
-      return c.json({
-        total: payments.length,
-        items: payments,
-      });
+        if (limit < 1 || page < 1) {
+          throw new BadRequestError("Limit and page must be greater than 0.");
+        }
+
+        const payments = await db.query.PaymentsTable.findMany({
+          limit,
+          offset: (page - 1) * limit,
+        });
+
+        if (!payments || payments.length === 0) {
+          throw new NotFoundError("No payments found.");
+        }
+
+        return c.json({
+          total: payments.length,
+          items: payments,
+        });
+      } catch(err){
+        return errorHandler(err, c);
+      }
     }
   )
   .openapi(
@@ -61,19 +87,39 @@ export default new OpenAPIHono()
       responses: {
         200: {
           description: "Successful payment retrieval",
+          content: {
+            "application/json": {
+              schema: PaymentDTO,
+            }
+          }
+        },
+        400: {
+          description: "Invalid payment ID",
+        },
+        404: {
+          description: "Payment not found",
+        },
+        500: {
+          description: "Internal server error",
         },
       },
     }),
     async (c) => {
-      const { id } = c.req.valid("param");
+      try{
+        const { id } = c.req.valid("param");
 
-      const dbPayment = await db.query.PaymentsTable.findFirst({
-        where: eq(PaymentsTable.paymentId, id),
-      });
-
-      if (!dbPayment) return c.json({ error: "Package not found" }, 404);
-
-      return c.json(dbPayment);
+        const dbPayment = await db.query.PaymentsTable.findFirst({
+          where: eq(PaymentsTable.paymentId, id),
+        });
+  
+        if (!dbPayment){
+          throw new NotFoundError("Payment not found");
+        }
+  
+        return c.json(dbPayment);
+      } catch(err){
+        return errorHandler(err, c);
+      }
     }
   )
   .openapi(
@@ -92,7 +138,7 @@ export default new OpenAPIHono()
         },
       },
       responses: {
-        200: {
+        201: {
           content: {
             "application/json": {
               schema: PaymentDTO,
@@ -100,24 +146,38 @@ export default new OpenAPIHono()
           },
           description: "Successful payment creation",
         },
+        400: {
+          description: "Invalid payment data",
+        },
+        500: {
+          description: "Internal server error",
+        },
       },
     }),
     async (c) => {
-      const body = c.req.valid("json");
+      try {
+        const body = c.req.valid("json");
 
-      const dbPackage = (
-        await db.insert(PaymentsTable).values(body).returning().execute()
-      )[0];
-
-      return c.json(dbPackage);
+        const dbPayment = (
+          await db.insert(PaymentsTable).values(body).returning().execute()
+        )[0];
+  
+        if (!dbPayment) {
+          throw new Error("Failed to create payment.");
+        }
+  
+        return c.json(PaymentDTO.parse(dbPayment), 201);
+      } catch (err) {
+        return errorHandler(err, c);
+      }
     }
   )
   .openapi(
     createRoute({
       tags: ["Payments"],
+      summary: "Update Payment by ID",
       method: "patch",
       path: "/:id",
-      summary: "Update the payment by ID",
       request: {
         body: {
           description: "Update Payment",
@@ -134,21 +194,43 @@ export default new OpenAPIHono()
               schema: PaymentDTO,
             },
           },
-          description: "User Updated",
+          description: "Payment Updated Successfully",
         },
         400: {
-          description: "Invalid user ID",
+          description: "Invalid payment ID",
+        },
+        404: {
+          description: "Payment not found",
+        },
+        500: {
+          description: "Internal server error",
         },
       },
     }),
     async (c) => {
-      const userId = Number(c.req.param("id"));
+      try{
+        const paymentId = Number(c.req.param("id"));
 
-      const updatedPayment = (await db
-        .update(PaymentsTable)
-        .set(UpdatePaymentDTO.parse(await c.req.json()))
-        .where(eq(PaymentsTable.paymentId, userId))
-        .returning().execute())[0];
-      return c.json(updatedPayment);
+        if(isNaN(paymentId)){
+          throw new BadRequestError("Invalid payment ID.");
+        }
+
+        const dbPayment = UpdatePaymentDTO.parse(await c.req.json());
+
+        const updatedPayment = await db
+          .update(PaymentsTable)
+          .set(dbPayment)
+          .where(eq(PaymentsTable.paymentId, paymentId))
+          .returning()
+	        .execute();
+
+        if(updatedPayment.length === 0){
+          throw new NotFoundError("Payment not found.");
+        }
+
+        return c.json(updatedPayment);
+      } catch(err){
+        return errorHandler(err, c);
+      }
     }
   );
