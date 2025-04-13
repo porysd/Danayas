@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@flaticon/flaticon-uicons": "^3.3.1",
     "@primeuix/themes": "^1.0.0",
     "@tailwindcss/vite": "^4.0.15",
 

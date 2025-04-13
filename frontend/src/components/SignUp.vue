@@ -100,6 +100,7 @@ const addNewUser = async (userData) => {
   }
   showSignUpModal.value = false;
 };
+showSignUpModal.value = false;
 
 const OpenSignUpModal = () => {
   showSignUpModal.value = true;

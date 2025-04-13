@@ -19,6 +19,7 @@ defineProps(["data"]);
       </div>
     </div>
 
+    <div style="height: 10px"></div>
     <div class="Package2">
       <img src="../assets/danayas_day.jpg" alt="card2" class="card1" />
       <div class="titlePackage">Package 1</div>
@@ -37,11 +38,19 @@ defineProps(["data"]);
 <style scoped>
 .Packages {
   display: flex;
+  position: relative;
   justify-content: center;
   align-items: center;
-  margin: auto;
-  font-family: "fraunces", serif;
   color: #000;
+  margin-bottom: 30px;
+}
+.Package2:hover {
+  transition: box-shadow 0.3 ease-in-out;
+  box-shadow: 0px 4px 11px #3f3f3f;
+}
+.Package1:hover {
+  transition: box-shadow 0.3 ease-in-out;
+  box-shadow: 0px 4px 11px #3f3f3f;
 }
 
 .titlePackage {
@@ -83,7 +92,6 @@ defineProps(["data"]);
   border-radius: 20px;
   filter: drop-shadow(0px 4px 4px rgb(47, 46, 46));
   align-items: center;
-  display: inline-block;
 }
 .Package2 {
   background: #fcfcfc;
@@ -92,7 +100,7 @@ defineProps(["data"]);
   border-radius: 20px;
   filter: drop-shadow(0px 4px 4px rgb(47, 46, 46));
   align-items: center;
-  display: inline-block;
+
   margin-left: 15rem;
 }
 .card1 {
@@ -114,10 +122,13 @@ defineProps(["data"]);
   border: none;
   text-align: center;
   word-wrap: break-word;
-  background-color: #194d1d;
+  background-color: #41ab5d;
   border-bottom-left-radius: 10px;
   border-bottom-right-radius: 10px;
   margin-top: 10px;
+}
+.detailsBtn:hover {
+  background-color: #194d1d;
 }
 #detailsBtn {
   background: transparent;
