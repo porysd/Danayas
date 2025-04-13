@@ -7,6 +7,7 @@ import PrimeVue from 'primevue/config';
 import Aura from '@primeuix/themes/aura';
 import Tooltip from 'primevue/tooltip';
 import ToastService from 'primevue/toastservice';
+import AnimateOnScroll from "primevue/animateonscroll";
 
 createApp(App)
   .use(router)
@@ -20,5 +21,6 @@ createApp(App)
   })
   .use(ToastService)
   .directive('tooltip', Tooltip)
+  .directive("animateonscroll", AnimateOnScroll)
   .mount('#app')
 
