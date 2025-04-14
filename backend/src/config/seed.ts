@@ -66,7 +66,6 @@ export default async function seed() {
       const row = await db
         .insert(PackagesTable)
         .values({
-          description: faker.word.words(20),
           inclusion: faker.word.words(10),
           price: faker.helpers.rangeToNumber({ min: 1000, max: 12000 }),
           name: faker.commerce.productName(),

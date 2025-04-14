@@ -17,11 +17,11 @@ export const PackageDTO = z.object({
         description: "The price of the package",
         example: 1000,
     }),
-    description: z.string().openapi({
-        description: "The description of the package",
-        example: "This is a package description",
+    inclusion: z.string().openapi({
+        description: "The inclusion of the package",
+        example: "This is a package inclusion",
     }),
-    status: z.enum(["active", "inactive", "coming-soon", "sold-out"]).openapi({
+    status: z.enum(["active", "inactive"]).openapi({
         description: "The status of the package",
         example: "active",
         default: "active",
