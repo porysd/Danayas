@@ -1,6 +1,10 @@
 import { z } from "@hono/zod-openapi";
 
 export const UserDTO = z.object({
+  username: z.string().openapi({
+    description: "Username of the user",
+    example: "Dekdek",
+  }),
   firstName: z.string().openapi({
     description: "First name of the user",
     example: "John",
@@ -50,6 +54,7 @@ export const UpdateUserDTO = UserDTO.omit({
 }).partial();
 
 export const CreateUserDTO = UserDTO.pick({
+  username:true,
   firstName: true,
   lastName: true,
   contactNo: true,

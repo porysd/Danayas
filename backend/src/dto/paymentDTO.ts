@@ -9,6 +9,10 @@ export const PaymentDTO = z.object({
         description: "Identifier for the associated booking",
         example: 101,
     }),
+    imageUrl: z.string().openapi({
+        description: 'URL of the proof of payment image',
+        example: 'https://example.com/uploads/payment-proof.jpg',
+      }),
     discountAmount: z.number().nullable().optional().openapi({
         description: "Discount amount applied to the payment",
         example: 50.0,
@@ -33,10 +37,10 @@ export const PaymentDTO = z.object({
         description: "Reference number for the payment",
         example: "1654 156 156354",
     }),
-    paymentStatus: z.enum(["pending", "partially-paid", "paid", "failed"]).openapi({
+    paymentStatus: z.enum(["refund", "partially-paid", "paid", "failed"]).openapi({
         description: "Status of the payment",
         example: "paid",
-        default: "pending",
+        default: "partially-paid",
     }),
     paidAt: z.string().openapi({
         description: "Timestamp when the payment was made",
