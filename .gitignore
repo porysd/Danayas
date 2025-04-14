@@ -185,3 +185,8 @@ backend/drizzle/0001_nosy_frog_thor.sql
 backend/drizzle/0000_daily_captain_britain.sql
 backend/database.sqlite
 backend/bun.lock
+package.json
+backend/package.json
+backend/drizzle/meta/0002_snapshot.json
+backend/drizzle/0002_flowery_alex_power.sql
+backend/drizzle/0000_slow_alex_wilder.sql
