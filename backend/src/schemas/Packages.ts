@@ -9,6 +9,7 @@ export const PackagesTable = sqliteTable('PACKAGES', {
   price: real('price').notNull(),
   inclusion: text('inclusion').notNull(),
   status: text('status', {enum: ['active', 'inactive']}).notNull(),
+  mode: text('mode', {enum: ['day-time', 'night-time', 'whole-day']}),
   isPromo: integer('isPromo').notNull().default(0),
   promoStart: text('promoStart'), 
   promoEnd: text('promoEnd'),
