@@ -22,6 +22,7 @@ export default async function seed() {
       await db
         .insert(UsersTable)
         .values({
+          username: faker.internet.username(),
           firstName: faker.person.firstName(),
           lastName: faker.person.lastName(),
           contactNo: faker.phone.number(),
@@ -42,6 +43,7 @@ export default async function seed() {
       const row = await db
         .insert(UsersTable)
         .values({
+          username: faker.internet.username(),
           firstName: faker.person.firstName(),
           lastName: faker.person.lastName(),
           contactNo: faker.phone.number(),
@@ -65,14 +67,17 @@ export default async function seed() {
         .insert(PackagesTable)
         .values({
           description: faker.word.words(20),
+          inclusion: faker.word.words(10),
           price: faker.helpers.rangeToNumber({ min: 1000, max: 12000 }),
           name: faker.commerce.productName(),
           status: faker.helpers.arrayElement([
             "active",
             "inactive",
-            "coming-soon",
-            "sold-out",
           ]),
+          imageUrl: faker.image.urlLoremFlickr(),
+          isPromo: faker.datatype.boolean() ? 1 : 0,
+          promoStart: faker.date.recent().toISOString(), 
+          promoEnd: faker.date.soon().toISOString(),
         })
         .returning()
         .execute();
@@ -224,6 +229,7 @@ export default async function seed() {
         .insert(PaymentsTable)
         .values({
           bookingId: faker.helpers.arrayElement(bookingId),
+          imageUrl: faker.image.urlLoremFlickr(),
           discountAmount: faker.helpers.rangeToNumber({ min: 0, max: 500 }),
           downpaymentAmount: faker.helpers.rangeToNumber({
             min: 1000,
@@ -237,7 +243,7 @@ export default async function seed() {
           mode: faker.helpers.arrayElement(["gcash", "cash"]),
           reference: faker.string.uuid(),
           paymentStatus: faker.helpers.arrayElement([
-            "pending",
+            "refund",
             "partially-paid",
             "paid",
             "failed",
