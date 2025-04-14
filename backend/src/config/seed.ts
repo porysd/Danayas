@@ -158,7 +158,7 @@ export default async function seed() {
     ])
   );
 
-  for (let i = 0; i < 100; i++) {
+  for (let i = 0; i < 10; i++) {
     try {
       const selectedPackageId = faker.helpers.arrayElement(packages)
       const packagePrice = packageMap.get(selectedPackageId) || 0;
@@ -207,6 +207,7 @@ export default async function seed() {
             "confirmed",
             "cancelled",
             "completed",
+            "rescheduled",
           ]),
           reservationType: faker.helpers.arrayElement(["online", "walk-in"]),
           createdAt: faker.date.recent().toISOString(),
@@ -223,7 +224,7 @@ export default async function seed() {
     (val) => val.bookingId
   );
 
-  for (let i = 0; i < 100; i++) {
+  for (let i = 0; i < 10; i++) {
     try {
       const row = await db
         .insert(PaymentsTable)
@@ -271,6 +272,55 @@ export default async function seed() {
       }).execute();
     }
     catch(e){
+      console.error(e);
+      continue;
+    }
+  }
+  const bookings = (await db.query.BookingsTable.findMany()).map(
+    (val) => val.bookingId
+  );
+
+  const catalogAddOn = (await db.query.CatalogAddOnsTable.findMany()).map(
+    (val) => val.catalogAddOnId
+  );
+
+  // BOOKING ADD ONS
+  for (let i = 0; i < 10; i++) {
+    try {
+      const bookingId = faker.helpers.arrayElement(bookings);
+      const catalogAddOnId = faker.helpers.arrayElement(catalogAddOn);
+
+      const selectedBooking = await db
+        .select({ totalAmount: BookingsTable.totalAmount })
+        .from(BookingsTable)
+        .where(eq(BookingsTable.bookingId, bookingId))
+        .then((rows) => rows[0]);
+      const selectedCatalogAddOn = await db
+        .select({ price: CatalogAddOnsTable.price })
+        .from(CatalogAddOnsTable)
+        .where(eq(CatalogAddOnsTable.catalogAddOnId, catalogAddOnId))
+        .then((rows) => rows[0]);
+
+      const price = selectedCatalogAddOn.price;
+
+      const updatedTotalAmount = selectedBooking.totalAmount + price;
+
+      const row = await db.insert(BookingAddOnsTable).values({
+        bookingId: bookingId,
+        catalogAddOnId: catalogAddOnId,
+        price: price,
+        createdAt: faker.date.recent().toISOString(),
+      });
+
+      const updatedBooking = await db
+        .update(BookingsTable)
+        .set({ totalAmount: updatedTotalAmount })
+        .where(eq(BookingsTable.bookingId, bookingId))
+        .returning()
+        .execute();
+
+      
+    } catch (e) {
       console.error(e);
       continue;
     }
