@@ -7,7 +7,6 @@ export const PackagesTable = sqliteTable('PACKAGES', {
   name: text('name').notNull(),
   imageUrl: text('imageUrl'),
   price: real('price').notNull(),
-  description: text('description').notNull(),
   inclusion: text('inclusion').notNull(),
   status: text('status', {enum: ['active', 'inactive']}).notNull(),
   isPromo: integer('isPromo').notNull().default(0),
