@@ -73,6 +73,11 @@ export default async function seed() {
             "active",
             "inactive",
           ]),
+          mode: faker.helpers.arrayElement([
+            "day-time",
+            "night-time",
+            "whole-day",
+          ]),
           imageUrl: faker.image.urlLoremFlickr(),
           isPromo: faker.datatype.boolean() ? 1 : 0,
           promoStart: faker.date.recent().toISOString(), 

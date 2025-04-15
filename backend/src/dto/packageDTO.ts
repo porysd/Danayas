@@ -26,6 +26,10 @@ export const PackageDTO = z.object({
         example: "active",
         default: "active",
     }),
+    mode: z.enum(["day-time", "night-time", "whole-day"]).openapi({
+        description: "The mode of the package",
+        example: "day-time",
+    }),
     isPromo: z.boolean().openapi({
         description: "Indicates if the package is a promo (true = promo, false = not promo)",
         example: false,
