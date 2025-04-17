@@ -190,24 +190,35 @@ export default new OpenAPIHono()
 
           if (!userDetails) {
             throw new BadRequestError("User not found.");
+          } 
+          
+          if (!["admin", "staff", "customer"].includes(userDetails.role)) {
+            throw new BadRequestError(
+              "Only admin, staff, or customer roles can make online reservations."
+            );
           }
-
-          // Optional: You could check if the role is 'customer' here if roles are strictly enforced.
         }
         if (reservationType === "walk-in") {
-          if (!body.createdBy) {
+          if (!body.userId) {
             throw new BadRequestError("Walk-in bookings must be created by staff or admin.");
           }
 
           createdByUser = await db
             .select()
             .from(UsersTable)
-            .where(eq(UsersTable.userId, body.createdBy))
+            .where(eq(UsersTable.userId, body.userId))
             .then((rows) => rows[0]);
 
-          if (!createdByUser || !["staff", "admin"].includes(createdByUser.role)) {
-            throw new BadRequestError("Unauthorized staff ID for walk-in booking.");
-          }
+            if (!createdByUser) {
+              throw new BadRequestError("Creator user not found.");
+            }
+
+            if (!["admin", "staff"].includes(createdByUser.role)) {
+              throw new BadRequestError(
+                "Only admin or staff roles can create walk-in bookings."
+              );
+            }
+
         }
 
         const { discountId, packageId } = body;
@@ -239,8 +250,7 @@ export default new OpenAPIHono()
 
         const processedBody = {
           ...processBookingData(body),
-          userId: body.userId ?? null,
-          createdBy: body.createdBy ?? body.userId,
+          userId: body.userId,
           totalAmount,
           catering: body.catering ? 1 : 0,
           firstName: body.firstName || userDetails?.firstName || null, 

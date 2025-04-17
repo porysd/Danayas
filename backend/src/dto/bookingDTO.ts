@@ -9,10 +9,10 @@ export const BookingDTO = z.object({
         description: "The ID of the user who made the booking",
         example: 3,
     }),
-    createdBy: z.number().int().openapi({
-        description: "The ID of the admin or staff who created the booking",
-        example: 1,
-    }),
+    // createdBy: z.number().int().nullable().optional().openapi({
+    //     description: "The ID of the admin or staff who created the booking",
+    //     example: 1,
+    // }),
     checkInDate: z.string().openapi({
         description: "The check-in date of the booking (MM-DD-YYYY)",
         example: "03-19-2025",
@@ -37,19 +37,19 @@ export const BookingDTO = z.object({
         description: "The last name of the person who made the booking",
         example: "Doe",
     }),
-    arrivalTime: z.string().openapi({
+    arrivalTime: z.string().nullable().optional().openapi({
         description: "The arrival time of the booking (HH:MM AM/PM)",
         example: "7:00 PM",
     }),
-    eventType: z.string().openapi({
+    eventType: z.string().nullable().optional().openapi({
         description: "The type of event for the booking",
         example: "Birthday",
     }),
-    numberOfGuest: z.number().int().openapi({
+    numberOfGuest: z.number().int().nullable().optional().openapi({
         description: "The number of guests expected",
         example: 50,
     }),
-    catering: z.coerce.boolean().openapi({
+    catering: z.coerce.boolean().nullable().optional().openapi({
         description: "Indicates whether catering is included",
         example: true,
     }),
@@ -77,11 +77,11 @@ export const BookingDTO = z.object({
         description: "The total amount due for the booking",
         example: 12000,
     }),
-    bookStatus: z.enum(["pending", "confirmed", "cancelled", "completed", "rescheduled"]).openapi({
+    bookStatus: z.enum(["pending", "confirmed", "cancelled", "completed", "rescheduled"]).nullable().optional().openapi({
         description: "The status of the booking",
         example: "pending",
     }),
-    reservationType: z.enum(["online", "walk-in"]).openapi({
+    reservationType: z.enum(["online", "walk-in"]).nullable().optional().openapi({
         description: "The type of reservation",
         example: "online",
     }),
@@ -97,7 +97,7 @@ export const UpdateBookingDTO = BookingDTO.omit({
     discountId: true,
     createdAt: true,
     userId: true,
-    createdBy: true,
+    // createdBy: true,
     firstName: true,
     lastName: true,
     contactNo: true,

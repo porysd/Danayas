@@ -8,7 +8,7 @@ import { DiscountsTable } from './Discounts';
 export const BookingsTable = sqliteTable('BOOKING', {
   bookingId: integer('bookingId').primaryKey({ autoIncrement: true}),
   userId: integer('userId').references(() => UsersTable.userId).notNull(), // Admin, Staff, and Customer
-  createdBy: integer('createdBy').references(() => UsersTable.userId).notNull(), // Admin or Staff
+  // createdBy: integer('createdBy').references(() => UsersTable.userId).notNull(), // Admin or Staff
   checkInDate: text('checkInDate').notNull(),
   checkOutDate: text('checkOutDate').notNull(),
   mode: text('mode', {enum: ['day-time', 'night-time', 'whole-day']}).notNull(),
