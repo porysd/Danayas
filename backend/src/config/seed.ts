@@ -224,44 +224,44 @@ export default async function seed() {
     }
   }
 
-  const bookingId = (await db.query.BookingsTable.findMany()).map(
-    (val) => val.bookingId
-  );
+  // const bookingId = (await db.query.BookingsTable.findMany()).map(
+  //   (val) => val.bookingId
+  // );
 
-  for (let i = 0; i < 10; i++) {
-    try {
-      const row = await db
-        .insert(PaymentsTable)
-        .values({
-          bookingId: faker.helpers.arrayElement(bookingId),
-          imageUrl: faker.image.urlLoremFlickr(),
-          discountAmount: faker.helpers.rangeToNumber({ min: 0, max: 500 }),
-          downpaymentAmount: faker.helpers.rangeToNumber({
-            min: 1000,
-            max: 2000,
-          }),
-          amountPaid: faker.helpers.rangeToNumber({ min: 100, max: 5000 }),
-          totalAmountDue: faker.helpers.rangeToNumber({
-            min: 1000,
-            max: 10000,
-          }),
-          mode: faker.helpers.arrayElement(["gcash", "cash"]),
-          reference: faker.string.uuid(),
-          paymentStatus: faker.helpers.arrayElement([
-            "refund",
-            "partially-paid",
-            "paid",
-            "failed",
-          ]),
-          paidAt: faker.date.recent().toISOString(),
-        })
-        .execute();
-      //await grantPermission(row[0].userId, "PACKAGES", "read");
-    } catch (e) {
-      console.error(e);
-      continue;
-    }
-  }
+  // for (let i = 0; i < 10; i++) {
+  //   try {
+  //     const row = await db
+  //       .insert(PaymentsTable)
+  //       .values({
+  //         bookingId: faker.helpers.arrayElement(bookingId),
+  //         imageUrl: faker.image.urlLoremFlickr(),
+  //         discountAmount: faker.helpers.rangeToNumber({ min: 0, max: 500 }),
+  //         downpaymentAmount: faker.helpers.rangeToNumber({
+  //           min: 1000,
+  //           max: 2000,
+  //         }),
+  //         amountPaid: faker.helpers.rangeToNumber({ min: 100, max: 5000 }),
+  //         totalAmountDue: faker.helpers.rangeToNumber({
+  //           min: 1000,
+  //           max: 10000,
+  //         }),
+  //         mode: faker.helpers.arrayElement(["gcash", "cash"]),
+  //         reference: faker.string.uuid(),
+  //         paymentStatus: faker.helpers.arrayElement([
+  //           "refund",
+  //           "partially-paid",
+  //           "paid",
+  //           "failed",
+  //         ]),
+  //         paidAt: faker.date.recent().toISOString(),
+  //       })
+  //       .execute();
+  //     //await grantPermission(row[0].userId, "PACKAGES", "read");
+  //   } catch (e) {
+  //     console.error(e);
+  //     continue;
+  //   }
+  // }
 
   for(let i = 0; i < 10; i++){
     try {

@@ -33,6 +33,10 @@ export const PaymentDTO = z.object({
     description: "Reference number for the payment",
     example: "1654 156 156354",
   }),
+  senderName: z.string().openapi({
+    description: "Name of the sender for the payment",
+    example: "John Doe",
+  }),
   refundAmount: z.number().nullable().optional().openapi({
     description: "Amount refunded to the user",
     example: 1000.0,
@@ -54,12 +58,21 @@ export const PaymentDTO = z.object({
     example: new Date().toISOString(),
   }),
 });
-export const CreatePaymentDTO = PaymentDTO.omit({
-  paymentId: true,
-  paidAt: true,
-  refundAmount: true,
-  refundStatus: true,
+export const CreatePaymentDTO = PaymentDTO.pick({
+  bookingId: true,
+  senderName: true,
+  imageUrl: true,
+  mode: true,
+  reference: true,
 });
+export const RefundPaymentDTO = PaymentDTO.pick({
+  bookingId: true,
+  senderName: true,
+  imageUrl: true,
+  mode: true,
+  reference: true,
+})
+
 export const UpdatePaymentDTO = PaymentDTO.pick({
   paymentStatus: true,
   refundStatus: true,

@@ -10,6 +10,7 @@ import { DiscountsTable } from "../schemas/Discounts";
 import { eq } from "drizzle-orm";
 import { processBookingData } from "../utils/dateHelpers";
 import { PackagesTable } from "../schemas/Packages";
+import { UsersTable } from '../schemas/User';
 import { fi } from "@faker-js/faker";
 import { BadRequestError, NotFoundError } from "../utils/errors";
 import { errorHandler } from "../middlewares/errorHandler";
@@ -170,6 +171,45 @@ export default new OpenAPIHono()
     async (c) => {
       try {
         const body = c.req.valid("json");
+
+        const reservationType = body.reservationType || "online";
+
+        let userDetails = null;
+        let createdByUser = null;
+
+        if (reservationType === "online") {
+          if (!body.userId) {
+            throw new BadRequestError("Online reservations require a user account.");
+          }
+
+          userDetails = await db
+            .select()
+            .from(UsersTable)
+            .where(eq(UsersTable.userId, body.userId))
+            .then((rows) => rows[0]);
+
+          if (!userDetails) {
+            throw new BadRequestError("User not found.");
+          }
+
+          // Optional: You could check if the role is 'customer' here if roles are strictly enforced.
+        }
+        if (reservationType === "walk-in") {
+          if (!body.createdBy) {
+            throw new BadRequestError("Walk-in bookings must be created by staff or admin.");
+          }
+
+          createdByUser = await db
+            .select()
+            .from(UsersTable)
+            .where(eq(UsersTable.userId, body.createdBy))
+            .then((rows) => rows[0]);
+
+          if (!createdByUser || !["staff", "admin"].includes(createdByUser.role)) {
+            throw new BadRequestError("Unauthorized staff ID for walk-in booking.");
+          }
+        }
+
         const { discountId, packageId } = body;
         // Getting Package Price
         const selectedPackage = await db
@@ -199,8 +239,15 @@ export default new OpenAPIHono()
 
         const processedBody = {
           ...processBookingData(body),
+          userId: body.userId ?? null,
+          createdBy: body.createdBy ?? body.userId,
           totalAmount,
           catering: body.catering ? 1 : 0,
+          firstName: body.firstName || userDetails?.firstName || null, 
+          lastName: body.lastName || userDetails?.lastName || null, 
+          contactNo: body.contactNo || userDetails?.contactNo || null,
+          emailAddress: body.emailAddress || userDetails?.email || null, 
+          address: body.address || userDetails?.address || null, 
         };
 
         const insertedBooking = (
