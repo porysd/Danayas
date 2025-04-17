@@ -363,4 +363,51 @@ export default new OpenAPIHono()
         return errorHandler(err, c);
       }
     }
-  );
+  )
+  .openapi(
+    createRoute({
+      tags: ["Users"],
+      summary: "Disable a user by ID",
+      method : "patch",
+      path : "/disable/:id",
+      responses : {
+        200 : {
+          description: "User disabled successfully",
+        },
+        400 : {
+          description: "Invalid user ID",
+        },
+        404 : {
+          description: "User not found",
+        },
+        500 : {
+          description: "Internal server error",
+        },
+      },
+    }),
+    async (c) => {
+      try {
+        const userId = Number(c.req.param("id"));
+        if (isNaN(userId)) {
+          throw new BadRequestError("Invalid user ID");
+        }
+        const user = await db.query.UsersTable.findFirst({  
+          where: eq(UsersTable.userId, userId),
+        });
+
+        if (!user) {
+          throw new NotFoundError("User not found");
+        }
+        await db
+          .update(UsersTable)
+          .set({ status: "disable" })
+          .where(eq(UsersTable.userId, userId))
+          .execute();
+
+          return c.json({message: "User disabled successfully", userId});
+
+      } catch(err) {
+        return  errorHandler(err, c);
+      }
+    }
+  )
