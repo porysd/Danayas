@@ -218,6 +218,7 @@ export default new OpenAPIHono()
                 "Only admin or staff roles can create walk-in bookings."
               );
             }
+
         }
 
         const { discountId, packageId } = body;
