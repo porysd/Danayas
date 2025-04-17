@@ -2,6 +2,7 @@ import { z } from "@hono/zod-openapi";
 import { UserDTO } from "./userDTO";
 
 export const RegisterDTO = UserDTO.pick({
+  username: true,
   firstName: true,
   lastName: true,
   contactNo: true,
