@@ -98,6 +98,9 @@ export default new OpenAPIHono()
         if (!dbUser) {
           throw new UnauthorizedError("Invalid email or password");
         }
+        if (dbUser.status === "disable") {
+          throw new UnauthorizedError("Your account has been disabled. Please contact support.");
+        }
         if(!await Bun.password.verify(body.password, dbUser.password)) {
           throw new UnauthorizedError("Invalid email or password");
         }
