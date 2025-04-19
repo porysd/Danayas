@@ -1,20 +1,31 @@
 <script setup>
 import { ref } from "vue";
+import { useRouter } from "vue-router";
 import Login from "../components/Login.vue";
 import SignUp from "../components/SignUp.vue";
 
-const isMenuOpen = ref(false);
+const isLoggedIn = ref(localStorage.getItem("token") !== null); // Checks if logged in
+const router = useRouter();
 
-const toggleMenu = () => {
-  isMenuOpen.value = !isMenuOpen.value;
-};
+function handleSignUpSuccess() {
+  isLoggedIn.value = true; // User is logged in after sign up
+}
+
+function handleLoginSuccess() {
+  isLoggedIn.value = true; // User is logged in after login
+}
 </script>
 
 <template>
   <nav class="nav-bar">
     <div class="logo">
       <a href="/">
-        <img src="../assets/logo.png" alt="logo" id="logo" class="drevsLogo" />
+        <img
+          src="../Admin/assets/drevslogo.png"
+          alt="logo"
+          id="logo"
+          class="drevsLogo"
+        />
       </a>
     </div>
 
@@ -53,20 +64,32 @@ const toggleMenu = () => {
             >Contact Us</router-link
           >
         </li>
-        <li>
-          <router-link to="/logs" active-class="active-route">Logs</router-link>
-        </li>
-        <li>
-          <router-link to="/profile-page" active-class="active-route"
-            >Profile</router-link
-          >
-        </li>
       </ul>
     </div>
 
     <div class="signup-btn-container">
-      <Login />
-      <SignUp />
+      <template v-if="isLoggedIn">
+        <router-link to="/logs" active-class="active-route">Logs</router-link>
+        <div class="profilepage">
+          <router-link to="/profile-page" active-class="active-route">
+            <i
+              class="pi pi-user"
+              style="
+                font-size: 1.5rem;
+                align-items: center;
+                position: relative;
+                justify-content: center;
+                align-content: center;
+                display: flex;
+              "
+            ></i
+          ></router-link>
+        </div>
+      </template>
+      <template v-else>
+        <Login @login-success="handleLoginSuccess" />
+        <SignUp @sign-up-success="handleSignUpSuccess" />
+      </template>
     </div>
   </nav>
 
@@ -76,6 +99,15 @@ const toggleMenu = () => {
 </template>
 
 <style scoped>
+.profilepage {
+  width: 40px;
+  padding: 5px;
+  border-radius: 50%;
+  background-color: #54d6a4;
+  height: 40px;
+  border-radius: 50%;
+  position: relative;
+}
 .nav-bar {
   display: flex;
   align-items: center;

@@ -1,5 +1,13 @@
 <script setup lang="ts">
-import { RouterView } from "vue-router";
+import { useRouter } from "vue-router";
+import { useAuthStore } from "./stores/authStore";
+
+const router = useRouter();
+const authStore = useAuthStore();
+
+if (!authStore.accessToken) {
+  router.replace("/admin/admin-login");
+}
 </script>
 
 <template>

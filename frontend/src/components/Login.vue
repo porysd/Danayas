@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from "vue";
+import { ref, defineEmits } from "vue";
 import { useRouter } from "vue-router";
 import SignUp from "./SignUp.vue";
 import ProgressSpinner from "primevue/progressspinner";
@@ -12,6 +12,7 @@ const loading = ref(false);
 const showModal = ref(false);
 const loginStatus = ref(null);
 
+const emit = defineEmits(["login-success"]);
 // const adUser = "admin";
 // const adPass = "admin123";
 
@@ -50,6 +51,12 @@ const login = async () => {
         password: password.value,
       }),
     });
+    const data = await response.json();
+
+    if (response.ok && data.token) {
+      localStorage.setItem("token", data.token);
+      isLoggedIn;
+    }
 
     // const result = await response.json();
 
@@ -67,6 +74,7 @@ const login = async () => {
           showModal.value = false;
         }, 1500);
       }
+      emit("login-success");
       loading.value = false;
     }, 2000);
   } catch (err) {
@@ -78,8 +86,6 @@ const login = async () => {
 
   showLogInModal.value = false;
 };
-
-// Modal for login
 </script>
 <template>
   <button class="login-btn" @click="openLogInModal">Login</button>
