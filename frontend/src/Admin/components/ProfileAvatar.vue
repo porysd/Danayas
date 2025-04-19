@@ -1,11 +1,14 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from "vue";
-import { useRouter } from "vue-router";
 import Avatar from "primevue/avatar";
+import { useAuthStore } from "../../stores/authStore";
+import { useRouter } from "vue-router";
+
+const authStore = useAuthStore();
 const router = useRouter();
 
 const logout = () => {
-  localStorage.removeItem("isLoggedIn");
+  authStore.logout();
   router.replace("/admin/admin-login");
 };
 

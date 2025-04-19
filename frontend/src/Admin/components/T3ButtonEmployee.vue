@@ -29,7 +29,7 @@ onUnmounted(() => {
 });
 
 const prop = defineProps(["employee"]);
-const emit = defineEmits(["archiveEmployee", "deleteEmployee", "changeRole"]);
+const emit = defineEmits(["archiveEmployee", "disableEmployee", "changeRole"]);
 
 const openArchiveModal = () => {
   formData.value = { ...prop.employee };
@@ -60,18 +60,18 @@ const archiveEmployee = () => {
   toast.add({
     severity: "warn",
     summary: "Archive",
-    detail: "Archived User",
+    detail: "Successfully Archived a User",
     life: 3000,
   });
   closeModals();
 };
 
 const confirmDisable = () => {
-  emit("deleteEmployee", formData.value);
+  emit("disableEmployee", formData.value);
   toast.add({
     severity: "error",
-    summary: "Disable",
-    detail: "Disable User",
+    summary: "Disabled",
+    detail: "Successfully Disable a User",
     life: 3000,
   });
   closeModals();
@@ -79,6 +79,12 @@ const confirmDisable = () => {
 
 const changeRole = () => {
   emit("changeRole", formData.value);
+  toast.add({
+    severity: "success",
+    summary: "Success",
+    detail: "Successfully Changed Role a User",
+    life: 3000,
+  });
   closeModals();
 };
 </script>
@@ -92,9 +98,24 @@ const changeRole = () => {
 
     <div v-if="showMenu" ref="hideMenu" class="dropdown-menu">
       <ul>
-        <li @click="openRoleModal">Roles</li>
-        <li @click="openArchiveModal">Archive</li>
-        <li @click="openDeleteModal">Disable</li>
+        <li
+          class="hover:bg-gray-100 dark:hover:bg-gray-700"
+          @click="openRoleModal"
+        >
+          Roles
+        </li>
+        <li
+          class="hover:bg-gray-100 dark:hover:bg-gray-700"
+          @click="openArchiveModal"
+        >
+          Archive
+        </li>
+        <li
+          class="hover:bg-gray-100 dark:hover:bg-gray-700"
+          @click="openDeleteModal"
+        >
+          Disable
+        </li>
       </ul>
     </div>
   </div>
@@ -193,40 +214,29 @@ const changeRole = () => {
       <div class="role1">
         <label class="switch">
           Admin
-          <ToggleSwitch v-model="checked" />
+          <ToggleSwitch
+            :modelValue="formData.role === 'admin'"
+            @update:modelValue="
+              (value) => {
+                if (value) formData.role = 'admin';
+              }
+            "
+          />
         </label>
-
-        <!--<label class="switch">
-            Employee Management
-            <ToggleSwitch v-model="checked" />
-          </label>
-
-          <label class="switch">
-            Packages and Promos
-            <ToggleSwitch v-model="checked" />
-          </label>
-
-          <label class="switch">
-            Discount and Add Ons
-            <ToggleSwitch v-model="checked" />
-          </label>-->
       </div>
 
       <div class="role2">
         <label class="switch">
           Staff
-          <ToggleSwitch v-model="checked" />
+          <ToggleSwitch
+            :modelValue="formData.role === 'staff'"
+            @update:modelValue="
+              (value) => {
+                if (value) formData.role = 'staff';
+              }
+            "
+          />
         </label>
-
-        <!--<label class="switch">
-          Booking Management
-          <ToggleSwitch v-model="checked" />
-        </label>
-
-        <label class="switch">
-          Transaction
-          <ToggleSwitch v-model="checked" />
-        </label>-->
       </div>
     </div>
 
@@ -263,7 +273,7 @@ const changeRole = () => {
   position: absolute;
   right: 0;
   top: 100%;
-  background: #fcf5f5;
+  background: #fcfcfc;
   color: #333;
   border-radius: 5px;
   padding: 5px;
@@ -284,11 +294,6 @@ const changeRole = () => {
   display: flex;
   align-items: center;
   gap: 5px;
-}
-
-.dropdown-menu li:hover {
-  background: #555;
-  color: #fcf5f5;
 }
 
 .role-container {

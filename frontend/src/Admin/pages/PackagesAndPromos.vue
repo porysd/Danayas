@@ -20,191 +20,34 @@ import Notification from "../components/Notification.vue";
 import DarkModeButton from "../components/DarkModeButton.vue";
 import Toast from "primevue/toast";
 import { useToast } from "primevue/usetoast";
+import { usePackageStore } from "../../stores/packageStore.js";
 
 const toast = useToast();
-const packages = ref([]);
-
-const getAllPackages = async () => {
-  packages.value = [];
-  const limit = 50;
-  let page = 1;
-  let hasMoreData = true;
-
-  while (hasMoreData) {
-    const response = await fetch(
-      `http://localhost:3000/packages?limit=${limit}&page=${page}`
-    );
-    if (!response.ok) throw new Error("Failed to fetch packages");
-
-    const packagesData = await response.json();
-
-    if (packagesData.items.length === 0) {
-      hasMoreData = false;
-    } else {
-      packages.value.push(...packagesData.items);
-      page++;
-    }
-  }
-};
-const totalPackages = computed(() => filteredPackages.value.length);
+const packageStore = usePackageStore();
 
 onMounted(() => {
-  getAllPackages();
+  packageStore.fetchAllPackages();
+  packageStore.fetchAllPromos();
 });
 
-const promos = ref([
-  {
-    id: 1,
-    name: "Cruz Package",
-    price: "PHP 7000.00",
-    status: "Active",
-    timeLimit: "2024-04-01",
-    created: "2024-03-01",
-  },
-  {
-    id: 2,
-    name: "Cruz Package",
-    price: "PHP 7000.00",
-    status: "Active",
-    timeLimit: "2024-04-01",
-    created: "2024-03-01",
-  },
-  {
-    id: 3,
-    name: "Cruz Package",
-    price: "PHP 7000.00",
-    status: "Active",
-    timeLimit: "2024-04-01",
-    created: "2024-03-01",
-  },
-  {
-    id: 4,
-    name: "Cruz Package",
-    price: "PHP 7000.00",
-    status: "Active",
-    timeLimit: "2024-04-01",
-    created: "2024-03-01",
-  },
-  {
-    id: 5,
-    name: "Cruz Package",
-    price: "PHP 7000.00",
-    status: "Active",
-    timeLimit: "2024-04-01",
-    created: "2024-03-01",
-  },
-]);
-const totalPromos = computed(() => promos.value.length);
-
-// Add Package
-
 const addPackageHandler = async (packageT) => {
-  const formatPackage = {
-    ...packageT,
-    price: packageT.price ? Number(packageT.price) : null,
-  };
-  try {
-    const response = await fetch("http://localhost:3000/packages", {
-      method: "POST",
-      headers: { "Content-type": "application/json" },
-      body: JSON.stringify(formatPackage),
-    });
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Failed to add package: ${errorText}`);
-    }
-    getAllPackages();
-  } catch (error) {
-    console.error("Error adding package:", error);
-  }
+  await packageStore.addPackage(packageT);
 };
-
-// Delete Package by ID
-
-const deletePackageHandler = async (packageT) => {
-  try {
-    const response = await fetch(
-      `http://localhost:3000/packages/${packageT.packageId}`,
-      {
-        method: "DELETE",
-      }
-    );
-    if (!response.ok) throw new Error("Failed to delete packages");
-    packages.value = packages.value.filter(
-      (c) => c.packageId !== packageT.packageId
-    );
-    getAllPackages();
-    getAllPackages();
-  } catch (error) {
-    console.error("Error deleting packages", error);
-  }
-};
-
-// Update the Package by ID
 
 const updatePackageHandler = async (updatedPackage) => {
-  try {
-    const response = await fetch(
-      `http://localhost:3000/packages/${updatedPackage.packageId}`,
-      {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(updatedPackage),
-      }
-    );
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Failed to edit package: ${errorText}`);
-    }
-    getAllPackages();
-  } catch (error) {
-    toast.add({
-      severity: "error",
-      summary: "Update Failed",
-      detail: error.message,
-      life: 3000,
-    });
-  }
+  await packageStore.updatePackage(updatedPackage);
 };
 
-//Package Details
-const selectedPackage = ref(null);
-const packageDetails = ref(false);
-
-const openPackageDetails = (packageT) => {
-  selectedPackage.value = packageT;
-  packageDetails.value = true;
+const updatePromoHandler = async (updatedPromo) => {
+  await packageStore.updatePromo(updatedPromo);
 };
 
-const closeModal = () => {
-  packageDetails.value = false;
+const deletePackageHandler = async (packageT) => {
+  await packageStore.deletePackage(packageT);
 };
 
-//Fix Date Format
-function formatDate(dateString) {
-  const date = new Date(dateString);
-  const options = { year: "numeric", month: "short", day: "numeric" };
-  return date.toLocaleDateString("en-US", options);
-}
-
-//Checks Severity of Status of the Package
-const getStatusSeverity = (status) => {
-  switch (status) {
-    case "active":
-      return "success";
-    case "inactive":
-      return "secondary";
-    case "sold-out":
-      return "danger";
-    case "coming-soon":
-      return "info";
-    default:
-      return "secondary";
-  }
-};
+const totalPackages = computed(() => filteredPackages.value.length);
+const totalPromos = computed(() => filteredPromos.value.length);
 
 // Paginator or pagination of the tables
 const firstPack = ref(0);
@@ -227,7 +70,10 @@ const firstPro = ref(0);
 const rowsPro = ref(10);
 
 const paginatedPromos = computed(() => {
-  return promos.value.slice(firstPro.value, firstPro.value + rowsPro.value);
+  return filteredPromos.value.slice(
+    firstPro.value,
+    firstPro.value + rowsPro.value
+  );
 });
 
 const onPageChangePro = (event) => {
@@ -235,15 +81,78 @@ const onPageChangePro = (event) => {
   rowsPro.value = event.rows;
 };
 
+//Package Details
+const selectedPackage = ref(null);
+const packageDetails = ref(false);
+const selectedPromo = ref(null);
+const promoDetails = ref(false);
+
+const openPackageDetails = (packageT) => {
+  selectedPackage.value = packageT;
+  packageDetails.value = true;
+};
+
+const openPromoDetails = (promo) => {
+  selectedPromo.value = promo;
+  promoDetails.value = true;
+};
+
+const closeModal = () => {
+  packageDetails.value = false;
+  promoDetails.value = false;
+};
+
 // Search logic
 const searchQuery = ref("");
 const filteredPackages = computed(() => {
-  return packages.value.filter((packageT) =>
-    Object.values(packageT).some((val) =>
-      String(val).toLowerCase().includes(searchQuery.value.toLowerCase())
-    )
-  );
+  let result = packageStore.packages;
+  if (searchQuery.value) {
+    result = result.filter((packageT) =>
+      Object.values(packageT).some((val) =>
+        String(val).toLowerCase().includes(searchQuery.value.toLowerCase())
+      )
+    );
+  }
+  return result;
 });
+const filteredPromos = computed(() => {
+  let result = packageStore.promos;
+  if (searchQuery.value) {
+    result = result.filter((packageT) =>
+      Object.values(packageT).some((val) =>
+        String(val).toLowerCase().includes(searchQuery.value.toLowerCase())
+      )
+    );
+  }
+  return result;
+});
+
+//Fix Date Format
+function formatDate(dateString) {
+  const date = new Date(dateString);
+  const options = { year: "numeric", month: "short", day: "numeric" };
+  return date.toLocaleDateString("en-US", options);
+}
+
+// Peso Currency Format
+function formatPeso(value) {
+  return new Intl.NumberFormat("en-PH", {
+    style: "currency",
+    currency: "PHP",
+  }).format(value);
+}
+
+//Checks Severity of Status of the Package
+const getStatusSeverity = (status) => {
+  switch (status) {
+    case "active":
+      return "success";
+    case "inactive":
+      return "danger";
+    default:
+      return "secondary";
+  }
+};
 </script>
 
 <template>
@@ -259,10 +168,14 @@ const filteredPackages = computed(() => {
         </div>
       </div>
       <div class="searchB">
-        <SearchBar class="sBar" />
+        <SearchBar class="sBar" v-model="searchQuery" />
         <div class="paBtns">
-          <FilterButton />
-          <AddButtonPromos class="addBtn" data="Promos" />
+          <!--<FilterButton />-->
+          <AddButtonPromos
+            class="addBtn"
+            data="Promos"
+            @addPromos="addPackageHandler"
+          />
           <AddButtonPackage
             class="addBtn"
             data="Packages"
@@ -288,6 +201,7 @@ const filteredPackages = computed(() => {
                       <th>ID</th>
                       <th>PACKAGE NAME</th>
                       <th>PRICE</th>
+                      <th>MODE</th>
                       <th>STATUS</th>
                       <th>CREATED</th>
                       <th>UPDATED</th>
@@ -303,7 +217,8 @@ const filteredPackages = computed(() => {
                     >
                       <td class="w-[5%]">{{ packageT.packageId }}</td>
                       <td class="w-[20%]">{{ packageT.name }}</td>
-                      <td class="w-[10%]">{{ packageT.price }}</td>
+                      <td class="w-[10%]">{{ formatPeso(packageT.price) }}</td>
+                      <td class="w-[10%]">{{ packageT.mode }}</td>
                       <td class="w-[15%]">
                         <Tag
                           :severity="getStatusSeverity(packageT.status)"
@@ -343,12 +258,15 @@ const filteredPackages = computed(() => {
                     <tr
                       class="header-style bg-[#194d1d] dark:bg-[#18181b] border-[#194D1D] dark:border-[#18181b]"
                     >
+                      <th>ID</th>
                       <th>PROMO NAME</th>
                       <th>PRICE</th>
+                      <th>MODE</th>
                       <th>STATUS</th>
-                      <th>TIME LIMIT</th>
+                      <td>PROMO START & END</td>
                       <th>CREATED</th>
-                      <th>ACTIONS</th>
+                      <th>UPDATED</th>
+                      <th></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -356,16 +274,25 @@ const filteredPackages = computed(() => {
                       class="paRow"
                       v-for="promo in paginatedPromos"
                       :key="promo.id"
+                      @click="openPromoDetails(promo)"
                     >
+                      <td>{{ promo.packageId }}</td>
                       <td>{{ promo.name }}</td>
-                      <td>{{ promo.price }}</td>
-                      <td>{{ promo.status }}</td>
-                      <td>{{ promo.timeLimit }}</td>
-                      <td>{{ promo.created }}</td>
+                      <td>{{ formatPeso(promo.price) }}</td>
+                      <td>{{ promo.mode }}</td>
                       <td>
+                        <Tag
+                          :severity="getStatusSeverity(promo.status)"
+                          :value="promo.status"
+                        />
+                      </td>
+                      <td>{{ promo.promoStart }} - {{ promo.promoEnd }}</td>
+                      <td>{{ formatDate(promo.createdAt) }}</td>
+                      <td>{{ formatDate(promo.updatedAt) }}</td>
+                      <td @click.stop>
                         <T3ButtonPromos
-                          :packageT="packageT"
-                          @updatePackage="updatePackageHandler"
+                          :packageT="promo"
+                          @updatePromo="updatePromoHandler"
                           @deletePackage="deletePackageHandler"
                         />
                       </td>
@@ -390,7 +317,7 @@ const filteredPackages = computed(() => {
     <div v-if="packageDetails" class="modal">
       <div class="modal-content font-[Poppins]">
         <h2 class="text-xl font-bold m-auto justify-center align-center flex">
-          Employee Details
+          Package Details
         </h2>
         <Divider />
         <div class="flex flex-col gap-2">
@@ -398,12 +325,43 @@ const filteredPackages = computed(() => {
           <p><strong>Package Name:</strong> {{ selectedPackage?.name }}</p>
           <p><strong>Package Price: </strong>{{ selectedPackage?.price }}</p>
           <p>
-            <strong>Package Description:</strong>
-            {{ selectedPackage?.description }}
+            <strong>Package Inclusion:</strong>
+            {{ selectedPackage?.inclusion }}
           </p>
+          <p><strong>Package Mode:</strong> {{ selectedPackage?.mode }}</p>
           <p><strong>Package Status:</strong> {{ selectedPackage?.status }}</p>
+          <p><strong>Package Image:</strong> {{ selectedPackage?.imageUrl }}</p>
           <p><strong>Created At:</strong> {{ selectedPackage?.createdAt }}</p>
           <p><strong>Updated At:</strong> {{ selectedPackage?.updatedAt }}</p>
+          <Divider />
+          <button class="closeDetails mt-5 w-[100%]" @click="closeModal">
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="promoDetails" class="modal">
+      <div class="modal-content font-[Poppins]">
+        <h2 class="text-xl font-bold m-auto justify-center align-center flex">
+          Promo Details
+        </h2>
+        <Divider />
+        <div class="flex flex-col gap-2">
+          <p><strong>Package ID:</strong> {{ selectedPromo?.packageId }}</p>
+          <p><strong>Promo Name:</strong> {{ selectedPromo?.name }}</p>
+          <p><strong>Promo Price: </strong>{{ selectedPromo?.price }}</p>
+          <p>
+            <strong>Promo Inclusion:</strong>
+            {{ selectedPromo?.inclusion }}
+          </p>
+          <p><strong>Promo Mode:</strong> {{ selectedPromo?.mode }}</p>
+          <p><strong>Promo Status:</strong> {{ selectedPromo?.status }}</p>
+          <p><strong>Promo Start:</strong> {{ selectedPromo?.promoStart }}</p>
+          <p><strong>Promo End:</strong> {{ selectedPromo?.promoEnd }}</p>
+          <p><strong>Promo Image:</strong> {{ selectedPromo?.imageUrl }}</p>
+          <p><strong>Created At:</strong> {{ selectedPromo?.createdAt }}</p>
+          <p><strong>Updated At:</strong> {{ selectedPromo?.updatedAt }}</p>
           <Divider />
           <button class="closeDetails mt-5 w-[100%]" @click="closeModal">
             Close
@@ -439,6 +397,7 @@ td {
   top: 0;
   left: 0;
   overflow: hidden;
+  max-width: 100%;
 }
 
 .searchB {
@@ -543,6 +502,7 @@ td {
 :deep(.rowPagination) {
   .p-paginator {
     background: transparent;
+    overflow: visible;
 
     border-radius: 0;
     height: 50px;
@@ -555,7 +515,7 @@ td {
 
 :deep(.tabPackPro) {
   max-height: 75%;
-  overflow-y: auto;
+  overflow-y: visible;
   .p-tabpanels {
     background: transparent;
     padding: 0;

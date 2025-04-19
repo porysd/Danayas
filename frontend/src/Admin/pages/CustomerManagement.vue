@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, computed } from "vue";
+import { ref, onMounted, computed, onUnmounted } from "vue";
 import SearchBar from "../components/SearchBar.vue";
 import AddButtonCustomer from "../components/AddButtonCustomer.vue";
 import FilterButton from "../components/FilterButton.vue";
@@ -11,106 +11,31 @@ import DarkModeButton from "../components/DarkModeButton.vue";
 import Divider from "primevue/divider";
 import ProfileAvatar from "../components/ProfileAvatar.vue";
 import Paginator from "primevue/paginator";
+import Checkbox from "primevue/checkbox";
+import { useUserStore } from "../../stores/userStore.js";
 
-const customers = ref([]);
+const userStore = useUserStore();
+// const loading = ref(true);
 
-// Get all Users with pagination
-const getAllCustomer = async () => {
-  customers.value = [];
-  const limit = 50;
-  let page = 1;
-  let hasMoreData = true;
-
-  while (hasMoreData) {
-    const response = await fetch(
-      `http://localhost:3000/users?limit=${limit}&page=${page}`
-    );
-    if (!response.ok) throw new Error("Failed to fetch users");
-    const users = await response.json();
-
-    if (users.items && users.items.length > 0) {
-      const customerData = users.items.filter(
-        (user) => user.role === "customer"
-      );
-
-      if (customerData.length === 0) {
-        hasMoreData = false;
-      } else {
-        customers.value.push(...customerData);
-        page++;
-      }
-    } else {
-      // If 'items' is missing or empty, stop the loop
-      hasMoreData = false;
-    }
-  }
-};
-
-onMounted(() => getAllCustomer());
-
-const totalCustomers = computed(() => filteredCustomer.value.length);
-
-const deleteCustomerHandler = async (customer) => {
-  try {
-    const response = await fetch(
-      `http://localhost:3000/users/${customer.userId}`
-    );
-    if (!response.ok) throw new Error("Failed to delete customer");
-    customers.value = customers.value.filter(
-      (c) => c.userId !== customer.userId
-    );
-    customers.value.disabled = true;
-    getAllCustomer();
-  } catch (error) {
-    console.error("Error deleting customer:", error);
-  }
-};
+// onMounted(async () => {
+//   await userStore.fetchCustomer();
+//   loading.value = false;
+// });
+onMounted(() => {
+  userStore.fetchCustomer();
+});
 
 const addCustomerHandler = async (customer) => {
-  try {
-    const response = await fetch("http://localhost:3000/users/user", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ...customer,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Failed to add customer: ${errorText}`);
-    }
-    getAllCustomer();
-    console.log("Customer added successfully");
-  } catch (error) {
-    console.error("Error adding customer:", error);
-  }
+  await userStore.addCustomer(customer);
+  console.log("Customer added successfully");
 };
 
-//Fix Date Format
-function formatDate(dateString) {
-  const date = new Date(dateString);
-  const options = { year: "numeric", month: "short", day: "numeric" };
-  return date.toLocaleDateString("en-US", options);
-}
-
-// Customer Details Modal
-const selectedCustomer = ref(null);
-const customerDetails = ref(false);
-
-const openCustomerDetails = (customer) => {
-  selectedCustomer.value = customer;
-  customerDetails.value = true;
+const disableCustomerHandler = async (customer) => {
+  await userStore.disableUser(customer);
+  console.log("Customer disabled successfully");
 };
 
-const closeModal = () => {
-  customerDetails.value = false;
-};
-
-// Checks Severity of Status of each Users
-const getStatusSeverity = (status) => {
-  return status === "active" ? "success" : "danger";
-};
+const totalCustomers = computed(() => filteredCustomer.value.length);
 
 // Paginator or pagination of the tables
 const first = ref(0);
@@ -132,14 +57,11 @@ const searchQuery = ref("");
 const filterStatuses = ref({
   active: false,
   inactive: false,
-});
-const filterState = ref({
-  enable: false,
   disable: false,
 });
 
 const filteredCustomer = computed(() => {
-  let result = customers.value;
+  let result = userStore.users;
 
   if (searchQuery.value !== "") {
     result = result.filter((customer) =>
@@ -158,15 +80,63 @@ const filteredCustomer = computed(() => {
     );
   }
 
-  // const selectedStates = Object.keys(filterState.value).filter(
-  //   (status) => filterState.value[state]
-  // );
-  // if (selectedStates.length > 0) {
-  //   result = result.filter((customer) =>
-  //     selectedStates.inclues(customer.state.toLowerCase())
-  //   );
-  // }
+  // Sort customers: active > inactive > disable
+  result = result.sort((a, b) => {
+    const statusOrder = { active: 1, inactive: 2, disable: 3 };
+    return statusOrder[a.status] - statusOrder[b.status];
+  });
+
   return result;
+});
+
+// Customer Details Modal
+const selectedCustomer = ref(null);
+const customerDetails = ref(false);
+
+const openCustomerDetails = (customer) => {
+  selectedCustomer.value = customer;
+  customerDetails.value = true;
+};
+
+const closeModal = () => {
+  customerDetails.value = false;
+};
+
+//Fix Date Format
+function formatDate(dateString) {
+  const date = new Date(dateString);
+  const options = { year: "numeric", month: "short", day: "numeric" };
+  return date.toLocaleDateString("en-US", options);
+}
+
+// Checks Severity of Status of each Users
+const getStatusSeverity = (status) => {
+  switch (status) {
+    case "active":
+      return "success";
+    case "inactive":
+      return "warning";
+    case "disable":
+      return "danger";
+    default:
+      return null;
+  }
+};
+
+const hideMenu = ref(false);
+
+const closeMenu = (event) => {
+  if (hideMenu.value && !hideMenu.value.contains(event.target)) {
+    showMenu.value = false;
+  }
+};
+
+onMounted(() => {
+  document.addEventListener("click", closeMenu);
+});
+
+onUnmounted(() => {
+  document.addEventListener("click", closeMenu);
 });
 </script>
 
@@ -190,37 +160,56 @@ const filteredCustomer = computed(() => {
 
             <div
               v-if="showMenu"
-              class="absolute -left-20 mt-2 w-35 shadow-md z-50 bg-[#fcf5f5] p-4 rounded"
+              ref="hideMenu"
+              class="absolute -left-20 mt-2 w-40 shadow-md z-50 bg-[#fcfcfc] dark:bg-stone-900 p-3 rounded-lg border border-gray-200 dark:border-gray-700"
             >
-              <h2 class="font-bold mb-1">Status</h2>
-              <ul>
-                <li class="hover:bg-gray-100 flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="active"
+              <h2
+                class="font-medium text-gray-700 dark:text-gray-300 mb-2 text-sm"
+              >
+                Filter by Status
+              </h2>
+              <ul class="space-y-1">
+                <li
+                  class="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 p-1 rounded-md"
+                >
+                  <Checkbox
                     v-model="filterStatuses.active"
+                    binary
+                    inputId="active"
                   />
-                  <label class="" for="active">Active</label>
+                  <label
+                    for="active"
+                    class="text-gray-600 dark:text-gray-300 text-sm"
+                    >Active</label
+                  >
                 </li>
-                <li class="hover:bg-gray-100 flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="inactive"
+                <li
+                  class="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 p-1 rounded-md"
+                >
+                  <Checkbox
                     v-model="filterStatuses.inactive"
+                    binary
+                    inputId="inactive"
                   />
-                  <label for="inactive">Inactive</label>
+                  <label
+                    for="inactive"
+                    class="text-gray-600 dark:text-gray-300 text-sm"
+                    >Inactive</label
+                  >
                 </li>
-              </ul>
-              <Divider />
-              <h2 class="font-bold mb-1">State</h2>
-              <ul>
-                <li class="hover:bg-gray-100 flex items-center gap-2">
-                  <input type="checkbox" id="enable" />
-                  <label for="enable">Enable</label>
-                </li>
-                <li class="hover:bg-gray-100 flex items-center gap-2">
-                  <input type="checkbox" id="disable" />
-                  <label for="disable">Disable</label>
+                <li
+                  class="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 p-1 rounded-md"
+                >
+                  <Checkbox
+                    v-model="filterStatuses.disable"
+                    binary
+                    inputId="disable"
+                  />
+                  <label
+                    for="disable"
+                    class="text-gray-600 dark:text-gray-300 text-sm"
+                    >Disable</label
+                  >
                 </li>
               </ul>
             </div>
@@ -248,6 +237,7 @@ const filteredCustomer = computed(() => {
           <tbody>
             <tr
               class="cRow"
+              :class="{ 'disabled-row': customer.status === 'disable' }"
               v-for="customer in paginatedCustomers"
               :key="customer.userId"
               @click="openCustomerDetails(customer)"
@@ -263,14 +253,14 @@ const filteredCustomer = computed(() => {
                 <Tag
                   style="font-size: 12px"
                   :severity="getStatusSeverity(customer.status)"
-                  :value="customer.status === 'active' ? 'Active' : 'Inactive'"
+                  :value="customer.status"
                 />
               </td>
               <td class="w-[20%]">{{ formatDate(customer.dateReg) }}</td>
               <td class="w-[5%]" @click.stop>
                 <T3ButtonCustomer
                   :customer="customer"
-                  @deleteCustomer="deleteCustomerHandler"
+                  @disableCustomer="disableCustomerHandler"
                 />
               </td>
             </tr>
@@ -403,6 +393,16 @@ td {
 
 .cRow:hover {
   background-color: #e6f4e8;
+}
+
+.disabled-row {
+  background-color: #4d4d4d20;
+  color: grey;
+  opacity: 0.8;
+}
+
+.disabled-row:hover {
+  background-color: #4d4d4d20;
 }
 
 .modal {

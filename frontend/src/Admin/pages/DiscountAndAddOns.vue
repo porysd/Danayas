@@ -5,7 +5,7 @@ import T3ButtonAddOns from "../components/T3ButtonAddOns.vue";
 import T3ButtonDiscount from "../components/T3ButtonDiscount.vue";
 import AddButtonAddOns from "../components/AddButtonAddOns.vue";
 import AddButtonDiscount from "../components/AddButtonDiscount.vue";
-import FilterButton from "../components/FilterButton.vue";
+import T3ButtonCatalog from "../components/T3ButtonCatalog.vue";
 import SideBar from "../components/SideBar.vue";
 import ProfileAvatar from "../components/ProfileAvatar.vue";
 import Notification from "../components/Notification.vue";
@@ -20,42 +20,34 @@ import Divider from "primevue/divider";
 import Tag from "primevue/tag";
 import Toast from "primevue/toast";
 import { useToast } from "primevue/usetoast";
+import { useDiscountStore } from "../../stores/discountStore.js";
+import { useCatalogStore } from "../../stores/catalogStore.js";
+import { useAddOnsStore } from "../../stores/addOnsStore.js";
 
 const toast = useToast();
+const discountStore = useDiscountStore();
+const catalogStore = useCatalogStore();
+const addOnsStore = useAddOnsStore();
 
-const discounts = ref([]);
+onMounted(() => {
+  discountStore.fetchAllDiscounts();
+  catalogStore.fetchAllCatalogs();
+  addOnsStore.fetchAllAddOns();
+});
 
-const getAllDiscount = async () => {
-  try {
-    discounts.value = [];
-    const limit = 50;
-    let page = 1;
-    let hasMoreData = true;
+const totalDiscounts = computed(() => filteredDiscount.value.length);
 
-    while (hasMoreData) {
-      const response = await fetch(
-        `http://localhost:3000/discounts?limit=${limit}&page=${page}`
-      );
-
-      if (!response.ok) throw new Error("Failed to fetch discounts");
-
-      const discountData = await response.json();
-
-      if (discountData.items.length === 0) {
-        hasMoreData = false;
-      } else {
-        discounts.value.push(...discountData.items);
-        page++;
-      }
-    }
-  } catch (error) {
-    console.error("Error fetching discounts:", error);
-  }
+const addDiscountHandler = async (discount) => {
+  await discountStore.addDiscount(discount);
 };
 
-onMounted(() => getAllDiscount());
+const updateDiscountHandler = async (updateDiscount) => {
+  await discountStore.updateDiscount(updateDiscount);
+};
 
-const totalDiscounts = computed(() => discounts.value.length);
+const deleteDiscountHandler = async (deleteDiscount) => {
+  await discountStore.deleteDiscount(deleteDiscount);
+};
 
 // Discount Details Modal
 const selectedDiscount = ref(null);
@@ -68,96 +60,15 @@ const openDiscountDetails = (discount) => {
 
 const closeModal = () => {
   discountDetails.value = false;
+  catalogDetails.value = false;
+  addOnsDetails.value = false;
 };
-
-const addDiscountHandler = async (discount) => {
-  const formatDiscount = {
-    ...discount,
-    percentage: discount.percentage ? Number(discount.percentage) : null,
-  };
-
-  try {
-    const response = await fetch("http://localhost:3000/discounts", {
-      method: "POST",
-      headers: { "Content-type": "application/json" },
-      body: JSON.stringify(formatDiscount),
-    });
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Failed to add discount: ${errorText}`);
-    }
-    getAllDiscount();
-  } catch (err) {
-    console.error("Error adding discount", err);
-  }
-};
-
-const updateDiscountHandler = async (updateDiscount) => {
-  try {
-    const response = await fetch(
-      `http://localhost:3000/discounts/${updateDiscount.discountId}`,
-      {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(updateDiscount),
-      }
-    );
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Failed to edit discount: ${errorText}`);
-    }
-    getAllDiscount();
-  } catch (error) {
-    toast.add({
-      severity: "error",
-      summary: "Update Failed",
-      detail: error.message,
-      life: 3000,
-    });
-  }
-};
-
-const deleteDiscountHandler = async (deleteDiscount) => {
-  try {
-    const response = await fetch(
-      `http://localhost:3000/discounts/${deleteDiscount.discountId}`,
-      {
-        method: "DELETE",
-      }
-    );
-    if (!response.ok) throw new Error("Failed to delete discount");
-    discounts.value = discounts.value.filter(
-      (c) => c.discountId !== deleteDiscount.discountId
-    );
-    getAllDiscount();
-  } catch (error) {
-    console.error("Error deleting discount", error);
-  }
-};
-
-//Checks Severity of Status
-const getStatusSeverity = (status) => {
-  return status === "active" ? "success" : "danger";
-};
-
-const addOns = ref([
-  {
-    id: 1,
-    name: "Chairs",
-    price: "PHP 200.00",
-    quantity: 10,
-    status: "Active",
-    created: "2024-03-01",
-  },
-]);
 
 const first = ref(0);
 const rows = ref(5);
 
 const paginatedDiscount = computed(() => {
-  return discounts.value.slice(first.value, first.value + rows.value);
+  return filteredDiscount.value.slice(first.value, first.value + rows.value);
 });
 
 const onPageChangePro = (event) => {
@@ -166,155 +77,60 @@ const onPageChangePro = (event) => {
 };
 
 // ADD ONS
-const bookingAddOns = ref([]);
-const getAllBookingAddOns = async () => {
-  bookingAddOns.value = [];
-  const limit = 50;
-  let page = 1;
-  let hasMoreData = true;
 
-  while (hasMoreData) {
-    const response = await fetch(
-      `http://localhost:3000/bookingaddon?limit=${limit}&page=${page}`
-    );
+const totalAddOns = computed(() => filteredAddOns.value.length);
 
-    if (!response.ok) throw new Error("Failed to fetch bookings");
-    const addOnData = await response.json();
+// const addAddOnsHandler = async (addOnsDetails) => {
+//   await addOnsStore.addAddOns(addOnsDetails);
+// };
 
-    if (addOnData.items.length === 0) {
-      hasMoreData = false;
-    } else {
-      bookingAddOns.value.push(...addOnData.items);
-      page++;
-    }
-  }
+const firstAo = ref(0);
+const rowsAo = ref(10);
+
+const paginatedAddOns = computed(() => {
+  return filteredAddOns.value.slice(
+    firstAo.value,
+    firstAo.value + rowsAo.value
+  );
+});
+
+const onPageChangeAo = (event) => {
+  firstAo.value = event.first;
+  rowsAo.value = event.rows;
 };
 
-onMounted(() => getAllBookingAddOns());
+const selectedAddOns = ref(null);
+const addOnsDetails = ref(false);
 
-// onMounted(async () => {
-//   const limit = 50;
-//   let page = 1;
-//   let hasMoreData = true;
-
-//   while (hasMoreData) {
-//     const bResponse = await fetch(
-//       `http://localhost:3000/bookings?limit=${limit}&page=${page}`
-//     );
-//     if (!bResponse.ok) throw new Error("Failed to fetch bookings");
-//     const bookingData = await bResponse.json();
-
-//     if (bookingData.items.length === 0) {
-//       hasMoreData = false;
-//     } else {
-//       bookings.value.push(...bookingData.items);
-//       page++;
-//     }
-//   }
-// });
+const openAddOnsDetails = (addOns) => {
+  selectedAddOns.value = addOns;
+  addOnsDetails.value = true;
+};
 
 // CATALOG
-const catalogs = ref([]);
-const getAllCatalog = async () => {
-  catalogs.value = [];
-  const limit = 50;
-  let page = 1;
-  let hasMoreData = true;
 
-  while (hasMoreData) {
-    const response = await fetch(
-      `http://localhost:3000/catalogaddon?limit=${limit}&page=${page}`
-    );
+const totalCatalog = computed(() => filteredCatalog.value.length);
 
-    if (!response.ok) throw new Error("Failed to fetch bookings");
-    const catalogData = await response.json();
-
-    if (catalogData.items.length === 0) {
-      hasMoreData = false;
-    } else {
-      catalogs.value.push(...catalogData.items);
-      page++;
-    }
-  }
+const addCatalogHandler = async (catalogDetails) => {
+  await catalogStore.addCatalog(catalogDetails);
 };
 
-onMounted(() => getAllCatalog());
-
-const totalCatalog = computed(() => catalogs.value.length);
-
-const addCatalogHandler = async (catalogAddOn) => {
-  const formatCatalogAddOn = {
-    ...catalogAddOn,
-    price: catalogAddOn.price ? Number(catalogAddOn.price) : null,
-  };
-  console.log("Sending to backend:", formatCatalogAddOn);
-  try {
-    const response = await fetch("http://localhost:3000/catalogaddon", {
-      method: "POST",
-      headers: { "Content-type": "application/json" },
-      body: JSON.stringify(formatCatalogAddOn),
-    });
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Error response from API:", errorText);
-      throw new Error(`Failed to add catalog add-on: ${errorText}`);
-    }
-    await getAllCatalog();
-  } catch (err) {
-    console.error("Error adding catalog add-on", err);
-  }
+const updateCatalogHandler = async (catalogDetails) => {
+  await catalogStore.updateCatalog(catalogDetails);
 };
 
-const updateCatalogHandler = async (updateCatalog) => {
-  try {
-    const response = await fetch(
-      `http://localhost:3000/catalogaddon/${updateCatalog.catalogAddOnId}`,
-      {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(updateCatalog),
-      }
-    );
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Failed to update catalog add-on: ${errorText}`);
-    }
-    getAllCatalog();
-  } catch (error) {
-    toast.add({
-      severity: "error",
-      summary: "Update Failed",
-      detail: error.message,
-      life: 3000,
-    });
-  }
-};
-
-const deleteCatalogHandler = async (deleteCatalog) => {
-  try {
-    const response = await fetch(
-      `http://localhost:3000/catalogaddon/${deleteCatalog.catalogAddOnId}`,
-      {
-        method: "DELETE",
-      }
-    );
-    if (!response.ok) throw new Error("Failed to delete catalog add-on");
-    catalogs.value = catalogs.value.filter(
-      (c) => c.catalogAddOnId !== deleteCatalog.catalogAddOnId
-    );
-    getAllCatalog();
-  } catch (error) {
-    console.error("Error deleting catalog add-on", error);
-  }
+const deleteCatalogHandler = async (catalogDetails) => {
+  await catalogStore.deleteCatalog(catalogDetails);
 };
 
 const firstCat = ref(0);
 const rowsCat = ref(5);
 
 const paginatedCatalogs = computed(() => {
-  return catalogs.value.slice(firstCat.value, firstCat.value + rowsCat.value);
+  return filteredCatalog.value.slice(
+    firstCat.value,
+    firstCat.value + rowsCat.value
+  );
 });
 
 const onPageChangeCat = (event) => {
@@ -330,9 +146,44 @@ const openCatalogDetails = (catalog) => {
   catalogDetails.value = true;
 };
 
-const closeCatalogModal = () => {
-  catalogDetails.value = false;
-};
+// Search logic
+const searchQuery = ref("");
+const filteredDiscount = computed(() => {
+  let result = discountStore.discounts;
+  if (searchQuery.value) {
+    result = result.filter((discount) =>
+      Object.values(discount).some((val) =>
+        String(val).toLowerCase().includes(searchQuery.value.toLowerCase())
+      )
+    );
+  }
+  return result;
+});
+
+const filteredAddOns = computed(() => {
+  let result = addOnsStore.addOns;
+  if (searchQuery.value) {
+    result = result.filter((bookingAddOn) =>
+      Object.values(bookingAddOn).some((val) =>
+        String(val).toLowerCase().includes(searchQuery.value.toLowerCase())
+      )
+    );
+  }
+  return result;
+});
+
+const filteredCatalog = computed(() => {
+  let result = catalogStore.catalog;
+  console.log("Catalog Store Data:", catalogStore.catalog);
+  if (searchQuery.value) {
+    result = result.filter((catalog) =>
+      Object.values(catalog).some((val) =>
+        String(val).toLowerCase().includes(searchQuery.value.toLowerCase())
+      )
+    );
+  }
+  return result;
+});
 
 //Fix Date Format
 function formatDate(dateString) {
@@ -340,6 +191,19 @@ function formatDate(dateString) {
   const options = { year: "numeric", month: "short", day: "numeric" };
   return date.toLocaleDateString("en-US", options);
 }
+
+// Peso Currency Format
+function formatPeso(value) {
+  return new Intl.NumberFormat("en-PH", {
+    style: "currency",
+    currency: "PHP",
+  }).format(value);
+}
+
+//Checks Severity of Status
+const getStatusSeverity = (status) => {
+  return status === "active" ? "success" : "danger";
+};
 
 //Change logic
 </script>
@@ -357,9 +221,8 @@ function formatDate(dateString) {
         </div>
       </div>
       <div class="searchB">
-        <SearchBar class="sBar" />
+        <SearchBar class="sBar" v-model="searchQuery" />
         <div class="paBtns">
-          <FilterButton />
           <AddButtonAddOns
             class="addBtn"
             data="Add Ons"
@@ -376,8 +239,8 @@ function formatDate(dateString) {
         <Tabs value="0">
           <TabList>
             <Tab value="0">DISCOUNT</Tab>
-            <Tab value="1">ADD ONS</Tab>
-            <Tab value="2">CATALOG</Tab>
+            <Tab value="1">CATALOG ADD ONS</Tab>
+            <Tab value="2">BOOKING ADD ONS</Tab>
           </TabList>
           <TabPanels>
             <TabPanel value="0">
@@ -440,44 +303,6 @@ function formatDate(dateString) {
                 <table class="dTable">
                   <thead>
                     <tr class="header-style">
-                      <th>ADD ONS NAME</th>
-                      <th>PRICE</th>
-                      <th>QUANTITY</th>
-                      <th>STATUS</th>
-                      <th>CREATED</th>
-                      <th>ACTIONS</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr
-                      class="paRow"
-                      v-for="bookingAddOn in bookingAddOns"
-                      :key="bookingAddOn.id"
-                    >
-                      <td>{{ bookingAddOn.bookingAddOnId }}</td>
-                      <td>{{ bookingAddOn.bookingId }}</td>
-                      <td>{{ bookingAddOn.catalogAddOnId }}</td>
-                      <td>{{ bookingAddOn.price }}</td>
-                      <td>{{ bookingAddOn.createdAt }}</td>
-                      <td><T3ButtonAddOns /></td>
-                    </tr>
-                  </tbody>
-                </table>
-                <Paginator
-                  :first="firstPro"
-                  :rows="rowsPro"
-                  :totalRecords="totalAddOns"
-                  :rowsPerPageOptions="[5, 10, 20, 30]"
-                  @page="onPageChangePro"
-                  class="rowPagination"
-                />
-              </div>
-            </TabPanel>
-            <TabPanel value="2">
-              <div class="tableContainer">
-                <table class="dTable">
-                  <thead>
-                    <tr class="header-style">
                       <th>ID</th>
                       <th>ADD ON NAME</th>
                       <th>PRICE</th>
@@ -495,7 +320,7 @@ function formatDate(dateString) {
                     >
                       <td>{{ catalog.catalogAddOnId }}</td>
                       <td>{{ catalog.itemName }}</td>
-                      <td>{{ catalog.price }}</td>
+                      <td>{{ formatPeso(catalog.price) }}</td>
                       <td>
                         <Tag
                           style="font-size: 12px"
@@ -507,7 +332,7 @@ function formatDate(dateString) {
                       </td>
                       <td>{{ formatDate(catalog.createdAt) }}</td>
                       <td @click.stop>
-                        <T3ButtonAddOns
+                        <T3ButtonCatalog
                           :catalog="catalog"
                           @updateCatalog="updateCatalogHandler"
                           @deleteCatalog="deleteCatalogHandler"
@@ -522,6 +347,51 @@ function formatDate(dateString) {
                   :totalRecords="totalCatalog"
                   :rowsPerPageOptions="[5, 10, 20, 30]"
                   @page="onPageChangeCat"
+                  class="rowPagination"
+                />
+              </div>
+            </TabPanel>
+            <TabPanel value="2">
+              <div class="tableContainer">
+                <table class="dTable">
+                  <thead>
+                    <tr class="header-style">
+                      <th>BOOKING ADD ON ID</th>
+                      <th>BOOKING ID</th>
+                      <th>CATALONG ADD ON ID</th>
+                      <th>PRICE</th>
+                      <th>CREATED</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr
+                      class="paRow"
+                      v-for="bookingAddOn in paginatedAddOns"
+                      :key="bookingAddOn.id"
+                      @click="openAddOnsDetails(bookingAddOn)"
+                    >
+                      <td>{{ bookingAddOn.bookingAddOnId }}</td>
+                      <td>{{ bookingAddOn.bookingId }}</td>
+                      <td>{{ bookingAddOn.catalogAddOnId }}</td>
+                      <td>{{ formatPeso(bookingAddOn.price) }}</td>
+                      <td>{{ formatDate(bookingAddOn.createdAt) }}</td>
+                      <td @click.stop>
+                        <T3ButtonAddOns
+                          :bookingAddOn="bookingAddOn"
+                          @updateAddOns=""
+                          @cancelAddOns=""
+                        />
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+                <Paginator
+                  :first="firstAo"
+                  :rows="rowsAo"
+                  :totalRecords="totalAddOns"
+                  :rowsPerPageOptions="[5, 10, 20, 30]"
+                  @page="onPageChangeAo"
                   class="rowPagination"
                 />
               </div>
@@ -565,10 +435,33 @@ function formatDate(dateString) {
             <p><strong>Status:</strong> {{ selectedCatalog?.status }}</p>
             <p><strong>Created At:</strong> {{ selectedCatalog?.createdAt }}</p>
             <Divider />
-            <button
-              class="closeDetails mt-5 w-[100%]"
-              @click="closeCatalogModal"
-            >
+            <button class="closeDetails mt-5 w-[100%]" @click="closeModal">
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div v-if="addOnsDetails" class="modal">
+        <div class="modal-content font-[Poppins]">
+          <h2 class="text-xl font-bold m-auto justify-center flex">
+            Booking Add-On Details
+          </h2>
+          <Divider />
+          <div class="flex flex-col gap-2">
+            <p>
+              <strong>Booking Add On ID:</strong>
+              {{ selectedAddOns?.bookingAddOnId }}
+            </p>
+            <p><strong>Booking ID:</strong> {{ selectedAddOns?.bookingId }}</p>
+            <p>
+              <strong>Catalog Add On ID:</strong>
+              {{ selectedAddOns?.catalogAddOnId }}
+            </p>
+            <p><strong>Price:</strong> {{ selectedAddOns?.price }}</p>
+            <p><strong>Created At:</strong> {{ selectedAddOns?.createdAt }}</p>
+            <Divider />
+            <button class="closeDetails mt-5 w-[100%]" @click="closeModal">
               Close
             </button>
           </div>

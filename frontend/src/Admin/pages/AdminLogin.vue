@@ -1,25 +1,28 @@
 <script setup>
 import { ref } from "vue";
+import { useAuthStore } from "../../stores/authStore.js";
 import { useRouter } from "vue-router";
 import ProgressSpinner from "primevue/progressspinner";
 import InputText from "primevue/inputtext";
 import Button from "primevue/button";
 
+const authStore = useAuthStore();
+
 const router = useRouter();
-const username = ref("");
+const email = ref("");
 const password = ref("");
 const loading = ref(false);
 const showModal = ref(false);
 const loginStatus = ref(null);
 const errorMessage = ref("");
 
-const adUser = "admin";
-const adPass = "admin123";
+// const adUser = "admin";
+// const adPass = "admin123";
 
-const login = () => {
+const login = async () => {
   errorMessage.value = "";
-  if (!username.value || !password.value) {
-    errorMessage.value = "Please enter both username and password.";
+  if (!email.value || !password.value) {
+    errorMessage.value = "Please enter both email and password.";
     return;
   }
 
@@ -27,8 +30,25 @@ const login = () => {
   loading.value = true;
   loginStatus.value = null;
 
-  setTimeout(() => {
-    if (username.value === adUser && password.value === adPass) {
+  try {
+    const response = await fetch(`http://localhost:3000/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: email.value,
+        password: password.value,
+      }),
+    });
+    const data = await response.json();
+    console.log("Login response data:", data);
+    if (response.ok) {
+      const { accessToken, refreshToken, user } = data;
+
+      authStore.setUser(user);
+      console.log("User data:", authStore.user);
+      authStore.setAccessToken(accessToken);
+      authStore.setRefreshToken(refreshToken);
+
       loginStatus.value = "success";
       setTimeout(() => {
         showModal.value = false;
@@ -36,12 +56,18 @@ const login = () => {
       }, 1500);
     } else {
       loginStatus.value = "error";
-      setTimeout(() => {
-        showModal.value = false;
-      }, 1500);
+      errorMessage.value = data.message || "Invalid credentials.";
+      showModal.value = false;
     }
+  } catch (error) {
+    // Handle network errors or unexpected issues
+    console.error("Login failed:", error);
+    loginStatus.value = "error";
+    errorMessage.value = "An error occurred. Please try again later.";
+    showModal.value = false;
+  } finally {
     loading.value = false;
-  }, 2000);
+  }
 };
 </script>
 
@@ -57,8 +83,8 @@ const login = () => {
       </h1>
 
       <div class="flex flex-col gap-2 w-full max-w-md">
-        <label for="username">Username</label>
-        <InputText id="username" type="text" v-model="username" />
+        <label for="email">Email</label>
+        <InputText id="email" type="text" v-model="email" />
       </div>
 
       <div class="flex flex-col gap-2 w-full max-w-md">
