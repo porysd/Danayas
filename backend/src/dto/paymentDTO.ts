@@ -46,13 +46,11 @@ export const PaymentDTO = z.object({
     example: "paid",
     default: "partially-paid",
   }),
-  refundStatus: z
-    .enum(["none", "pending", "partial", "fullRefunded", "cancelled"])
-    .openapi({
-      description: "Status of the refund",
-      example: "fullRefunded",
-      default: "none",
-    }),
+  refundStatus: z.enum(["none", "pending", "refunded", "cancelled"]).openapi({
+    description: "Status of the refund",
+    example: "refunded",
+    default: "none",
+  }),
   paidAt: z.string().openapi({
     description: "Timestamp when the payment was made",
     example: new Date().toISOString(),
@@ -71,7 +69,7 @@ export const RefundPaymentDTO = PaymentDTO.pick({
   imageUrl: true,
   mode: true,
   reference: true,
-})
+});
 
 export const UpdatePaymentDTO = PaymentDTO.pick({
   paymentStatus: true,

@@ -61,36 +61,242 @@ export default async function seed() {
     }
   }
   // packages
-  for (let i = 0; i < 10; i++) {
+  const realPackages = [
+    {
+      name: "Teresa's Package (Events Venue)",
+      inclusion:
+        "- Swimming Pool\n- Tables and Chairs\n- Fully Airconditioned Events Venue (Teresa Hall)\n- Function Hall Ground Floor (Cruz Hall)",
+      price: 12000,
+      mode: "day-time",
+      status: "active",
+      imageUrl: "https://example.com/images/conference-package.jpg",
+      isPromo: 0,
+      promoStart: null,
+      promoEnd: null,
+    },
+    {
+      name: "Cruz Package (Package A)",
+      inclusion:
+        "- Swimming Pool\n- Tables and Chairs\n- Function Hall Ground Floor (Cruz Hall)\n- Nipa Hut\n- Griller\n- Kitchen Table\n- 2 Toilet and Bath",
+      price: 7000,
+      mode: "day-time",
+      status: "active",
+      imageUrl: "https://example.com/images/conference-package.jpg",
+      isPromo: 0,
+      promoStart: null,
+      promoEnd: null,
+    },
+    {
+      name: "Cruz Package (Package A)",
+      inclusion:
+        "- Swimming Pool\n- Tables and Chairs\n- Function Hall Ground Floor (Cruz Hall)\n- Nipa Hut\n- Griller\n- Kitchen Table\n- 2 Toilet and Bath",
+      price: 9000,
+      mode: "night-time",
+      status: "active",
+      imageUrl: "https://example.com/images/conference-package.jpg",
+      isPromo: 0,
+      promoStart: null,
+      promoEnd: null,
+    },
+    {
+      name: "Cruz Package (Package A)",
+      inclusion:
+        "- Swimming Pool\n- Tables and Chairs\n- Function Hall Ground Floor (Cruz Hall)\n- Nipa Hut\n- Griller\n- Kitchen Table\n- 2 Toilet and Bath",
+      price: 14000,
+      mode: "whole-day",
+      status: "active",
+      imageUrl: "https://example.com/images/conference-package.jpg",
+      isPromo: 0,
+      promoStart: null,
+      promoEnd: null,
+    },
+    {
+      name: "Cruz Package (Package B)",
+      inclusion:
+        "- Swimming Pool\n- Tables and Chairs\n- Function Hall Ground Floor (Cruz Hall)\n- Nipa Hut\n- Griller\n- Kitchen Table\n- 2 Toilet and Bath\n- Karaoke\n- 2 Airconditioned Rooms",
+      price: 10000,
+      mode: "day-time",
+      status: "active",
+      imageUrl: "https://example.com/images/conference-package.jpg",
+      isPromo: 0,
+      promoStart: null,
+      promoEnd: null,
+    },
+    {
+      name: "Cruz Package (Package B)",
+      inclusion:
+        "- Swimming Pool\n- Tables and Chairs\n- Function Hall Ground Floor (Cruz Hall)\n- Nipa Hut\n- Griller\n- Kitchen Table\n- 2 Toilet and Bath\n- Karaoke\n- 2 Airconditioned Rooms",
+      price: 12000,
+      mode: "night-time",
+      status: "active",
+      imageUrl: "https://example.com/images/conference-package.jpg",
+      isPromo: 0,
+      promoStart: null,
+      promoEnd: null,
+    },
+    {
+      name: "Cruz Package (Package B)",
+      inclusion:
+        "- Swimming Pool\n- Tables and Chairs\n- Function Hall Ground Floor (Cruz Hall)\n- Nipa Hut\n- Griller\n- Kitchen Table\n- 2 Toilet and Bath\n- Karaoke\n- 2 Airconditioned Rooms",
+      price: 20000,
+      mode: "whole-day",
+      status: "active",
+      imageUrl: "https://example.com/images/conference-package.jpg",
+      isPromo: 0,
+      promoStart: null,
+      promoEnd: null,
+    },
+    {
+      name: "Cruz Package (Package C - SMALL GROUP PACKAGES)",
+      inclusion:
+        "- Swimming Pool\n- 3 Sets Tables and Chairs\n- Function Hall Ground Floor (Cruz Hall)\n- Nipa Hut\n- Griller\n- 2 Toilet and Bath",
+      price: 5000,
+      mode: "day-time",
+      status: "active",
+      imageUrl: "https://example.com/images/conference-package.jpg",
+      isPromo: 1,
+      promoStart: null,
+      promoEnd: null,
+    },
+    {
+      name: "Cruz Package (Package C - SMALL GROUP PACKAGES)",
+      inclusion:
+        "- Swimming Pool\n- 3 Sets Tables and Chairs\n- Function Hall Ground Floor (Cruz Hall)\n- Nipa Hut\n- Griller\n- 2 Toilet and Bath",
+      price: 7000,
+      mode: "night-time",
+      status: "active",
+      imageUrl: "https://example.com/images/conference-package.jpg",
+      isPromo: 1,
+      promoStart: null,
+      promoEnd: null,
+    },
+    {
+      name: "Cruz Package (Package C - SMALL GROUP PACKAGES)",
+      inclusion:
+        "- Swimming Pool\n- 3 Sets Tables and Chairs\n- Function Hall Ground Floor (Cruz Hall)\n- Nipa Hut\n- Griller\n- 2 Toilet and Bath",
+      price: 12000,
+      mode: "whole-day",
+      status: "active",
+      imageUrl: "https://example.com/images/conference-package.jpg",
+      isPromo: 1,
+      promoStart: null,
+      promoEnd: null,
+    },
+
+    {
+      name: "Package A (Private)",
+      inclusion:
+        "- Swimming Pool\n- Tables and Chairs\n- Function Hall Ground Floor (Cruz Hall)\n- Nipa Hut\n- Griller\n- 1 Airconditioned Room\n -Karaoke",
+      price: 8000,
+      mode: "day-time",
+      status: "active",
+      imageUrl: "https://example.com/images/conference-package.jpg",
+      isPromo: 1,
+      promoStart: null,
+      promoEnd: null,
+    },
+    {
+      name: "Package A (Private)",
+      inclusion:
+        "- Swimming Pool\n- Tables and Chairs\n- Function Hall Ground Floor (Cruz Hall)\n- Nipa Hut\n- Griller\n- 1 Airconditioned Room\n -Karaoke",
+      price: 10000,
+      mode: "night-time",
+      status: "active",
+      imageUrl: "https://example.com/images/conference-package.jpg",
+      isPromo: 1,
+      promoStart: null,
+      promoEnd: null,
+    },
+    {
+      name: "Package B (Private)",
+      inclusion:
+        "- Swimming Pool\n- Tables and Chairs\n- Function Hall Ground Floor (Cruz Hall)\n- Griller\n- 2 Airconditioned Room\n -Karaoke\n- 2 Toilet and Bath",
+      price: 10000,
+      mode: "day-time",
+      status: "active",
+      imageUrl: "https://example.com/images/conference-package.jpg",
+      isPromo: 1,
+      promoStart: null,
+      promoEnd: null,
+    },
+    {
+      name: "Package B (Private)",
+      inclusion:
+        "- Swimming Pool\n- Tables and Chairs\n- Function Hall Ground Floor (Cruz Hall)\n- Griller\n- 2 Airconditioned Room\n -Karaoke\n- 2 Toilet and Bath",
+      price: 12000,
+      mode: "day-time",
+      status: "active",
+      imageUrl: "https://example.com/images/conference-package.jpg",
+      isPromo: 1,
+      promoStart: null,
+      promoEnd: null,
+    },
+    {
+      name: "Small Package (Private)",
+      inclusion:
+        "- Swimming Pool\n- 5 Sets Tables and Chairs\n- Function Hall Ground Floor (Cruz Hall)\n- Griller\n -Karaoke",
+      price: 6000,
+      mode: "day-time",
+      status: "active",
+      imageUrl: "https://example.com/images/conference-package.jpg",
+      isPromo: 1,
+      promoStart: null,
+      promoEnd: null,
+    },
+    {
+      name: "Small Package (Private)",
+      inclusion:
+        "- Swimming Pool\n- 5 Sets Tables and Chairs\n- Function Hall Ground Floor (Cruz Hall)\n- Griller\n -Karaoke\n- 1 Airconditioned Room",
+      price: 7500,
+      mode: "night-time",
+      imageUrl: "https://example.com/images/conference-package.jpg",
+      status: "active",
+      isPromo: 1,
+      promoStart: null,
+      promoEnd: null,
+    },
+  ] as const;
+  for (const packageData of realPackages) {
     try {
       const row = await db
         .insert(PackagesTable)
-        .values({
-          inclusion: faker.word.words(10),
-          price: faker.helpers.rangeToNumber({ min: 1000, max: 12000 }),
-          name: faker.commerce.productName(),
-          status: faker.helpers.arrayElement([
-            "active",
-            "inactive",
-          ]),
-          mode: faker.helpers.arrayElement([
-            "day-time",
-            "night-time",
-            "whole-day",
-          ]),
-          imageUrl: faker.image.urlLoremFlickr(),
-          isPromo: faker.datatype.boolean() ? 1 : 0,
-          promoStart: faker.date.recent().toISOString(), 
-          promoEnd: faker.date.soon().toISOString(),
-        })
+        .values(packageData)
         .returning()
         .execute();
-      //await grantPermission(row[0].userId, "PACKAGES", "read");
-    } catch (e) {
-      console.error(e);
+    } catch (err) {
       continue;
     }
   }
+  // for (let i = 0; i < 10; i++) {
+  //   try {
+  //     const row = await db
+  //       .insert(PackagesTable)
+  //       .values({
+  //         inclusion: faker.word.words(10),
+  //         price: faker.helpers.rangeToNumber({ min: 1000, max: 12000 }),
+  //         name: faker.commerce.productName(),
+  //         status: faker.helpers.arrayElement([
+  //           "active",
+  //           "inactive",
+  //         ]),
+  //         mode: faker.helpers.arrayElement([
+  //           "day-time",
+  //           "night-time",
+  //           "whole-day",
+  //         ]),
+  //         imageUrl: faker.image.urlLoremFlickr(),
+  //         isPromo: faker.datatype.boolean() ? 1 : 0,
+  //         promoStart: faker.date.recent().toISOString(),
+  //         promoEnd: faker.date.soon().toISOString(),
+  //       })
+  //       .returning()
+  //       .execute();
+  //     //await grantPermission(row[0].userId, "PACKAGES", "read");
+  //   } catch (e) {
+  //     console.error(e);
+  //     continue;
+  //   }
+  // }
   // discounts
   // for (let i = 0; i < 100; i++) {
   //   try {
@@ -117,9 +323,24 @@ export default async function seed() {
     status: "active" | "inactive";
   }[] = [
     { typeFor: "pwd", name: "PWD Discount", percentage: 0.2, status: "active" },
-    { typeFor: "student", name: "Student Discount", percentage: 0.15, status: "active" },
-    { typeFor: "senior", name: "Senior Citizen Discount", percentage: 0.25, status: "active" },
-    { typeFor: "birthday", name: "Birthday Discount", percentage: 0.1, status: "active" }
+    {
+      typeFor: "student",
+      name: "Student Discount",
+      percentage: 0.15,
+      status: "active",
+    },
+    {
+      typeFor: "senior",
+      name: "Senior Citizen Discount",
+      percentage: 0.25,
+      status: "active",
+    },
+    {
+      typeFor: "birthday",
+      name: "Birthday Discount",
+      percentage: 0.1,
+      status: "active",
+    },
   ];
 
   for (const discount of uniqueDiscounts) {
@@ -156,16 +377,13 @@ export default async function seed() {
     ])
   );
   const packageMap = new Map(
-    (await db.query.PackagesTable.findMany()).map((p) => [
-      p.packageId,
-      p.price,
-    ])
+    (await db.query.PackagesTable.findMany()).map((p) => [p.packageId, p.price])
   );
 
   for (let i = 0; i < 10; i++) {
     try {
       const selectedUserId = faker.helpers.arrayElement(customers);
-      
+
       const selectedUser = await db
         .select({
           firstName: UsersTable.firstName,
@@ -177,39 +395,50 @@ export default async function seed() {
         .from(UsersTable)
         .where(eq(UsersTable.userId, selectedUserId))
         .then((rows) => rows[0]);
-  
+
       const selectedPackageId = faker.helpers.arrayElement(packages);
       const packagePrice = packageMap.get(selectedPackageId) || 0;
-  
+
       const selectedDiscountId = faker.helpers.arrayElement(discounts);
       const discountPercent = discountMap.get(selectedDiscountId) || 0;
-  
+
       const discountAmount = packagePrice * discountPercent;
       const finalAmount = packagePrice - discountAmount;
-  
+
       const row = await db
         .insert(BookingsTable)
         .values({
-          userId: selectedUserId, 
+          userId: selectedUserId,
           checkInDate: faker.date.past().toISOString(),
           checkOutDate: faker.date.future().toISOString(),
-          mode: faker.helpers.arrayElement(["day-time", "night-time", "whole-day"]),
+          mode: faker.helpers.arrayElement([
+            "day-time",
+            "night-time",
+            "whole-day",
+          ]),
           packageId: selectedPackageId,
           firstName: selectedUser.firstName,
-          lastName: selectedUser.lastName,   
+          lastName: selectedUser.lastName,
           contactNo: selectedUser.contactNo,
-          emailAddress: selectedUser.email, 
-          address: selectedUser.address,     
+          emailAddress: selectedUser.email,
+          address: selectedUser.address,
           arrivalTime: faker.date.recent().toISOString(),
-          eventType: faker.helpers.arrayElement(["wedding", "birthday", "conference"]),
+          eventType: faker.helpers.arrayElement([
+            "wedding",
+            "birthday",
+            "conference",
+          ]),
           numberOfGuest: faker.helpers.rangeToNumber({ min: 10, max: 500 }),
           catering: faker.helpers.rangeToNumber({ min: 0, max: 1 }),
           discountId: selectedDiscountId,
-          paymentTerms: faker.helpers.arrayElement(["installment", "full-payment"]),
+          paymentTerms: faker.helpers.arrayElement([
+            "installment",
+            "full-payment",
+          ]),
           totalAmount: finalAmount,
           bookStatus: faker.helpers.arrayElement([
             "pending",
-            "confirmed",
+            "reserved",
             "cancelled",
             "completed",
             "rescheduled",
@@ -259,9 +488,8 @@ export default async function seed() {
           refundStatus: faker.helpers.arrayElement([
             "none",
             "pending",
-            "partial",
-            "fullRefunded",
-            "cancelled",  
+            "refunded",
+            "cancelled",
           ]),
           paidAt: faker.date.recent().toISOString(),
         })
@@ -273,19 +501,18 @@ export default async function seed() {
     }
   }
 
-  for(let i = 0; i < 10; i++){
+  for (let i = 0; i < 10; i++) {
     try {
-      const row = await db.insert(CatalogAddOnsTable).values({
-        itemName: faker.commerce.productName(),
-        price: faker.helpers.rangeToNumber({ min: 100, max: 500 }),
-        status: faker.helpers.arrayElement([
-          "active",
-          "inactive",
-        ]),
-        createdAt: faker.date.recent().toISOString(),
-      }).execute();
-    }
-    catch(e){
+      const row = await db
+        .insert(CatalogAddOnsTable)
+        .values({
+          itemName: faker.commerce.productName(),
+          price: faker.helpers.rangeToNumber({ min: 100, max: 500 }),
+          status: faker.helpers.arrayElement(["active", "inactive"]),
+          createdAt: faker.date.recent().toISOString(),
+        })
+        .execute();
+    } catch (e) {
       console.error(e);
       continue;
     }
@@ -332,8 +559,6 @@ export default async function seed() {
         .where(eq(BookingsTable.bookingId, bookingId))
         .returning()
         .execute();
-
-      
     } catch (e) {
       console.error(e);
       continue;
