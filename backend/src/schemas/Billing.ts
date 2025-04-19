@@ -1,28 +1,29 @@
-// import { sqliteTable, text, integer, real, check } from 'drizzle-orm/sqlite-core';
-// import { sql } from 'drizzle-orm';
-// import { Booking } from './Booking';
-// import { Payment } from './Payment';
-// import { z } from 'zod';
+import { sqliteTable, text, integer, check, real } from 'drizzle-orm/sqlite-core';
+import { sql } from "drizzle-orm";
+import { BookingsTable } from "./Booking";
+import { PaymentsTable } from "./Payment";
+import { PackagesTable } from "./Packages";
+import { DiscountsTable } from "./Discounts";
+import { UsersTable } from "./User";
 
-// export const Billing = sqliteTable('BILLING', {
-//   billingId: integer('billingId').primaryKey({autoIncrement: true}),
-//   bookingId: integer('bookingId').references(() => Booking.bookingId).notNull(),
-//   paymentId: integer('paymentId').references(() => Payment.paymentId),
-//   totalAmount: real('totalAmount').notNull(),
-//   status: text('status').notNull(),
-//   createdAt: text('createdAt').notNull().default(sql`(current_timestamp)`),
-// }, 
-
-// (table) => [
-//   check('statusCheck', sql`${table.status} in ('Unpaid', 'Partially Paid', 'Paid')`)
-// ]);
-
-
-// // ZOD
-// // export const BillingSchema = z.object({
-// //   billingId: z.number().int().optional(),
-// //   bookingId: z.number().int(),
-// //   paymentId: z.number().int().optional(),
-// //   totalAmount: z.number(),
-// //   status: z.enum(['Unpaid', 'Partially Paid', 'Paid']),
-// // });
+export const BillingsTable = sqliteTable("BILLING", {
+    billingId: integer('billingId').primaryKey({ autoIncrement: true}),
+    paymentId: integer('paymentId').references(() => PaymentsTable.paymentId).notNull(), // Payment
+    checkInDate: text('checkInDate').notNull(), // Booking
+    checkOutDate: text('checkOutDate').notNull(), // Booking
+    mode: text('mode', {enum: ['day-time', 'night-time', 'whole-day']}).notNull(), // Booking
+    arrivalTime: text('arrivalTime').notNull(), // Booking
+    catering: integer('catering').notNull(), // Booking
+    firstName: text('firstName'),  // Booking
+    lastName: text('lastName'),  // Booking
+    contactNo: text('contactNo'),  // Booking
+    emailAddress: text('emailAddress'),  // Booking
+    address: text('address'),  // Booking
+    inclusion: text('inclusion').notNull(), // Package
+    price: real('price').notNull(), // Package
+    paymentTerms: text('paymentTerms', {enum: ['installment', 'full-payment']}).notNull(), // Payment
+    totalAmount: real('totalAmountDue').notNull(), // Booking
+    reference: text('reference'), // Payment
+    imageUrl: text("imageUrl"), // Payment
+    createdAt: text('createdAt').notNull().default(sql`(current_timestamp)`),
+});
