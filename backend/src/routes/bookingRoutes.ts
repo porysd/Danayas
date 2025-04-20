@@ -12,11 +12,17 @@ import { processBookingData } from "../utils/dateHelpers";
 import { PackagesTable } from "../schemas/Packages";
 import { UsersTable } from '../schemas/User';
 import { fi } from "@faker-js/faker";
-import { BadRequestError, NotFoundError } from "../utils/errors";
+import { BadRequestError, ForbiddenError, NotFoundError } from "../utils/errors";
 import { errorHandler } from "../middlewares/errorHandler";
+import { authMiddleware } from "../middlewares/authMiddleware";
+import { verifyPermission } from "../utils/permissionUtils";
+import type { AuthContext } from "../types";
 
-export default new OpenAPIHono()
-  .openapi(
+const bookingRoutes = new OpenAPIHono<AuthContext>();
+
+bookingRoutes.use("/*", authMiddleware);
+
+bookingRoutes.openapi(
     createRoute({
       tags: ["Bookings"],
       summary: "Get all bookings",
@@ -56,6 +62,13 @@ export default new OpenAPIHono()
     }),
     async (c) => {
       try {
+        const userId = c.get("userId");
+        const hasPermission = await verifyPermission(userId, "BOOKING", "read");
+
+        if(!hasPermission) {
+          throw new ForbiddenError("No permission to get bookings.");
+        }
+
         const { limit, page } = c.req.valid("query");
 
         if (limit < 1 || page < 1) {
@@ -89,7 +102,8 @@ export default new OpenAPIHono()
       }
     }
   )
-  .openapi(
+
+bookingRoutes.openapi(
     createRoute({
       tags: ["Bookings"],
       summary: "Retrieve Booking by ID",
@@ -119,6 +133,13 @@ export default new OpenAPIHono()
     }),
     async (c) => {
       try {
+        const userId = c.get("userId");
+        const hasPermission = await verifyPermission(userId, "BOOKING", "read");
+
+        if(!hasPermission) {
+          throw new ForbiddenError("No permission to get booking.");
+        }
+
         const { id } = c.req.valid("param");
         const booking = await db.query.BookingsTable.findFirst({
           where: eq(BookingsTable.bookingId, id),
@@ -134,7 +155,8 @@ export default new OpenAPIHono()
       }
     }
   )
-  .openapi(
+
+bookingRoutes.openapi(
     createRoute({
       tags: ["Bookings"],
       summary: "Create Booking",
@@ -170,6 +192,13 @@ export default new OpenAPIHono()
     }),
     async (c) => {
       try {
+        const userId = c.get("userId");
+        const hasPermission = await verifyPermission(userId, "BOOKING", "create");
+
+        if(!hasPermission) {
+          throw new ForbiddenError("No permission to create booking.");
+        }
+
         const body = c.req.valid("json");
 
         const reservationType = body.reservationType || "online";
@@ -284,7 +313,8 @@ export default new OpenAPIHono()
       }
     }
   )
-  .openapi(
+  
+bookingRoutes.openapi(
     createRoute({
       tags: ["Bookings"],
       summary: "Update Booking by ID",
@@ -321,6 +351,13 @@ export default new OpenAPIHono()
     }),
     async (c) => {
       try {
+        const userId = c.get("userId");
+        const hasPermission = await verifyPermission(userId, "BOOKING", "update");
+
+        if(!hasPermission) {
+          throw new ForbiddenError("No permission to update booking.");
+        }
+
         const bookingId = Number(c.req.param("id"));
 
         if (isNaN(bookingId)) {
@@ -351,7 +388,8 @@ export default new OpenAPIHono()
       }
     }
   )
-  .openapi(
+
+bookingRoutes.openapi(
     createRoute({
       tags: ["Bookings"],
       summary: "Update Booking Status by ID",
@@ -397,6 +435,13 @@ export default new OpenAPIHono()
     }),
     async (c) => {
       try {
+        const userId = c.get("userId");
+        const hasPermission = await verifyPermission(userId, "BOOKING", "update");
+
+        if(!hasPermission) {
+          throw new ForbiddenError("No permission to update booking status.");
+        }
+
         const bookingId = Number(c.req.param("id"));
         const { bookStatus } = await c.req.json();
 
@@ -429,7 +474,8 @@ export default new OpenAPIHono()
       }
     }
   )
-  .openapi(
+
+bookingRoutes.openapi(
     createRoute({
       tags: ["Bookings"],
       summary: "Delete booking by ID",
@@ -452,6 +498,13 @@ export default new OpenAPIHono()
     }),
     async (c) => {
       try {
+        const userId = c.get("userId");
+        const hasPermission = await verifyPermission(userId, "BOOKING", "delete");
+
+        if(!hasPermission) {
+          throw new ForbiddenError("No permission to delete booking.");
+        }
+
         const bookingId = Number(c.req.param("id"));
 
         if (isNaN(bookingId)) {
@@ -480,3 +533,5 @@ export default new OpenAPIHono()
       }
     }
   );
+
+export default bookingRoutes;

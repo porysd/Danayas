@@ -21,8 +21,8 @@ export async function authMiddleware(c: Context, next: Next) {
       throw new UnauthorizedError("Invalid or expired token");
     }
 
-//     c.set("userId", decoded.sub);
-//     c.set("role", decoded.role);
+      c.set("userId", decoded.sub);
+      c.set("role", decoded.role);
 
     await next();
   } catch (err) {

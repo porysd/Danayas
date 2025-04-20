@@ -3,12 +3,18 @@ import { db } from "../config/database";
 import { BillingsTable } from "../schemas/Billing";
 import { BillingDTO, CreateBillingDTO } from "../dto/billingDTO";
 import { eq } from "drizzle-orm";
-import { BadRequestError, NotFoundError } from "../utils/errors";
+import { BadRequestError, ForbiddenError, NotFoundError } from "../utils/errors";
 import { errorHandler } from "../middlewares/errorHandler";
 import { PaymentsTable, BookingsTable, PackagesTable } from "../schemas/schema";
+import { authMiddleware } from "../middlewares/authMiddleware";
+import { verifyPermission } from "../utils/permissionUtils";
+import type { AuthContext } from "../types";
 
-export default new OpenAPIHono()
-    .openapi(
+const billingRoutes = new OpenAPIHono<AuthContext>();
+
+billingRoutes.use("/*", authMiddleware);
+
+billingRoutes.openapi(
         createRoute({
           tags: ["Billings"],
           summary: "Get all billings",
@@ -48,6 +54,13 @@ export default new OpenAPIHono()
         }),
         async (c) => {
           try {
+            const userId = c.get("userId");
+            const hasPermission = await verifyPermission(userId, "BILLING", "read");
+
+            if(!hasPermission) {
+              throw new ForbiddenError("No permission to get billings.");
+            }
+
             const { limit, page } = c.req.valid("query");
     
             if (limit < 1 || page < 1) {
@@ -76,7 +89,8 @@ export default new OpenAPIHono()
           }
         }
       )
-      .openapi(
+
+    billingRoutes.openapi(
           createRoute({
             tags: ["Billings"],
             summary: "Get Billing by ID",
@@ -109,6 +123,13 @@ export default new OpenAPIHono()
           }),
           async (c) => {
             try {
+              const userId = c.get("userId");
+              const hasPermission = await verifyPermission(userId, "BILLING", "read");
+  
+              if(!hasPermission) {
+                throw new ForbiddenError("No permission to get billing.");
+              }
+
               const { id } = c.req.valid("param");
               const billing = await db.query.BillingsTable.findFirst({
                 where: eq(BillingsTable.billingId, id),
@@ -124,7 +145,8 @@ export default new OpenAPIHono()
             }
           }
         )
-        .openapi(
+
+      billingRoutes.openapi(
             createRoute({
               tags: ["Billings"],
               summary: "Create Billing",
@@ -160,6 +182,13 @@ export default new OpenAPIHono()
             }),
             async (c) => {
               try {
+                const userId = c.get("userId");
+                const hasPermission = await verifyPermission(userId, "BILLING", "create");
+    
+                if(!hasPermission) {
+                  throw new ForbiddenError("No permission to create billing.");
+                }
+
                 const parsed = CreateBillingDTO.parse(await c.req.json());
                 const { paymentId } = parsed;
 
@@ -214,3 +243,5 @@ export default new OpenAPIHono()
               }
             }
           )
+          
+          export default billingRoutes;

@@ -3,12 +3,17 @@ import { CreateUserDTO, UpdateUserDTO, GetUserDTO } from "../dto/userDTO";
 import db from "../config/database";
 import { UsersTable } from "../schemas/User";
 import { eq, like, or } from "drizzle-orm";
-import { BadRequestError, NotFoundError, ConflictError } from "../utils/errors";
+import { BadRequestError, NotFoundError, ConflictError, ForbiddenError } from "../utils/errors";
 import { errorHandler } from "../middlewares/errorHandler";
+import { authMiddleware } from "../middlewares/authMiddleware";
+import type { AuthContext } from "../types";
+import { verifyPermission } from "../utils/permissionUtils";
 
-export default new OpenAPIHono()
+const userRoutes = new OpenAPIHono<AuthContext>();
 
-  .openapi(
+userRoutes.use("/*", authMiddleware);
+
+userRoutes.openapi(
     createRoute({
       tags: ["Users"],
       summary: "Search users",
@@ -43,6 +48,13 @@ export default new OpenAPIHono()
     }),
     async (c) => {
       try {
+        const userId = c.get("userId");
+        const hasPermission = await verifyPermission(userId, "USER", "read");
+        
+        if(!hasPermission) {
+          throw new ForbiddenError("No permission to search users.");
+        }
+
         const { limit, query } = c.req.valid("query");
 
         if (query.trim() === "") {
@@ -71,7 +83,8 @@ export default new OpenAPIHono()
       }
     }
   )
-  .openapi(
+
+userRoutes.openapi(
     createRoute({
       tags: ["Users"],
       summary: "Retrieve User by ID",
@@ -99,14 +112,21 @@ export default new OpenAPIHono()
     }),
     async (c) => {
       try {
-        const userId = Number(c.req.param("id"));
+        const userId = c.get("userId");
+        const hasPermission = await verifyPermission(userId, "USER", "read");
+        
+        if(!hasPermission){
+          throw new ForbiddenError("No permission to get user.");
+        }
 
-        if (isNaN(userId)) {
+        const paramId = Number(c.req.param("id"));
+
+        if (isNaN(paramId)) {
           throw new BadRequestError("Invalid user ID");
         }
 
         const user = await db.query.UsersTable.findFirst({
-          where: eq(UsersTable.userId, userId),
+          where: eq(UsersTable.userId, paramId),
         });
 
         if (!user) {
@@ -124,7 +144,8 @@ export default new OpenAPIHono()
       }
     }
   )
-  .openapi(
+  
+userRoutes.openapi(
     createRoute({
       tags: ["Users"],
       summary: "Update User by ID",
@@ -161,14 +182,21 @@ export default new OpenAPIHono()
     }),
     async (c) => {
       try {
-        const userId = Number(c.req.param("id"));
+        const userId = c.get("userId");
+        const hasPermission = await verifyPermission(userId, "USER", "update");
+        
+        if(!hasPermission){
+          throw new ForbiddenError("No permission to update user.");
+        }
 
-        if (isNaN(userId)) {
+        const paramId = Number(c.req.param("id"));
+
+        if (isNaN(paramId)) {
           throw new BadRequestError("Invalid user ID");
         }
 
         const user = await db.query.UsersTable.findFirst({
-          where: eq(UsersTable.userId, userId),
+          where: eq(UsersTable.userId, paramId),
         });
 
         if (!user) {
@@ -180,7 +208,7 @@ export default new OpenAPIHono()
         await db
           .update(UsersTable)
           .set(updatedUser)
-          .where(eq(UsersTable.userId, userId))
+          .where(eq(UsersTable.userId, paramId))
           .execute();
 
         return c.json(updatedUser);
@@ -189,7 +217,8 @@ export default new OpenAPIHono()
       }
     }
   )
-  .openapi(
+
+userRoutes.openapi(
     createRoute({
       tags: ["Users"],
       summary: "Delete User by ID",
@@ -209,14 +238,21 @@ export default new OpenAPIHono()
     }),
     async (c) => {
       try {
-        const userId = Number(c.req.param("id"));
+        const userId = c.get("userId");
+        const hasPermission = await verifyPermission(userId, "USER", "delete");
 
-        if (isNaN(userId)) {
+        if(!hasPermission){
+          throw new ForbiddenError("No permission to delete user.");
+        }
+
+        const paramId = Number(c.req.param("id"));
+
+        if (isNaN(paramId)) {
           throw new BadRequestError("Invalid user ID");
         }
 
         const deletedUser = await db.query.UsersTable.findFirst({
-          where: eq(UsersTable.userId, userId),
+          where: eq(UsersTable.userId, paramId),
         });
 
         if (!deletedUser) {
@@ -225,7 +261,7 @@ export default new OpenAPIHono()
 
         await db
           .delete(UsersTable)
-          .where(eq(UsersTable.userId, userId))
+          .where(eq(UsersTable.userId, paramId))
           .execute();
 
         return c.json({
@@ -237,7 +273,8 @@ export default new OpenAPIHono()
       }
     }
   )
-  .openapi(
+
+userRoutes.openapi(
     createRoute({
       tags: ["Users"],
       summary: "Retrieve all the user",
@@ -272,6 +309,13 @@ export default new OpenAPIHono()
     }),
     async (c) => {
       try {
+        const userId = c.get("userId");
+        const hasPermission = await verifyPermission(userId, "USER", "read");
+
+        if (!hasPermission) {
+          throw new ForbiddenError("No permission to get users.");
+        }
+
         const { limit, page } = c.req.valid("query");
 
         if (limit < 0 || page < 0) {
@@ -298,7 +342,8 @@ export default new OpenAPIHono()
       }
     }
   )
-  .openapi(
+
+userRoutes.openapi(
     createRoute({
       tags: ["Users"],
       summary: "Create a new user",
@@ -335,6 +380,13 @@ export default new OpenAPIHono()
     }),
     async (c) => {
       try {
+        const userId = c.get("userId");
+        const hasPermission = await verifyPermission(userId, "USER", "create");
+
+        if (!hasPermission) {
+          throw new ForbiddenError("No permission to create user.");
+        }
+
         const body = c.req.valid("json");
 
         const existingUser = await db.query.UsersTable.findFirst({
@@ -364,7 +416,8 @@ export default new OpenAPIHono()
       }
     }
   )
-  .openapi(
+
+userRoutes.openapi(
     createRoute({
       tags: ["Users"],
       summary: "Disable a user by ID",
@@ -387,12 +440,19 @@ export default new OpenAPIHono()
     }),
     async (c) => {
       try {
-        const userId = Number(c.req.param("id"));
-        if (isNaN(userId)) {
+        const userId = c.get("userId");
+        const hasPermission = await verifyPermission(userId, "USER", "update");
+
+        if (!hasPermission) {
+          throw new ForbiddenError("No permission to disable user.");
+        }
+
+        const paramId = Number(c.req.param("id"));
+        if (isNaN(paramId)) {
           throw new BadRequestError("Invalid user ID");
         }
         const user = await db.query.UsersTable.findFirst({  
-          where: eq(UsersTable.userId, userId),
+          where: eq(UsersTable.userId, paramId),
         });
 
         if (!user) {
@@ -401,13 +461,15 @@ export default new OpenAPIHono()
         await db
           .update(UsersTable)
           .set({ status: "disable" })
-          .where(eq(UsersTable.userId, userId))
+          .where(eq(UsersTable.userId, paramId))
           .execute();
 
-          return c.json({message: "User disabled successfully", userId});
+          return c.json({message: "User disabled successfully", paramId});
 
       } catch(err) {
         return  errorHandler(err, c);
       }
     }
-  )
+  );
+
+export default userRoutes;
