@@ -190,49 +190,11 @@ billingRoutes.openapi(
                 }
 
                 const parsed = CreateBillingDTO.parse(await c.req.json());
-                const { paymentId } = parsed;
-
-                const selectedPayment = await db
-                    .select()
-                    .from(PaymentsTable)
-                    .where(eq(PaymentsTable.paymentId, paymentId))
-                    .then((rows) => rows[0]);
-
-                // Selects booking based on paymentId
-                const selectedBooking = await db
-                    .select()
-                    .from(BookingsTable)
-                    .where(eq(BookingsTable.bookingId, selectedPayment.bookingId))
-                    .then((rows) => rows[0]);
-                // Selects package based on BookingId
-                const selectedPackage = await db
-                    .select()
-                    .from(PackagesTable)
-                    .where(eq(PackagesTable.packageId, selectedBooking.packageId))
-                    .then((rows) => rows[0]);
-                
                 const created = (
                   await db
                     .insert(BillingsTable)
                     .values({
-                        ...parsed,
-                        checkInDate: selectedBooking.checkInDate,
-                        checkOutDate: selectedBooking.checkOutDate,
-                        mode: selectedBooking.mode,
-                        arrivalTime: selectedBooking.arrivalTime,
-                        catering: selectedBooking.catering,
-                        firstName: selectedBooking.firstName,
-                        lastName: selectedBooking.lastName,
-                        contactNo: selectedBooking.contactNo,
-                        emailAddress: selectedBooking.emailAddress,
-                        address: selectedBooking.address,
-                        inclusion: selectedPackage.inclusion,
-                        price: selectedPackage.price,
-                        paymentTerms: selectedBooking.paymentTerms,
-                        totalAmount: selectedBooking.totalAmount,
-                        reference: selectedPayment.reference,
-                        imageUrl: selectedPayment.imageUrl,
-                    })
+                      bookingId: parsed.bookingId,})
                     .returning()
                     .execute()
                 )[0];
