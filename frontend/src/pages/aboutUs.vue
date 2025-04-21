@@ -16,37 +16,43 @@ import Footer from "../components/Footer.vue";
   </div>
 
   <div class="AboutSection">
-    <div class="mb-10 mt-10">
-      <h2
-        class="font-[Poppins] font-black text-center top-[-2 rem] font-bold relative text-5xl mb-3"
-      >
-        Vision & Mission
-      </h2>
-      <hr
-        class="line w-40 border-3 relative top-[-0rem] flex flex-auto m-auto justify-center content-center mb-4"
+    <div
+      class="flex gap-20 w-full max-w-6xl px-4 justify-center content-center align-center m-auto"
+      style="position: relative; bottom: -5rem"
+    >
+      <img
+        src="../assets/aboutUs1.jpg"
+        class="w-2/5 rounded-[20px] mb-4"
+        style="border-radius: 20px"
       />
-      <p class="m-auto text-center w-200 mt-10">
-        Established in the historic quarter, where cultural legacy meets the
-        sought-after culinary scene, Brook St. is the best kept secret of town,
-        just across the sea front. Its urban renaissance is infusing new vibes
-        and brings back creatives, trend setters and smart investors.
-      </p>
+      <div class="flex flex-col justify-center items-center text-center w-4/5">
+        <h2 class="font-[Poppins] font-black font-bold relative text-5xl mb-3">
+          Vision & Mission
+        </h2>
+
+        <hr class="w-40 border-2 mb-4" />
+
+        <p class="mt-10 mb-20">
+          Established in the historic quarter, where cultural legacy meets the
+          sought-after culinary scene, Brook St. is the best kept secret of
+          town, just across the sea front. Its urban renaissance is infusing new
+          vibes and brings back creatives, trend setters and smart investors.
+        </p>
+      </div>
     </div>
-    <div class="imgbr">
-      <img class="h-[383px] w-full" src="../assets/aboutbr.jpg" alt="" />
-    </div>
-    <div class="mb-20 mt-20">
-      <h2
-        class="font-[Poppins] font-black text-center top-[-2 rem] font-bold relative text-5xl mb-3"
-      >
+  </div>
+
+  <div
+    class="flex gap-20 w-full max-w-6xl px-4 content-center align-center justify-center m-auto bottom-[-10rem] relative"
+  >
+    <div class="flex flex-col justify-center items-center text-center w-4/5">
+      <h2 class="font-[Poppins] font-black font-bold relative text-5xl mb-3">
         Our Story
       </h2>
 
-      <hr
-        class="line w-40 border-4 relative top-[-0rem] flex flex-auto m-auto justify-center content-center mb-4"
-      />
+      <hr class="w-40 border-2 mb-4" />
 
-      <p class="text2 m-auto mt-10 text-center w-200">
+      <p class="mt-10 mb-10">
         Every website has a story, and your visitors want to hear yours. This
         space is a great opportunity to give a full background on who you are,
         what your team does, and what your site has to offer. Double click on
@@ -57,86 +63,129 @@ import Footer from "../components/Footer.vue";
         from the crowd. Add a photo, gallery, or video for even more engagement.
       </p>
     </div>
-    <div class="location">
-      <article>
-        <div class="location-text">
-          <h1
-            style="
-              font-weight: bold;
-              font-size: 50px;
-              text-align: center;
-              position: relative;
-            "
-          >
-            Location
-          </h1>
-          <p>
-            Established in the historic quarter, where cultural legacy meets the
-            sought-after culinary scene, Brook St. is the best kept secret of
-            town, just across the sea front. Its urban renaissance is infusing
-            new vibes and brings back creatives, trend setters and smart
-            investors.
-          </p>
-        </div>
+    <img
+      src="../assets/aboutUs1.jpg"
+      class="w-2/5 rounded-[20px] mb-4"
+      style="border-radius: 20px"
+    />
+  </div>
 
-        <div id="Gmap">
-          <iframe
-            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d1929.608118783353!2d121
-            .12431473799222!3d14.7003600939651!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3397bb19868e1b37%3A0x429ae5ae7c94d0f2!2s7%20Jones%20Dulong%20Bayan
-            %202%2C%20San%20Mateo%2C%20Rizal%20Philippines!5e0!3m2!1sen!2sph!4v1741699299438!5m2!1sen!2sph"
-            width="1108"
-            height="607"
-            style="border: 0; border-radius: 10px; margin-top: 40px"
-            allowfullscreen=""
-            loading="lazy"
-            referrerpolicy="no-referrer-when-downgrade"
-          ></iframe>
-        </div>
-      </article>
-    </div>
-    <div class="staffData">
-      <h1
-        style="
-          margin-top: 10rem;
-          font-weight: bold;
-          font-size: 50px;
-          text-align: center;
-          position: relative;
-        "
-      >
+  <div
+    class="staffData gap-20 w-full max-w-6xl px-4 justify-center content-center align-center m-auto"
+  >
+    <div
+      class="flex flex-col justify-center m-auto items-center text-center w-4/5 mb-10"
+    >
+      <h2 class="font-[Poppins] font-black font-bold relative text-5xl mb-3">
         Meet The Team
-      </h1>
-      <hr
-        class="line w-40 border-4 relative top-[-0rem] mb-[5rem] flex flex-auto m-auto justify-center content-center"
-      />
-      <div class="staff-container">
-        <div class="staff-box">
-          <img class="img" src="../assets/staff.jpg" alt="staff" />
-          <div class="img-container">
-            <h4><b>Shaian May Tendenilla</b></h4>
-            <p>Position: Manager</p>
-          </div>
+      </h2>
+
+      <hr class="w-40 border-2 mb-4" />
+    </div>
+    <div
+      class="staff-image inline-flex gap-10 m-auto justify-center content-center"
+    >
+      <div class="staff-card">
+        <img src="../assets/staff.jpg" alt="Shaina" />
+        <div class="staff-overlay">
+          <h3>Shaina May Tendenilla</h3>
+          <a
+            href="https://www.facebook.com/photo/?fbid=970067787886190&set=a.103485781211066"
+            target="_blank"
+          >
+            <img
+              src="..//assets/facebookneon.jpg"
+              alt="Facebook"
+              style="
+                border-radius: 50%;
+                object-fit: cover;
+                justify-content: center;
+                align-items: center;
+                margin: auto;
+                margin-top: 5px;
+                width: 40px;
+                height: 40px;
+              "
+            />
+          </a>
         </div>
-        <div class="staff-box">
-          <img class="img" src="../assets/staff1.jpg" alt="staff1" />
-          <div class="img-container">
-            <h4><b>Shaian May Tendenilla</b></h4>
-            <p>Position: Manager</p>
-          </div>
+      </div>
+      <div class="staff-card">
+        <img src="../assets/staff.jpg" alt="Shaina" />
+        <div class="staff-overlay">
+          <h3>Shaina May Tendenilla</h3>
+          <a
+            href="https://www.facebook.com/photo/?fbid=970067787886190&set=a.103485781211066"
+            target="_blank"
+          >
+            <img
+              src="..//assets/facebookneon.jpg"
+              alt="Facebook"
+              style="
+                border-radius: 50%;
+                object-fit: cover;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                margin: auto;
+                margin-top: 5px;
+                width: 40px;
+                height: 40px;
+              "
+            />
+          </a>
         </div>
-        <div class="staff-box">
-          <img class="img" src="../assets/staff.jpg" alt="staff" />
-          <div class="img-container">
-            <h4><b>Shaian May Tendenilla</b></h4>
-            <p>Position: Manager</p>
-          </div>
+      </div>
+
+      <div class="staff-card">
+        <img src="../assets/staff.jpg" alt="Shaina" />
+        <div class="staff-overlay">
+          <h3>Shaina May Tendenilla</h3>
+          <a
+            href="https://www.facebook.com/photo/?fbid=970067787886190&set=a.103485781211066"
+            target="_blank"
+          >
+            <img
+              src="..//assets/facebookneon.jpg"
+              alt="Facebook"
+              style="
+                border-radius: 50%;
+                object-fit: cover;
+                justify-content: center;
+                align-items: center;
+                margin: auto;
+                margin-top: 5px;
+                width: 40px;
+                height: 40px;
+              "
+            />
+          </a>
         </div>
-        <div class="staff-box">
-          <img class="img" src="../assets/staff1.jpg" alt="staff1" />
-          <div class="img-container">
-            <h4><b>Shaian May Tendenilla</b></h4>
-            <p>Position: Manager</p>
-          </div>
+      </div>
+
+      <div class="staff-card">
+        <img src="../assets/staff.jpg" alt="Shaina" />
+        <div class="staff-overlay">
+          <h3>Shaina May Tendenilla</h3>
+          <a
+            href="https://www.facebook.com/photo/?fbid=970067787886190&set=a.103485781211066"
+            target="_blank"
+          >
+            <img
+              src="..//assets/facebookneon.jpg"
+              alt="Facebook"
+              style="
+                border-radius: 50%;
+                object-fit: cover;
+                justify-content: center;
+                align-items: center;
+                margin: auto;
+                margin-top: 5px;
+                width: 40px;
+                height: 40px;
+              "
+            />
+          </a>
         </div>
       </div>
     </div>
@@ -145,6 +194,52 @@ import Footer from "../components/Footer.vue";
 </template>
 
 <style scoped>
+h3 {
+  margin-top: 21rem;
+  margin-left: 10px;
+  font-size: 25px;
+  font-weight: 600;
+}
+.staff-card {
+  position: relative;
+  width: 280px;
+  height: 500px;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease;
+}
+
+.staff-card img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.staff-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  filter: blur(10px 10px 4px);
+  width: 100%;
+  height: 100%;
+  background-color: rgba(10, 124, 66, 0.6); /* Black with opacity */
+  display: flex;
+  flex-direction: column;
+  color: white;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+a {
+  position: relative;
+  left: -4rem;
+}
+
+.staff-card:hover .staff-overlay {
+  opacity: 1;
+}
+
 .ContainerAbout {
   position: relative;
   width: 85rem;
@@ -174,69 +269,20 @@ import Footer from "../components/Footer.vue";
   text-align: center;
 }
 
-#Gmap {
-  display: flex;
-  margin: 0;
-  margin-left: 45rem;
-  box-shadow: 1px 10px 10px #7bab81;
-  border-radius: 20px;
-  width: 40%;
-  justify-content: center;
-  align-items: center;
-
-  top: -6rem;
-  position: relative;
-  transition: 0.3s;
-}
-#Gmap:hover {
-  box-shadow: 0 8px 16px 0 rgba(14, 180, 47, 0.2);
-}
-.location-text {
-  display: inline-block;
-  bottom: -20rem;
-  width: 30pc;
-  position: relative;
-  margin-left: 40px;
-}
-.location {
-  margin-top: -2rem;
-  margin-bottom: 5rem;
-  width: fit-content; /* Ensures the width matches content */
-  margin-left: auto;
-  margin-right: auto;
-  display: flex; /* Ensures content inside stays centered */
-  justify-content: center;
-  align-items: center;
-}
-.staff-box {
-  box-shadow: 0 4px 10px 0 rgba(0, 0, 0, 0.2);
-  transition: 0.3s;
-  width: 25%;
-  padding: 30px;
-  margin-bottom: 20px;
-  display: inline-block;
-  gap: 20rem;
-  margin-left: 170px;
-  border-radius: 20px;
-}
 .staffData {
   position: relative;
   margin: auto;
   justify-content: center;
   align-items: center;
-  top: -5rem;
+  align-content: center;
+  margin-top: 20rem;
 }
-.staff-box:hover {
-  box-shadow: 0 8px 16px 0 rgba(0, 0, 0, 0.2);
-}
+
 .img {
   position: relative;
   height: 50vh;
   width: 100%;
   display: inline-block;
   border-radius: 8px;
-}
-.staff-container {
-  margin-left: 9rem;
 }
 </style>

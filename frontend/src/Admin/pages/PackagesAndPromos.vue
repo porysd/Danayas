@@ -373,10 +373,6 @@ const getStatusSeverity = (status) => {
 </template>
 
 <style scoped>
-table,
-th,
-td {
-}
 .paM {
   background-color: #eef9eb;
 }

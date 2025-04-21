@@ -5,9 +5,7 @@ import { useAuthStore } from "./stores/authStore";
 const router = useRouter();
 const authStore = useAuthStore();
 
-if (!authStore.accessToken) {
-  router.replace("/admin/admin-login");
-}
+authStore.initializeAuth();
 </script>
 
 <template>

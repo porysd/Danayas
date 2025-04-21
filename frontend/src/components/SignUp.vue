@@ -39,6 +39,7 @@ const SignUp = () => {
   } = newUser.value;
 
   if (
+    !username ||
     !firstName ||
     !lastName ||
     !contactNo ||
@@ -66,7 +67,7 @@ const addNewUser = async (userData) => {
   signUpStatus.value = null;
 
   try {
-    const response = await fetch("http://localhost:3000/users", {
+    const response = await fetch("http://localhost:3000/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(signUpUser),
