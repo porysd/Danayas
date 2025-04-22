@@ -2,29 +2,35 @@
 import { ref } from "vue";
 import NavBar from "../components/NavBar.vue";
 import Footer from "../components/Footer.vue";
+import DatePicker from "primevue/datepicker";
 
 const isMenuOpen1 = ref(false);
 const isMenuOpen2 = ref(false);
+const Reschedule = ref(false);
 
 const toggleMenu = () => {
   isMenuOpen.value = !isMenuOpen.value;
 };
 
-const cancelModal = ref(false);
-const showpendingmodal = ref(false);
-
-const showcancelModal = () => {
-  cancelModal.value = true;
+const showRescheduleModal = () => {
+  RescheduleModal.value = true;
 };
+
 const closemodal = () => {
-  cancelModal.value = false;
+  RescheduleModal.value = false;
 };
-const OpenPendingModal = () => {
-  cancelModal.value = false;
-  showpendingmodal.value = true;
-};
+const calendar = ref(null);
+const RescheduleModal = ref(false);
+function checkCalendar() {
+  if (calendar.value) {
+    RescheduleModal.value = false;
+  } else {
+    RescheduleModal.value = true;
+    alert("Please select your preferred date.");
+  }
+}
 </script>
-
+~
 <template>
   <NavBar />
   <div class="ContainerAbout">
@@ -50,69 +56,69 @@ const OpenPendingModal = () => {
 
           <div
             v-if="isMenuOpen1"
-            class="absolute right-2 mt-4 w-35 shadow-md z-50 bg-[#fcf5f5] p-4 rounded"
+            class="absolute right-2 mt-4 w-35 shadow-md z-50 bg-[#fcfcfc] p-4 rounded"
           >
-            <button class="hover:bg-[#C1F2B0]">Reschedule</button>
-            <button class="hover:bg-[#C1F2B0]" @click="showcancelModal">
-              Cancel
-            </button>
-
-            <div v-if="cancelModal" class="modal">
-              <div
-                class="DelBox p-10 bg-[#eef9eb]"
+            <ul>
+              <li class="hover:bg-[#C1F2B0]">
+                <button @click="showRescheduleModal">Reschedule</button>
+              </li>
+            </ul>
+          </div>
+          <div v-if="RescheduleModal" class="modal">
+            2
+            <div
+              class="DelBox p-10 bg-[#eef9eb]"
+              style="
+                border: 1px solid #38dc87;
+                border-radius: 10px;
+                box-shadow: 0px 0px 10px rgba(28, 216, 34, 0.5);
+                align-items: center;
+                flex-direction: column;
+                justify-content: center;
+                text-align: center;
+                font-weight: 600;
+                font-size: large;
+              "
+            >
+              <i
+                class="pi pi-times"
                 style="
-                  border: 1px solid #38dc87;
-                  border-radius: 10px;
-                  box-shadow: 0px 0px 10px rgba(28, 216, 34, 0.5);
-                  align-items: center;
-                  justify-content: center;
-                  text-align: center;
-                  font-weight: 600;
-                  font-size: large;
+                  font-size: 1.5rem;
+                  color: green;
+                  align-self: flex-end;
+                  margin-left: 30rem;
+                  font-size: 1.5rem;
+                  cursor: pointer;
+                  margin-right: 10px;
                 "
-              >
-                <h2>Are you sure you want to cancel your reservation?</h2>
-                <div class="Button">
-                  <button
-                    class="btn1 hover:bg-[#FF8080]"
-                    @click="OpenPendingModal"
-                  >
-                    YES
-                  </button>
+                @click="closemodal"
+              ></i>
 
-                  <button class="btn2 hover:bg-[#194d1d]" @click="closemodal">
-                    NO
-                  </button>
-                </div>
+              <h2 class="mb-[30px]">SELECT PREPARE DATE</h2>
+              <DatePicker
+                v-model="date"
+                inline
+                showWeek
+                class="w-full sm:w-[30rem]"
+              />
+
+              <div class="text-left relative mt-[20px]">
+                <p>Check-in:</p>
+                <p>Check-out:</p>
+                <p></p>
+                <p
+                  class="text-green-500 top-[-1rem] relative flex m-auto justify-center content-center text-center"
+                  style="margin-top: 20px; position: relative; display: flex"
+                >
+                  "Your selected date is currently available!"
+                </p>
               </div>
-            </div>
-            <div v-if="showpendingmodal" class="modal">
-              <div
-                class="pendingBox p-10 bg-[#eef9eb] w-120"
-                style="
-                  border: 1px solid #38dc87;
-                  border-radius: 10px;
-                  box-shadow: 0px 0px 10px rgba(28, 216, 34, 0.5);
-                  align-items: center;
-                  justify-content: center;
-                  text-align: center;
-                  font-weight: 600;
-                  font-size: large;
-                "
+              <button
+                class="mt-[10px] bg-[#41ab5d] p-2 rounded-xl m-auto w-[6rem] text-center text-white"
+                @click="checkCalendar"
               >
-                <h2 style="word-wrap: break-word">
-                  Your refund will be processed and sent to your email from 3 to
-                  5 working days.
-                </h2>
-                <div class="flex justify-center">
-                  <button
-                    class="btn1 hover:bg-[#41AB5D] mt-[2rem]"
-                    @click="showpendingmodal = false"
-                  >
-                    OK
-                  </button>
-                </div>
-              </div>
+                OK
+              </button>
             </div>
           </div>
         </div>
@@ -157,6 +163,21 @@ const OpenPendingModal = () => {
 </template>
 
 <style scoped>
+calendar-range {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+}
+textarea {
+  background-color: #f7f0f0;
+  border: 1px solid green;
+  padding: 2px;
+  height: 10vh;
+  width: 100%;
+  break-inside: auto;
+  object-fit: cover;
+  display: flex;
+}
 .Logs-Container {
   margin-top: 5rem;
   margin-bottom: 2rem;
@@ -202,17 +223,11 @@ img {
   position: static;
 }
 .information {
-  position: relative;
-  display: inline-block;
-  width: full;
   font-size: 1.2rem;
-  align-items: center;
-  justify-content: center;
-  width: 15rem;
-  display: flex;
-  flex-direction: column;
-  justify-content: start;
-  margin-right: 70rem;
+  font-weight: 600;
+  color: green;
+  width: 100%;
+  margin-left: 20px;
 }
 
 .logsBox {

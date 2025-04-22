@@ -1,9 +1,11 @@
 <script setup>
-import { ref } from "vue";
+import { ref, defineEmits } from "vue";
 import { useRouter } from "vue-router";
 import SignUp from "./SignUp.vue";
 import ProgressSpinner from "primevue/progressspinner";
+import { useAuthStore } from "../stores/authStore";
 
+const authStore = useAuthStore();
 const router = useRouter();
 const email = ref("");
 const password = ref("");
@@ -12,8 +14,7 @@ const loading = ref(false);
 const showModal = ref(false);
 const loginStatus = ref(null);
 
-// const adUser = "admin";
-// const adPass = "admin123";
+const emit = defineEmits(["login-success"]);
 
 const showLogInModal = ref(false);
 
@@ -26,11 +27,6 @@ const closeModal = () => {
 };
 
 const login = async () => {
-  // if (username.value === adUser || password.value === adPass) {
-  //   alert("Login Successful!");
-  //   router.replace("/");
-  // } else if (!username.value || !password.value) {
-
   errorMessage.value = "";
   if (!email.value || !password.value) {
     errorMessage.value = "Please enter both username and password.";
@@ -51,24 +47,30 @@ const login = async () => {
       }),
     });
 
-    // const result = await response.json();
+    const data = await response.json();
+    if (response.ok) {
+      const { accessToken, refreshToken, user } = data;
 
-    setTimeout(() => {
-      if (response.ok) {
-        loginStatus.value = "success";
-        setTimeout(() => {
-          showModal.value = false;
-          router.replace("/home");
-        }, 1500);
-      } else {
-        loginStatus.value = "error";
-        errorMessage.value = "Invalid username or password.";
-        setTimeout(() => {
-          showModal.value = false;
-        }, 1500);
-      }
-      loading.value = false;
-    }, 2000);
+      authStore.setUser(user);
+      console.log("User data:", authStore.user);
+      authStore.setAccessToken(accessToken);
+      authStore.setRefreshToken(refreshToken);
+
+      loginStatus.value = "success";
+      setTimeout(() => {
+        showModal.value = false;
+        showLogInModal.value = false;
+        emit("login-success");
+        router.replace("/home");
+      }, 1500);
+    } else {
+      loginStatus.value = "error";
+      errorMessage.value = data.message || "Invalid credentials.";
+      setTimeout(() => {
+        showModal.value = false;
+        loading.value = false;
+      }, 1500);
+    }
   } catch (err) {
     console.error("Error", err);
     errorMessage.value = "Something went wrong. Try again later.";
@@ -78,8 +80,6 @@ const login = async () => {
 
   showLogInModal.value = false;
 };
-
-// Modal for login
 </script>
 <template>
   <button class="login-btn" @click="openLogInModal">Login</button>

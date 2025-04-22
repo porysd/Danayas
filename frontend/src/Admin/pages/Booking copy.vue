@@ -16,40 +16,130 @@ import TabList from "primevue/tablist";
 import Tab from "primevue/tab";
 import TabPanels from "primevue/tabpanels";
 import TabPanel from "primevue/tabpanel";
-import { useBookingStore } from "../../stores/bookingStore.js";
-import { usePackageStore } from "../../stores/packageStore.js";
-import { usePaymentStore } from "../../stores/paymentStore.js";
 
-const bookingStore = useBookingStore();
-const packageStore = usePackageStore();
-const paymentStore = usePaymentStore();
+const bookings = ref([]);
+const pendingBookings = ref([]);
+const cancelledBookings = ref([]);
+const reservedBookings = ref([]);
+const completedBookings = ref([]);
+const rescheduledBookings = ref([]);
+const packages = ref([]);
 
-onMounted(() => {
-  bookingStore.fetchUserBookings();
-  packageStore.fetchAllPackages();
-  packageStore.fetchAllPromos();
-});
+// Get All Booking with pagination
+const getAllBooking = async () => {
+  bookings.value = [];
+  pendingBookings.value = [];
+  cancelledBookings.value = [];
+  reservedBookings.value = [];
+  completedBookings.value = [];
+  rescheduledBookings.value = [];
+  const limit = 50;
+  let page = 1;
+  let hasMoreData = true;
 
-const addBookingHandler = async (booking, paymentDetails) => {
+  while (hasMoreData) {
+    const bResponse = await fetch(
+      `http://localhost:3000/bookings?limit=${limit}&page=${page}`
+    );
+    if (!bResponse.ok) throw new Error("Failed to fetch bookings");
+    const bookingData = await bResponse.json();
+    bookings.value.unshift(...bookingData.items.reverse());
+
+    if (bookingData.tems && bookingData.items.length > 0) {
+      const filteredPending = bookingData.items.filter(
+        (booking) => booking.bookStatus === "pending"
+      );
+      const filteredCancelled = bookingData.items.filter(
+        (booking) => booking.bookStatus === "cancelled"
+      );
+      const filteredReserved = bookingData.items.filter(
+        (booking) => booking.bookStatus === "reserved"
+      );
+      const filteredCompleted = bookingData.items.filter(
+        (booking) => booking.bookStatus === "completed"
+      );
+      const filteredRescheduled = bookingData.items.filter(
+        (booking) => booking.bookStatus === "rescheduled"
+      );
+      pendingBookings.value.unshift(...filteredPending.reverse());
+      cancelledBookings.value.unshift(...filteredCancelled.reverse());
+      reservedBookings.value.unshift(...filteredReserved.reverse());
+      completedBookings.value.unshift(...filteredCompleted.reverse());
+      rescheduledBookings.value.unshift(...filteredRescheduled.reverse());
+    }
+
+    const pResponse = await fetch(
+      `http://localhost:3000/packages?limit=${limit}`
+    );
+    if (!pResponse.ok) throw new Error("Failed to fetch packages");
+
+    const packagesData = await pResponse.json();
+
+    packages.value = packagesData.items;
+    if (bookingData.items.length === 0) {
+      hasMoreData = false;
+    } else {
+      page++;
+    }
+  }
+};
+
+onMounted(() => getAllBooking());
+
+const totalBookings = computed(() => filteredBooking.value.length);
+
+// Delete Booking by ID
+const deleteBookingHandler = async (booking) => {
   try {
-    const newBooking = await bookingStore.addBooking(booking);
-    const bookingId = newBooking.bookingId;
+    const response = await fetch(
+      `http://localhost:3000/bookings/${booking.bookingId}`,
+      {
+        method: "delete",
+      }
+    );
+    if (!response.ok) throw new Error("Failed to delete booking");
+    bookings.value = bookings.value.filter(
+      (c) => c.bookingId !== booking.bookingId
+    );
+    getAllBooking();
+  } catch (error) {
+    console.error("Error deleting booking", error);
+  }
+};
 
-    const fullPaymentDetails = {
-      ...paymentDetails,
-      bookingId,
-    };
+const addBookingHandler = async (booking) => {
+  const formattedBooking = {
+    ...booking,
+    userId: booking.userId ? Number(booking.userId) : null,
+    createdBy: booking.createdBy ? Number(booking.createdBy) : null,
+    packageId: Number(booking.packageId),
+    numberOfGuest: Number(booking.numberOfGuest),
+    discountPromoId: Number(booking.discountPromoId),
+    totalAmountDue: booking.totalAmountDue ? Number(booking.totalAmountDue) : 0,
+    catering:
+      booking.catering === "true"
+        ? true
+        : booking.catering === "false"
+        ? false
+        : Boolean(booking.catering),
+  };
 
-    await paymentStore.addPayment(fullPaymentDetails);
-
-    toast.add({
-      severity: "success",
-      summary: "Success",
-      detail: "Booking and Payment successfully created!",
-      life: 3000,
+  try {
+    const response = await fetch("http://localhost:3000/bookings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(formattedBooking),
     });
 
-    await bookingStore.fetchAllBookings();
+    const text = await response.text();
+    console.log("Raw response:", text);
+
+    const data = JSON.parse(text);
+
+    if (!response.ok)
+      throw new Error(`Failed to add booking: ${JSON.stringify(data)}`);
+    console.log("Booking added successfully:", data);
+    getAllBooking();
   } catch (error) {
     console.error("Error adding booking:", error);
   }
@@ -57,23 +147,34 @@ const addBookingHandler = async (booking, paymentDetails) => {
 
 // Upadte Booking Status by ID
 const updateBookingHandler = async (booking) => {
-  await bookingStore.updateBookingStatus(booking);
+  try {
+    const response = await fetch(
+      `http://localhost:3000/bookings/${booking.bookingId}/status`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bookStatus: booking.bookStatus }),
+      }
+    );
+
+    if (!response.ok) throw new Error("Failed to update booking");
+
+    const updatedBooking = await response.json();
+    const index = bookings.value.findIndex(
+      (b) => b.bookingId === booking.bookingId
+    );
+    if (index !== -1) {
+      bookings.value[index].bookStatus = booking.bookStatus;
+    }
+    getAllBooking();
+  } catch (error) {
+    console.error("Error updating booking:", error);
+  }
 };
-
-const updateBookingDateHandler = async (booking) => {
-  await bookingStore.updateBookingDates(booking);
-};
-
-const bookings = ref([]);
-const packages = ref([]);
-
-const totalBookings = computed(() => filteredBooking.value.length);
 
 // Get Package Name using packageId
 const getPackageName = (packageId) => {
-  const pkg =
-    packageStore.packages.find((p) => p.packageId === packageId) ||
-    packageStore.promos.find((p) => p.packageId === packageId);
+  const pkg = packages.value.find((p) => p.packageId === packageId);
   return pkg ? pkg.name : "Unknown Package";
 };
 
@@ -158,7 +259,7 @@ const filterReservationType = ref({
   "walk-in": false,
 });
 const filteredBooking = computed(() => {
-  let result = bookingStore.bookings;
+  let result = bookings.value;
 
   if (searchQuery.value !== "") {
     result = result.filter((booking) =>
@@ -380,387 +481,7 @@ const filteredBooking = computed(() => {
                   <tbody>
                     <tr
                       class="bRow border-[#194D1D] dark:border-[#18181b]"
-                      v-for="booking in bookingStore.bookingPending"
-                      :key="booking.id"
-                      @click="openBookingDetails(booking)"
-                    >
-                      <td class="w-[3%]">{{ booking.bookingId }}</td>
-                      <td class="w-[17%]">
-                        <strong
-                          >{{ booking.firstName }}
-                          {{ booking.lastName }}</strong
-                        >
-                        <br />
-                        {{ booking.contactNo }}
-                      </td>
-                      <td class="w-[15%]">
-                        {{ getPackageName(booking.packageId) }} <br />
-                        {{ booking.mode }}
-                      </td>
-                      <td class="w-[10%]">{{ booking.paymentTerms }}</td>
-                      <td class="w-[18%]">
-                        {{ formatDate(booking.checkInDate) }} to
-                        {{ formatDate(booking.checkOutDate) }}
-                      </td>
-                      <td class="w-[8%]">
-                        {{ formatPeso(booking.totalAmount) }}
-                      </td>
-                      <td class="w-[10%]">
-                        <Tag
-                          :severity="getStatusSeverity(booking.bookStatus)"
-                          :value="booking.bookStatus"
-                        />
-                      </td>
-                      <td class="w-[12%]">
-                        {{ formatDate(booking.createdAt) }}
-                      </td>
-                      <td class="w-[5%]" @click.stop>
-                        <T3ButtonBooking
-                          :booking="booking"
-                          :packageName="getPackageName(booking.packageId)"
-                          @deleteBooking="deleteBookingHandler"
-                          @updateStatus="updateBookingHandler"
-                        />
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-                <Paginator
-                  :first="first"
-                  :rows="rows"
-                  :totalRecords="totalBookings"
-                  :rowsPerPageOptions="[5, 10, 20, 30]"
-                  @page="onPageChange"
-                  class="rowPagination"
-                />
-              </div>
-            </TabPanel>
-            <TabPanel value="1">
-              <div class="tableContainer">
-                <table class="dTable border-[#194D1D] dark:border-[#FCFCFC]">
-                  <thead>
-                    <tr
-                      class="header-style bg-[#194D1D] dark:bg-[#18181b] border-[#194D1D] dark:border-[#18181b]"
-                    >
-                      <th>ID</th>
-                      <th>NAME</th>
-                      <th>PACKAGE</th>
-                      <th>PAY TERMS</th>
-                      <th>CHECK IN & CHECK OUT</th>
-                      <th>AMOUNT</th>
-                      <th>STATUS</th>
-                      <th>DATE</th>
-                      <th></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr
-                      class="bRow border-[#194D1D] dark:border-[#18181b]"
-                      v-for="booking in bookingStore.bookingReserved"
-                      :key="booking.id"
-                      @click="openBookingDetails(booking)"
-                    >
-                      <td class="w-[3%]">{{ booking.bookingId }}</td>
-                      <td class="w-[17%]">
-                        <strong
-                          >{{ booking.firstName }}
-                          {{ booking.lastName }}</strong
-                        >
-                        <br />
-                        {{ booking.contactNo }}
-                      </td>
-                      <td class="w-[15%]">
-                        {{ getPackageName(booking.packageId) }} <br />
-                        {{ booking.mode }}
-                      </td>
-                      <td class="w-[10%]">{{ booking.paymentTerms }}</td>
-                      <td class="w-[18%]">
-                        {{ formatDate(booking.checkInDate) }} to
-                        {{ formatDate(booking.checkOutDate) }}
-                      </td>
-                      <td class="w-[8%]">
-                        {{ formatPeso(booking.totalAmount) }}
-                      </td>
-                      <td class="w-[10%]">
-                        <Tag
-                          :severity="getStatusSeverity(booking.bookStatus)"
-                          :value="booking.bookStatus"
-                        />
-                      </td>
-                      <td class="w-[12%]">
-                        {{ formatDate(booking.createdAt) }}
-                      </td>
-                      <td class="w-[5%]" @click.stop>
-                        <T3ButtonBooking
-                          :booking="booking"
-                          :packageName="getPackageName(booking.packageId)"
-                          @deleteBooking="deleteBookingHandler"
-                          @updateStatus="updateBookingHandler"
-                        />
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-                <Paginator
-                  :first="first"
-                  :rows="rows"
-                  :totalRecords="totalBookings"
-                  :rowsPerPageOptions="[5, 10, 20, 30]"
-                  @page="onPageChange"
-                  class="rowPagination"
-                />
-              </div>
-            </TabPanel>
-            <TabPanel value="2">
-              <div class="tableContainer">
-                <table class="dTable border-[#194D1D] dark:border-[#FCFCFC]">
-                  <thead>
-                    <tr
-                      class="header-style bg-[#194D1D] dark:bg-[#18181b] border-[#194D1D] dark:border-[#18181b]"
-                    >
-                      <th>ID</th>
-                      <th>NAME</th>
-                      <th>PACKAGE</th>
-                      <th>PAY TERMS</th>
-                      <th>CHECK IN & CHECK OUT</th>
-                      <th>AMOUNT</th>
-                      <th>STATUS</th>
-                      <th>DATE</th>
-                      <th></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr
-                      class="bRow border-[#194D1D] dark:border-[#18181b]"
-                      v-for="booking in bookingStore.bookingRescheduled"
-                      :key="booking.id"
-                      @click="openBookingDetails(booking)"
-                    >
-                      <td class="w-[3%]">{{ booking.bookingId }}</td>
-                      <td class="w-[17%]">
-                        <strong
-                          >{{ booking.firstName }}
-                          {{ booking.lastName }}</strong
-                        >
-                        <br />
-                        {{ booking.contactNo }}
-                      </td>
-                      <td class="w-[15%]">
-                        {{ getPackageName(booking.packageId) }} <br />
-                        {{ booking.mode }}
-                      </td>
-                      <td class="w-[10%]">{{ booking.paymentTerms }}</td>
-                      <td class="w-[18%]">
-                        {{ formatDate(booking.checkInDate) }} to
-                        {{ formatDate(booking.checkOutDate) }}
-                      </td>
-                      <td class="w-[8%]">
-                        {{ formatPeso(booking.totalAmount) }}
-                      </td>
-                      <td class="w-[10%]">
-                        <Tag
-                          :severity="getStatusSeverity(booking.bookStatus)"
-                          :value="booking.bookStatus"
-                        />
-                      </td>
-                      <td class="w-[12%]">
-                        {{ formatDate(booking.createdAt) }}
-                      </td>
-                      <td class="w-[5%]" @click.stop>
-                        <T3ButtonBooking
-                          :booking="booking"
-                          :packageName="getPackageName(booking.packageId)"
-                          @deleteBooking="deleteBookingHandler"
-                          @updateStatus="updateBookingHandler"
-                        />
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-                <Paginator
-                  :first="first"
-                  :rows="rows"
-                  :totalRecords="totalBookings"
-                  :rowsPerPageOptions="[5, 10, 20, 30]"
-                  @page="onPageChange"
-                  class="rowPagination"
-                />
-              </div>
-            </TabPanel>
-            <TabPanel value="3">
-              <div class="tableContainer">
-                <table class="dTable border-[#194D1D] dark:border-[#FCFCFC]">
-                  <thead>
-                    <tr
-                      class="header-style bg-[#194D1D] dark:bg-[#18181b] border-[#194D1D] dark:border-[#18181b]"
-                    >
-                      <th>ID</th>
-                      <th>NAME</th>
-                      <th>PACKAGE</th>
-                      <th>PAY TERMS</th>
-                      <th>CHECK IN & CHECK OUT</th>
-                      <th>AMOUNT</th>
-                      <th>STATUS</th>
-                      <th>DATE</th>
-                      <th></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr
-                      class="bRow border-[#194D1D] dark:border-[#18181b]"
-                      v-for="booking in bookingStore.bookingCancelled"
-                      :key="booking.id"
-                      @click="openBookingDetails(booking)"
-                    >
-                      <td class="w-[3%]">{{ booking.bookingId }}</td>
-                      <td class="w-[17%]">
-                        <strong
-                          >{{ booking.firstName }}
-                          {{ booking.lastName }}</strong
-                        >
-                        <br />
-                        {{ booking.contactNo }}
-                      </td>
-                      <td class="w-[15%]">
-                        {{ getPackageName(booking.packageId) }} <br />
-                        {{ booking.mode }}
-                      </td>
-                      <td class="w-[10%]">{{ booking.paymentTerms }}</td>
-                      <td class="w-[18%]">
-                        {{ formatDate(booking.checkInDate) }} to
-                        {{ formatDate(booking.checkOutDate) }}
-                      </td>
-                      <td class="w-[8%]">
-                        {{ formatPeso(booking.totalAmount) }}
-                      </td>
-                      <td class="w-[10%]">
-                        <Tag
-                          :severity="getStatusSeverity(booking.bookStatus)"
-                          :value="booking.bookStatus"
-                        />
-                      </td>
-                      <td class="w-[12%]">
-                        {{ formatDate(booking.createdAt) }}
-                      </td>
-                      <td class="w-[5%]" @click.stop>
-                        <T3ButtonBooking
-                          :booking="booking"
-                          :packageName="getPackageName(booking.packageId)"
-                          @deleteBooking="deleteBookingHandler"
-                          @updateStatus="updateBookingHandler"
-                        />
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-                <Paginator
-                  :first="first"
-                  :rows="rows"
-                  :totalRecords="totalBookings"
-                  :rowsPerPageOptions="[5, 10, 20, 30]"
-                  @page="onPageChange"
-                  class="rowPagination"
-                />
-              </div>
-            </TabPanel>
-            <TabPanel value="4">
-              <div class="tableContainer">
-                <table class="dTable border-[#194D1D] dark:border-[#FCFCFC]">
-                  <thead>
-                    <tr
-                      class="header-style bg-[#194D1D] dark:bg-[#18181b] border-[#194D1D] dark:border-[#18181b]"
-                    >
-                      <th>ID</th>
-                      <th>NAME</th>
-                      <th>PACKAGE</th>
-                      <th>PAY TERMS</th>
-                      <th>CHECK IN & CHECK OUT</th>
-                      <th>AMOUNT</th>
-                      <th>STATUS</th>
-                      <th>DATE</th>
-                      <th></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr
-                      class="bRow border-[#194D1D] dark:border-[#18181b]"
-                      v-for="booking in bookingStore.bookingCompleted"
-                      :key="booking.id"
-                      @click="openBookingDetails(booking)"
-                    >
-                      <td class="w-[3%]">{{ booking.bookingId }}</td>
-                      <td class="w-[17%]">
-                        <strong
-                          >{{ booking.firstName }}
-                          {{ booking.lastName }}</strong
-                        >
-                        <br />
-                        {{ booking.contactNo }}
-                      </td>
-                      <td class="w-[15%]">
-                        {{ getPackageName(booking.packageId) }} <br />
-                        {{ booking.mode }}
-                      </td>
-                      <td class="w-[10%]">{{ booking.paymentTerms }}</td>
-                      <td class="w-[18%]">
-                        {{ formatDate(booking.checkInDate) }} to
-                        {{ formatDate(booking.checkOutDate) }}
-                      </td>
-                      <td class="w-[8%]">
-                        {{ formatPeso(booking.totalAmount) }}
-                      </td>
-                      <td class="w-[10%]">
-                        <Tag
-                          :severity="getStatusSeverity(booking.bookStatus)"
-                          :value="booking.bookStatus"
-                        />
-                      </td>
-                      <td class="w-[12%]">
-                        {{ formatDate(booking.createdAt) }}
-                      </td>
-                      <td class="w-[5%]" @click.stop>
-                        <T3ButtonBooking
-                          :booking="booking"
-                          :packageName="getPackageName(booking.packageId)"
-                          @deleteBooking="deleteBookingHandler"
-                          @updateStatus="updateBookingHandler"
-                        />
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-                <Paginator
-                  :first="first"
-                  :rows="rows"
-                  :totalRecords="totalBookings"
-                  :rowsPerPageOptions="[5, 10, 20, 30]"
-                  @page="onPageChange"
-                  class="rowPagination"
-                />
-              </div>
-            </TabPanel>
-            <TabPanel value="5">
-              <div class="tableContainer">
-                <table class="dTable border-[#194D1D] dark:border-[#FCFCFC]">
-                  <thead>
-                    <tr
-                      class="header-style bg-[#194D1D] dark:bg-[#18181b] border-[#194D1D] dark:border-[#18181b]"
-                    >
-                      <th>ID</th>
-                      <th>NAME</th>
-                      <th>PACKAGE</th>
-                      <th>PAY TERMS</th>
-                      <th>CHECK IN & CHECK OUT</th>
-                      <th>AMOUNT</th>
-                      <th>STATUS</th>
-                      <th>DATE</th>
-                      <th></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr
-                      class="bRow border-[#194D1D] dark:border-[#18181b]"
-                      v-for="booking in bookingStore.bookings"
+                      v-for="booking in pendingBookings"
                       :key="booking.id"
                       @click="openBookingDetails(booking)"
                     >
@@ -830,6 +551,9 @@ const filteredBooking = computed(() => {
           <p><strong>Booking ID:</strong> {{ selectedBooking?.bookingId }}</p>
           <p><strong>User ID:</strong> {{ selectedBooking?.userId }}</p>
           <p>
+            <strong>Created By ID:</strong> {{ selectedBooking?.createdBy }}
+          </p>
+          <p>
             <strong>Name:</strong> {{ selectedBooking?.firstName }}
             {{ selectedBooking?.lastName }}
           </p>
@@ -854,13 +578,15 @@ const filteredBooking = computed(() => {
             {{ selectedBooking?.numberOfGuest }}
           </p>
           <p><strong>Catering:</strong> {{ selectedBooking?.catering }}</p>
-          <p><strong>Discount:</strong> {{ selectedBooking?.discountId }}</p>
+          <p>
+            <strong>Discount:</strong> {{ selectedBooking?.discountPromoId }}
+          </p>
           <p>
             <strong>Payment Terms:</strong> {{ selectedBooking?.paymentTerms }}
           </p>
           <p>
             <strong>Total Amount Due:</strong>
-            {{ selectedBooking?.totalAmount }}
+            {{ selectedBooking?.totalAmountDue }}
           </p>
           <p>
             <strong>Booking Status:</strong> {{ selectedBooking?.bookStatus }}
@@ -988,7 +714,7 @@ td {
   background: white;
   padding: 20px;
   border-radius: 5px;
-  width: 40rem;
+  width: auto;
 }
 
 .closeDetails {
@@ -1015,6 +741,7 @@ td {
     background: transparent;
   }
 }
+
 :deep(.tabBookings) {
   max-height: 75%;
   overflow-y: auto;

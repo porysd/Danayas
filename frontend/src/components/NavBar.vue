@@ -1,20 +1,54 @@
 <script setup>
-import { ref } from "vue";
+import { computed, ref, onMounted, onUnmounted } from "vue";
+import { useRouter } from "vue-router";
 import Login from "../components/Login.vue";
 import SignUp from "../components/SignUp.vue";
+import { useAuthStore } from "../stores/authStore";
+import Avatar from "primevue/avatar";
 
-const isMenuOpen = ref(false);
+const authStore = useAuthStore();
+const isLoggedIn = computed(() => authStore.isLoggedIn);
+const showMenu = ref(false);
+const hideMenu = ref(null);
 
-const toggleMenu = () => {
-  isMenuOpen.value = !isMenuOpen.value;
+function handleSignUpSuccess() {
+  isLoggedIn.value = true; // User is logged in after sign up
+}
+
+function handleLoginSuccess() {
+  isLoggedIn.value = true; // User is logged in after login
+}
+
+const logout = () => {
+  authStore.logout();
+  router.replace("/admin/admin-login");
 };
+
+const closeMenu = (event) => {
+  if (hideMenu.value && !hideMenu.value.contains(event.target)) {
+    showMenu.value = false;
+  }
+};
+
+onMounted(() => {
+  document.addEventListener("click", closeMenu);
+});
+
+onUnmounted(() => {
+  document.addEventListener("click", closeMenu);
+});
 </script>
 
 <template>
   <nav class="nav-bar">
     <div class="logo">
       <a href="/">
-        <img src="../assets/logo.png" alt="logo" id="logo" class="drevsLogo" />
+        <img
+          src="../Admin/assets/drevslogo.png"
+          alt="logo"
+          id="logo"
+          class="drevsLogo"
+        />
       </a>
     </div>
 
@@ -53,20 +87,43 @@ const toggleMenu = () => {
             >Contact Us</router-link
           >
         </li>
-        <li>
-          <router-link to="/logs" active-class="active-route">Logs</router-link>
-        </li>
-        <li>
-          <router-link to="/profile-page" active-class="active-route"
-            >Profile</router-link
-          >
-        </li>
       </ul>
     </div>
 
     <div class="signup-btn-container">
-      <Login />
-      <SignUp />
+      <template v-if="isLoggedIn">
+        <router-link to="/logs" active-class="active-route">Logs</router-link>
+        <div class="profilepage">
+          <Avatar
+            icon="pi pi-user"
+            class="mr-2"
+            size="large"
+            style="
+              background-color: rgb(127, 241, 150);
+              box-shadow: 0px 4px 4px #41ab5d;
+            "
+            shape="circle"
+            @click.stop="showMenu = !showMenu"
+          />
+          <div v-if="showMenu" ref="hideMenu" class="dropdown-menu">
+            <ul>
+              <li class="hover:bg-gray-100 dark:hover:bg-gray-700">
+                <router-link to="/profile-page">My Profile</router-link>
+              </li>
+              <li
+                @click="logout"
+                class="hover:bg-gray-100 dark:hover:bg-gray-700"
+              >
+                Log Out
+              </li>
+            </ul>
+          </div>
+        </div>
+      </template>
+      <template v-else>
+        <Login @login-success="handleLoginSuccess" />
+        <SignUp @sign-up-success="handleSignUpSuccess" />
+      </template>
     </div>
   </nav>
 
@@ -184,5 +241,32 @@ const toggleMenu = () => {
   .menu-toggle {
     display: block;
   }
+}
+
+.dropdown-menu {
+  position: absolute;
+  bottom: -2.5rem;
+  right: 8.5rem;
+  background: #fcfcfc;
+  color: #333;
+  border-radius: 5px;
+  padding: 5px;
+  width: 120px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  z-index: 100;
+}
+
+.dropdown-menu ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.dropdown-menu li {
+  padding: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
 }
 </style>

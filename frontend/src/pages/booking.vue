@@ -14,7 +14,13 @@ import FileUpload from "primevue/fileupload";
 import Dialog from "primevue/dialog";
 import NavBar from "../components/NavBar.vue";
 import Footer from "../components/Footer.vue";
+import { useBookingStore } from "../stores/bookingStore";
 
+const bookingStore = useBookingStore();
+
+onMounted(() => {
+  bookingStore.fetchUserBookings();
+});
 const bookMode = ref("");
 const paymentTerms = ref("");
 
@@ -55,138 +61,60 @@ const OpenContinueModal = () => {
   }, 3000);
 };
 
-const newBooking = ref({
-  userId: "",
-  createdBy: "",
-  firstName: "",
-  lastName: "",
-  contactNo: "",
-  emailAddress: "",
-  address: "",
-  packageId: "",
-  eventType: "",
-  checkInDate: "",
-  checkOutDate: "",
-  mode: "",
-  arrivalTime: "",
-  catering: "",
-  numberOfGuest: "",
-  discountPromoId: "",
-  bookingAddOns: "",
-  paymentTerms: "",
-  totalPaid: "",
-  totalAmountDue: "",
-  bookStatus: "",
-  reservationType: "",
-});
-
-const addBookingHandler = async (booking) => {
-  const formattedBooking = {
-    ...booking,
-    userId: booking.userId ? Number(booking.userId) : null,
-    createdBy: booking.createdBy ? Number(booking.createdBy) : null,
-    packageId: Number(booking.packageId),
-    numberOfGuest: Number(booking.numberOfGuest),
-    discountPromoId: Number(booking.discountPromoId),
-    totalAmountDue: booking.totalAmountDue ? Number(booking.totalAmountDue) : 0,
-    catering:
-      booking.catering === "true"
-        ? true
-        : booking.catering === "false"
-        ? false
-        : Boolean(booking.catering),
-  };
-
-  try {
-    const response = await fetch("http://localhost:3000/bookings/booking", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(formattedBooking),
-    });
-
-    const text = await response.text();
-    console.log("Raw response:", text);
-
-    const data = JSON.parse(text);
-
-    if (!response.ok)
-      throw new Error(`Failed to add booking: ${JSON.stringify(data)}`);
-    console.log("Booking added successfully:", data);
-  } catch (error) {
-    console.error("Error adding booking:", error);
-  }
-};
-
 // FOR CALENDAR
-const bookings = ref([]);
-
-onMounted(async () => {
-  const limit = 50;
-  let page = 1;
-  let hasMoreData = true;
-
-  while (hasMoreData) {
-    const bResponse = await fetch(
-      `http://localhost:3000/bookings?limit=${limit}&page=${page}`
-    );
-    if (!bResponse.ok) throw new Error("Failed to fetch bookings");
-    const bookingData = await bResponse.json();
-
-    if (bookingData.items.length === 0) {
-      hasMoreData = false;
-    } else {
-      bookings.value.push(...bookingData.items);
-      page++;
-    }
-  }
-});
-
 const getBookingStyle = (slotDate) => {
   const jsDate = new Date(slotDate.year, slotDate.month - 1, slotDate.day);
 
   const formattedDate = jsDate.toISOString().split("T")[0];
 
-  const booking = bookings.value.find((b) =>
+  const booking = bookingStore.bookings.find((b) =>
     b.checkInDate.startsWith(formattedDate)
   );
 
   if (!booking) {
     return {
-      backgroundColor: "#4BB344",
-      color: "white",
+      backgroundColor: "#90EE94",
+      color: "#15803D",
       width: "40px",
       height: "40px",
       display: "inline-flex",
       justifyContent: "center",
       alignItems: "center",
-      borderRadius: "50%",
+      borderRadius: "10rem",
+      fontSize: "17px",
     };
   }
 
   let backgroundColor;
+  let color;
   switch (booking.mode) {
     case "day-time":
-      backgroundColor = "#3EDFFF";
+      backgroundColor = "#FFD5";
+      color = "white";
       break;
     case "night-time":
-      backgroundColor = "#1714BA";
+      backgroundColor = "#6A5ACD";
+      color = "white";
       break;
     case "whole-day":
-      backgroundColor = "#FF2D55";
+      backgroundColor = "#FF6B6B";
+      color = "white";
       break;
     default:
-      backgroundColor = "#4BB344";
+      backgroundColor = "#90EE94";
+      color = "#15803D";
   }
 
   return {
     backgroundColor,
-    color: "white",
+    color,
     width: "40px",
     height: "40px",
     display: "inline-flex",
     justifyContent: "center",
     alignItems: "center",
-    borderRadius: "50%",
+    borderRadius: "10rem",
+    fontSize: "18px",
   };
 };
 </script>
@@ -269,23 +197,7 @@ const getBookingStyle = (slotDate) => {
                   <DatePicker
                     v-model="date"
                     inline
-                    class="dateChart w-full sm:w-[30rem]"
-                  >
-                    <template #date="slotProps">
-                      <span>
-                        <strong
-                          :style="getBookingStyle(slotProps.date)"
-                          class="date-box"
-                        >
-                          {{ slotProps.date.day }}
-                        </strong>
-                      </span>
-                    </template>
-                  </DatePicker>
-                  <DatePicker
-                    v-model="date"
-                    inline
-                    class="dateChart w-full sm:w-[30rem]"
+                    class="dateChart w-full sm:w-[60rem]"
                   >
                     <template #date="slotProps">
                       <span>
@@ -332,7 +244,7 @@ const getBookingStyle = (slotDate) => {
                     <span
                       class="dot"
                       id="Available"
-                      style="background-color: #4bb344"
+                      style="background-color: #90ee94"
                     >
                       <label for="dot" style="margin-left: 50px"
                         >AVAILABLE</label
@@ -341,7 +253,7 @@ const getBookingStyle = (slotDate) => {
                     <span
                       class="dot"
                       id="DayAvailable"
-                      style="background-color: #3edfff"
+                      style="background-color: #ffd580"
                     >
                       <label for="dot" style="margin-left: 50px; width: 145px"
                         >DAY AVAILABLE</label
@@ -363,7 +275,7 @@ const getBookingStyle = (slotDate) => {
                     <span
                       class="dot"
                       id="FullyBooked"
-                      style="background-color: #ff2d55"
+                      style="background-color: #ff6b6b"
                     >
                       <label
                         for="dot"
@@ -374,7 +286,7 @@ const getBookingStyle = (slotDate) => {
                     <span
                       class="dot"
                       id="NightAvailable"
-                      style="background-color: #1714ba"
+                      style="background-color: #6a5acd"
                     >
                       <label for="dot" style="margin-left: 50px; width: 145px"
                         >NIGHT AVAILABLE</label
@@ -439,15 +351,15 @@ const getBookingStyle = (slotDate) => {
               <div
                 class="flex-col flex justify-center items-center font-medium h-auto w-[50rem] mt-5"
               >
-                <div class="flex flex-col overflow-auto h-[65rem]">
+                <div class="flex flex-col h-[65rem]">
                   <h1
-                    class="text-left w-[100%] flex font-black text-4xl font-[Poppins] mt-10"
+                    class="text-left w-[100%] flex font-black text-4xl font-[Poppins] mt-10 mb-10"
                   >
                     Select Package
                   </h1>
-                  <BookPackage />
-                  <BookPackage />
-                  <BookPackage />
+                  <div class="overflow-auto">
+                    <BookPackage />
+                  </div>
                 </div>
               </div>
               <div
@@ -926,7 +838,7 @@ const getBookingStyle = (slotDate) => {
           asperiores repellat.
         </p>
       </div>
-      <div class="checkboxConfirmation">
+      <div class="checkboxConfirmation" style="margin: auto">
         <input type="checkbox" id="signupCheck" />
         <label for="bookingCheck">I accept all terms & conditions</label>
       </div>
@@ -1074,10 +986,24 @@ const getBookingStyle = (slotDate) => {
     padding: 0px;
   }
 
-  .p-datepicker-panel,
+  .p-datepicker-panel {
+    background: #fcfcfc;
+  }
   .p-datepicker-header {
-    background-color: #c7e3b6;
-    color: #fcfcfc;
+    background: #fcfcfc;
+  }
+  .p-datepicker-day {
+    border-radius: 0;
+  }
+  .p-datepicker-day:hover {
+    border-radius: 0;
+    font-size: 20px;
+  }
+
+  .my-app-dark .p-datepicker-panel,
+  .my-app-dark .p-datepicker-header {
+    border: none;
+    background: #18181b;
   }
 }
 

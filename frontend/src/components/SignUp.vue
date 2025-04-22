@@ -4,6 +4,7 @@ import { useRouter } from "vue-router";
 import ProgressSpinner from "primevue/progressspinner";
 
 const router = useRouter();
+const emit = defineEmits(["sign-up-success"]);
 
 const newUser = ref({
   username: "",
@@ -38,6 +39,7 @@ const SignUp = () => {
   } = newUser.value;
 
   if (
+    !username ||
     !firstName ||
     !lastName ||
     !contactNo ||
@@ -49,10 +51,10 @@ const SignUp = () => {
     return;
   }
 
-  // if (password !== confirmPass) {
-  //   alert("Passwords do not match.");
-  //   return;
-  // }
+  if (password !== confirmPass) {
+    alert("Passwords do not match.");
+    return;
+  }
 
   addNewUser({ ...newUser.value });
 };
@@ -65,7 +67,7 @@ const addNewUser = async (userData) => {
   signUpStatus.value = null;
 
   try {
-    const response = await fetch("http://localhost:3000/users", {
+    const response = await fetch("http://localhost:3000/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(signUpUser),
@@ -79,9 +81,11 @@ const addNewUser = async (userData) => {
     setTimeout(() => {
       if (response.ok) {
         signUpStatus.value = "success";
+        localStorage.setItem("token", "your-jwt-token"); // Store token upon success
+        isLoggedIn.value = true;
         setTimeout(() => {
           showModal.value = false;
-          router.replace("/home");
+          router.replace("/");
         }, 1500);
       } else {
         signUpStatus.value = "error";
@@ -212,7 +216,11 @@ const CloseSignUpModal = () => {
               </div>
               <div>
                 <label>Confirm Password:</label>
-                <input class="packEvents" placeholder="Confirm Password" />
+                <input
+                  class="packEvents"
+                  v-model="newUser.confirmPass"
+                  placeholder="Confirm Password"
+                />
               </div>
             </div>
 
@@ -222,7 +230,9 @@ const CloseSignUpModal = () => {
             </div>
 
             <div class="modal-actions">
-              <button class="submitBtn" type="submit">Sign Up</button>
+              <button class="submitBtn" type="submit" @click="addNewUser">
+                Sign Up
+              </button>
             </div>
           </div>
         </form>

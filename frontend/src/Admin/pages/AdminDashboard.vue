@@ -7,15 +7,13 @@ import DarkModeButton from "../components/DarkModeButton.vue";
 import Notification from "../components/Notification.vue";
 import ProfileAvatar from "../components/ProfileAvatar.vue";
 import Header from "../components/Header.vue";
-import "cally";
+import Divider from "primevue/divider";
 
 const bookings = ref([]);
 const customers = ref([]);
 const months = ref(new Array(12).fill(0));
 const day = ref(new Array(31).fill(0));
 
-// 1a211a
-// 0c170c
 // Get All Booking and Customer with pagination
 onMounted(async () => {
   const limit = 50;
@@ -29,17 +27,17 @@ onMounted(async () => {
     if (!bResponse.ok) throw new Error("Failed to fetch bookings");
     const bookingData = await bResponse.json();
 
-    const cResponse = await fetch(
-      `http://localhost:3000/users?limit=${limit}&page=${page}`
-    );
-    if (!cResponse.ok) throw new Error("Failed to fetch customers");
-    const customerData = await cResponse.json();
+    // const cResponse = await fetch(
+    //   `http://localhost:3000/users?limit=${limit}&page=${page}`
+    // );
+    // if (!cResponse.ok) throw new Error("Failed to fetch customers");
+    // const customerData = await cResponse.json();
 
-    if (bookingData.items.length === 0 && customerData.items.length === 0) {
+    if (bookingData.items.length === 0) {
       hasMoreData = false;
     } else {
       bookings.value.push(...bookingData.items);
-      customers.value.push(...customerData.items);
+      // customers.value.push(...customerData.items);
       page++;
     }
   }
@@ -63,6 +61,21 @@ const processBookings = () => {
   updateChartData();
 };
 
+const monthColors = [
+  "#4F46E5", // January - Indigo
+  "#EC4899", // February - Pink
+  "#EF4444", // March - Red
+  "#F59E0B", // April - Amber
+  "#84CC16", // May - Lime
+  "#06B6D4", // June - Cyan
+  "#10B981", // July - Emerald
+  "#8B5CF6", // August - Violet
+  "#22C55E", // September - Green
+  "#EAB308", // October - Yellow
+  "#3B82F6", // November - Blue
+  "#14B8A6", // December - Teal
+];
+
 const chartData = ref({
   labels: [
     "January",
@@ -80,11 +93,10 @@ const chartData = ref({
   ],
   datasets: [
     {
-      label: "Reservations",
       data: months.value,
-      backgroundColor: ["#4BB344"],
+      backgroundColor: monthColors,
       borderWidth: 2,
-      borderRadius: 5,
+      borderRadius: 20,
       borderSkipped: false,
     },
   ],
@@ -99,7 +111,7 @@ const chartOptions = ref({
   maintainAspectRatio: false,
   plugins: {
     legend: {
-      position: "top",
+      display: false,
     },
   },
 });
@@ -111,24 +123,31 @@ const countPendingBookings = computed(() => {
   ).length;
 });
 
-// Get COMPLETED Booking Status
-const countCompletedBookings = computed(() => {
+// Get CONFIRMED Booking Status
+const countConfirmedBookings = computed(() => {
   return bookings.value.filter(
-    (b) => b.bookStatus && b.bookStatus.trim().toLowerCase() === "completed"
+    (b) => b.bookStatus && b.bookStatus.trim().toLowerCase() === "confirmed"
   ).length;
 });
 
-// Get RESCHEDULED Booking Status === NOT YET IMPLEMENTED!!!!
-// const countRescheduledBooking = computed(() => {
-//     return bookings.value.filter(b =>
-//         b.bookStatus && b.bookStatus.trim().toLowerCase() === 'rescheduled'
-//     ).length;
-// });
+// Get RESCHEDULED Booking Status
+const countRescheduledBooking = computed(() => {
+  return bookings.value.filter(
+    (b) => b.bookStatus && b.bookStatus.trim().toLowerCase() === "rescheduled"
+  ).length;
+});
 
 // Get CANCELLED Booking Status
 const countCancelledBookings = computed(() => {
   return bookings.value.filter(
     (b) => b.bookStatus && b.bookStatus.trim().toLowerCase() === "cancelled"
+  ).length;
+});
+
+// Get COMPLETED Booking Status
+const countCompletedBookings = computed(() => {
+  return bookings.value.filter(
+    (b) => b.bookStatus && b.bookStatus.trim().toLowerCase() === "completed"
   ).length;
 });
 
@@ -144,41 +163,48 @@ const getBookingStyle = (slotDate) => {
 
   if (!booking) {
     return {
-      backgroundColor: "#4BB344",
-      color: "white",
+      backgroundColor: "#90EE94",
+      color: "#15803D",
       width: "40px",
       height: "40px",
       display: "inline-flex",
       justifyContent: "center",
       alignItems: "center",
-      borderRadius: "50%",
+      borderRadius: "10rem",
+      fontSize: "17px",
     };
   }
 
   let backgroundColor;
+  let color;
   switch (booking.mode) {
     case "day-time":
-      backgroundColor = "#3EDFFF";
+      backgroundColor = "#FFD580";
+      color = "white";
       break;
     case "night-time":
-      backgroundColor = "#1714BA";
+      backgroundColor = "#6A5ACD";
+      color = "white";
       break;
     case "whole-day":
-      backgroundColor = "#FF2D55";
+      backgroundColor = "#FF6B6B";
+      color = "white";
       break;
     default:
-      backgroundColor = "#4BB344";
+      backgroundColor = "#90EE94";
+      color = "#15803D";
   }
 
   return {
     backgroundColor,
-    color: "white",
+    color,
     width: "40px",
     height: "40px",
     display: "inline-flex",
     justifyContent: "center",
     alignItems: "center",
-    borderRadius: "50%",
+    borderRadius: "10rem",
+    fontSize: "18px",
   };
 };
 
@@ -228,28 +254,54 @@ const getBookingStyle = (slotDate) => {
           </div>
         </div>
         <div
-          class="completedBook p-4 md:p-5 shadow-lg bg-green-50 dark:bg-green-100/10"
+          class="pendingBook p-4 md:p-5 shadow-lg bg-cyan-50 dark:bg-cyan-100/10"
         >
           <div class="flex justify-between mb-4">
             <div>
-              <p class="text-xs uppercase text-gray-500" icon>
-                Completed<i
+              <p class="text-xs uppercase text-gray-500">
+                RESERVED<i
                   class="pi pi-question-circle ml-2"
                   style="font-size: 12px"
-                  v-tooltip="'Total Number of Completed'"
+                  v-tooltip="'Total Number of Reserved'"
                 />
               </p>
               <h3
                 class="text-xl sm:text-3xl font-medium text-gray-800 dark:text-white mt-1"
               >
-                {{ countCompletedBookings }}
+                {{ countConfirmedBookings }}
               </h3>
             </div>
             <div
-              class="flex items-center justify-center bg-green-200 dark:bg-green-400/10 rounded-xl"
+              class="flex items-center justify-center bg-cyan-200 dark:bg-cyan-400/10 rounded-xl"
               style="width: 2.5rem; height: 2.5rem"
             >
-              <i class="pi pi-check-circle text-green-600 !text-xl" />
+              <i class="pi pi-calendar text-cyan-600 !text-xl" />
+            </div>
+          </div>
+        </div>
+        <div
+          class="completedBook p-4 md:p-5 shadow-lg bg-purple-50 dark:bg-purple-100/10"
+        >
+          <div class="flex justify-between mb-4">
+            <div>
+              <p class="text-xs uppercase text-gray-500" icon>
+                Rescheduled<i
+                  class="pi pi-question-circle ml-2"
+                  style="font-size: 12px"
+                  v-tooltip="'Total Number of Rescheduled'"
+                />
+              </p>
+              <h3
+                class="text-xl sm:text-3xl font-medium text-gray-800 dark:text-white mt-1"
+              >
+                {{ countRescheduledBooking }}
+              </h3>
+            </div>
+            <div
+              class="flex items-center justify-center bg-purple-200 dark:bg-purple-400/10 rounded-xl"
+              style="width: 2.5rem; height: 2.5rem"
+            >
+              <i class="pi pi-calendar-clock text-purple-600 !text-xl" />
             </div>
           </div>
         </div>
@@ -279,6 +331,34 @@ const getBookingStyle = (slotDate) => {
             </div>
           </div>
         </div>
+
+        <div
+          class="completedBook p-4 md:p-5 shadow-lg bg-green-50 dark:bg-green-100/10"
+        >
+          <div class="flex justify-between mb-4">
+            <div>
+              <p class="text-xs uppercase text-gray-500" icon>
+                Completed<i
+                  class="pi pi-question-circle ml-2"
+                  style="font-size: 12px"
+                  v-tooltip="'Total Number of Completed'"
+                />
+              </p>
+              <h3
+                class="text-xl sm:text-3xl font-medium text-gray-800 dark:text-white mt-1"
+              >
+                {{ countCompletedBookings }}
+              </h3>
+            </div>
+            <div
+              class="flex items-center justify-center bg-green-200 dark:bg-green-400/10 rounded-xl"
+              style="width: 2.5rem; height: 2.5rem"
+            >
+              <i class="pi pi-check-circle text-green-600 !text-xl" />
+            </div>
+          </div>
+        </div>
+        <!--
         <div
           class="noCustomer p-4 md:p-5 shadow-lg bg-cyan-50 dark:bg-cyan-100/10"
         >
@@ -305,16 +385,16 @@ const getBookingStyle = (slotDate) => {
             </div>
           </div>
         </div>
-      </div>
+      --></div>
 
       <div class="charts">
         <div
-          class="calendarChart p-4 md:p-5 shadow-lg bg-[#FCFCFC] dark:bg-[#18181b]"
+          class="calendarChart p-4 md:p-5 shadow-lg bg-[#FCFCFC] dark:bg-[#18181b] font-[Poppins]"
         >
           <DatePicker
             v-model="date"
             inline
-            class="dateChart w-full sm:w-[25rem]"
+            class="dateChart w-full sm:w-[30rem]"
           >
             <template #date="slotProps">
               <span>
@@ -327,13 +407,32 @@ const getBookingStyle = (slotDate) => {
               </span>
             </template>
           </DatePicker>
+
+          <div class="mt-4 mb-4 flex flex-wrap items-center gap-2 text-sm">
+            <div class="flex items-center gap-2">
+              <span class="w-4 h-4 rounded-full bg-[#90EE90]"></span>
+              <span>Available</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="w-4 h-4 rounded-full bg-[#FFD580]"></span>
+              <span>Day Available</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="w-4 h-4 rounded-full bg-[#6A5ACD]"></span>
+              <span>Night Available</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="w-4 h-4 rounded-full bg-[#FF6B6B]"></span>
+              <span>Fully Booked</span>
+            </div>
+          </div>
         </div>
 
         <div
           class="chartPeak p-4 md:p-5 shadow-lg bg-[#FCFCFC] dark:bg-[#18181b]"
         >
-          <div class="font-semibold text-xl mb-4 mt-4 text-left w-[90%]">
-            Peak Months
+          <div class="font-semibold text-xl mb-4 text-left w-[90%]">
+            Peak Months of Reservations
           </div>
           <Chart
             type="bar"
@@ -348,10 +447,29 @@ const getBookingStyle = (slotDate) => {
 </template>
 
 <style scoped>
-::v-deep(.dateChart) {
+:deep(.dateChart) {
   .p-datepicker-panel {
+    border: none;
+    background: #fcfcfc;
+  }
+  .p-datepicker-header {
+    background: #fcfcfc;
+  }
+  .p-datepicker-day {
+    border-radius: 0;
+  }
+  .p-datepicker-day:hover {
+    border-radius: 0;
+    font-size: 20px;
+  }
+
+  .my-app-dark .p-datepicker-panel,
+  .my-app-dark .p-datepicker-header {
+    border: none;
+    background: #18181b;
   }
 }
+
 .h1 {
   text-align: center;
   margin-top: 50px;
@@ -382,7 +500,7 @@ const getBookingStyle = (slotDate) => {
   display: flex;
   flex-direction: row;
   margin-top: 30px;
-  gap: 50px;
+  gap: 10px;
   justify-content: center;
 
   border-radius: 10px;

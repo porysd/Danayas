@@ -96,6 +96,7 @@ const revertPayment = () => {
 
     <div v-if="showMenu" class="dropdown-menu">
       <ul>
+        <li>Pay</li>
         <li v-if="payment.paymentStatus !== 'failed'" @click="openVoidModal">
           Void
         </li>

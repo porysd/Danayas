@@ -72,7 +72,7 @@ const toggleContentMenu = () => {
         Reports</router-link
       >
       <router-link
-        to="/admin/packages-amd-promos"
+        to="/admin/packages-and-promos"
         class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
         active-class="active-route"
       >

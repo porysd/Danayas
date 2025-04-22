@@ -1,5 +1,7 @@
 import { createRouter, createWebHistory } from "vue-router";
-//Public Pages
+import { useAuthStore } from "../stores/authStore.js";
+
+// Public Pages
 import Home from "../pages/Home.vue";
 import AboutUs from "../pages/aboutUs.vue";
 import PackageSection from "../pages/PackageSection.vue";
@@ -10,7 +12,7 @@ import ContactUs from "../pages/contactUs.vue";
 import Logs from "../pages/Logs.vue";
 import Profilepage from "../pages/Profilepage.vue";
 
-//Admin Pages
+// Admin Pages
 import AdminDashboard from "../Admin/pages/AdminDashboard.vue";
 import AdminLogin from "../Admin/pages/AdminLogin.vue";
 import EmployeeManagement from "../Admin/pages/EmployeeManagement.vue";
@@ -34,7 +36,7 @@ import Profile from "../Admin/pages/Profile.vue";
 import NotFound from "../pages/NotFound.vue";
 
 const routes = [
-  //Public Pages
+  // Public Pages
   { path: "/", component: Home },
   { path: "/home", component: Home },
   { path: "/packages", component: PackageSection },
@@ -46,25 +48,73 @@ const routes = [
   { path: "/logs", component: Logs },
   { path: "/profile-page", component: Profilepage },
 
-  //Admin Pages
+  // Admin Pages
   { path: "/admin/admin-login", component: AdminLogin },
-  { path: "/admin/admin-dashboard", component: AdminDashboard },
-  { path: "/admin/employee-management", component: EmployeeManagement },
-  { path: "/admin/booking", component: Booking },
-  { path: "/admin/transaction", component: Transaction },
-  { path: "/admin/reports", component: Reports },
-  { path: "/admin/packages-amd-promos", component: PackagesAndPromos },
-  { path: "/admin/discount-and-add-ons", component: DiscountAndAddOns },
-  { path: "/admin/customer-management", component: CustomerManagement },
-  { path: "/admin/homepage", component: Homepage },
-  { path: "/admin/reviews", component: Reviews },
-  { path: "/admin/gallery", component: Gallery },
-  { path: "/admin/faqs", component: FAQs },
-  { path: "/admin/about-us", component: AdminAboutUs },
-  { path: "/admin/footer", component: Footer },
-  { path: "/admin/terms-and-condition", component: TermsAndCondition },
-  { path: "/admin/archived", component: Archived },
-  { path: "/admin/profile", component: Profile },
+  {
+    path: "/admin/admin-dashboard",
+    component: AdminDashboard,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/admin/employee-management",
+    component: EmployeeManagement,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/admin/booking",
+    component: Booking,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/admin/transaction",
+    component: Transaction,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/admin/reports",
+    component: Reports,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/admin/packages-and-promos",
+    component: PackagesAndPromos,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/admin/discount-and-add-ons",
+    component: DiscountAndAddOns,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/admin/customer-management",
+    component: CustomerManagement,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/admin/homepage",
+    component: Homepage,
+    meta: { requiresAuth: true },
+  },
+  { path: "/admin/reviews", component: Reviews, meta: { requiresAuth: true } },
+  { path: "/admin/gallery", component: Gallery, meta: { requiresAuth: true } },
+  { path: "/admin/faqs", component: FAQs, meta: { requiresAuth: true } },
+  {
+    path: "/admin/about-us",
+    component: AdminAboutUs,
+    meta: { requiresAuth: true },
+  },
+  { path: "/admin/footer", component: Footer, meta: { requiresAuth: true } },
+  {
+    path: "/admin/terms-and-condition",
+    component: TermsAndCondition,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/admin/archived",
+    component: Archived,
+    meta: { requiresAuth: true },
+  },
+  { path: "/admin/profile", component: Profile, meta: { requiresAuth: true } },
 
   // Not Found Page
   { path: "/:pathMatch(.*)*", component: NotFound },
@@ -73,6 +123,16 @@ const routes = [
 const router = createRouter({
   history: createWebHistory(),
   routes,
+});
+
+router.beforeEach((to, from, next) => {
+  const authStore = useAuthStore();
+
+  if (to.meta.requiresAuth && !authStore.isLoggedIn) {
+    next("/admin/admin-login");
+  } else {
+    next();
+  }
 });
 
 export default router;

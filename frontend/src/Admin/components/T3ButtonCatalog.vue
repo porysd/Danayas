@@ -3,62 +3,60 @@ import { ref, defineProps, defineEmits, onMounted, onUnmounted } from "vue";
 import Button from "primevue/button";
 import Dialog from "primevue/dialog";
 import Toast from "primevue/toast";
-import Textarea from "primevue/textarea";
 import { useToast } from "primevue/usetoast";
-import FileUpload from "primevue/fileupload";
 
 const toast = useToast();
 
 const showMenu = ref(false);
 const showEditModal = ref(false);
 const showDeleteModal = ref(false);
-// const showDisableModal = ref(false);
+const showDisableModal = ref(false);
 const formData = ref({});
 
-const props = defineProps(["packageT"]);
-const emit = defineEmits(["updatePackage", "deletePackage"]);
+const props = defineProps(["catalog"]);
+const emit = defineEmits(["updateCatalog", "deleteCatalog", "disableCatalog"]);
 
 const openEditModal = () => {
-  formData.value = { ...props.packageT };
+  formData.value = { ...props.catalog };
   showEditModal.value = true;
   showMenu.value = false;
 };
 
 const openDeleteModal = () => {
-  formData.value = { ...props.packageT };
+  formData.value = { ...props.catalog };
   showDeleteModal.value = true;
   showMenu.value = false;
 };
 
-// const openDisableModal = () => {
-//   formData.value = { ...props.packageT };
-//   showDisableModal.value = true;
-//   showMenu.value = false;
-// };
+const openDisableModal = () => {
+  formData.value = { ...props.catalog };
+  showDisableModal.value = true;
+  showMenu.value = false;
+};
 
 const closeModals = () => {
   showEditModal.value = false;
   showDeleteModal.value = false;
-  // showDisableModal.value = false;
+  showDisableModal.value = false;
 };
 
-const confirmEditPackage = () => {
-  emit("updatePackage", formData.value);
+const confirmEdit = () => {
+  emit("updateCatalog", formData.value);
   toast.add({
     severity: "success",
-    summary: "Updated Package",
-    detail: "Successfully Updated Package",
+    summary: "Updated catalog",
+    detail: "Successfully Updated catalog",
     life: 3000,
   });
   closeModals();
 };
 
-const confirmDeletePackage = () => {
-  emit("deletePackage", formData.value);
+const confirmDelete = () => {
+  emit("deleteCatalog", formData.value);
   toast.add({
     severity: "success",
-    summary: "Deleted Package",
-    detail: "Successfully Deleted Package",
+    summary: "Deleted catalog",
+    detail: "Successfully Deleted catalog",
     life: 3000,
   });
   closeModals();
@@ -107,7 +105,7 @@ onUnmounted(() => {
     <Dialog v-model:visible="showEditModal" modal :style="{ width: '25rem' }">
       <template #header>
         <div class="flex flex-col items-center justify-center w-full">
-          <h2 class="text-2xl font-bold font-[Poppins]">EDIT PACKAGE:</h2>
+          <h2 class="text-2xl font-bold font-[Poppins]">EDIT ADD ONS:</h2>
         </div>
       </template>
 
@@ -115,21 +113,11 @@ onUnmounted(() => {
         <div class="addPack flex flex-col justify-center m-auto content-center">
           <div class="addPackInput">
             <label>Name:</label>
-            <input v-model="formData.name" placeholder="Package Name" />
+            <input v-model="formData.itemName" placeholder="Package Name" />
           </div>
           <div class="addPackInput">
             <label>Price:</label>
             <input v-model="formData.price" placeholder="Price" />
-          </div>
-          <div class="addPackInput">
-            <label>Description:</label>
-            <Textarea
-              v-model="formData.inclusion"
-              autoResize
-              rows="3"
-              cols="30"
-              placeholder="Inclusion"
-            />
           </div>
           <div class="addPackInput">
             <label>Status:</label>
@@ -137,25 +125,6 @@ onUnmounted(() => {
               <option value="active">Active</option>
               <option value="inactive">Inactive</option>
             </select>
-          </div>
-          <div class="addPackInput">
-            <label>Mode:</label>
-            <select v-model="formData.mode" class="border p-2 rounded w-full">
-              <option value="day-time">Day Time</option>
-              <option value="night-time">Night Time</option>
-              <option value="whole-day">Whole Day</option>
-            </select>
-          </div>
-          <div class="addPackInput">
-            <label>Image URL:</label>
-            <FileUpload
-              ref="fileupload"
-              mode="basic"
-              name="demo[]"
-              url="/api/upload"
-              accept="image/*"
-              :maxFileSize="1000000"
-            />
           </div>
         </div>
       </div>
@@ -172,7 +141,7 @@ onUnmounted(() => {
           type="button"
           label="Save"
           severity="primary"
-          @click="confirmEditPackage"
+          @click="confirmEdit"
           class="font-bold w-full"
         />
       </div>
@@ -181,7 +150,7 @@ onUnmounted(() => {
     <Dialog v-model:visible="showDeleteModal" modal :style="{ width: '30rem' }">
       <template #header>
         <div class="flex flex-col items-center justify-center w-full">
-          <h2 class="text-xl font-bold font-[Poppins]">Delete Package</h2>
+          <h2 class="text-xl font-bold font-[Poppins]">Delete Add Ons</h2>
         </div>
       </template>
 
@@ -189,8 +158,8 @@ onUnmounted(() => {
         class="text-lg text-surface-700 dark:text-surface-400 block mb-8 text-center font-[Poppins]"
       >
         Are you sure you want to
-        <strong class="text-red-500">DELETE</strong> this Package:
-        <span class="font-black font-[Poppins]">{{ packageT.name }}</span
+        <strong class="text-red-500">DELETE</strong> this Add Ons:
+        <span class="font-black font-[Poppins]">{{ catalog.itemName }}</span
         >?
       </span>
 
@@ -206,7 +175,7 @@ onUnmounted(() => {
           type="button"
           label="Delete"
           severity="danger"
-          @click="confirmDeletePackage"
+          @click="confirmDelete"
           class="font-bold w-full"
         />
       </div>
@@ -242,7 +211,6 @@ onUnmounted(() => {
   align-items: center;
   gap: 5px;
 }
-
 .addPack {
   gap: 10px;
 }

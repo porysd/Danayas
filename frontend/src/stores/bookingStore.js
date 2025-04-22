@@ -1,0 +1,216 @@
+// stores/bookingStore.js
+import { defineStore } from "pinia";
+import { useAuthStore } from "./authStore";
+
+export const useBookingStore = defineStore("booking", {
+  state: () => ({
+    bookings: [],
+    bookingPending: [],
+    bookingReserved: [],
+    bookingRescheduled: [],
+    bookingCancelled: [],
+    bookingCompleted: [],
+  }),
+
+  actions: {
+    // Fetch All BOOKINGS
+    async fetchUserBookings() {
+      const auth = useAuthStore();
+      if (!auth.isLoggedIn) return;
+
+      this.bookings = [];
+      this.bookingPending = [];
+      this.bookingReserved = [];
+      this.bookingRescheduled = [];
+      this.bookingCancelled = [];
+      this.bookingCompleted = [];
+      const limit = 50;
+      let page = 1;
+      let hasMoreData = true;
+
+      while (hasMoreData) {
+        const res = await fetch(
+          `http://localhost:3000/bookings?limit=${limit}&page=${page}`,
+          {
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${auth.accessToken}`,
+            },
+          }
+        );
+
+        if (!res.ok) {
+          console.error("Failed to fetch user bookings");
+          break;
+        }
+
+        const bookingData = await res.json();
+
+        if (bookingData.items && bookingData.items.length > 0) {
+          this.bookings = bookingData.items;
+
+          this.bookingPending = bookingData.items.filter(
+            (booking) => booking.bookStatus === "pending"
+          );
+          this.bookingCancelled = bookingData.items.filter(
+            (booking) => booking.bookStatus === "cancelled"
+          );
+          this.bookingReserved = bookingData.items.filter(
+            (booking) => booking.bookStatus === "reserved"
+          );
+          this.bookingCompleted = bookingData.items.filter(
+            (booking) => booking.bookStatus === "completed"
+          );
+          this.bookingRescheduled = bookingData.items.filter(
+            (booking) => booking.bookStatus === "rescheduled"
+          );
+
+          this.bookings.unshift(...bookingData.items.reverse());
+
+          if (bookingData.length === 0) {
+            hasMoreData = false;
+          } else {
+            page++;
+          }
+        } else {
+          hasMoreData = false;
+        }
+      }
+    },
+
+    // Add BOOKING
+    async addBooking(booking) {
+      const auth = useAuthStore();
+      if (!auth.isLoggedIn) return;
+
+      const role = auth.user.role;
+
+      const formattedBooking = {
+        ...booking,
+        // userId: booking.userId ? Number(booking.userId) : null,
+        userId: auth.user.userId,
+        packageId: Number(booking.packageId),
+        numberOfGuest: Number(booking.numberOfGuest),
+        discountPromoId: Number(booking.discountPromoId),
+        totalAmountDue: booking.totalAmountDue
+          ? Number(booking.totalAmountDue)
+          : 0,
+        catering:
+          booking.catering === "true"
+            ? true
+            : booking.catering === "false"
+            ? false
+            : Boolean(booking.catering),
+        reservationType: ["admin", "staff"].includes(role)
+          ? "walk-in"
+          : "online",
+      };
+
+      const res = await fetch("http://localhost:3000/bookings", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${auth.accessToken}`,
+        },
+        body: JSON.stringify(formattedBooking),
+      });
+
+      const result = await res.json();
+
+      if (!res.ok) {
+        throw new Error(result?.error || "Failed to create booking");
+      }
+
+      const newBooking = result;
+      this.bookings.push(newBooking);
+
+      return newBooking;
+    },
+
+    // Update BOOKING STATUS
+    async updateBookingStatus(booking) {
+      const auth = useAuthStore();
+      if (!auth.isLoggedIn) return;
+
+      const res = await fetch(
+        `http://localhost:3000/bookings/${booking.bookingId}/status`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${auth.accessToken}`,
+          },
+          body: JSON.stringify({ bookStatus: booking.bookStatus }),
+        }
+      );
+
+      if (!res.ok) {
+        throw new Error("Failed to update booking status");
+      }
+
+      const updatedBooking = await res.json();
+      const index = this.bookings.findIndex(
+        (b) => b.bookingId === booking.bookStatus
+      );
+      if (index !== -1) {
+        this.bookings[index].bookStatus = booking.bookStatus;
+      }
+
+      await this.fetchUserBookings();
+    },
+
+    // Update BOOKING DATES
+    async updateBookingDates(booking) {
+      const auth = useAuthStore();
+      if (!auth.isLoggedIn) return;
+
+      const res = await fetch(
+        `http://localhost:3000/bookings/${booking.bookingId}`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${auth.accessToken}`,
+          },
+          body: JSON.stringify({
+            checkInDate: booking.checkInDate,
+            checkOutDate: booking.checkOutDate,
+          }),
+        }
+      );
+
+      if (!res.ok) {
+        throw new Error("Failed to update booking dates");
+      }
+
+      const updatedBooking = await res.json();
+      const index = this.bookings.findIndex(
+        (b) => b.bookingId === updatedBooking.bookingId
+      );
+      if (index !== -1) {
+        this.bookings[index].checkInDate = updatedBooking.checkInDate;
+        this.bookings[index].checkOutDate = updatedBooking.checkOutDate;
+      }
+    },
+
+    //Delete BOOKING
+    async deleteBooking(bookingId) {
+      const auth = useAuthStore();
+      if (!auth.isLoggedIn) return;
+
+      const res = await fetch(`http://localhost:3000/bookings/${bookingId}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${auth.accessToken}`,
+        },
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to delete booking");
+      }
+
+      this.bookings = this.bookings.filter((b) => b.bookingId !== bookingId);
+    },
+  },
+});

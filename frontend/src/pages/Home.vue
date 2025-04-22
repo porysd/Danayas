@@ -14,6 +14,70 @@ import "cally";
 import HomePackage from "../components/HomePackage.vue";
 import NavBar from "../components/NavBar.vue";
 import Footer from "../components/Footer.vue";
+import { useBookingStore } from "../stores/bookingStore";
+
+const bookingStore = useBookingStore();
+
+onMounted(() => {
+  bookingStore.fetchUserBookings();
+});
+
+// Process booking days
+const getBookingStyle = (slotDate) => {
+  const jsDate = new Date(slotDate.year, slotDate.month - 1, slotDate.day);
+
+  const formattedDate = jsDate.toISOString().split("T")[0];
+
+  const booking = bookingStore.bookings.find((b) =>
+    b.checkInDate.startsWith(formattedDate)
+  );
+
+  if (!booking) {
+    return {
+      backgroundColor: "#90EE94",
+      color: "#15803D",
+      width: "40px",
+      height: "40px",
+      display: "inline-flex",
+      justifyContent: "center",
+      alignItems: "center",
+      borderRadius: "10rem",
+      fontSize: "17px",
+    };
+  }
+
+  let backgroundColor;
+  let color;
+  switch (booking.mode) {
+    case "day-time":
+      backgroundColor = "#FFD5";
+      color = "white";
+      break;
+    case "night-time":
+      backgroundColor = "#6A5ACD";
+      color = "white";
+      break;
+    case "whole-day":
+      backgroundColor = "#FF6B6B";
+      color = "white";
+      break;
+    default:
+      backgroundColor = "#90EE94";
+      color = "#15803D";
+  }
+
+  return {
+    backgroundColor,
+    color,
+    width: "40px",
+    height: "40px",
+    display: "inline-flex",
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: "10rem",
+    fontSize: "18px",
+  };
+};
 
 let images = [img, img1, img2, img3];
 const texts = [
@@ -130,6 +194,7 @@ function toggleDarkMode() {
   document.documentElement.classList.toggle("my-app-dark");
   isDarkMode.value = !isDarkMode.value;
 }
+const checkOutDate = ref(null);
 </script>
 
 <template>
@@ -202,18 +267,41 @@ function toggleDarkMode() {
       <DatePicker
         v-model="date"
         inline
-        class="w-full sm:w-[20rem] mr-10 ml-10"
-      />
-      <DatePicker v-model="date" inline class="w-full sm:w-[20rem]" />
+        class="dateChart w-full sm:w-[20rem] mr-10 ml-10"
+      >
+        <template #date="slotProps">
+          <span>
+            <strong :style="getBookingStyle(slotProps.date)" class="date-box">
+              {{ slotProps.date.day }}
+            </strong>
+          </span>
+        </template>
+      </DatePicker>
+      <DatePicker v-model="date" inline class="dateChart w-full sm:w-[20rem]">
+        <template #date="slotProps">
+          <span>
+            <strong :style="getBookingStyle(slotProps.date)" class="date-box">
+              {{ slotProps.date.day }}
+            </strong>
+          </span>
+        </template>
+      </DatePicker>
 
       <div class="Status">
-        <h1 style="text-align: center; font-size: 20px; font-weight: 600">
-          Status
+        <h1
+          style="
+            text-align: center;
+            font-size: 20px;
+            font-weight: 750;
+            margin-bottom: 10px;
+          "
+        >
+          STATUS:
         </h1>
-        <span class="dot" id="Available" style="background-color: #4bb344">
+        <span class="dot" id="Available" style="background-color: #90ee90">
           <label for="dot" style="margin-left: 50px"> AVAILABLE</label></span
         >
-        <span class="dot" id="FullyBooked" style="background-color: #ff2d55">
+        <span class="dot" id="FullyBooked" style="background-color: #ff6b6b">
           <label
             for="dot"
             style="margin-left: 50px; width: 145px; font-size: 16px"
@@ -221,21 +309,19 @@ function toggleDarkMode() {
             FULLY BOOKED</label
           ></span
         >
-        <span class="dot" id="DayAvailble" style="background-color: #3edfff">
+        <span class="dot" id="DayAvailble" style="background-color: #ffd580">
           <label for="dot" style="margin-left: 50px; width: 145px">
             DAY AVAILABLE</label
           ></span
         >
-        <span class="dot" id="NightAvailble" style="background-color: #1714ba">
-          <label
-            for="dot"
-            style="margin-left: 50px; text-align: center; width: 145px"
-          >
+        <span class="dot" id="NightAvailble" style="background-color: #6a5acd">
+          <label for="dot" style="margin-left: 50px; width: 145px">
             NIGHT AVAILABLE</label
           ></span
         >
         <button
           id="Availablity"
+          @click="$router.push('/booking')"
           style="
             background-color: #41ab5d;
             text-align: center;
@@ -296,7 +382,7 @@ function toggleDarkMode() {
               font-family: Libre Baskerville;
               font-size: 40px;
               color: #194d1d;
-              text-shadow: 0px 4px 4px rgb(255, 255, 255);
+              text-shadow: 0px 0px 4px rgb(255, 255, 255);
             "
           >
             FEATURES
@@ -321,7 +407,6 @@ function toggleDarkMode() {
               text-align: center;
               margin-right: 40%;
               margin-top: 15px;
-              margin-bottom: 10px;
               font-size: 20px;
               font-weight: 400;
               padding: 5px;
@@ -358,23 +443,24 @@ function toggleDarkMode() {
 
     <section class="DanayasPackages">
       <div class="packageSection content-center justify-center m-auto">
-        <H1
+        <h1
           style="
-            font-size: 70px;
+            font-size: 60px;
             font-weight: Bold;
             text-align: center;
             color: #194d1d;
             text-shadow: 0px 2px 2px rgb(40, 135, 21);
           "
-          >Danayas Packages</H1
         >
+          Danayas Packages
+        </h1>
         <p
           style="
             font-size: 20px;
             font-weight: 400;
             color: black;
             text-align: center;
-            margin-bottom: 20px;
+            margin-bottom: 10px;
             word-wrap: break-word;
             margin-top: 10px;
           "
@@ -384,7 +470,7 @@ function toggleDarkMode() {
           modern design, where each home tells a story of its own”
         </p>
         <div class="SeeAllBtn content-center justify-center m-auto">
-          <button>SEE ALL PACKAGES</button>
+          <button @click="$router.push('/packages')">SEE ALL PACKAGES</button>
         </div>
         <div class="packageComponent">
           <HomePackage />
@@ -402,8 +488,8 @@ function toggleDarkMode() {
         display: flex;
         justify-content: center;
         align-items: center;
-        margin-top: 10rem;
-        padding: 5rem;
+        margin-top: 5rem;
+        padding: 3rem;
       "
     >
       <div class="AddressBackgound" style="text-align: center">
@@ -415,7 +501,7 @@ function toggleDarkMode() {
             font-size: 65px;
             color: #194d1d;
             text-align: center;
-            margin-bottom: 1rem;
+            margin-bottom: 0rem;
             margin-top: 1px;
             text-shadow: 0px 4px 4px rgb(255, 255, 255);
           "
@@ -443,9 +529,9 @@ function toggleDarkMode() {
             src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d1929.608118783353!2d121
             .12431473799222!3d14.7003600939651!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3397bb19868e1b37%3A0x429ae5ae7c94d0f2!2s7%20Jones%20Dulong%20Bayan
             %202%2C%20San%20Mateo%2C%20Rizal%20Philippines!5e0!3m2!1sen!2sph!4v1741699299438!5m2!1sen!2sph"
-            width="1108"
-            height="700"
-            style="border: 0; border-radius: 10px; margin-top: 40px"
+            width="1100"
+            height="600"
+            style="border: 0; border-radius: 10px; margin-top: 3px"
             allowfullscreen=""
             loading="lazy"
             referrerpolicy="no-referrer-when-downgrade"
@@ -512,7 +598,6 @@ function toggleDarkMode() {
   justify-content: center;
   align-items: center;
   align-content: center;
-  flex-wrap: ;
 }
 .homeSlider {
   position: relative;
@@ -531,7 +616,7 @@ function toggleDarkMode() {
 }
 
 .packageComponent {
-  margin-top: 30px;
+  margin-top: 10px;
 }
 .SeeAllBtn {
   background-color: #41ab5d;
@@ -805,10 +890,8 @@ h1 {
 .DiscountBackground {
   background-color: #c1f2b0;
   height: 250px;
-  margin-top: 5rem;
   color: #194d1d;
-
-  margin-bottom: 5rem;
+  margin-bottom: 2rem;
 }
 .discount-text {
   color: #194d1d;
@@ -943,6 +1026,29 @@ hr {
   .p-datepicker-input {
     border: none;
     background-color: #c7e3b6;
+  }
+}
+
+:deep(.dateChart) {
+  .p-datepicker-panel {
+    border: none;
+    background: #fcfcfc;
+  }
+  .p-datepicker-header {
+    background: #fcfcfc;
+  }
+  .p-datepicker-day {
+    border-radius: 0;
+  }
+  .p-datepicker-day:hover {
+    border-radius: 0;
+    font-size: 20px;
+  }
+
+  .my-app-dark .p-datepicker-panel,
+  .my-app-dark .p-datepicker-header {
+    border: none;
+    background: #18181b;
   }
 }
 </style>

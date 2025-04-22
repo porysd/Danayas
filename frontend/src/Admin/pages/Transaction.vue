@@ -16,32 +16,15 @@ import TabList from "primevue/tablist";
 import Tab from "primevue/tab";
 import TabPanels from "primevue/tabpanels";
 import TabPanel from "primevue/tabpanel";
+import DataTable from "primevue/datatable";
+import Column from "primevue/column";
+import { usePaymentStore } from "../../stores/paymentStore.js";
 
-const payments = ref([]);
+const paymentStore = usePaymentStore();
 
-const getAllPayment = async () => {
-  payments.value = [];
-  const limit = 50;
-  let page = 1;
-  let hasMoreData = true;
-
-  while (hasMoreData) {
-    const response = await fetch(
-      `http://localhost:3000/payments?limit=${limit}&page=${page}`
-    );
-    if (!response.ok) throw new Error("Failed to fetch payments");
-    const paymentData = await response.json();
-
-    if (paymentData.items.length === 0) {
-      hasMoreData = false;
-    } else {
-      payments.value.push(...paymentData.items);
-      page++;
-    }
-  }
-};
-
-onMounted(() => getAllPayment());
+onMounted(() => {
+  paymentStore.fetchPayments();
+});
 
 const totalPayments = computed(() => filteredPayment.value.length);
 
@@ -81,7 +64,6 @@ const updatePaymentHandler = async (payment) => {
     if (index !== -1) {
       Object.assign(payments.value[index], payment);
     }
-    getAllPayment();
   } catch (error) {
     console.error("Error updating payment:", error);
   }
@@ -94,23 +76,38 @@ function formatDate(dateString) {
   return date.toLocaleDateString("en-US", options);
 }
 
+// Peso Currency Format
+function formatPeso(value) {
+  return new Intl.NumberFormat("en-PH", {
+    style: "currency",
+    currency: "PHP",
+  }).format(value);
+}
+
 // Payment Details
 const selectedPayment = ref(null);
 const paymentDetails = ref(false);
+const billingDetails = ref(false);
 
 const openPaymentDetails = (payment) => {
   selectedPayment.value = payment;
   paymentDetails.value = true;
 };
 
+const openBillingDetails = (payment) => {
+  selectedPayment.value = payment;
+  billingDetails.value = true;
+};
+
 const closeModal = () => {
   paymentDetails.value = false;
+  billingDetails.value = false;
 };
 
 // Checks Severity of Status of the Payment
 const getStatusSeverity = (status) => {
   switch (status) {
-    case "pending":
+    case "refund":
       return "warn";
     case "partially-paid":
       return "info";
@@ -144,14 +141,14 @@ const filterStatuses = ref({
   "partially-paid": false,
   paid: false,
   failed: false,
-  // refund: false,
+  refund: false,
 });
 const filterMode = ref({
   cash: false,
   gcash: false,
 });
 const filteredPayment = computed(() => {
-  let result = payments.value;
+  let result = paymentStore.payments;
 
   if (searchQuery.value !== "") {
     result = result.filter((payment) =>
@@ -232,7 +229,11 @@ const filteredPayment = computed(() => {
                   <label for="failed">Failed</label>
                 </li>
                 <li class="hover:bg-gray-100 flex items-center gap-2">
-                  <input type="checkbox" id="refund" />
+                  <input
+                    type="checkbox"
+                    id="refund"
+                    v-model="filterStatuses.refund"
+                  />
                   <label for="refund">Refund</label>
                 </li>
               </ul>
@@ -260,11 +261,244 @@ const filteredPayment = computed(() => {
       <div class="tabPayBill">
         <Tabs value="0">
           <TabList>
-            <Tab value="0">PAYMENTS</Tab>
-            <Tab value="1">BILLING</Tab>
+            <Tab value="0">BILLING</Tab>
+            <Tab value="1">PARTIALLY PAID</Tab>
+            <Tab value="2">FULLY PAID</Tab>
+            <Tab value="3">REFUND</Tab>
+            <Tab value="4">VOIDED</Tab>
           </TabList>
           <TabPanels>
             <TabPanel value="0">
+              <div class="tableContainer">
+                <table class="dTable">
+                  <thead>
+                    <tr class="header-style">
+                      <th>ID</th>
+                      <td>BOOKING ID</td>
+                      <th>DOWNPAYMENT AMOUNT</th>
+                      <th>AMOUNT PAID</th>
+                      <th>BAlANCE</th>
+                      <th>MODE</th>
+                      <th>REFERENCE</th>
+                      <th>STATUS</th>
+                      <th>PAID AT</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr
+                      class="cRow"
+                      v-for="payment in paginatedPayments"
+                      :key="payment.paymentId"
+                      @click="openBillingDetails(payment)"
+                    >
+                      <td class="w-[3%]">{{ payment.paymentId }}</td>
+                      <td class="w-[3%]">{{ payment.bookingId }}</td>
+                      <td class="w-[15%]">
+                        {{ formatPeso(payment.downPaymentAmount) }}
+                      </td>
+                      <td class="w-[10%]">
+                        {{ formatPeso(payment.amountPaid) }}
+                      </td>
+                      <td class="w-[10%]">
+                        {{ formatPeso(payment.remainingBalance) }}
+                      </td>
+                      <td class="w-[8%]">{{ payment.mode }}</td>
+                      <td class="w-[15%]">{{ payment.reference }}</td>
+                      <td class="w-[12%]">
+                        <Tag
+                          :severity="getStatusSeverity(payment.paymentStatus)"
+                          :value="payment.paymentStatus"
+                        />
+                      </td>
+                      <td>{{ formatDate(payment.paidAt) }}</td>
+                      <td @click.stop>
+                        <T3ButtonTransaction
+                          :payment="payment"
+                          @voidPayment="updatePaymentHandler"
+                        />
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+                <Paginator
+                  :first="first"
+                  :rows="rows"
+                  :totalRecords="totalPayments"
+                  :rowsPerPageOptions="[5, 10, 20, 30]"
+                  @page="onPageChange"
+                  class="rowPagination"
+                />
+              </div>
+            </TabPanel>
+
+            <TabPanel value="1">
+              <div class="tableContainer">
+                <table class="dTable">
+                  <thead>
+                    <tr class="header-style">
+                      <th>ID</th>
+                      <th>DOWNPAYMENT AMOUNT</th>
+                      <th>AMOUNT PAID</th>
+                      <th>BALANCE</th>
+                      <th>MODE</th>
+                      <th>REFERENCE</th>
+                      <th>STATUS</th>
+                      <th>PAID AT</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr
+                      class="cRow"
+                      v-for="payment in paymentStore.payPartially"
+                      :key="payment.paymentId"
+                      @click="openPaymentDetails(payment)"
+                    >
+                      <td class="w-[3%]">{{ payment.paymentId }}</td>
+                      <td class="w-[15%]">{{ payment.downPaymentAmount }}</td>
+                      <td class="w-[10%]">{{ payment.amountPaid }}</td>
+                      <td class="w-[10%]">{{ payment.remainingBalance }}</td>
+                      <td class="w-[8%]">{{ payment.mode }}</td>
+                      <td class="w-[15%]">{{ payment.reference }}</td>
+                      <td class="w-[12%]">
+                        <Tag
+                          :severity="getStatusSeverity(payment.paymentStatus)"
+                          :value="payment.paymentStatus"
+                        />
+                      </td>
+                      <td>{{ formatDate(payment.paidAt) }}</td>
+                      <td @click.stop>
+                        <T3ButtonTransaction
+                          :payment="payment"
+                          @voidPayment="updatePaymentHandler"
+                        />
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+                <Paginator
+                  :first="first"
+                  :rows="rows"
+                  :totalRecords="totalPayments"
+                  :rowsPerPageOptions="[5, 10, 20, 30]"
+                  @page="onPageChange"
+                  class="rowPagination"
+                />
+              </div>
+            </TabPanel>
+
+            <TabPanel value="2">
+              <div class="tableContainer">
+                <table class="dTable">
+                  <thead>
+                    <tr class="header-style">
+                      <th>ID</th>
+                      <th>DOWNPAYMENT AMOUNT</th>
+                      <th>AMOUNT PAID</th>
+                      <th>TOTAL DUE</th>
+                      <th>MODE</th>
+                      <th>REFERENCE</th>
+                      <th>STATUS</th>
+                      <th>PAID AT</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr
+                      class="cRow"
+                      v-for="payment in paymentStore.payFull"
+                      :key="payment.paymentId"
+                      @click="openPaymentDetails(payment)"
+                    >
+                      <td class="w-[3%]">{{ payment.paymentId }}</td>
+                      <td class="w-[15%]">{{ payment.downPaymentAmount }}</td>
+                      <td class="w-[10%]">{{ payment.amountPaid }}</td>
+                      <td class="w-[10%]">{{ payment.remainingBalance }}</td>
+                      <td class="w-[8%]">{{ payment.mode }}</td>
+                      <td class="w-[15%]">{{ payment.reference }}</td>
+                      <td class="w-[12%]">
+                        <Tag
+                          :severity="getStatusSeverity(payment.paymentStatus)"
+                          :value="payment.paymentStatus"
+                        />
+                      </td>
+                      <td>{{ formatDate(payment.paidAt) }}</td>
+                      <td @click.stop>
+                        <T3ButtonTransaction
+                          :payment="payment"
+                          @voidPayment="updatePaymentHandler"
+                        />
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+                <Paginator
+                  :first="first"
+                  :rows="rows"
+                  :totalRecords="totalPayments"
+                  :rowsPerPageOptions="[5, 10, 20, 30]"
+                  @page="onPageChange"
+                  class="rowPagination"
+                />
+              </div>
+            </TabPanel>
+            <TabPanel value="3">
+              <div class="tableContainer">
+                <table class="dTable">
+                  <thead>
+                    <tr class="header-style">
+                      <th>ID</th>
+                      <th>DOWNPAYMENT AMOUNT</th>
+                      <th>AMOUNT PAID</th>
+                      <th>TOTAL DUE</th>
+                      <th>MODE</th>
+                      <th>REFERENCE</th>
+                      <th>STATUS</th>
+                      <th>PAID AT</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr
+                      class="cRow"
+                      v-for="payment in paymentStore.payRefund"
+                      :key="payment.paymentId"
+                      @click="openPaymentDetails(payment)"
+                    >
+                      <td class="w-[3%]">{{ payment.paymentId }}</td>
+                      <td class="w-[15%]">{{ payment.downPaymentAmount }}</td>
+                      <td class="w-[10%]">{{ payment.amountPaid }}</td>
+                      <td class="w-[10%]">{{ payment.remainingBalance }}</td>
+                      <td class="w-[8%]">{{ payment.mode }}</td>
+                      <td class="w-[15%]">{{ payment.reference }}</td>
+                      <td class="w-[12%]">
+                        <Tag
+                          :severity="getStatusSeverity(payment.refundStatus)"
+                          :value="payment.refundStatus"
+                        />
+                      </td>
+                      <td>{{ formatDate(payment.paidAt) }}</td>
+                      <td @click.stop>
+                        <T3ButtonTransaction
+                          :payment="payment"
+                          @voidPayment="updatePaymentHandler"
+                        />
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+                <Paginator
+                  :first="first"
+                  :rows="rows"
+                  :totalRecords="totalPayments"
+                  :rowsPerPageOptions="[5, 10, 20, 30]"
+                  @page="onPageChange"
+                  class="rowPagination"
+                />
+              </div>
+            </TabPanel>
+            <TabPanel value="4">
               <div class="tableContainer">
                 <table class="dTable">
                   <thead>
@@ -284,7 +518,7 @@ const filteredPayment = computed(() => {
                   <tbody>
                     <tr
                       class="cRow"
-                      v-for="payment in paginatedPayments"
+                      v-for="payment in paymentStore.payVoided"
                       :key="payment.paymentId"
                       @click="openPaymentDetails(payment)"
                     >
@@ -321,62 +555,52 @@ const filteredPayment = computed(() => {
                 />
               </div>
             </TabPanel>
-            <TabPanel value="1">
-              <div class="tableContainer">
-                <table class="dTable">
-                  <thead>
-                    <tr class="header-style">
-                      <th>ID</th>
-                      <th>BOOKING ID</th>
-                      <th>AMOUNT PAID</th>
-                      <th>PAYMENT DATE</th>
-                      <th>MODE</th>
-                      <th>STATUS</th>
-                      <th>REMAINING BALANACE</th>
-                      <th></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr
-                      class="cRow"
-                      v-for="payment in paginatedPayments"
-                      :key="payment.paymentId"
-                      @click="openPaymentDetails(payment)"
-                    >
-                      <td class="w-[3%]">{{ payment.paymentId }}</td>
-
-                      <td class="w-[15%]">{{ payment.downpaymentAmount }}</td>
-                      <td class="w-[10%]">{{ payment.amountPaid }}</td>
-                      <td class="w-[10%]">{{ payment.totalAmountDue }}</td>
-                      <td class="w-[8%]">{{ payment.mode }}</td>
-                      <td class="w-[15%]">{{ payment.reference }}</td>
-                      <td class="w-[12%]">
-                        <Tag
-                          :severity="getStatusSeverity(payment.paymentStatus)"
-                          :value="payment.paymentStatus"
-                        />
-                      </td>
-                      <td class="w-[5%]" @click.stop>
-                        <T3ButtonTransaction
-                          :payment="payment"
-                          @voidPayment="updatePaymentHandler"
-                        />
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-                <Paginator
-                  :first="first"
-                  :rows="rows"
-                  :totalRecords="totalPayments"
-                  :rowsPerPageOptions="[5, 10, 20, 30]"
-                  @page="onPageChange"
-                  class="rowPagination"
-                />
-              </div>
-            </TabPanel>
           </TabPanels>
         </Tabs>
+      </div>
+    </div>
+
+    <div v-if="billingDetails" class="modal">
+      <div class="modal-content font-[Poppins]">
+        <h2 class="text-xl font-bold m-auto justify-center align-center flex">
+          Billing Details
+        </h2>
+        <Divider />
+        <div class="flex flex-col gap-2">
+          <p><strong>Billing ID:</strong> {{ selectedPayment?.paymentId }}</p>
+          <p><strong>Booking ID:</strong> {{ selectedPayment?.bookingId }}</p>
+          <p>
+            <strong>Customer Name:</strong>
+            {{ selectedPayment?.bookingId.firstName }}
+            {{ selectedPayment?.bookingId.lastName }}
+          </p>
+          <p>
+            <strong>Total Amount Due: </strong
+            >{{ selectedPayment?.totalAmountDue }}
+          </p>
+          <p><strong>Total Paid:</strong> {{ selectedPayment?.amountPaid }}</p>
+          <p>
+            <strong>Remaining Balance: </strong
+            >{{ selectedPayment?.totalAmountDue - selectedPayment?.amountPaid }}
+          </p>
+          <p><strong>Mode:</strong> {{ selectedPayment?.mode }}</p>
+          <p>
+            <strong>Payment Status: </strong
+            >{{ selectedPayment?.paymentStatus }}
+          </p>
+          <DataTable :value="payments" tableStyle="min-width: 50rem">
+            <Column field="paymentId" header="Payment ID"></Column>
+            <Column field="amountPaid" header="AmountPaid"></Column>
+            <Column field="mode" header="Mode"></Column>
+            <Column field="paidAt" header="Date"></Column>
+          </DataTable>
+
+          <p><strong>Paid At: </strong>{{ selectedPayment?.paidAt }}</p>
+          <Divider />
+          <button class="closeDetails mt-5 w-[100%]" @click="closeModal">
+            Close
+          </button>
+        </div>
       </div>
     </div>
 
