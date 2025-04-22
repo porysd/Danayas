@@ -24,6 +24,7 @@ export async function authMiddleware(c: Context, next: Next) {
     c.set("userId", decoded.sub);
     c.set("role", decoded.role);
 
+
     await next();
   } catch (err) {
     return errorHandler(err, c);

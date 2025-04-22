@@ -16,11 +16,17 @@ import { eq } from "drizzle-orm";
 import { BookingsTable } from "../schemas/Booking";
 import { CatalogAddOnsTable } from "../schemas/CatalogAddOns";
 import { errorHandler } from "../middlewares/errorHandler";
-import { BadRequestError, NotFoundError } from "../utils/errors";
+import { BadRequestError, ForbiddenError, NotFoundError } from "../utils/errors";
 import { CatalogAddOnDTO } from "../dto/catalogAddOnDTO";
+import { authMiddleware } from "../middlewares/authMiddleware";
+import { verifyPermission } from "../utils/permissionUtils";
+import type { AuthContext } from "../types";
 
-export default new OpenAPIHono()
-  .openapi(
+const bookingAddOnRoutes = new OpenAPIHono<AuthContext>();
+
+bookingAddOnRoutes.use("/*", authMiddleware);
+
+bookingAddOnRoutes.openapi(
     createRoute({
       tags: ["Booking Add-Ons"],
       summary: "Get all booking add-ons",
@@ -60,6 +66,13 @@ export default new OpenAPIHono()
     }),
     async (c) => {
       try {
+        const userId = c.get("userId");
+        const hasPermission = await verifyPermission(userId, "BOOKING_ADD_ONS", "read");
+
+        if(!hasPermission) {
+          throw new ForbiddenError("No permission to get bookings.")
+        }
+
         const { limit, page } = c.req.valid("query");
 
         if (limit < 1 || page < 1) {
@@ -88,7 +101,8 @@ export default new OpenAPIHono()
       }
     }
   )
-  .openapi(
+
+bookingAddOnRoutes.openapi(
     createRoute({
       tags: ["Booking Add-Ons"],
       summary: "Create a new booking add-on",
@@ -127,6 +141,13 @@ export default new OpenAPIHono()
     }),
     async (c) => {
       try {
+        const userId = c.get("userId");
+        const hasPermission = await verifyPermission(userId, "BOOKING_ADD_ONS", "create");
+
+        if(!hasPermission) {
+          throw new ForbiddenError("No permission to create booking add-on.")
+        }
+
         const parsed = CreateBookingAddOnDTO.parse(await c.req.json());
         const { bookingId, catalogAddOnId } = parsed;
 
@@ -177,3 +198,5 @@ export default new OpenAPIHono()
       }
     }
   );
+
+export default bookingAddOnRoutes;

@@ -8,11 +8,17 @@ import {
 import db from "../config/database";
 import { BookingsTable, PaymentsTable } from "../schemas/schema";
 import { desc, eq, like, or } from "drizzle-orm";
-import { BadRequestError, NotFoundError } from "../utils/errors";
+import { BadRequestError, ForbiddenError, NotFoundError } from "../utils/errors";
 import { errorHandler } from "../middlewares/errorHandler";
+import { authMiddleware } from "../middlewares/authMiddleware";
+import { verifyPermission } from "../utils/permissionUtils";
+import type { AuthContext } from "../types";
 
-export default new OpenAPIHono()
-  .openapi(
+const paymentRoutes = new OpenAPIHono<AuthContext>();
+
+paymentRoutes.use("/*", authMiddleware);
+
+paymentRoutes.openapi(
     createRoute({
       tags: ["Payments"],
       summary: "Retrieve all the payments",
@@ -55,6 +61,13 @@ export default new OpenAPIHono()
     }),
     async (c) => {
       try {
+        const userId = c.get("userId");
+        const hasPermission = await verifyPermission(userId, "PAYMENT", "read");
+
+        if(!hasPermission) {
+          throw new ForbiddenError("No permission to get payments.")
+        }
+
         const { limit, page } = c.req.valid("query");
 
         if (limit < 1 || page < 1) {
@@ -79,7 +92,8 @@ export default new OpenAPIHono()
       }
     }
   )
-  .openapi(
+
+paymentRoutes.openapi(
     createRoute({
       tags: ["Payments"],
       summary: "Get Payment By ID",
@@ -112,6 +126,13 @@ export default new OpenAPIHono()
     }),
     async (c) => {
       try {
+        const userId = c.get("userId");
+        const hasPermission = await verifyPermission(userId, "PAYMENT", "read");
+
+        if(!hasPermission) {
+          throw new ForbiddenError("No permission to get payment.")
+        }
+
         const { id } = c.req.valid("param");
 
         const dbPayment = await db.query.PaymentsTable.findFirst({
@@ -128,7 +149,8 @@ export default new OpenAPIHono()
       }
     }
   )
-  .openapi(
+
+paymentRoutes.openapi(
     createRoute({
       tags: ["Payments"],
       summary: "Refund Payment",
@@ -162,6 +184,13 @@ export default new OpenAPIHono()
     }),
     async (c) => {
       try {
+        const userId = c.get("userId");
+        const hasPermission = await verifyPermission(userId, "PAYMENT", "create");
+
+        if(!hasPermission) {
+          throw new ForbiddenError("No permission to create payment.")
+        }
+
         const parsed = RefundPaymentDTO.parse(await c.req.json());
         const { bookingId, mode } = parsed;
 
@@ -241,7 +270,8 @@ export default new OpenAPIHono()
       }
     }
   )
-  .openapi(
+
+paymentRoutes .openapi(
     createRoute({
       tags: ["Payments"],
       summary: "Create Payments",
@@ -275,6 +305,13 @@ export default new OpenAPIHono()
     }),
     async (c) => {
       try {
+        const userId = c.get("userId");
+        const hasPermission = await verifyPermission(userId, "PAYMENT", "create");
+
+        if(!hasPermission) {
+          throw new ForbiddenError("No permission to create payments.")
+        }
+
         const parsed = CreatePaymentDTO.parse(await c.req.json());
         const { bookingId, mode } = parsed;
 
@@ -406,7 +443,8 @@ export default new OpenAPIHono()
       }
     }
   )
-  .openapi(
+  
+paymentRoutes.openapi(
     createRoute({
       tags: ["Payments"],
       summary: "Update Payment by ID",
@@ -443,6 +481,13 @@ export default new OpenAPIHono()
     }),
     async (c) => {
       try {
+        const userId = c.get("userId");
+        const hasPermission = await verifyPermission(userId, "PAYMENT", "update");
+
+        if(!hasPermission) {
+          throw new ForbiddenError("No permission to update payment.")
+        }
+
         const paymentId = Number(c.req.param("id"));
 
         if (isNaN(paymentId)) {
@@ -468,3 +513,5 @@ export default new OpenAPIHono()
       }
     }
   );
+
+export default paymentRoutes;
