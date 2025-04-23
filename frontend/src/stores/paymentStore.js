@@ -27,7 +27,13 @@ export const usePaymentStore = defineStore("payment", {
 
         while (hasMoreData) {
           const response = await fetch(
-            `http://localhost:3000/payments?limit=${limit}&page=${page}`
+            `http://localhost:3000/payments?limit=${limit}&page=${page}`,
+            {
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${auth.accessToken}`,
+              },
+            }
           );
           const paymentData = await response.json();
 
@@ -67,6 +73,8 @@ export const usePaymentStore = defineStore("payment", {
 
     // Add PAYMENT
     async addPayment(paymentDetails) {
+      const auth = useAuthStore();
+      if (!auth.isLoggedIn) return;
       const res = await fetch("http://localhost:3000/payments", {
         method: "POST",
         headers: {

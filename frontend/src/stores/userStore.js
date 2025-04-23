@@ -22,7 +22,13 @@ export const useUserStore = defineStore("user", {
 
         while (hasMoreData) {
           const response = await fetch(
-            `http://localhost:3000/users?limit=${limit}&page=${page}`
+            `http://localhost:3000/users?limit=${limit}&page=${page}`,
+            {
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${auth.accessToken}`,
+              },
+            }
           );
           if (!response.ok) throw new Error("Failed to fetch users");
 
@@ -61,7 +67,13 @@ export const useUserStore = defineStore("user", {
 
         while (hasMoreData) {
           const response = await fetch(
-            `http://localhost:3000/users?limit=${limit}&page=${page}`
+            `http://localhost:3000/users?limit=${limit}&page=${page}`,
+            {
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${auth.accessToken}`,
+              },
+            }
           );
           if (!response.ok) throw new Error("Failed to fetch users");
 
@@ -98,7 +110,7 @@ export const useUserStore = defineStore("user", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            //   Authorization: `Bearer ${auth.accessToken}`,
+            Authorization: `Bearer ${auth.accessToken}`,
           },
           body: JSON.stringify(employeeDetails),
         });
@@ -125,7 +137,7 @@ export const useUserStore = defineStore("user", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            //   Authorization: `Bearer ${auth.accessToken}`,
+            Authorization: `Bearer ${auth.accessToken}`,
           },
           body: JSON.stringify(customerDetails),
         });
@@ -145,12 +157,15 @@ export const useUserStore = defineStore("user", {
     // Change Employee Role
     async changeRole(employee) {
       try {
+        const auth = useAuthStore();
+        if (!auth.isLoggedIn) return;
         const res = await fetch(
           `http://localhost:3000/users/${employee.userId}`,
           {
             method: "PATCH",
             headers: {
               "Content-Type": "application/json",
+              Authorization: `Bearer ${auth.accessToken}`,
             },
             body: JSON.stringify(employee),
           }
@@ -185,8 +200,6 @@ export const useUserStore = defineStore("user", {
       } catch (error) {
         console.error("Error disabling user:", error);
       }
-      const auth = useAuthStore();
-      if (!auth.isLoggedIn) return;
     },
   },
 });

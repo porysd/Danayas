@@ -1,4 +1,5 @@
 import { defineStore } from "pinia";
+import { useAuthStore } from "./authStore";
 
 export const usePackageStore = defineStore("package", {
   state: () => ({
@@ -9,6 +10,8 @@ export const usePackageStore = defineStore("package", {
   actions: {
     // Fetch All PACKAGES Only
     async fetchAllPackages() {
+      const auth = useAuthStore();
+      if (!auth.isLoggedIn) return;
       this.packages = [];
       const limit = 50;
       let page = 1;
@@ -20,7 +23,7 @@ export const usePackageStore = defineStore("package", {
           {
             headers: {
               "Content-Type": "application/json",
-              //   Authorization: `Bearer ${auth.accessToken}`,
+              Authorization: `Bearer ${auth.accessToken}`,
             },
           }
         );
@@ -51,6 +54,8 @@ export const usePackageStore = defineStore("package", {
 
     // Fetch All PROMOS Only
     async fetchAllPromos() {
+      const auth = useAuthStore();
+      if (!auth.isLoggedIn) return;
       this.promos = [];
       const limit = 50;
       let page = 1;
@@ -62,7 +67,7 @@ export const usePackageStore = defineStore("package", {
           {
             headers: {
               "Content-Type": "application/json",
-              //   Authorization: `Bearer ${auth.accessToken}`,
+              Authorization: `Bearer ${auth.accessToken}`,
             },
           }
         );
@@ -93,6 +98,8 @@ export const usePackageStore = defineStore("package", {
 
     // Add a new PACKAGE or PROMO
     async addPackage(packageT) {
+      const auth = useAuthStore();
+      if (!auth.isLoggedIn) return;
       const formatPackage = {
         ...packageT,
         price: packageT.price ? Number(packageT.price) : null,
@@ -101,7 +108,10 @@ export const usePackageStore = defineStore("package", {
       try {
         const response = await fetch("http://localhost:3000/packages", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${auth.accessToken}`,
+          },
           body: JSON.stringify(formatPackage),
         });
 
@@ -119,6 +129,9 @@ export const usePackageStore = defineStore("package", {
 
     // Update a PACKAGE
     async updatePackage(updatedPackage) {
+      const auth = useAuthStore();
+      if (!auth.isLoggedIn) return;
+
       const updatePackage = {
         ...updatedPackage,
         isPromo: false,
@@ -134,6 +147,7 @@ export const usePackageStore = defineStore("package", {
             method: "PATCH",
             headers: {
               "Content-Type": "application/json",
+              Authorization: `Bearer ${auth.accessToken}`,
             },
             body: JSON.stringify(updatePackage),
           }
@@ -152,6 +166,9 @@ export const usePackageStore = defineStore("package", {
 
     // Update a PROMO
     async updatePromo(updatedPromo) {
+      const auth = useAuthStore();
+      if (!auth.isLoggedIn) return;
+
       const updatePackage = {
         ...updatedPromo,
         isPromo: true,
@@ -165,6 +182,7 @@ export const usePackageStore = defineStore("package", {
             method: "PATCH",
             headers: {
               "Content-Type": "application/json",
+              Authorization: `Bearer ${auth.accessToken}`,
             },
             body: JSON.stringify(updatePackage),
           }
@@ -183,11 +201,15 @@ export const usePackageStore = defineStore("package", {
 
     // Delete a PACKAGE or PROMO
     async deletePackage(packageT) {
+      const auth = useAuthStore();
+      if (!auth.isLoggedIn) return;
+
       try {
         const response = await fetch(
           `http://localhost:3000/packages/${packageT.packageId}`,
           {
             method: "DELETE",
+            Authorization: `Bearer ${auth.accessToken}`,
           }
         );
 

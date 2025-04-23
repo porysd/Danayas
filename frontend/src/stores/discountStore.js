@@ -9,11 +9,12 @@ export const useDiscountStore = defineStore("discount", {
   actions: {
     // Fetch All DISCOUNTS
     async fetchAllDiscounts() {
+      const auth = useAuthStore();
+      if (!auth.isLoggedIn) return;
       this.discounts = [];
       const limit = 50;
       let page = 1;
       let hasMoreData = true;
-      const auth = useAuthStore();
 
       while (hasMoreData) {
         const res = await fetch(
@@ -21,7 +22,7 @@ export const useDiscountStore = defineStore("discount", {
           {
             headers: {
               "Content-Type": "application/json",
-              //   Authorization: `Bearer ${auth.accessToken}`,
+              Authorization: `Bearer ${auth.accessToken}`,
             },
           }
         );
@@ -49,6 +50,8 @@ export const useDiscountStore = defineStore("discount", {
     // Add Discount
     async addDiscount(discount) {
       try {
+        const auth = useAuthStore();
+        if (!auth.isLoggedIn) return;
         const formatDiscount = {
           ...discount,
           percentage: discount.percentage ? Number(discount.percentage) : null,
@@ -57,7 +60,7 @@ export const useDiscountStore = defineStore("discount", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            //   Authorization: `Bearer ${auth.accessToken}`,
+            Authorization: `Bearer ${auth.accessToken}`,
           },
           body: JSON.stringify(formatDiscount),
         });
@@ -78,12 +81,15 @@ export const useDiscountStore = defineStore("discount", {
     // Update Discount
     async updateDiscount(discount) {
       try {
+        const auth = useAuthStore();
+        if (!auth.isLoggedIn) return;
         const res = await fetch(
           `http://localhost:3000/discounts/${discount.discountId}`,
           {
             method: "PATCH",
             headers: {
               "Content-Type": "application/json",
+              Authorization: `Bearer ${auth.accessToken}`,
             },
             body: JSON.stringify(discount),
           }
@@ -109,10 +115,16 @@ export const useDiscountStore = defineStore("discount", {
     // Delete Discount
     async deleteDiscount(discount) {
       try {
+        const auth = useAuthStore();
+        if (!auth.isLoggedIn) return;
         const res = await fetch(
           `http://localhost:3000/discounts/${discount.discountId}`,
           {
             method: "DELETE",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${auth.accessToken}`,
+            },
           }
         );
 
