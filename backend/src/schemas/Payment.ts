@@ -7,11 +7,12 @@ import {
 } from "drizzle-orm/sqlite-core";
 import { BookingsTable } from "./Booking";
 import { sql } from "drizzle-orm";
+import { TransactionsTable } from "./Transaction";
 
 export const PaymentsTable = sqliteTable("PAYMENT", {
   paymentId: integer("paymentId").primaryKey({ autoIncrement: true }),
-  bookingId: integer("bookingId")
-    .references(() => BookingsTable.bookingId)
+  transactionId: integer("transactionId")
+    .references(() => TransactionsTable.transactionId)
     .notNull(),
   imageUrl: text("imageUrl"),
   downPaymentAmount: real("downPaymentAmount"),
