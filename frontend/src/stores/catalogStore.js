@@ -23,7 +23,7 @@ export const useCatalogStore = defineStore("catalog", {
             {
               headers: {
                 "Content-Type": "application/json",
-                // Authorization: `Bearer ${auth.accessToken}`,
+                Authorization: `Bearer ${auth.accessToken}`,
               },
             }
           );
@@ -67,7 +67,7 @@ export const useCatalogStore = defineStore("catalog", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            // Authorization: `Bearer ${auth.accessToken}`,
+            Authorization: `Bearer ${auth.accessToken}`,
           },
           body: JSON.stringify(formatCatalogAddOn),
         });
@@ -94,7 +94,7 @@ export const useCatalogStore = defineStore("catalog", {
             method: "PATCH",
             headers: {
               "Content-Type": "application/json",
-              // Authorization: `Bearer ${auth.accessToken}`,
+              Authorization: `Bearer ${auth.accessToken}`,
             },
             body: JSON.stringify(catalogDetails),
           }
@@ -124,6 +124,10 @@ export const useCatalogStore = defineStore("catalog", {
           `http://localhost:3000/catalogaddon/${catalogDetails.catalogAddOnId}`,
           {
             method: "DELETE",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${auth.accessToken}`,
+            },
           }
         );
 

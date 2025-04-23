@@ -8,11 +8,12 @@ export const useAddOnsStore = defineStore("addOns", {
 
   actions: {
     async fetchAllAddOns() {
+      const auth = useAuthStore();
+      if (!auth.isLoggedIn) return;
       this.addOns = [];
       const limit = 50;
       let page = 1;
       let hasMoreData = true;
-      const auth = useAuthStore();
 
       while (hasMoreData) {
         const res = await fetch(
