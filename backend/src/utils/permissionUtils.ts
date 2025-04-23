@@ -1,11 +1,13 @@
 import db from "../config/database";
 import { and, eq } from "drizzle-orm";
 import { PermissionsTable } from "../schemas/Permission";
+import { UsersTable } from "../schemas/User";
+import { NotFoundError } from "./errors";
 
 export enum Roles {
-  ADMIN = "ADMIN",
-  STAFF = "STAFF",
-  CUSTOMER = "CUSTOMER",
+  ADMIN = "admin",
+  STAFF = "staff",
+  CUSTOMER = "customer",
 }
 
 export const permissionsArray = ["create", "read", "update", "delete"] as const;
@@ -15,6 +17,34 @@ export async function verifyPermission(
   table: string,
   action: typeof permissionsArray[number],
 ) {
+  const user = await db.query.UsersTable.findFirst({
+    where: eq(UsersTable.userId, userId),
+  });
+
+  if (!user) {
+    throw new NotFoundError("User not found");
+  }
+
+  if (user.role === Roles.ADMIN) {
+    return true;
+  }
+
+  if(user.role === Roles.STAFF) {
+    if(["create", "read", "update"].includes(action)){
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  if(user.role === Roles.CUSTOMER){
+    if(action === "read"){
+      return true;
+    } else{
+      return false;
+    }
+  }
+
   const permissionRecord = await db.query.PermissionsTable.findFirst({
     where: (fields, operators) =>
       operators.and(
