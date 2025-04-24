@@ -5,8 +5,8 @@ export const PaymentDTO = z.object({
     description: "Unique identifier for the payment",
     example: 1,
   }),
-  bookingId: z.number().openapi({
-    description: "Identifier for the associated booking",
+  transactionId: z.number().openapi({
+    description: "Identifier for the associated transaction",
     example: 101,
   }),
   imageUrl: z.string().nullable().optional().openapi({
@@ -57,14 +57,14 @@ export const PaymentDTO = z.object({
   }),
 });
 export const CreatePaymentDTO = PaymentDTO.pick({
-  bookingId: true,
+  transactionId: true,
   senderName: true,
   imageUrl: true,
   mode: true,
   reference: true,
 });
 export const RefundPaymentDTO = PaymentDTO.pick({
-  bookingId: true,
+  transactionId: true,
   senderName: true,
   imageUrl: true,
   mode: true,
