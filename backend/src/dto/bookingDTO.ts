@@ -115,7 +115,8 @@ export const UpdateBookingDTO = BookingDTO.omit({
   .extend({
     catering: z
       .union([z.boolean(), z.number().int().min(0).max(1)])
-      .transform((val) => Number(val)),
+      .transform((val) => Number(val))
+      .optional(),
   });
 
 export const CreateBookingDTO = BookingDTO.omit({
@@ -128,5 +129,6 @@ export const CreateBookingDTO = BookingDTO.omit({
     z
       .union([z.boolean(), z.number().int().min(0).max(1)])
       .transform((val) => Number(val))
+      .optional()
   ),
 });

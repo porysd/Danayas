@@ -73,5 +73,5 @@ export const RefundPaymentDTO = PaymentDTO.pick({
 
 export const UpdatePaymentDTO = PaymentDTO.pick({
   paymentStatus: true,
-  refundStatus: true,
+  // refundStatus: true,
 });
