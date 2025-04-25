@@ -6,6 +6,11 @@ export const usePackageStore = defineStore("package", {
     packages: [],
     promos: [],
   }),
+  getters: {
+    getPackageById: (state) => (id) => {
+      return state.packages.find((pkg) => pkg.packageId === id);
+    },
+  },
 
   actions: {
     // Fetch All PACKAGES Only

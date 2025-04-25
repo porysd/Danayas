@@ -8,6 +8,7 @@ import Step from "primevue/step";
 import StepPanel from "primevue/steppanel";
 import Button from "primevue/button";
 import DatePicker from "primevue/datepicker";
+import FloatLabel from "primevue/floatlabel";
 import RadioButton from "primevue/radiobutton";
 import BookPackage from "../components/BookPackage.vue";
 import FileUpload from "primevue/fileupload";
@@ -15,14 +16,20 @@ import Dialog from "primevue/dialog";
 import NavBar from "../components/NavBar.vue";
 import Footer from "../components/Footer.vue";
 import { useBookingStore } from "../stores/bookingStore";
+import { usePaymentStore } from "../stores/paymentStore";
+import { useToast } from "primevue/usetoast";
+import { usePackageStore } from "../stores/packageStore";
+import { formatPeso } from "../utility/pesoFormat";
+
+const toast = useToast();
 
 const bookingStore = useBookingStore();
+const paymentStore = usePaymentStore();
+const packageStore = usePackageStore();
 
 onMounted(() => {
   bookingStore.fetchUserBookings();
 });
-const bookMode = ref("");
-const paymentTerms = ref("");
 
 const header = ref([
   "Check-in & Check-out Date",
@@ -30,6 +37,112 @@ const header = ref([
   "Guest Information",
   "Booking Confirmation",
 ]);
+
+// Add Booking
+const newBooking = ref({
+  firstName: "" || null,
+  lastName: "" || null,
+  contactNo: "" || null,
+  emailAddress: "" || null,
+  address: "" || null,
+  packageId: "",
+  eventType: "" || null,
+  checkInDate: "",
+  checkOutDate: "",
+  mode: "",
+  arrivalTime: "" || null,
+  catering: "" || null,
+  numberOfGuest: "" || null,
+  discountId: "" || null,
+  bookingAddOns: [] || null,
+  paymentTerms: "",
+});
+
+const paymentDetails = ref({
+  mode: "",
+  reference: "",
+  imageUrl: "",
+  senderName: "",
+});
+
+const formatDate = (date) => {
+  if (!date) return "";
+  const d = new Date(date);
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  const year = d.getFullYear();
+  return `${month}-${day}-${year}`;
+};
+
+const addBookingHandler = async (newBooking, paymentDetails) => {
+  try {
+    const formatBooking = {
+      ...newBooking.value,
+      checkInDate: formatDate(newBooking.value.checkInDate),
+      checkOutDate: formatDate(newBooking.value.checkOutDate),
+      discountId: discount?.discountId || null,
+    };
+
+    const formatPayment = {
+      ...formatBooking,
+      paymentDetails,
+    };
+
+    await bookingStore.addBooking(formatBooking);
+    await paymentStore.addPayment(formatPayment);
+
+    toast.add({
+      severity: "success",
+      summary: "Success",
+      detail: "Booking and Payment successfully created!",
+      life: 3000,
+    });
+
+    await bookingStore.fetchUserBookings();
+  } catch (err) {
+    console.error("Error adding booking", err);
+  }
+};
+
+//STEP: 1
+// const stepOneBtn = () => {
+//   if (
+//     !newBooking.value.checkInDate ||
+//     !newBooking.value.checkOutDate ||
+//     !newBooking.value.mode
+//   ) {
+//     alert("Please fill up all fields");
+//   } else {
+//     activateCallback("2");
+//   }
+// };
+
+//STEP 2
+const stepTwoBtn = () => {
+  if (!newBooking.packageId) {
+    alert("Please select a package");
+  }
+};
+
+// ref = reactive state
+// selectedPackage is a reactive state that will hold the selected package fromt child (BookPackage)
+const selectedPackage = ref(null);
+
+// availPackageHandler = function for the availPackage in BookPackage
+const availPackageHandler = (pkg) => {
+  selectedPackage.value = pkg; // this will update the reactive state of the selectedPackage = ref(null) into the selected package from the BookPackage
+};
+
+//STEP 3
+const stepThreeBtn = () => {
+  if (
+    !newBooking.value.paymentTerms ||
+    !paymentDetails.value.reference ||
+    !paymentDetails.value.imageUrl
+  ) {
+    alert("Please fill up al the fields");
+  }
+};
 
 const currentStep = ref(0);
 
@@ -181,6 +294,29 @@ const getBookingStyle = (slotDate) => {
             <div class="flex h-auto">
               <div class="date m-auto h-auto">
                 <div
+                  class="flex gap-30 m-auto justify-center align-center mt-10"
+                >
+                  <FloatLabel variant="on">
+                    <DatePicker
+                      v-model="newBooking.checkInDate"
+                      inputId="on_label"
+                      showIcon
+                      iconDisplay="input"
+                    />
+                    <label for="on_label">Check-In</label>
+                  </FloatLabel>
+                  <FloatLabel variant="on">
+                    <DatePicker
+                      v-model="newBooking.checkOutDate"
+                      inputId="on_label"
+                      showIcon
+                      iconDisplay="input"
+                    />
+                    <label for="on_label">Check-Out</label>
+                  </FloatLabel>
+                </div>
+
+                <div
                   class="datePicker"
                   style="
                     background-color: none;
@@ -300,7 +436,7 @@ const getBookingStyle = (slotDate) => {
             <div class="flex items-center gap-5 ml-20">
               <div class="flex items-center gap-2">
                 <RadioButton
-                  v-model="bookMode"
+                  v-model="newBooking.mode"
                   inputId="dayMode"
                   name="bookingMode"
                   value="day-time"
@@ -312,7 +448,7 @@ const getBookingStyle = (slotDate) => {
               </div>
               <div class="flex items-center gap-2">
                 <RadioButton
-                  v-model="bookMode"
+                  v-model="newBooking.mode"
                   inputId="nightMode"
                   name="bookingMode"
                   value="night-time"
@@ -324,7 +460,7 @@ const getBookingStyle = (slotDate) => {
               </div>
               <div class="flex items-center gap-2">
                 <RadioButton
-                  v-model="bookMode"
+                  v-model="newBooking.mode"
                   inputId="wholeDay"
                   name="bookingMode"
                   value="whole-day"
@@ -339,6 +475,7 @@ const getBookingStyle = (slotDate) => {
                 @click="
                   activateCallback('2');
                   nextBtn();
+                  stepOneBtn();
                 "
                 class="bg-[#194d1d] text-white w-50 h-15 font-black font-[Poppins] text-xl rounded-xl cursor-pointer ml-[45rem]"
               >
@@ -358,7 +495,8 @@ const getBookingStyle = (slotDate) => {
                     Select Package
                   </h1>
                   <div class="overflow-auto">
-                    <BookPackage />
+                    <BookPackage @availPackage="availPackageHandler" />
+                    <!--availPackage comes from the BookPackage and holds the selected-->
                   </div>
                 </div>
               </div>
@@ -375,40 +513,46 @@ const getBookingStyle = (slotDate) => {
                   </h1>
 
                   <div class="bg-[#fcfcfc] rounded-sm p-2 mb-2">
-                    <div class="flex gap-[20rem]">
+                    <div class="flex">
                       <p>Date:</p>
-                      <div class="inline-block">
-                        <button class="">Edit</button>
-                      </div>
                     </div>
-                    <div class="flex gap-[19rem]">
-                      <p>Check-in:</p>
+                    <div class="w-full flex">
+                      <p>Check-in: {{ formatDate(newBooking.checkInDate) }}</p>
                       <button><i class="pi pi-calendar"></i></button>
                     </div>
-                    <div class="flex gap-[18rem]">
-                      <p>Check-out:</p>
-                      <button class="">
+                    <div class="w-full flex border-1">
+                      <p>
+                        Check-out: {{ formatDate(newBooking.checkOutDate) }}
+                      </p>
+                      <div
+                        class="relative inline-block text-right border-1"
+                        style="right: -20rem"
+                      >
                         <i class="pi pi-calendar"></i>
-                      </button>
+                      </div>
                     </div>
                   </div>
 
                   <div class="bg-[#fcfcfc] p-2 rounded">
-                    <p>Mode:</p>
+                    <p>Mode: {{ newBooking.mode }}</p>
                   </div>
 
                   <div class="flex flex-col gap-2">
                     <h1 class="text-lg font-bold font-[Poppins]">
                       Package Selected:
                     </h1>
-                    <div class="flex bg-[#fcfcfc] p-1 rounded-sm">
-                      <p>Package Name:</p>
+                    <div class="flex flex-col bg-[#fcfcfc] p-1 rounded-sm">
+                      <p>Package Name: {{ selectedPackage?.name }}</p>
+                      <p>Inclusion: {{ selectedPackage?.inclusion }}</p>
+                      <p>Mode:{{ selectedPackage?.mode }}</p>
                     </div>
                     <div class="bg-[#CDDA54] p-1 rounde-sm">
                       <p>VAT Charged:</p>
                     </div>
                     <div class="bg-[#4BB344] p-1 rounded-sm">
-                      <p>TOTAL CHARGED:</p>
+                      <p>
+                        TOTAL CHARGED: {{ formatPeso(selectedPackage?.price) }}
+                      </p>
                     </div>
                   </div>
                   <div class="btn flex pt-6">
@@ -523,7 +667,7 @@ const getBookingStyle = (slotDate) => {
                     <div class="flex items-center gap-5 ml-20 mt-5">
                       <div class="flex items-center gap-2">
                         <RadioButton
-                          v-model="paymentTerms"
+                          v-model="newBooking.paymentTerms"
                           inputId="installment"
                           name="paymentTerm"
                           value="installment"
@@ -535,7 +679,7 @@ const getBookingStyle = (slotDate) => {
                       </div>
                       <div class="flex items-center gap-2">
                         <RadioButton
-                          v-model="paymentTerms"
+                          v-model="newBooking.paymentTerms"
                           inputId="full-payment"
                           name="paymentTerm"
                           value="full-payment"
@@ -562,7 +706,6 @@ const getBookingStyle = (slotDate) => {
                   <div class="bg-[#fcfcfc] mb-2 p-2 rounded-sm">
                     <div class="flex gap-[20rem]">
                       <p>Date:</p>
-                      <button>Edit</button>
                     </div>
                     <div class="flex gap-[19rem]">
                       <p>Check-in:</p>
@@ -611,7 +754,11 @@ const getBookingStyle = (slotDate) => {
                       </h1>
                       <div class="bg-[#fcfcfc] mb-2 rounded">
                         <div>
-                          <input class="p-2" placeholder="FEJIJKA4381FK9" />
+                          <input
+                            class="p-2"
+                            placeholder="FEJIJKA4381FK9"
+                            v-model="paymentDetails.reference"
+                          />
                         </div>
                       </div>
                       <div class="gcashUpload">
@@ -620,6 +767,7 @@ const getBookingStyle = (slotDate) => {
                         </h1>
                         <FileUpload
                           ref="fileupload"
+                          v-model="paymentDetails.imageUrl"
                           mode="basic"
                           name="demo[]"
                           url="/api/upload"
@@ -637,6 +785,7 @@ const getBookingStyle = (slotDate) => {
                       @click="
                         activateCallback('4');
                         nextBtn();
+                        stepThreeBtn();
                       "
                     />
                     <Button
@@ -668,7 +817,6 @@ const getBookingStyle = (slotDate) => {
                 <div class="bg-[#fcfcfc] mb-2 p-2 rounded-sm">
                   <div class="flex gap-2">
                     <p>Date:</p>
-                    <button>Edit</button>
                   </div>
                   <div class="flex gap-2">
                     <p>Check-in:</p>
