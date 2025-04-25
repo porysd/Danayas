@@ -1,6 +1,7 @@
 // stores/bookingStore.js
 import { defineStore } from "pinia";
 import { useAuthStore } from "./authStore";
+import { formatDate } from "../utility/dateFormat";
 
 export const useBookingStore = defineStore("booking", {
   state: () => ({
@@ -65,7 +66,7 @@ export const useBookingStore = defineStore("booking", {
             (booking) => booking.bookStatus === "rescheduled"
           );
 
-          this.bookings.unshift(...bookingData.items.reverse());
+          this.bookings = bookingData.items.reverse();
 
           if (bookingData.length === 0) {
             hasMoreData = false;
@@ -164,6 +165,9 @@ export const useBookingStore = defineStore("booking", {
       const auth = useAuthStore();
       if (!auth.isLoggedIn) return;
 
+      const formattedCheckInDate = formatDate(booking.checkInDate);
+      const formattedCheckOutDate = formatDate(booking.checkOutDate);
+
       const res = await fetch(
         `http://localhost:3000/bookings/${booking.bookingId}`,
         {
@@ -173,8 +177,8 @@ export const useBookingStore = defineStore("booking", {
             Authorization: `Bearer ${auth.accessToken}`,
           },
           body: JSON.stringify({
-            checkInDate: booking.checkInDate,
-            checkOutDate: booking.checkOutDate,
+            checkInDate: formattedCheckInDate,
+            checkOutDate: formattedCheckOutDate,
           }),
         }
       );
@@ -211,6 +215,31 @@ export const useBookingStore = defineStore("booking", {
       }
 
       this.bookings = this.bookings.filter((b) => b.bookingId !== bookingId);
+    },
+
+    // Get BOOKING by ID
+    async getBookingById(bookingId) {
+      const auth = useAuthStore();
+      if (!auth.isLoggedIn) return;
+
+      try {
+        const res = await fetch(`http://localhost:3000/bookings/${bookingId}`, {
+          headers: {
+            Authorization: `Bearer ${auth.accessToken}`,
+          },
+        });
+
+        if (!res.ok) {
+          const errorText = await res.text();
+          throw new Error(`Failed to fetch booking: ${errorText}`);
+        }
+
+        const booking = await res.json();
+        return booking;
+      } catch (err) {
+        console.error("Error fetching booking by ID:", err);
+        throw err;
+      }
     },
   },
 });
