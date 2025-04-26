@@ -6,6 +6,11 @@ export const usePackageStore = defineStore("package", {
     packages: [],
     promos: [],
   }),
+  getters: {
+    getPackageById: (state) => (id) => {
+      return state.packages.find((pkg) => pkg.packageId === id);
+    },
+  },
 
   actions: {
     // Fetch All PACKAGES Only
@@ -223,6 +228,30 @@ export const usePackageStore = defineStore("package", {
         await this.fetchAllPromos();
       } catch (error) {
         console.error("Error deleting package:", error);
+      }
+    },
+
+    // Get PACKAGE by ID
+    async getPackageByID(packageId) {
+      try {
+        const auth = useAuthStore();
+        if (!auth.isLoggedIn) return;
+
+        const res = await fetch(`http://localhost:3000/packages/${packageId}`, {
+          headers: {
+            Authorization: `Bearer ${auth.accessToken}`,
+          },
+        });
+
+        if (!res.ok) {
+          console.error("Failed to fetch package");
+          return;
+        }
+
+        const data = await res.json();
+        return data;
+      } catch (err) {
+        console.error("Error fetching package", err);
       }
     },
   },

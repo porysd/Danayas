@@ -1,6 +1,7 @@
 <script setup>
 import { onMounted } from "vue";
 import { usePackageStore } from "../stores/packageStore.js";
+import router from "../router/index.js";
 
 const packageStore = usePackageStore();
 onMounted(() => {
@@ -66,15 +67,16 @@ onMounted(() => {
   margin-bottom: 10px;
   font-weight: bolder;
   margin: auto;
-  font-size: 40px;
+  font-size: 20px;
   color: #000;
 }
 
 .Package1 {
   background: #fcfcfc;
-  width: 400px;
-
-  height: auto;
+  width: 100%;
+  max-width: 350px;
+  padding: 3px;
+  height: 400px;
   border-radius: 20px;
   filter: drop-shadow(0px 4px 4px rgb(47, 46, 46));
   display: flex;
@@ -89,11 +91,12 @@ onMounted(() => {
 .P1 {
   color: rgb(21, 21, 21);
   font-weight: regular;
-  font-size: 20px;
+  font-size: 14px;
+  flex-direction: column;
   word-wrap: break-word;
 }
 .detailsBtn {
-  width: 100%;
+  width: 100px;
   height: 40px;
   border: none;
   background-color: #194d1d;

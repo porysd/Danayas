@@ -142,5 +142,32 @@ export const useDiscountStore = defineStore("discount", {
         throw error;
       }
     },
+
+    // Get DISCOUNT by ID
+    async getDiscountById(discountId) {
+      try {
+        const auth = useAuthStore();
+        if (!auth.isLoggedIn) return;
+
+        const res = await fetch(
+          `http://localhost:3000/discounts/${discountId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${auth.accessToken}`,
+            },
+          }
+        );
+
+        if (!res.ok) {
+          console.error("Failed to fetch discounts");
+          return;
+        }
+
+        const data = await res.json();
+        return data;
+      } catch (err) {
+        console.err("Error fetching discounts", err);
+      }
+    },
   },
 });

@@ -53,7 +53,6 @@ export const useCatalogStore = defineStore("catalog", {
     },
 
     // Add CATALOG
-    // NOTE: NOT YET WORKING
     async addCatalog(catalogDetails) {
       try {
         const auth = useAuthStore();
@@ -75,6 +74,7 @@ export const useCatalogStore = defineStore("catalog", {
         if (!res.ok) {
           throw new Error("Failed to add catalog");
         }
+
         const newCatalog = await res.json();
         this.catalog.push(newCatalog);
       } catch (error) {
@@ -140,6 +140,33 @@ export const useCatalogStore = defineStore("catalog", {
         // await this.fetchAllCatalogs();
       } catch (error) {
         console.error("Error deleting catalog:", error);
+      }
+    },
+
+    // Get CATALOG by ID
+    async getCatalogById(catalogAddOnId) {
+      try {
+        const auth = useAuthStore();
+        if (!auth.isLoggedIn) return;
+
+        const res = await fetch(
+          `http://localhost:3000/catalogaddon/${catalogAddOnId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${auth.accessToken}`,
+            },
+          }
+        );
+
+        if (!res.ok) {
+          console.error("Failed to fetch catalog");
+          return;
+        }
+
+        const data = await res.json();
+        return data;
+      } catch (err) {
+        console.error("Error fetching catalog", err);
       }
     },
   },

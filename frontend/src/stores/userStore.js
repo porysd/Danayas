@@ -100,6 +100,36 @@ export const useUserStore = defineStore("user", {
       }
     },
 
+    // Fetch User by ID
+    async getUserById(userId) {
+      try {
+        const auth = useAuthStore();
+        if (!auth.isLoggedIn) return;
+
+        // Check if userId is provided
+        if (!userId) {
+          console.error("User ID is missing");
+          return;
+        }
+
+        const res = await fetch(`http://localhost:3000/users/${userId}`, {
+          headers: {
+            Authorization: `Bearer ${auth.accessToken}`,
+          },
+        });
+
+        if (!res.ok) {
+          console.error("Failed to fetch user data");
+          return;
+        }
+
+        const data = await res.json();
+        return data;
+      } catch (error) {
+        console.error("Error fetching users:", error);
+      }
+    },
+
     // Add EMPLOYEE DATA
     async addEmployee(employeeDetails) {
       try {
@@ -178,12 +208,12 @@ export const useUserStore = defineStore("user", {
     },
 
     // Disable USER ACCOUNT
-    async disableUser(userId) {
+    async disableUser(user) {
       try {
         const auth = useAuthStore();
         if (!auth.isLoggedIn) return;
         const res = await fetch(
-          `http://localhost:3000/users/disable/${userId.userId}`,
+          `http://localhost:3000/users/disable/${user.userId}`,
           {
             method: "PATCH",
             headers: {
@@ -196,9 +226,45 @@ export const useUserStore = defineStore("user", {
           console.error("Failed to create user data");
           return;
         }
-        await this.fetchCustomer();
+
+        if (user.role === "customer") {
+          await this.fetchCustomer();
+        } else {
+          await this.fetchEmployee();
+        }
       } catch (error) {
         console.error("Error disabling user:", error);
+      }
+    },
+    // Enable USER ACCOUNT
+    async enableUser(user) {
+      try {
+        const auth = useAuthStore();
+        if (!auth.isLoggedIn) return;
+
+        const res = await fetch(
+          `http://localhost:3000/users/enable/${user.userId}`,
+          {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${auth.accessToken}`,
+            },
+          }
+        );
+
+        if (!res.ok) {
+          console.error("Failed to enable user");
+          return;
+        }
+
+        if (user.role === "customer") {
+          await this.fetchCustomer();
+        } else {
+          await this.fetchEmployee();
+        }
+      } catch (error) {
+        console.error("Error enabling user:", error);
       }
     },
   },
