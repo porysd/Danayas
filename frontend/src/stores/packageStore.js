@@ -230,5 +230,29 @@ export const usePackageStore = defineStore("package", {
         console.error("Error deleting package:", error);
       }
     },
+
+    // Get PACKAGE by ID
+    async getPackageByID(packageId) {
+      try {
+        const auth = useAuthStore();
+        if (!auth.isLoggedIn) return;
+
+        const res = await fetch(`http://localhost:3000/packages/${packageId}`, {
+          headers: {
+            Authorization: `Bearer ${auth.accessToken}`,
+          },
+        });
+
+        if (!res.ok) {
+          console.error("Failed to fetch package");
+          return;
+        }
+
+        const data = await res.json();
+        return data;
+      } catch (err) {
+        console.error("Error fetching package", err);
+      }
+    },
   },
 });

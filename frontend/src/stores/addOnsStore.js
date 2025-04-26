@@ -7,6 +7,7 @@ export const useAddOnsStore = defineStore("addOns", {
   }),
 
   actions: {
+    // Fetch All Add Ons
     async fetchAllAddOns() {
       const auth = useAuthStore();
       if (!auth.isLoggedIn) return;

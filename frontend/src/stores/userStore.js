@@ -101,18 +101,18 @@ export const useUserStore = defineStore("user", {
     },
 
     // Fetch User by ID
-    async getUserById(user) {
+    async getUserById(userId) {
       try {
         const auth = useAuthStore();
         if (!auth.isLoggedIn) return;
 
         // Check if userId is provided
-        if (!user || !user.userId) {
+        if (!userId) {
           console.error("User ID is missing");
           return;
         }
 
-        const res = await fetch(`http://localhost:3000/users/${user.userId}`, {
+        const res = await fetch(`http://localhost:3000/users/${userId}`, {
           headers: {
             Authorization: `Bearer ${auth.accessToken}`,
           },

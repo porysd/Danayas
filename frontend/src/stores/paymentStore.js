@@ -12,6 +12,7 @@ export const usePaymentStore = defineStore("payment", {
   }),
 
   actions: {
+    // Fetch All Payments
     async fetchPayments() {
       try {
         const auth = useAuthStore();

@@ -68,7 +68,7 @@ export const useTransactionStore = defineStore("transaction", {
         });
 
         if (!response.ok) {
-          const errorText = await res.text();
+          const errorText = await response.text();
           throw new Error(`Failed to create transactions: ${errorText}`);
         }
 
