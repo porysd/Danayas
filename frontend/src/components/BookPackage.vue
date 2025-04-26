@@ -33,11 +33,9 @@ const avail = (pkg) => {
       <h1 class="font-bold text-xl">{{ pkg.name }}</h1>
       <div class="mb-3 mt-2 flex-col">
         <p class="">Inclusion:</p>
-        <ul class="text-left ml-8">
-          {{
-            pkg.inclusion
-          }}
-        </ul>
+        <pre class="text-left ml-8">
+          {{ pkg.inclusion }}
+        </pre>
         <ul class="text-left ml-8">
           {{
             pkg.mode
@@ -91,24 +89,29 @@ const avail = (pkg) => {
   margin: auto;
   border: 1px solid black;
   border-radius: 10px;
-  display: inline-flex;
+  display: flex;
   width: 40rem;
   margin-bottom: 20px;
   padding: 20px;
 }
 
 #rightPart {
-  width: auto;
+  flex: 1;
   position: relative;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
 }
 
 #leftPart {
   position: relative;
   background-color: grey;
   margin-right: 10px;
-
   border-radius: 10px;
-  width: 300px;
+  width: 200px;
+  min-width: 200px;
+  max-width: 200px;
   margin-left: 5px;
+  flex-shrink: 0;
+  flex-grow: 0;
 }
 </style>
