@@ -19,16 +19,24 @@ import { useBookingStore } from "../stores/bookingStore";
 import { usePaymentStore } from "../stores/paymentStore";
 import { useToast } from "primevue/usetoast";
 import { usePackageStore } from "../stores/packageStore";
+import { useDiscountStore } from "../stores/discountStore";
 import { formatPeso } from "../utility/pesoFormat";
+import { formatDate } from "../utility/dateFormat";
+import { formatDates } from "../utility/dateFormat";
+import { useTransactionStore } from "../stores/transactionStore";
+import Select from "primevue/select";
 
 const toast = useToast();
 
 const bookingStore = useBookingStore();
+const transactionStore = useTransactionStore();
 const paymentStore = usePaymentStore();
 const packageStore = usePackageStore();
+const discountStore = useDiscountStore();
 
 onMounted(() => {
   bookingStore.fetchUserBookings();
+  discountStore.fetchAllDiscounts();
 });
 
 const header = ref([
@@ -59,36 +67,40 @@ const newBooking = ref({
 });
 
 const paymentDetails = ref({
-  mode: "",
+  mode: "gcash",
   reference: "",
   imageUrl: "",
   senderName: "",
 });
 
-const formatDate = (date) => {
-  if (!date) return "";
-  const d = new Date(date);
-  const month = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  const year = d.getFullYear();
-  return `${month}-${day}-${year}`;
-};
+// Find the discount by ID or name
+const discount = discountStore.discounts.find(
+  (d) =>
+    d.id === newBooking.value.discountId ||
+    d.name.toLowerCase() === newBooking.value.discountId?.toLowerCase()
+);
 
 const addBookingHandler = async (newBooking, paymentDetails) => {
   try {
+    // 1: Create Booking
     const formatBooking = {
       ...newBooking.value,
       checkInDate: formatDate(newBooking.value.checkInDate),
       checkOutDate: formatDate(newBooking.value.checkOutDate),
       discountId: discount?.discountId || null,
     };
+    const createdBooking = await bookingStore.addBooking(formatBooking);
+    const bookingId = createdBooking.bookingId;
 
+    // 2: Get Transaction ID and create Data
+    const newTransaction = await transactionStore.addTransaction({ bookingId });
+    const transactionId = newTransaction.transactionId;
+
+    // 3: Connect Transaction to Payment
     const formatPayment = {
-      ...formatBooking,
-      paymentDetails,
+      ...paymentDetails.value,
+      transactionId,
     };
-
-    await bookingStore.addBooking(formatBooking);
     await paymentStore.addPayment(formatPayment);
 
     toast.add({
@@ -105,24 +117,16 @@ const addBookingHandler = async (newBooking, paymentDetails) => {
 };
 
 //STEP: 1
-// const stepOneBtn = () => {
-//   if (
-//     !newBooking.value.checkInDate ||
-//     !newBooking.value.checkOutDate ||
-//     !newBooking.value.mode
-//   ) {
-//     alert("Please fill up all fields");
-//   } else {
-//     activateCallback("2");
-//   }
-// };
-
-//STEP 2
-const stepTwoBtn = () => {
-  if (!newBooking.packageId) {
-    alert("Please select a package");
+const stepOneBtn = (activateCallback) => {
+  const { checkInDate, checkOutDate, mode } = newBooking.value;
+  if (!checkInDate || !checkOutDate || !mode) {
+    alert("Please fill up all fields");
+  } else {
+    activateCallback("2");
   }
 };
+
+//STEP 2
 
 // ref = reactive state
 // selectedPackage is a reactive state that will hold the selected package fromt child (BookPackage)
@@ -131,17 +135,44 @@ const selectedPackage = ref(null);
 // availPackageHandler = function for the availPackage in BookPackage
 const availPackageHandler = (pkg) => {
   selectedPackage.value = pkg; // this will update the reactive state of the selectedPackage = ref(null) into the selected package from the BookPackage
+  newBooking.value.packageId = pkg.packageId;
+  console.log("Selected Package:", newBooking.value.packageId);
+};
+
+const stepTwoBtn = (activateCallback) => {
+  if (!newBooking.value.packageId) {
+    alert("Please select a package");
+  } else {
+    activateCallback("3");
+  }
 };
 
 //STEP 3
-const stepThreeBtn = () => {
-  if (
-    !newBooking.value.paymentTerms ||
-    !paymentDetails.value.reference ||
-    !paymentDetails.value.imageUrl
-  ) {
+const stepThreeBtn = (activateCallback) => {
+  if (!newBooking.value.paymentTerms || !paymentDetails.value.reference) {
     alert("Please fill up al the fields");
+  } else {
+    activateCallback("4");
   }
+};
+
+//STEP 4
+const isChecked = ref(false);
+const showTermsAndCondition = ref(false);
+const showContinueModal = ref(false);
+
+const openTermsAndCondition = () => {
+  showTermsAndCondition.value = true;
+};
+
+const OpenContinueModal = async () => {
+  await addBookingHandler(newBooking, paymentDetails);
+  showContinueModal.value = true;
+  showTermsAndCondition.value = false;
+
+  setTimeout(() => {
+    showContinueModal.value = false;
+  }, 3000);
 };
 
 const currentStep = ref(0);
@@ -156,22 +187,6 @@ const prevBtn = () => {
   if (currentStep.value > 0) {
     currentStep.value--;
   }
-};
-
-const showTermsAndCondition = ref(false);
-const showContinueModal = ref(false);
-
-const openTermsAndCondition = () => {
-  showTermsAndCondition.value = true;
-};
-
-const OpenContinueModal = () => {
-  showContinueModal.value = true;
-  showTermsAndCondition.value = false;
-
-  closeTimeOut = setTimeout(() => {
-    showContinueModal.value = false;
-  }, 3000);
 };
 
 // FOR CALENDAR
@@ -473,9 +488,8 @@ const getBookingStyle = (slotDate) => {
 
               <button
                 @click="
-                  activateCallback('2');
                   nextBtn();
-                  stepOneBtn();
+                  stepOneBtn(activateCallback);
                 "
                 class="bg-[#194d1d] text-white w-50 h-15 font-black font-[Poppins] text-xl rounded-xl cursor-pointer ml-[45rem]"
               >
@@ -517,12 +531,12 @@ const getBookingStyle = (slotDate) => {
                       <p>Date:</p>
                     </div>
                     <div class="w-full flex">
-                      <p>Check-in: {{ formatDate(newBooking.checkInDate) }}</p>
+                      <p>Check-in: {{ formatDates(newBooking.checkInDate) }}</p>
                       <button><i class="pi pi-calendar"></i></button>
                     </div>
                     <div class="w-full flex border-1">
                       <p>
-                        Check-out: {{ formatDate(newBooking.checkOutDate) }}
+                        Check-out: {{ formatDates(newBooking.checkOutDate) }}
                       </p>
                       <div
                         class="relative inline-block text-right border-1"
@@ -543,7 +557,8 @@ const getBookingStyle = (slotDate) => {
                     </h1>
                     <div class="flex flex-col bg-[#fcfcfc] p-1 rounded-sm">
                       <p>Package Name: {{ selectedPackage?.name }}</p>
-                      <p>Inclusion: {{ selectedPackage?.inclusion }}</p>
+                      <p>Inclusion:</p>
+                      <pre>{{ selectedPackage?.inclusion }}</pre>
                       <p>Mode:{{ selectedPackage?.mode }}</p>
                     </div>
                     <div class="bg-[#CDDA54] p-1 rounde-sm">
@@ -560,8 +575,8 @@ const getBookingStyle = (slotDate) => {
                       label="Continue"
                       iconPos="right"
                       @click="
-                        activateCallback('3');
                         nextBtn();
+                        stepTwoBtn(activateCallback);
                       "
                     />
                     <Button
@@ -727,15 +742,19 @@ const getBookingStyle = (slotDate) => {
                     <h1 class="text-lg font-bold font-[Poppins]">
                       Package Selected:
                     </h1>
-                    <div class="flex bg-[#fcfcfc] p-1 rounded-sm">
-                      <p>Package Name:</p>
-                      <p>Price</p>
+                    <div class="flex flex-col bg-[#fcfcfc] p-1 rounded-sm">
+                      <p>Package Name: {{ selectedPackage?.name }}</p>
+                      <p>Inclusion:</p>
+                      <pre>{{ selectedPackage?.inclusion }}</pre>
+                      <p>Mode:{{ selectedPackage?.mode }}</p>
                     </div>
                     <div class="bg-[#CDDA54] p-1 rounded-sm">
                       <p>VAT Charged:</p>
                     </div>
                     <div class="bg-[#4BB344] p-1 rounded-sm">
-                      <p>TOTAL CHARGED:</p>
+                      <p>
+                        TOTAL CHARGED: {{ formatPeso(selectedPackage?.price) }}
+                      </p>
                     </div>
                     <div>
                       <h1 class="text-lg font-bold font-[Poppins]">Payment:</h1>
@@ -765,7 +784,7 @@ const getBookingStyle = (slotDate) => {
                         <h1 class="text-xl font-bold font-[Poppins] mb-3 mt-3">
                           Proof of Payment:
                         </h1>
-                        <FileUpload
+                        <!--<FileUpload
                           ref="fileupload"
                           v-model="paymentDetails.imageUrl"
                           mode="basic"
@@ -774,6 +793,11 @@ const getBookingStyle = (slotDate) => {
                           accept="image/*"
                           :maxFileSize="1000000"
                           @upload="onUpload"
+                        />-->
+                        <input
+                          class="p-2"
+                          placeholder="LINK"
+                          v-model="paymentDetails.imageUrl"
                         />
                       </div>
                     </div>
@@ -783,9 +807,8 @@ const getBookingStyle = (slotDate) => {
                       label="Continue"
                       iconPos="right"
                       @click="
-                        activateCallback('4');
                         nextBtn();
-                        stepThreeBtn();
+                        stepThreeBtn(activateCallback);
                       "
                     />
                     <Button
@@ -864,14 +887,18 @@ const getBookingStyle = (slotDate) => {
                     Package Selected:
                   </h1>
                   <div class="flex bg-[#fcfcfc] p-1 rounded-sm">
-                    <p>Package Name:</p>
+                    <p>Package Name: {{ selectedPackage?.name }}</p>
+                    <p>Inclusion: {{ selectedPackage?.inclusion }}</p>
+                    <p>Mode:{{ selectedPackage?.mode }}</p>
                     <p>Price</p>
                   </div>
                   <div class="bg-[#CDDA54] p-1 rounded-sm">
                     <p>VAT Charged:</p>
                   </div>
                   <div class="bg-[#4BB344] p-1 rounded-sm">
-                    <p>TOTAL CHARGED:</p>
+                    <p>
+                      TOTAL CHARGED:{{ formatPeso(selectedPackage?.price) }}
+                    </p>
                   </div>
                 </div>
 
@@ -987,10 +1014,16 @@ const getBookingStyle = (slotDate) => {
         </p>
       </div>
       <div class="checkboxConfirmation" style="margin: auto">
-        <input type="checkbox" id="signupCheck" />
+        <input type="checkbox" id="signupCheck" v-model="isChecked" />
         <label for="bookingCheck">I accept all terms & conditions</label>
       </div>
-      <button class="Bookingbtn" @click="OpenContinueModal">Continue</button>
+      <button
+        class="Bookingbtn"
+        :disabled="!isChecked"
+        @click="OpenContinueModal"
+      >
+        Continue
+      </button>
     </Dialog>
 
     <div v-if="showContinueModal" class="modal">

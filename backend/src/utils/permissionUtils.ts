@@ -38,7 +38,7 @@ export async function verifyPermission(
   }
 
   if(user.role === Roles.CUSTOMER){
-    if(action === "read"){
+    if(["create", "read", "update"].includes(action)){
       return true;
     } else{
       return false;
