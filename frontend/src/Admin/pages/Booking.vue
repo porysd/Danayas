@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, computed } from "vue";
+import { ref, onMounted, onUnmounted, computed } from "vue";
 import SearchBar from "../components/SearchBar.vue";
 import T3ButtonBooking from "../components/T3ButtonBooking.vue";
 import AddButtonBooking from "../components/AddButtonBooking.vue";
@@ -16,11 +16,14 @@ import TabList from "primevue/tablist";
 import Tab from "primevue/tab";
 import TabPanels from "primevue/tabpanels";
 import TabPanel from "primevue/tabpanel";
+import Checkbox from "primevue/checkbox";
 import { useBookingStore } from "../../stores/bookingStore.js";
 import { usePackageStore } from "../../stores/packageStore.js";
 import { usePaymentStore } from "../../stores/paymentStore.js";
+import { useTransactionStore } from "../../stores/transactionStore.js";
 
 const bookingStore = useBookingStore();
+const transactionStore = useTransactionStore();
 const packageStore = usePackageStore();
 const paymentStore = usePaymentStore();
 
@@ -32,14 +35,22 @@ onMounted(() => {
 
 const addBookingHandler = async (booking, paymentDetails) => {
   try {
+    // 1: Create Booking
     const newBooking = await bookingStore.addBooking(booking);
     const bookingId = newBooking.bookingId;
 
+    // 2: Create Transaction
+    const newTransaction = await transactionStore.addTransaction({ bookingId });
+    console.log("Created transaction:", newTransaction);
+    const transactionId = newTransaction.transactionId;
+
+    // 3: Create Payment with transaction
     const fullPaymentDetails = {
       ...paymentDetails,
-      bookingId,
+      transactionId,
     };
 
+    console.log("Full payment details being sent:", fullPaymentDetails);
     await paymentStore.addPayment(fullPaymentDetails);
 
     toast.add({
@@ -49,7 +60,7 @@ const addBookingHandler = async (booking, paymentDetails) => {
       life: 3000,
     });
 
-    await bookingStore.fetchAllBookings();
+    await bookingStore.fetchUserBookings();
   } catch (error) {
     console.error("Error adding booking:", error);
   }
@@ -68,6 +79,11 @@ const bookings = ref([]);
 const packages = ref([]);
 
 const totalBookings = computed(() => filteredBooking.value.length);
+const totalPendings = computed(() => filteredPendings.value.length);
+const totalReserved = computed(() => filteredReserved.value.length);
+const totalRescheduled = computed(() => filteredRescheduled.value.length);
+const totalCancelled = computed(() => filteredCancelled.value.length);
+const totalCompleted = computed(() => filteredCompleted.value.length);
 
 // Get Package Name using packageId
 const getPackageName = (packageId) => {
@@ -110,8 +126,10 @@ const getStatusSeverity = (status) => {
   switch (status) {
     case "pending":
       return "warn";
-    case "confirmed":
+    case "reserved":
       return "info";
+    case "rescheduled":
+      return "secondary";
     case "completed":
       return "success";
     case "cancelled":
@@ -201,7 +219,154 @@ const filteredBooking = computed(() => {
     );
   }
 
+  // Sort booking
+  result = result.sort((a, b) => {
+    const statusOrder = {
+      pending: 1,
+      reserved: 2,
+      rescheduled: 3,
+      cancelled: 4,
+      completed: 5,
+    };
+    return statusOrder[a.bookStatus] - statusOrder[b.bookStatus];
+  });
+
   return result;
+});
+
+// Paginator or pagination of the tables
+const firstPen = ref(0);
+const rowsPen = ref(10);
+
+const paginatedPendings = computed(() => {
+  return filteredPendings.value.slice(
+    firstPen.value,
+    firstPen.value + rowsPen.value
+  );
+});
+
+const filteredPendings = computed(() => {
+  let result = bookingStore.bookingPending;
+
+  if (searchQuery.value !== "") {
+    result = result.filter((booking) =>
+      Object.values(booking).some((val) =>
+        String(val).toLowerCase().includes(searchQuery.value.toLowerCase())
+      )
+    );
+  }
+  return result;
+});
+
+// Paginator or pagination of the tables
+const firstRes = ref(0);
+const rowsRes = ref(10);
+
+const paginatedReserved = computed(() => {
+  return filteredReserved.value.slice(
+    firstRes.value,
+    firstRes.value + rowsRes.value
+  );
+});
+
+const filteredReserved = computed(() => {
+  let result = bookingStore.bookingReserved;
+
+  if (searchQuery.value !== "") {
+    result = result.filter((booking) =>
+      Object.values(booking).some((val) =>
+        String(val).toLowerCase().includes(searchQuery.value.toLowerCase())
+      )
+    );
+  }
+  return result;
+});
+
+// Paginator or pagination of the tables
+const firstCan = ref(0);
+const rowsCan = ref(10);
+
+const paginatedCancelled = computed(() => {
+  return filteredCancelled.value.slice(
+    firstCan.value,
+    firstCan.value + rowsCan.value
+  );
+});
+
+const filteredCancelled = computed(() => {
+  let result = bookingStore.bookingCancelled;
+
+  if (searchQuery.value !== "") {
+    result = result.filter((booking) =>
+      Object.values(booking).some((val) =>
+        String(val).toLowerCase().includes(searchQuery.value.toLowerCase())
+      )
+    );
+  }
+  return result;
+});
+
+// Paginator or pagination of the tables
+const firstCom = ref(0);
+const rowsCom = ref(10);
+
+const paginatedCompleted = computed(() => {
+  return filteredCompleted.value.slice(
+    firstCom.value,
+    firstCom.value + rowsCom.value
+  );
+});
+
+const filteredCompleted = computed(() => {
+  let result = bookingStore.bookingCompleted;
+
+  if (searchQuery.value !== "") {
+    result = result.filter((booking) =>
+      Object.values(booking).some((val) =>
+        String(val).toLowerCase().includes(searchQuery.value.toLowerCase())
+      )
+    );
+  }
+  return result;
+});
+
+// Paginator or pagination of the tables
+const firstResc = ref(0);
+const rowsResc = ref(10);
+
+const paginatedRescheduled = computed(() => {
+  return filteredRescheduled.value.slice(
+    firstResc.value,
+    firstResc.value + rowsResc.value
+  );
+});
+
+const filteredRescheduled = computed(() => {
+  let result = bookingStore.bookingRescheduled;
+
+  if (searchQuery.value !== "") {
+    result = result.filter((booking) =>
+      Object.values(booking).some((val) =>
+        String(val).toLowerCase().includes(searchQuery.value.toLowerCase())
+      )
+    );
+  }
+  return result;
+});
+const hideMenu = ref(false);
+
+const closeMenu = (event) => {
+  if (hideMenu.value && !hideMenu.value.contains(event.target)) {
+    showMenu.value = false;
+  }
+};
+
+onMounted(() => {
+  document.addEventListener("click", closeMenu);
+});
+
+onUnmounted(() => {
+  document.addEventListener("click", closeMenu);
 });
 
 //             <h2 class="text-xl font-medium">Total bookings: {{ totalBookings }}</h2>
@@ -227,63 +392,114 @@ const filteredBooking = computed(() => {
 
             <div
               v-if="showMenu"
-              class="absolute -left-30 mt-2 w-[21rem] shadow-md z-50 bg-[#fcf5f5] p-4 rounded"
+              ref="hideMenu"
+              class="absolute -left-30 mt-2 w-[21rem] shadow-md z-50 bg-[#fcfcfc] dark:bg-stone-900 p-4 rounded-lg border-gray-200 dark:border-gray-700"
             >
               <div class="flex flex-row">
                 <div class="flex-1">
                   <h2 class="font-bold mb-1">Status</h2>
                   <ul>
-                    <li class="hover:bg-gray-100 flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        id="pending"
+                    <li
+                      class="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 p-1 rounded-md"
+                    >
+                      <Checkbox
                         v-model="filterStatuses.pending"
+                        binary
+                        inputId="pending"
                       />
-                      <label class="" for="pending">Pending</label>
+                      <label
+                        class="text-gray-600 dark:text-gray-300 text-sm"
+                        for="pending"
+                        >Pending</label
+                      >
                     </li>
-                    <li class="hover:bg-gray-100 flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        id="confirmed"
-                        v-model="filterStatuses.confirmed"
+                    <li
+                      class="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 p-1 rounded-md"
+                    >
+                      <Checkbox
+                        v-model="filterStatuses.reserved"
+                        binary
+                        inputId="reserved"
                       />
-                      <label for="confirmed">Confirmed</label>
+                      <label
+                        class="text-gray-600 dark:text-gray-300 text-sm"
+                        for="reserved"
+                        >Reserved</label
+                      >
                     </li>
-                    <li class="hover:bg-gray-100 flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        id="completed"
-                        v-model="filterStatuses.completed"
+                    <li
+                      class="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 p-1 rounded-md"
+                    >
+                      <Checkbox
+                        v-model="filterStatuses.rescheduled"
+                        binary
+                        inputId="rescheduled"
                       />
-                      <label for="completed">Completed</label>
+                      <label
+                        class="text-gray-600 dark:text-gray-300 text-sm"
+                        for="rescheduled"
+                        >Rescheduled</label
+                      >
                     </li>
-                    <li class="hover:bg-gray-100 flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        id="cancelled"
+                    <li
+                      class="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 p-1 rounded-md"
+                    >
+                      <Checkbox
                         v-model="filterStatuses.cancelled"
+                        binary
+                        inputId="cancelled"
                       />
-                      <label for="cancelled">Cancelled</label>
+                      <label
+                        class="text-gray-600 dark:text-gray-300 text-sm"
+                        for="cancelled"
+                        >Cancelled</label
+                      >
+                    </li>
+                    <li
+                      class="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 p-1 rounded-md"
+                    >
+                      <Checkbox
+                        v-model="filterStatuses.completed"
+                        binary
+                        inputId="completed"
+                      />
+                      <label
+                        class="text-gray-600 dark:text-gray-300 text-sm"
+                        for="completed"
+                        >Completed</label
+                      >
                     </li>
                   </ul>
                   <Divider />
                   <h2 class="font-bold mb-1">Payment Terms</h2>
                   <ul>
-                    <li class="hover:bg-gray-100 flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        id="installment"
+                    <li
+                      class="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 p-1 rounded-md"
+                    >
+                      <Checkbox
                         v-model="filterPaymentTerms.installment"
+                        binary
+                        inputId="installment"
                       />
-                      <label for="installment">Installment</label>
+                      <label
+                        class="text-gray-600 dark:text-gray-300 text-sm"
+                        for="installment"
+                        >Installment</label
+                      >
                     </li>
-                    <li class="hover:bg-gray-100 flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        id="fullpayment"
+                    <li
+                      class="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 p-1 rounded-md"
+                    >
+                      <Checkbox
                         v-model="filterPaymentTerms['full-payment']"
+                        binary
+                        inputId="fullpayment"
                       />
-                      <label for="fullpayment">Full Payment</label>
+                      <label
+                        class="text-gray-600 dark:text-gray-300 text-sm"
+                        for="fullpayment"
+                        >Full Payment</label
+                      >
                     </li>
                   </ul>
                 </div>
@@ -291,49 +507,79 @@ const filteredBooking = computed(() => {
                 <div class="flex-1">
                   <h2 class="font-bold mb-1">Mode</h2>
                   <ul>
-                    <li class="hover:bg-gray-100 flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        id="night"
+                    <li
+                      class="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 p-1 rounded-md"
+                    >
+                      <Checkbox
                         v-model="filterMode['day-time']"
+                        binary
+                        inputId="day"
                       />
-                      <label for="night">Day</label>
+                      <label
+                        class="text-gray-600 dark:text-gray-300 text-sm"
+                        for="day"
+                        >Day</label
+                      >
                     </li>
-                    <li class="hover:bg-gray-100 flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        id="night"
+                    <li
+                      class="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 p-1 rounded-md"
+                    >
+                      <Checkbox
                         v-model="filterMode['night-time']"
+                        binary
+                        inputId="night"
                       />
-                      <label for="night">Night</label>
+                      <label
+                        class="text-gray-600 dark:text-gray-300 text-sm"
+                        for="night"
+                        >Night</label
+                      >
                     </li>
-                    <li class="hover:bg-gray-100 flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        id="whole-day"
+                    <li
+                      class="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 p-1 rounded-md"
+                    >
+                      <Checkbox
                         v-model="filterMode['whole-day']"
+                        binary
+                        inputId="whole-day"
                       />
-                      <label for="whole-day">Whole Day</label>
+                      <label
+                        class="text-gray-600 dark:text-gray-300 text-sm"
+                        for="whole-day"
+                        >Whole Day</label
+                      >
                     </li>
                   </ul>
                   <Divider />
                   <h2 class="font-bold mb-1">Reservation Type</h2>
                   <ul>
-                    <li class="hover:bg-gray-100 flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        id="online"
+                    <li
+                      class="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 p-1 rounded-md"
+                    >
+                      <Checkbox
                         v-model="filterReservationType.online"
+                        binary
+                        inputId="online"
                       />
-                      <label for="online">Online</label>
+                      <label
+                        class="text-gray-600 dark:text-gray-300 text-sm"
+                        for="online"
+                        >Online</label
+                      >
                     </li>
-                    <li class="hover:bg-gray-100 flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        id="walk-in"
+                    <li
+                      class="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 p-1 rounded-md"
+                    >
+                      <Checkbox
                         v-model="filterReservationType['walk-in']"
+                        binary
+                        inputId="walk-in"
                       />
-                      <label for="walk-in">Walk In</label>
+                      <label
+                        class="text-gray-600 dark:text-gray-300 text-sm"
+                        for="walk-in"
+                        >Walk In</label
+                      >
                     </li>
                   </ul>
                 </div>
@@ -380,7 +626,7 @@ const filteredBooking = computed(() => {
                   <tbody>
                     <tr
                       class="bRow border-[#194D1D] dark:border-[#18181b]"
-                      v-for="booking in bookingStore.bookingPending"
+                      v-for="booking in paginatedPendings"
                       :key="booking.id"
                       @click="openBookingDetails(booking)"
                     >
@@ -420,15 +666,16 @@ const filteredBooking = computed(() => {
                           :packageName="getPackageName(booking.packageId)"
                           @deleteBooking="deleteBookingHandler"
                           @updateStatus="updateBookingHandler"
+                          @updateBooking="updateBookingDateHandler"
                         />
                       </td>
                     </tr>
                   </tbody>
                 </table>
                 <Paginator
-                  :first="first"
-                  :rows="rows"
-                  :totalRecords="totalBookings"
+                  :first="firstPen"
+                  :rows="rowsPen"
+                  :totalRecords="totalPendings"
                   :rowsPerPageOptions="[5, 10, 20, 30]"
                   @page="onPageChange"
                   class="rowPagination"
@@ -456,7 +703,7 @@ const filteredBooking = computed(() => {
                   <tbody>
                     <tr
                       class="bRow border-[#194D1D] dark:border-[#18181b]"
-                      v-for="booking in bookingStore.bookingReserved"
+                      v-for="booking in paginatedReserved"
                       :key="booking.id"
                       @click="openBookingDetails(booking)"
                     >
@@ -496,15 +743,16 @@ const filteredBooking = computed(() => {
                           :packageName="getPackageName(booking.packageId)"
                           @deleteBooking="deleteBookingHandler"
                           @updateStatus="updateBookingHandler"
+                          @updateBooking="updateBookingDateHandler"
                         />
                       </td>
                     </tr>
                   </tbody>
                 </table>
                 <Paginator
-                  :first="first"
-                  :rows="rows"
-                  :totalRecords="totalBookings"
+                  :first="firstRes"
+                  :rows="rowsRes"
+                  :totalRecords="totalReserved"
                   :rowsPerPageOptions="[5, 10, 20, 30]"
                   @page="onPageChange"
                   class="rowPagination"
@@ -532,7 +780,7 @@ const filteredBooking = computed(() => {
                   <tbody>
                     <tr
                       class="bRow border-[#194D1D] dark:border-[#18181b]"
-                      v-for="booking in bookingStore.bookingRescheduled"
+                      v-for="booking in paginatedRescheduled"
                       :key="booking.id"
                       @click="openBookingDetails(booking)"
                     >
@@ -572,15 +820,16 @@ const filteredBooking = computed(() => {
                           :packageName="getPackageName(booking.packageId)"
                           @deleteBooking="deleteBookingHandler"
                           @updateStatus="updateBookingHandler"
+                          @updateBooking="updateBookingDateHandler"
                         />
                       </td>
                     </tr>
                   </tbody>
                 </table>
                 <Paginator
-                  :first="first"
-                  :rows="rows"
-                  :totalRecords="totalBookings"
+                  :first="firstResc"
+                  :rows="rowsResc"
+                  :totalRecords="totalRescheduled"
                   :rowsPerPageOptions="[5, 10, 20, 30]"
                   @page="onPageChange"
                   class="rowPagination"
@@ -608,7 +857,7 @@ const filteredBooking = computed(() => {
                   <tbody>
                     <tr
                       class="bRow border-[#194D1D] dark:border-[#18181b]"
-                      v-for="booking in bookingStore.bookingCancelled"
+                      v-for="booking in paginatedCancelled"
                       :key="booking.id"
                       @click="openBookingDetails(booking)"
                     >
@@ -654,9 +903,9 @@ const filteredBooking = computed(() => {
                   </tbody>
                 </table>
                 <Paginator
-                  :first="first"
-                  :rows="rows"
-                  :totalRecords="totalBookings"
+                  :first="firstCan"
+                  :rows="rowsCan"
+                  :totalRecords="totalCancelled"
                   :rowsPerPageOptions="[5, 10, 20, 30]"
                   @page="onPageChange"
                   class="rowPagination"
@@ -684,7 +933,7 @@ const filteredBooking = computed(() => {
                   <tbody>
                     <tr
                       class="bRow border-[#194D1D] dark:border-[#18181b]"
-                      v-for="booking in bookingStore.bookingCompleted"
+                      v-for="booking in paginatedCompleted"
                       :key="booking.id"
                       @click="openBookingDetails(booking)"
                     >
@@ -730,9 +979,9 @@ const filteredBooking = computed(() => {
                   </tbody>
                 </table>
                 <Paginator
-                  :first="first"
-                  :rows="rows"
-                  :totalRecords="totalBookings"
+                  :first="firstCom"
+                  :rows="rowsCom"
+                  :totalRecords="totalCompleted"
                   :rowsPerPageOptions="[5, 10, 20, 30]"
                   @page="onPageChange"
                   class="rowPagination"
@@ -760,7 +1009,7 @@ const filteredBooking = computed(() => {
                   <tbody>
                     <tr
                       class="bRow border-[#194D1D] dark:border-[#18181b]"
-                      v-for="booking in bookingStore.bookings"
+                      v-for="booking in paginatedBookings"
                       :key="booking.id"
                       @click="openBookingDetails(booking)"
                     >
@@ -901,6 +1150,7 @@ td {
   top: 0;
   left: 0;
   overflow: hidden;
+  max-width: 100%;
 }
 
 .searchB {
@@ -925,11 +1175,12 @@ td {
 
 .tableContainer {
   max-height: 75%;
-  overflow-y: auto;
+  overflow: visible;
   border-radius: 5px;
 }
 
-.tableContainer::-webkit-scrollbar {
+.tableContainer::-webkit-scrollbar,
+.tabBookings::-webkit-scrollbar {
   display: none;
 }
 
@@ -1006,6 +1257,7 @@ td {
 :deep(.rowPagination) {
   .p-paginator {
     background: transparent;
+    overflow: visible;
 
     border-radius: 0;
     height: 50px;
@@ -1018,31 +1270,46 @@ td {
 :deep(.tabBookings) {
   max-height: 75%;
   overflow-y: auto;
+
   .p-tabpanels {
     background: transparent;
     padding: 0;
   }
+
   .p-tablist {
     --p-tabs-tablist-background: transparent;
+    display: flex;
+    gap: 8px;
+    padding-bottom: 4px;
+    border-bottom: 2px solid #e0e0e0;
   }
+
   .p-tab {
     font-size: 15px;
-    font-weight: bold;
-    padding: 10px;
-    margin-top: 0;
-    border-radius: 5px 5px 0 0;
-    border: 1px solid #194d1d;
+    font-weight: 600;
+    padding: 10px 16px;
+    border-radius: 12px 12px 0 0;
+    background-color: transparent;
+    color: #194d1d;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: none;
+    position: relative;
   }
+
   .p-tab.p-tab-active {
-    background-color: #194d1d;
-    color: white;
+    background: #194d1d;
+    color: #ffffff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   }
-  .p-tab:hover {
-    background-color: #b5d9b5;
+
+  .p-tab:hover:not(.p-tab-active) {
+    background-color: #e8f5e9;
+    color: #194d1d;
   }
+
   .p-tablist-active-bar {
-    color: transparent;
-    background: white;
+    display: none;
   }
 }
 </style>

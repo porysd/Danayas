@@ -316,7 +316,7 @@ console.log("Booking Data:", newBooking.value, paymentDetails.value);
     <Dialog
       v-model:visible="showPaymentModal"
       modal
-      :style="{ width: '50rem', minHeight: '30rem' }"
+      :style="{ width: '50rem', minHeight: '20rem' }"
     >
       <template #header>
         <div class="flex flex-col items-center justify-center w-full">
