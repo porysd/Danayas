@@ -16,9 +16,6 @@ const showModal = ref(false);
 const loginStatus = ref(null);
 const errorMessage = ref("");
 
-// const adUser = "admin";
-// const adPass = "admin123";
-
 const login = async () => {
   errorMessage.value = "";
   if (!email.value || !password.value) {
@@ -57,10 +54,11 @@ const login = async () => {
     } else {
       loginStatus.value = "error";
       errorMessage.value = data.message || "Invalid credentials.";
-      showModal.value = false;
+      setTimeout(() => {
+        showModal.value = false;
+      }, 1500);
     }
   } catch (error) {
-    // Handle network errors or unexpected issues
     console.error("Login failed:", error);
     loginStatus.value = "error";
     errorMessage.value = "An error occurred. Please try again later.";
@@ -73,130 +71,112 @@ const login = async () => {
 
 <template>
   <div
-    class="loginContainer flex flex-col md:flex-row items-center justify-center min-h-screen"
+    class="loginContainer flex items-center justify-center min-h-screen bg-gradient-to-br from-green-200 to-green-500"
   >
     <div
-      class="loginBox w-full md:w-5/12 flex flex-col items-center justify-center gap-3 py-5 rounded-xl shadow-lg"
+      class="loginBox bg-white/30 backdrop-blur-md shadow-2xl rounded-2xl p-10 flex flex-col items-center gap-6 w-full max-w-md"
     >
-      <h1 class="text-3xl font-bold text-green-800 mb-5 mt-5">
-        ADMINISTRATOR SIGN IN
-      </h1>
+      <h1 class="text-4xl font-extrabold text-gray-800">Employee Login</h1>
+      <p class="text-gray-600 text-sm mb-4">
+        Welcome back! Please enter your details.
+      </p>
 
-      <div class="flex flex-col gap-2 w-full max-w-md">
-        <label for="email">Email</label>
-        <InputText id="email" type="text" v-model="email" />
+      <div class="flex flex-col gap-2 w-full">
+        <label for="email" class="text-sm text-gray-700">Email </label>
+        <InputText id="email" v-model="email" class="p-3 rounded-lg" />
       </div>
 
-      <div class="flex flex-col gap-2 w-full max-w-md">
-        <label for="password">Password</label>
-        <InputText id="password" type="password" v-model="password" />
-      </div>
-
-      <p v-if="errorMessage" class="text-red-600">{{ errorMessage }}</p>
-
-      <div class="flex w-full max-w-md mb-5 mt-5">
-        <Button
-          label="Login"
-          icon="pi pi-user"
-          class="w-full"
-          @click="login"
-          :disabled="loading"
+      <div class="flex flex-col gap-2 w-full">
+        <label for="password" class="text-sm text-gray-700">Password</label>
+        <InputText
+          id="password"
+          type="password"
+          v-model="password"
+          class="p-3 rounded-lg"
         />
       </div>
+
+      <p v-if="errorMessage" class="text-red-500 text-sm">{{ errorMessage }}</p>
+
+      <Button
+        label="Sign In"
+        icon="pi pi-sign-in"
+        class="w-full mt-4 p-3 text-white bg-green-700 hover:bg-green-800 rounded-lg transition-all"
+        @click="login"
+        :disabled="loading"
+      />
+
+      <p class="text-xs text-gray-500 mt-4">© 2025 Danayas Resorts</p>
     </div>
   </div>
-
   <div
     v-if="showModal"
-    class="fixed top-0 left-0 w-full h-full bg-opacity-50 flex justify-center items-center"
+    class="fixed inset-0 bg-black/50 flex items-center justify-center"
   >
-    <div class="bg-white p-6 rounded-lg text-center w-80">
+    <div
+      class="bg-white p-8 rounded-2xl flex flex-col items-center gap-4 shadow-lg w-80"
+    >
       <ProgressSpinner v-if="loading" style="width: 50px; height: 50px" />
-      <i
-        v-else-if="loginStatus === 'success'"
-        class="pi pi-check-circle text-green-600 text-4xl"
-      ></i>
-      <i
-        v-else-if="loginStatus === 'error'"
-        class="pi pi-times-circle text-red-600 text-4xl"
-      ></i>
-      <p v-if="loginStatus === 'success'" class="text-green-600 font-bold">
-        Login Successful! Welcome {{ adUser }}
-      </p>
-      <p v-if="loginStatus === 'error'" class="text-red-600 font-bold">
-        Invalid Credentials
-      </p>
+      <template v-else>
+        <i
+          v-if="loginStatus === 'success'"
+          class="pi pi-check-circle text-green-500 text-5xl"
+        ></i>
+        <i
+          v-else-if="loginStatus === 'error'"
+          class="pi pi-times-circle text-red-500 text-5xl"
+        ></i>
+        <p
+          v-if="loginStatus === 'success'"
+          class="text-green-600 font-semibold"
+        >
+          Login Successful!
+        </p>
+        <p v-if="loginStatus === 'error'" class="text-red-600 font-semibold">
+          Login Failed!
+        </p>
+      </template>
     </div>
   </div>
 
-  <router-view></router-view>
+  <router-view />
 </template>
 
 <style scoped>
 .loginContainer {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
+  background: #eef9eb;
 }
 
 .loginBox {
-  padding: 20px;
-  background: #fcfcfc;
-}
-
-.loginCred {
-  margin-bottom: 15px;
-}
-
-label {
-  display: block;
-  text-align: left;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
 }
 
 input {
-  width: 100%;
-  padding: 8px;
-  margin-top: 5px;
-  border: 1px solid #ccc;
-  background-color: white;
-  border-radius: 5px;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
 }
 
 button {
-  width: 100%;
-  padding: 10px;
-  background-color: #194d1d;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-}
-
-button:disabled {
-  background-color: gray;
-  cursor: not-allowed;
+  transition: all 0.3s ease;
 }
 
 button:hover {
-  background-color: #333;
+  background-color: #065f46;
+}
+
+label {
+  font-weight: 600;
+}
+
+.modal {
+  backdrop-filter: blur(4px);
 }
 
 .error {
   color: red;
   margin-bottom: 10px;
-}
-
-.modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
 }
 
 .modal-content {
