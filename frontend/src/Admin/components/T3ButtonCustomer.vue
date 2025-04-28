@@ -9,11 +9,15 @@ const toast = useToast();
 const showMenu = ref(false);
 const showArchiveModal = ref(false);
 const showDisableModal = ref(false);
-let previousStatus = null;
+const showEnableModal = ref(false);
 const formData = ref({});
 
 const prop = defineProps(["customer"]);
-const emit = defineEmits(["archiveCustomer", "disableCustomer"]);
+const emit = defineEmits([
+  "archiveCustomer",
+  "disableCustomer",
+  "enableCustomer",
+]);
 
 const openArchiveModal = () => {
   formData.value = { ...prop.customer };
@@ -24,13 +28,19 @@ const openArchiveModal = () => {
 const openDisableModal = () => {
   formData.value = { ...prop.customer };
   showDisableModal.value = true;
-  previousStatus = formData.value.status;
+  showMenu.value = false;
+};
+
+const openEnableModal = () => {
+  formData.value = { ...prop.customer };
+  showEnableModal.value = true;
   showMenu.value = false;
 };
 
 const closeModals = () => {
   showArchiveModal.value = false;
   showDisableModal.value = false;
+  showEnableModal.value = false;
 };
 
 const archiveCustomer = () => {
@@ -45,7 +55,6 @@ const archiveCustomer = () => {
 };
 
 const confirmDisable = () => {
-  formData.value.status = "disable";
   emit("disableCustomer", formData.value);
   toast.add({
     severity: "error",
@@ -57,15 +66,14 @@ const confirmDisable = () => {
 };
 
 const enableUser = () => {
-  formData.value.status = previousStatus;
-  emit("disableCustomer", formData.value);
+  emit("enableCustomer", formData.value);
   toast.add({
     severity: "success",
-    summary: "Enable",
-    detail: "Enabled User",
+    summary: "Enabled",
+    detail: "Successfully Enabled a User",
     life: 3000,
   });
-  showMenu.value = false;
+  closeModals();
 };
 
 const hideMenu = ref(false);
@@ -110,7 +118,7 @@ onUnmounted(() => {
         <li
           v-else
           class="hover:bg-gray-100 dark:hover:bg-gray-700"
-          @click="enableUser"
+          @click="openEnableModal"
         >
           Enable
         </li>
@@ -183,6 +191,41 @@ onUnmounted(() => {
         label="Disable"
         severity="danger"
         @click="confirmDisable"
+        class="font-bold w-full"
+      />
+    </div>
+  </Dialog>
+
+  <Dialog v-model:visible="showEnableModal" modal :style="{ width: '30rem' }">
+    <template #header>
+      <div class="flex flex-col items-center justify-center w-full">
+        <h2 class="text-xl font-bold font-[Poppins]">Enable User</h2>
+      </div>
+    </template>
+
+    <span
+      class="text-lg text-surface-700 dark:text-surface-400 block mb-8 text-center font-[Poppins]"
+    >
+      Are you sure you want to
+      <strong class="text-green-500">ENABLE</strong> this user:
+      <span class="font-black font-[Poppins]"
+        >{{ customer.firstName }} {{ customer.lastName }}</span
+      >?
+    </span>
+
+    <div class="flex justify-center gap-2 font-[Poppins]">
+      <Button
+        type="button"
+        label="Cancel"
+        severity="secondary"
+        @click="closeModals"
+        class="font-bold w-full"
+      />
+      <Button
+        type="button"
+        label="Enable"
+        severity="success"
+        @click="enableUser"
         class="font-bold w-full"
       />
     </div>
