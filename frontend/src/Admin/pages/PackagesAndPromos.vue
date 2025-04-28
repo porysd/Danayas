@@ -511,32 +511,47 @@ const getStatusSeverity = (status) => {
 
 :deep(.tabPackPro) {
   max-height: 75%;
-  overflow-y: visible;
+  overflow-y: auto;
+
   .p-tabpanels {
     background: transparent;
     padding: 0;
   }
+
   .p-tablist {
     --p-tabs-tablist-background: transparent;
+    display: flex;
+    gap: 8px;
+    padding-bottom: 4px;
+    border-bottom: 2px solid #e0e0e0;
   }
+
   .p-tab {
     font-size: 15px;
-    font-weight: bold;
-    padding: 10px;
-    margin-top: 0;
-    border-radius: 5px 5px 0 0;
-    border: 1px solid #194d1d;
+    font-weight: 600;
+    padding: 10px 16px;
+    border-radius: 12px 12px 0 0;
+    background-color: transparent;
+    color: #194d1d;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: none;
+    position: relative;
   }
+
   .p-tab.p-tab-active {
-    background-color: #194d1d;
-    color: white;
+    background: #194d1d;
+    color: #ffffff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   }
-  .p-tab:hover {
-    background-color: #b5d9b5;
+
+  .p-tab:hover:not(.p-tab-active) {
+    background-color: #e8f5e9;
+    color: #194d1d;
   }
+
   .p-tablist-active-bar {
-    color: transparent;
-    background: white;
+    display: none;
   }
 }
 </style>
