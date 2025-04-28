@@ -8,50 +8,28 @@ import Notification from "../components/Notification.vue";
 import ProfileAvatar from "../components/ProfileAvatar.vue";
 import Header from "../components/Header.vue";
 import Divider from "primevue/divider";
+import FullCalendar from "@fullcalendar/vue3";
+import dayGridPlugin from "@fullcalendar/daygrid";
+import timeGridPlugin from "@fullcalendar/timegrid";
+import interactionPlugin from "@fullcalendar/interaction";
+import { useBookingStore } from "../../stores/bookingStore.js";
 
-const bookings = ref([]);
-const customers = ref([]);
-const months = ref(new Array(12).fill(0));
-const day = ref(new Array(31).fill(0));
+const bookingStore = useBookingStore();
 
-// Get All Booking and Customer with pagination
 onMounted(async () => {
-  const limit = 50;
-  let page = 1;
-  let hasMoreData = true;
-
-  while (hasMoreData) {
-    const bResponse = await fetch(
-      `http://localhost:3000/bookings?limit=${limit}&page=${page}`
-    );
-    if (!bResponse.ok) throw new Error("Failed to fetch bookings");
-    const bookingData = await bResponse.json();
-
-    // const cResponse = await fetch(
-    //   `http://localhost:3000/users?limit=${limit}&page=${page}`
-    // );
-    // if (!cResponse.ok) throw new Error("Failed to fetch customers");
-    // const customerData = await cResponse.json();
-
-    if (bookingData.items.length === 0) {
-      hasMoreData = false;
-    } else {
-      bookings.value.push(...bookingData.items);
-      // customers.value.push(...customerData.items);
-      page++;
-    }
-  }
+  await bookingStore.fetchUserBookings();
 
   processBookings();
 });
 
-const totalCustomer = computed(() => customers.value.length);
+const months = ref(new Array(12).fill(0));
+const day = ref(new Array(31).fill(0));
 
 // Process bookings to count booking occurences per month
 const processBookings = () => {
   months.value = new Array(12).fill(0);
 
-  bookings.value.forEach((booking) => {
+  bookingStore.bookings.forEach((booking) => {
     if (booking.checkInDate) {
       const monthIndex = new Date(booking.checkInDate).getMonth();
       months.value[monthIndex]++;
@@ -78,18 +56,18 @@ const monthColors = [
 
 const chartData = ref({
   labels: [
-    "January",
-    "February",
-    "March",
-    "April",
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
     "May",
     "June",
     "July",
-    "August",
-    "September",
-    "October",
-    "November",
-    "December",
+    "Aug",
+    "Sept",
+    "Oct",
+    "Nov",
+    "Dec",
   ],
   datasets: [
     {
@@ -118,100 +96,106 @@ const chartOptions = ref({
 
 // Get PENDING Bookings
 const countPendingBookings = computed(() => {
-  return bookings.value.filter(
+  return bookingStore.bookingPending.filter(
     (b) => b.bookStatus && b.bookStatus.trim().toLowerCase() === "pending"
   ).length;
 });
 
 // Get CONFIRMED Booking Status
 const countConfirmedBookings = computed(() => {
-  return bookings.value.filter(
-    (b) => b.bookStatus && b.bookStatus.trim().toLowerCase() === "confirmed"
+  return bookingStore.bookingReserved.filter(
+    (b) => b.bookStatus && b.bookStatus.trim().toLowerCase() === "reserved"
   ).length;
 });
 
 // Get RESCHEDULED Booking Status
 const countRescheduledBooking = computed(() => {
-  return bookings.value.filter(
+  return bookingStore.bookingRescheduled.filter(
     (b) => b.bookStatus && b.bookStatus.trim().toLowerCase() === "rescheduled"
   ).length;
 });
 
 // Get CANCELLED Booking Status
 const countCancelledBookings = computed(() => {
-  return bookings.value.filter(
+  return bookingStore.bookingCancelled.filter(
     (b) => b.bookStatus && b.bookStatus.trim().toLowerCase() === "cancelled"
   ).length;
 });
 
 // Get COMPLETED Booking Status
 const countCompletedBookings = computed(() => {
-  return bookings.value.filter(
+  return bookingStore.bookingCompleted.filter(
     (b) => b.bookStatus && b.bookStatus.trim().toLowerCase() === "completed"
   ).length;
 });
 
+// Reserved dates for the calendar
+// const reservedDates = computed(() => {
+//   return bookingStore.bookings
+//     .filter((booking) => booking.bookStatus === "reserved")
+//     .map((booking) => ({
+//       start: new Date(booking.checkInDate),
+//       end: new Date(booking.checkOutDate),
+//     }));
+// });
+
 // Process booking days
-const getBookingStyle = (slotDate) => {
-  const jsDate = new Date(slotDate.year, slotDate.month - 1, slotDate.day);
+// FOR CALENDAR
+const mapBookingsToEvents = (bookings) => {
+  return bookings
+    .filter((b) => b.bookStatus === "reserved")
+    .map((b) => {
+      let backgroundColor;
+      let textColor = "white";
+      let title;
 
-  const formattedDate = jsDate.toISOString().split("T")[0];
+      switch (b.mode) {
+        case "day-time": // if someone booked day status it will give Night Available
+          backgroundColor = "#6A5ACD";
+          textColor = "black";
+          title = "Night Available";
+          break;
+        case "night-time": // if someone booked night status it will give Day Available
+          backgroundColor = "#FFD580";
+          textColor = "black";
+          title = "Day Available";
+          break;
+        case "whole-day": // if someone booked day and night status and whole day status it will give Fully Booked
+          backgroundColor = "#FF6B6B";
+          title = "Fully Booked";
+          break;
+        default:
+          backgroundColor = "#90EE94";
+          textColor = "#15803D";
+      }
 
-  const booking = bookings.value.find((b) =>
-    b.checkInDate.startsWith(formattedDate)
-  );
-
-  if (!booking) {
-    return {
-      backgroundColor: "#90EE94",
-      color: "#15803D",
-      width: "40px",
-      height: "40px",
-      display: "inline-flex",
-      justifyContent: "center",
-      alignItems: "center",
-      borderRadius: "10rem",
-      fontSize: "17px",
-    };
-  }
-
-  let backgroundColor;
-  let color;
-  switch (booking.mode) {
-    case "day-time":
-      backgroundColor = "#FFD580";
-      color = "white";
-      break;
-    case "night-time":
-      backgroundColor = "#6A5ACD";
-      color = "white";
-      break;
-    case "whole-day":
-      backgroundColor = "#FF6B6B";
-      color = "white";
-      break;
-    default:
-      backgroundColor = "#90EE94";
-      color = "#15803D";
-  }
-
-  return {
-    backgroundColor,
-    color,
-    width: "40px",
-    height: "40px",
-    display: "inline-flex",
-    justifyContent: "center",
-    alignItems: "center",
-    borderRadius: "10rem",
-    fontSize: "18px",
-  };
+      return {
+        id: b.bookingId,
+        title: title,
+        start: b.checkInDate,
+        // end: b.checkOutDate,
+        backgroundColor: backgroundColor,
+        textColor: textColor,
+        allDay: true,
+      };
+    });
 };
 
-// 4BB344
-// FF2D55
-// 3EDFFF
-// 1714BA
+const calendarOptions = ref({
+  plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin],
+  headerToolbar: {
+    left: "prev,next today",
+    center: "title",
+    right: "dayGridMonth,timeGridWeek,timeGridDay",
+  },
+  initialView: "dayGridMonth",
+  editable: false,
+  selectable: false,
+  selectMirror: false,
+  dayMaxEvents: false,
+  weekends: true,
+  events: computed(() => mapBookingsToEvents(bookingStore.bookings)),
+});
 </script>
 
 <template>
@@ -391,7 +375,12 @@ const getBookingStyle = (slotDate) => {
         <div
           class="calendarChart p-4 md:p-5 shadow-lg bg-[#FCFCFC] dark:bg-[#18181b] font-[Poppins]"
         >
-          <DatePicker
+          <FullCalendar class="fullCalendar" :options="calendarOptions">
+            <template #eventContent="{ event, timeText }">
+              <b>{{ timeText }}</b> <i>{{ event.title }}</i>
+            </template>
+          </FullCalendar>
+          <!--<DatePicker
             v-model="date"
             inline
             class="dateChart w-full sm:w-[30rem]"
@@ -406,9 +395,9 @@ const getBookingStyle = (slotDate) => {
                 </strong>
               </span>
             </template>
-          </DatePicker>
+          </DatePicker>-->
 
-          <div class="mt-4 mb-4 flex flex-wrap items-center gap-2 text-sm">
+          <div class="mt-2 flex flex-wrap items-center gap-2 text-sm">
             <div class="flex items-center gap-2">
               <span class="w-4 h-4 rounded-full bg-[#90EE90]"></span>
               <span>Available</span>
@@ -470,6 +459,53 @@ const getBookingStyle = (slotDate) => {
   }
 }
 
+:deep(.fullCalendar) {
+  margin: 0 auto;
+  width: 470px;
+  height: 320px;
+  font-size: 10px;
+
+  .fc {
+    font-family: Poppins, sans-serif;
+  }
+
+  .fc-toolbar-title {
+    font-size: 14px;
+  }
+
+  .fc-button {
+    background-color: #41ab5d;
+    color: white;
+    border-radius: 6px;
+    padding: 2px 6px;
+    font-size: 10px;
+    height: 24px;
+    min-width: 24px;
+  }
+
+  .fc-button .fc-icon {
+    font-size: 10px;
+  }
+
+  .fc-daygrid-event {
+    font-size: 10px;
+    padding: 1px 2px;
+    white-space: normal;
+  }
+
+  .fc-daygrid-more-link {
+    font-size: 9px;
+  }
+
+  .fc-event-title {
+    font-weight: 600;
+  }
+
+  .fc-daygrid-event-dot {
+    display: none; /* Hide dot, show full colored event */
+  }
+}
+
 .h1 {
   text-align: center;
   margin-top: 50px;
@@ -487,7 +523,6 @@ const getBookingStyle = (slotDate) => {
   position: absolute;
   top: 0;
   left: 0;
-  overflow: hidden;
   max-width: 100%;
 }
 

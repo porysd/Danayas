@@ -34,6 +34,7 @@ import Profile from "../Admin/pages/Profile.vue";
 
 // Not Found
 import NotFound from "../pages/NotFound.vue";
+import AccessDenied from "../Admin/pages/AccessDenied.vue";
 
 const routes = [
   // Public Pages
@@ -118,6 +119,7 @@ const routes = [
 
   // Not Found Page
   { path: "/:pathMatch(.*)*", component: NotFound },
+  { path: "/access-denied", component: AccessDenied },
 ];
 
 const router = createRouter({
@@ -129,7 +131,7 @@ router.beforeEach((to, from, next) => {
   const authStore = useAuthStore();
 
   if (to.meta.requiresAuth && !authStore.isLoggedIn) {
-    next("/admin/admin-login");
+    next("/access-denied");
   } else {
     next();
   }
