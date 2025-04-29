@@ -1,6 +1,5 @@
 import { defineStore } from "pinia";
 import { useAuthStore } from "./authStore";
-import { index } from "drizzle-orm/mysql-core";
 
 export const useFaqsStore = defineStore("faqs", {
   state: () => ({
@@ -58,7 +57,7 @@ export const useFaqsStore = defineStore("faqs", {
         const auth = useAuthStore();
         if (!auth.isLoggedIn) return;
 
-        const res = await fetch("https://localhost:3000/faqs", {
+        const res = await fetch("http://localhost:3000/faqs", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -88,7 +87,7 @@ export const useFaqsStore = defineStore("faqs", {
           `http://localhost:3000/faqs/${faqsData.faqsId}`,
           {
             method: "PATCH",
-            header: {
+            headers: {
               "Content-Type": "application/json",
               Authorization: `Bearer ${auth.accessToken}`,
             },
@@ -104,7 +103,7 @@ export const useFaqsStore = defineStore("faqs", {
         );
         if (index !== -1) this.faqs[index] = updatedFaqs;
       } catch (err) {
-        console.log("Erro updating Faqs,", err);
+        console.error("Error updating Faqs,", err);
       }
     },
 
@@ -113,13 +112,16 @@ export const useFaqsStore = defineStore("faqs", {
       try {
         const auth = useAuthStore();
         if (!auth.isLoggedIn) return;
-        const res = await fetch(`http://localhost:3000/${faqsData.faqsId}`, {
-          method: "Delete",
-          headers: {
-            "content-Type": "application/json",
-            Authorization: `Bearer ${auth.accessToken},`,
-          },
-        });
+        const res = await fetch(
+          `http://localhost:3000/faqs/${faqsData.faqsId}`,
+          {
+            method: "Delete",
+            headers: {
+              "content-Type": "application/json",
+              Authorization: `Bearer ${auth.accessToken},`,
+            },
+          }
+        );
         if (!res.ok) {
           console.log("Failedd to delete Faqs");
         }
@@ -135,7 +137,7 @@ export const useFaqsStore = defineStore("faqs", {
         const auth = useAuthStore;
         if (!auth.isLoggedIn) return;
 
-        const res = await fetch(`https://localhost:3000/faqs/${faqsId}`, {
+        const res = await fetch(`http://localhost:3000/faqs/${faqsId}`, {
           headers: {
             Authorization: `Bearer ${auth.accessToken}`,
           },
