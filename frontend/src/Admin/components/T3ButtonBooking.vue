@@ -1,5 +1,5 @@
 <script setup>
-import { ref, defineProps, defineEmits } from "vue";
+import { ref, defineProps, defineEmits, onMounted, onUnmounted } from "vue";
 import Button from "primevue/button";
 import Dialog from "primevue/dialog";
 import Toast from "primevue/toast";
@@ -54,6 +54,22 @@ const saveChanges = () => {
   });
   closeModals();
 };
+
+const hideMenu = ref(false);
+
+const closeMenu = (event) => {
+  if (hideMenu.value && !hideMenu.value.contains(event.target)) {
+    showMenu.value = false;
+  }
+};
+
+onMounted(() => {
+  document.addEventListener("click", closeMenu);
+});
+
+onUnmounted(() => {
+  document.addEventListener("click", closeMenu);
+});
 </script>
 
 <template>
@@ -63,10 +79,20 @@ const saveChanges = () => {
       class="adminButton pi pi-ellipsis-v"
     ></button>
 
-    <div v-if="showMenu" class="dropdown-menu">
+    <div v-if="showMenu" ref="hideMenu" class="dropdown-menu">
       <ul>
-        <li @click="openStatusModal">Status</li>
-        <li @click="openEditModal">Update</li>
+        <li
+          class="hover:bg-gray-100 dark:hover:bg-gray-700"
+          @click="openStatusModal"
+        >
+          Status
+        </li>
+        <li
+          class="hover:bg-gray-100 dark:hover:bg-gray-700"
+          @click="openEditModal"
+        >
+          Update
+        </li>
       </ul>
     </div>
   </div>
@@ -82,10 +108,17 @@ const saveChanges = () => {
       <label class="block text-lg font-semibold mb-2">Booking Status</label>
       <select v-model="formData.bookStatus" class="border p-2 rounded w-full">
         <option value="pending">Pending</option>
-        <option value="confirmed">Confirmed</option>
+        <option value="reserved">Reserved</option>
+        <option value="rescheduled">Rescheduled</option>
         <option value="completed">Completed</option>
         <option value="cancelled">Cancelled</option>
       </select>
+      <div>
+        <template v-if="formData.bookStatus === 'cancelled'">
+          <label>Reason for Cancellation:</label>
+          <input v-model="formData.cancelReason" />
+        </template>
+      </div>
     </div>
 
     <div class="flex justify-center gap-2 font-[Poppins]">
@@ -127,6 +160,7 @@ const saveChanges = () => {
           class="packEvents"
           v-model="formData.packageName"
           placeholder="Package Name"
+          disabled
         />
       </div>
       <div>
@@ -135,6 +169,7 @@ const saveChanges = () => {
           class="packEvents"
           v-model="formData.eventType"
           placeholder="Event Type"
+          disabled
         />
       </div>
     </div>
@@ -164,7 +199,12 @@ const saveChanges = () => {
       </div>
       <div>
         <label>Mode:</label>
-        <input class="cDates" v-model="formData.mode" placeholder="Mode" />
+        <input
+          class="cDates"
+          v-model="formData.mode"
+          placeholder="Mode"
+          disabled
+        />
       </div>
     </div>
 
@@ -175,6 +215,7 @@ const saveChanges = () => {
           class="atcngs"
           v-model="formData.arrivalTime"
           placeholder="Arival Time"
+          disabled
         />
       </div>
       <div>
@@ -183,6 +224,7 @@ const saveChanges = () => {
           v-model="formData.catering"
           placeholder="Catering"
           class="border p-2 rounded w-full"
+          disabled
         >
           <option value="true">Yes</option>
           <option value="false">No</option>
@@ -195,6 +237,7 @@ const saveChanges = () => {
           type="number"
           v-model="formData.numberOfGuest"
           placeholder="Number of Guest"
+          disabled
         />
       </div>
     </div>
@@ -204,8 +247,9 @@ const saveChanges = () => {
         <label>Discount:</label>
         <input
           class="dAdds"
-          v-model="formData.discountPromoId"
+          v-model="formData.discountId"
           placeholder="Discount"
+          disabled
         />
       </div>
       <div>
@@ -214,6 +258,7 @@ const saveChanges = () => {
           class="dAdds"
           v-model="formData.bookingAddOn"
           placeholder="Add Ons"
+          disabled
         />
       </div>
     </div>
@@ -251,7 +296,7 @@ const saveChanges = () => {
   position: absolute;
   right: 0;
   top: 100%;
-  background: #fcf5f5;
+  background: #fcfcfc;
   color: #333;
   border-radius: 5px;
   padding: 5px;
@@ -272,11 +317,6 @@ const saveChanges = () => {
   display: flex;
   align-items: center;
   gap: 5px;
-}
-
-.dropdown-menu li:hover {
-  background: #555;
-  color: #fcf5f5;
 }
 
 .packEvent,

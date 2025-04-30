@@ -27,12 +27,14 @@ onMounted(() => {
 
 const addCustomerHandler = async (customer) => {
   await userStore.addCustomer(customer);
-  console.log("Customer added successfully");
 };
 
 const disableCustomerHandler = async (customer) => {
   await userStore.disableUser(customer);
-  console.log("Customer disabled successfully");
+};
+
+const enableCustomerHandler = async (customer) => {
+  await userStore.enableUser(customer);
 };
 
 const totalCustomers = computed(() => filteredCustomer.value.length);
@@ -261,6 +263,7 @@ onUnmounted(() => {
                 <T3ButtonCustomer
                   :customer="customer"
                   @disableCustomer="disableCustomerHandler"
+                  @enableCustomer="enableCustomerHandler"
                 />
               </td>
             </tr>

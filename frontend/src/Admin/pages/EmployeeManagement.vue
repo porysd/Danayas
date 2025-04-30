@@ -20,45 +20,16 @@ onMounted(() => {
   userStore.fetchEmployee();
 });
 
-const employees = ref([]);
-
-// const getAllEmployee = async () => {
-//   employees.value = [];
-//   const limit = 50;
-//   let page = 1;
-//   let hasMoreData = true;
-
-//   while (hasMoreData) {
-//     const response = await fetch(
-//       `http://localhost:3000/users?limit=${limit}&page=${page}`
-//     );
-//     if (!response.ok) throw new Error("Failed to fetch users");
-
-//     const users = await response.json();
-
-//     if (users.items && users.items.length > 0) {
-//       const employeeData = users.items.filter(
-//         (user) => user.role === "staff" || user.role === "admin"
-//       );
-//       if (employeeData.length === 0) {
-//         hasMoreData = false;
-//       } else {
-//         employees.value.push(...employeeData);
-//         page++;
-//       }
-//     } else {
-//       hasMoreData = false;
-//     }
-//   }
-// };
-// onMounted(() => getAllEmployee());
-
 const addEmployeeHandler = async (employee) => {
   await userStore.addEmployee(employee);
 };
 
 const disableEmployeeHandler = async (employee) => {
   await userStore.disableUser(employee);
+};
+
+const enableEmployeeHandler = async (employee) => {
+  await userStore.enableUser(employee);
 };
 
 const changeRoleHandler = async (employee) => {
@@ -342,6 +313,7 @@ onUnmounted(() => {
                 <T3ButtonEmployee
                   :employee="employee"
                   @disableEmployee="disableEmployeeHandler"
+                  @enableEmployee="enableEmployeeHandler"
                   @changeRole="changeRoleHandler"
                 />
               </td>

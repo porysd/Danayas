@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, ref } from "vue";
+import { onMounted, ref, computed } from "vue";
 import Stepper from "primevue/stepper";
 import StepList from "primevue/steplist";
 import StepPanels from "primevue/steppanels";
@@ -25,6 +25,10 @@ import { formatDate } from "../utility/dateFormat";
 import { formatDates } from "../utility/dateFormat";
 import { useTransactionStore } from "../stores/transactionStore";
 import Select from "primevue/select";
+import FullCalendar from "@fullcalendar/vue3";
+import dayGridPlugin from "@fullcalendar/daygrid";
+import timeGridPlugin from "@fullcalendar/timegrid";
+import interactionPlugin from "@fullcalendar/interaction";
 
 const toast = useToast();
 
@@ -190,61 +194,56 @@ const prevBtn = () => {
 };
 
 // FOR CALENDAR
-const getBookingStyle = (slotDate) => {
-  const jsDate = new Date(slotDate.year, slotDate.month - 1, slotDate.day);
+const mapBookingsToEvents = (bookings) => {
+  return bookings
+    .filter((b) => b.bookStatus === "reserved")
+    .map((b) => {
+      let backgroundColor;
+      let textColor = "white";
 
-  const formattedDate = jsDate.toISOString().split("T")[0];
+      switch (b.mode) {
+        case "day-time":
+          backgroundColor = "#FFD5";
+          textColor = "black";
+          break;
+        case "night-time":
+          backgroundColor = "#6A5ACD";
+          break;
+        case "whole-day":
+          backgroundColor = "#FF6B6B";
+          break;
+        default:
+          backgroundColor = "#90EE94";
+          textColor = "#15803D";
+      }
 
-  const booking = bookingStore.bookings.find((b) =>
-    b.checkInDate.startsWith(formattedDate)
-  );
-
-  if (!booking) {
-    return {
-      backgroundColor: "#90EE94",
-      color: "#15803D",
-      width: "40px",
-      height: "40px",
-      display: "inline-flex",
-      justifyContent: "center",
-      alignItems: "center",
-      borderRadius: "10rem",
-      fontSize: "17px",
-    };
-  }
-
-  let backgroundColor;
-  let color;
-  switch (booking.mode) {
-    case "day-time":
-      backgroundColor = "#FFD5";
-      color = "white";
-      break;
-    case "night-time":
-      backgroundColor = "#6A5ACD";
-      color = "white";
-      break;
-    case "whole-day":
-      backgroundColor = "#FF6B6B";
-      color = "white";
-      break;
-    default:
-      backgroundColor = "#90EE94";
-      color = "#15803D";
-  }
-
-  return {
-    backgroundColor,
-    color,
-    width: "40px",
-    height: "40px",
-    display: "inline-flex",
-    justifyContent: "center",
-    alignItems: "center",
-    borderRadius: "10rem",
-    fontSize: "18px",
-  };
+      return {
+        id: b.bookingId,
+        title: b.mode,
+        start: b.checkInDate,
+        // end: b.checkOutDate,
+        backgroundColor: backgroundColor,
+        textColor: textColor,
+        allDay: true,
+      };
+    });
 };
+
+const calendarOptions = ref({
+  plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin],
+  headerToolbar: {
+    left: "prev,next today",
+    center: "title",
+    right: "dayGridMonth,timeGridWeek,timeGridDay",
+  },
+  initialView: "dayGridMonth",
+  editable: false,
+  selectable: false,
+  selectMirror: false,
+  dayMaxEvents: true,
+  weekends: true,
+  events: computed(() => mapBookingsToEvents(bookingStore.bookings)),
+});
 </script>
 
 <template>
@@ -330,7 +329,11 @@ const getBookingStyle = (slotDate) => {
                     <label for="on_label">Check-Out</label>
                   </FloatLabel>
                 </div>
-
+                <FullCalendar class="fullCalendar" :options="calendarOptions">
+                  <template #eventContent="{ event, timeText }">
+                    <b>{{ timeText }}</b> <i>{{ event.title }}</i>
+                  </template>
+                </FullCalendar>
                 <div
                   class="datePicker"
                   style="
@@ -345,7 +348,7 @@ const getBookingStyle = (slotDate) => {
                     gap: 5rem;
                   "
                 >
-                  <DatePicker
+                  <!--<DatePicker
                     v-model="date"
                     inline
                     class="dateChart w-full sm:w-[60rem]"
@@ -360,7 +363,7 @@ const getBookingStyle = (slotDate) => {
                         </strong>
                       </span>
                     </template>
-                  </DatePicker>
+                  </DatePicker>-->
                 </div>
 
                 <div
@@ -942,77 +945,70 @@ const getBookingStyle = (slotDate) => {
       :style="{ width: '70rem' }"
       :breakpoints="{ '1199px': '75vw', '575px': '90vw' }"
     >
-      <div class="mb-6">
-        <p class="mb-8">
-          "Sed ut perspiciatis unde omnis iste natus error sit voluptatem
-          accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae
-          ab illo inventore veritatis et quasi architecto beatae vitae dicta
-          sunt explicabo. Nemo enim ipsam voluptatem quia voluptas sit
-          aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos
-          qui ratione voluptatem sequi nesciunt. Neque porro quisquam est, qui
-          dolorem ipsum quia dolor sit amet, consectetur, adipisci velit, sed
-          quia non numquam eius modi tempora incidunt ut labore et dolore magnam
-          aliquam quaerat voluptatem. Ut enim ad minima veniam, quis nostrum
-          exercitationem ullam corporis suscipit laboriosam, nisi ut aliquid ex
-          ea commodi consequatur? Quis autem vel eum iure reprehenderit qui in
-          ea voluptate velit esse quam nihil molestiae consequatur, vel illum
-          qui dolorem eum fugiat quo voluptas nulla pariatur?
-        </p>
-        <p class="mb-8">
-          At vero eos et accusamus et iusto odio dignissimos ducimus qui
-          blanditiis praesentium voluptatum deleniti atque corrupti quos dolores
-          et quas molestias excepturi sint occaecati cupiditate non provident,
-          similique sunt in culpa qui officia deserunt mollitia animi, id est
-          laborum et dolorum fuga. Et harum quidem rerum facilis est et expedita
-          distinctio. Nam libero tempore, cum soluta nobis est eligendi optio
-          cumque nihil impedit quo minus id quod maxime placeat facere possimus,
-          omnis voluptas assumenda est, omnis dolor repellendus. Temporibus
-          autem quibusdam et aut officiis debitis aut rerum necessitatibus saepe
-          eveniet ut et voluptates repudiandae sint et molestiae non recusandae.
-          Itaque earum rerum hic tenetur a sapiente delectus, ut aut reiciendis
-          voluptatibus maiores alias consequatur aut perferendis doloribus
-          asperiores repellat.
-        </p>
-        <p class="mb-8">
-          Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
-          eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad
-          minim veniam, quis nostrud exercitation ullamco laboris nisi ut
-          aliquip ex ea commodo consequat. Duis aute irure dolor in
-          reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla
-          pariatur. Excepteur sint occaecat cupidatat non proident, sunt in
-          culpa qui officia deserunt mollit anim id est laborum.
-        </p>
-        <p class="mb-8">
-          "Sed ut perspiciatis unde omnis iste natus error sit voluptatem
-          accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae
-          ab illo inventore veritatis et quasi architecto beatae vitae dicta
-          sunt explicabo. Nemo enim ipsam voluptatem quia voluptas sit
-          aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos
-          qui ratione voluptatem sequi nesciunt. Neque porro quisquam est, qui
-          dolorem ipsum quia dolor sit amet, consectetur, adipisci velit, sed
-          quia non numquam eius modi tempora incidunt ut labore et dolore magnam
-          aliquam quaerat voluptatem. Ut enim ad minima veniam, quis nostrum
-          exercitationem ullam corporis suscipit laboriosam, nisi ut aliquid ex
-          ea commodi consequatur? Quis autem vel eum iure reprehenderit qui in
-          ea voluptate velit esse quam nihil molestiae consequatur, vel illum
-          qui dolorem eum fugiat quo voluptas nulla pariatur?
-        </p>
-        <p>
-          At vero eos et accusamus et iusto odio dignissimos ducimus qui
-          blanditiis praesentium voluptatum deleniti atque corrupti quos dolores
-          et quas molestias excepturi sint occaecati cupiditate non provident,
-          similique sunt in culpa qui officia deserunt mollitia animi, id est
-          laborum et dolorum fuga. Et harum quidem rerum facilis est et expedita
-          distinctio. Nam libero tempore, cum soluta nobis est eligendi optio
-          cumque nihil impedit quo minus id quod maxime placeat facere possimus,
-          omnis voluptas assumenda est, omnis dolor repellendus. Temporibus
-          autem quibusdam et aut officiis debitis aut rerum necessitatibus saepe
-          eveniet ut et voluptates repudiandae sint et molestiae non recusandae.
-          Itaque earum rerum hic tenetur a sapiente delectus, ut aut reiciendis
-          voluptatibus maiores alias consequatur aut perferendis doloribus
-          asperiores repellat.
-        </p>
-      </div>
+      <ol class="list-decimal list-inside space-y-2 text-black">
+        <li>
+          A downpayment Reservation fee of P 2000-3000.00 is required to ensure
+          the client's specified schedule.
+        </li>
+
+        <li>
+          Reservation in case of delay, shall be given an allowance of two (2)
+          Days based on agreed time. Without prior notice, the management can
+          cancel the reservation and forfeit the down payment after the
+          allowable extension time.
+        </li>
+        <li>
+          Reservation fee or down payment is non-refundable in case of
+          cancellation.
+        </li>
+        <li>
+          50% of the reservation fee or downpayment can be refundable in cases
+          of cancellation due to natural disaster.
+        </li>
+        <li>
+          In case of cancellation, the customer has the option to change the
+          date and subject of availability in the area.
+        </li>
+        <li>
+          Full contract payment should be made upon entrance on the day itself
+          and excess charges shall be connected upon check—out.
+        </li>
+        <li>
+          It is understood that the management is not responsible for any
+          accident, injury, or loss that may occur during the tenure of the
+          lease. The Customer waives the right to claim damages against the
+          management.
+        </li>
+        <li>Food and Drinks are not allowed in the Pool hArea</li>
+        <li>Swimming when drunk is strictly prohibited.</li>
+        <li>Firearms and illegal substances are strictly prohibited</li>
+        <li>Children must be always accompanied by adults.</li>
+        <li>
+          Excess guests will be charged depending on the chosen schedule. In
+          Daytime (P100.00/ per head) Overnight (P 150.00/ per head)
+        </li>
+        <li>Pets are not allowed in the pool premises.</li>
+        <li>
+          It is our standard procedure to check items and equipment 30 minutes
+          upon check—out of guests.
+        </li>
+        <li>
+          Any loss or damage to property during the tenure of the lease shall be
+          accounted to the customer.
+        </li>
+        <li>No refund policy is implemented</li>
+
+        <li>
+          <div>Clients must property observe the house rules</div>
+        </li>
+        <li>
+          <div>
+            It is understood that the customers agreed on the terms and
+            conditions of the Danayas Resorts Events Venue.
+          </div>
+        </li>
+      </ol>
+
       <div class="checkboxConfirmation" style="margin: auto">
         <input type="checkbox" id="signupCheck" v-model="isChecked" />
         <label for="bookingCheck">I accept all terms & conditions</label>
@@ -1045,6 +1041,18 @@ const getBookingStyle = (slotDate) => {
   font-weight: bold;
   background-color: #41ab5d;
   color: white;
+}
+
+:deep(.fullCalendar) {
+  max-width: 1400px;
+  margin: 40px auto;
+  height: 600px;
+
+  .fc-button {
+    background-color: #41ab5d;
+    color: white;
+    border-radius: 6px;
+  }
 }
 
 .BookingBox {

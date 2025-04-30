@@ -8,6 +8,7 @@ import {
   CatalogAddOnsTable,
   BookingAddOnsTable,
   TransactionsTable,
+  FaqsTable,
 } from "../schemas/schema.ts";
 import { faker } from "@faker-js/faker";
 import { grantPermission } from "../utils/permissionUtils.ts";
@@ -531,7 +532,7 @@ export default async function seed() {
             senderName: faker.person.fullName(),
             paymentStatus: "paid",
           });
-        } else{
+        } else {
           await db.insert(PaymentsTable).values({
             transactionId: transaction,
             amountPaid: amountPaid,
@@ -544,7 +545,7 @@ export default async function seed() {
       } else {
         const paymentTerms = selectedBooking.paymentTerms;
         const mode = faker.helpers.arrayElement(["gcash", "cash"]);
-        if(paymentTerms === "installment"){
+        if (paymentTerms === "installment") {
           if (mode === "gcash") {
             await db.insert(PaymentsTable).values({
               transactionId: transaction,
@@ -557,7 +558,7 @@ export default async function seed() {
               senderName: faker.person.fullName(),
               paymentStatus: "partially-paid",
             });
-          } else{
+          } else {
             await db.insert(PaymentsTable).values({
               transactionId: transaction,
               downPaymentAmount: 3000,
@@ -568,7 +569,7 @@ export default async function seed() {
               paymentStatus: "partially-paid",
             });
           }
-        } else{
+        } else {
           if (mode === "gcash") {
             await db.insert(PaymentsTable).values({
               transactionId: transaction,
@@ -580,7 +581,7 @@ export default async function seed() {
               senderName: faker.person.fullName(),
               paymentStatus: "paid",
             });
-          } else{
+          } else {
             await db.insert(PaymentsTable).values({
               transactionId: transaction,
               amountPaid: remainingBalance,
@@ -658,6 +659,24 @@ export default async function seed() {
         .execute();
     } catch (e) {
       console.error(e);
+      continue;
+    }
+  }
+
+  // for FAQS
+  for (let i = 0; i < 20; i++) {
+    try {
+      await db
+        .insert(FaqsTable)
+        .values({
+          question: faker.lorem.sentence(),
+          answer: faker.lorem.paragraph(),
+          createdAt: faker.date.past().toISOString(),
+          updatedAt: faker.date.recent().toISOString(),
+        })
+        .execute();
+    } catch (e) {
+      console.error(`Error inserting FAQ #${i + 1}:`, e);
       continue;
     }
   }
