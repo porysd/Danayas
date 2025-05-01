@@ -269,54 +269,6 @@ export default async function seed() {
       continue;
     }
   }
-  // for (let i = 0; i < 10; i++) {
-  //   try {
-  //     const row = await db
-  //       .insert(PackagesTable)
-  //       .values({
-  //         inclusion: faker.word.words(10),
-  //         price: faker.helpers.rangeToNumber({ min: 1000, max: 12000 }),
-  //         name: faker.commerce.productName(),
-  //         status: faker.helpers.arrayElement([
-  //           "active",
-  //           "inactive",
-  //         ]),
-  //         mode: faker.helpers.arrayElement([
-  //           "day-time",
-  //           "night-time",
-  //           "whole-day",
-  //         ]),
-  //         imageUrl: faker.image.urlLoremFlickr(),
-  //         isPromo: faker.datatype.boolean() ? 1 : 0,
-  //         promoStart: faker.date.recent().toISOString(),
-  //         promoEnd: faker.date.soon().toISOString(),
-  //       })
-  //       .returning()
-  //       .execute();
-  //     //await grantPermission(row[0].userId, "PACKAGES", "read");
-  //   } catch (e) {
-  //     console.error(e);
-  //     continue;
-  //   }
-  // }
-  // discounts
-  // for (let i = 0; i < 100; i++) {
-  //   try {
-  //     const row = await db
-  //       .insert(DiscountsTable)
-  //       .values({
-  //         name: faker.commerce.product(),
-  //         percentage: faker.helpers.rangeToNumber({ min: 0.1, max: 1.0 }),
-  //         typeFor: faker.helpers.arrayElement(["pwd", "student", "senior"]),
-  //       })
-  //       .returning()
-  //       .execute();
-  //     //await grantPermission(row[0].userId, "PACKAGES", "read");
-  //   } catch (e) {
-  //     console.error(e);
-  //     continue;
-  //   }
-  // }
 
   const uniqueDiscounts: {
     typeFor: "pwd" | "student" | "senior" | "birthday";
@@ -328,19 +280,19 @@ export default async function seed() {
     {
       typeFor: "student",
       name: "Student Discount",
-      percentage: 0.15,
+      percentage: 15,
       status: "active",
     },
     {
       typeFor: "senior",
       name: "Senior Citizen Discount",
-      percentage: 0.25,
+      percentage: 25,
       status: "active",
     },
     {
       typeFor: "birthday",
       name: "Birthday Discount",
-      percentage: 0.1,
+      percentage: 1,
       status: "active",
     },
   ];
@@ -441,10 +393,11 @@ export default async function seed() {
           totalAmount: finalAmount,
           bookStatus: faker.helpers.arrayElement([
             "pending",
-            "reserved",
-            "cancelled",
-            "completed",
-            "rescheduled",
+            // "reserved",
+            // "cancelled",
+            // "completed",
+            // "rescheduled",
+            // "pending-cancellation",
           ]),
           reservationType: faker.helpers.arrayElement(["online", "walk-in"]),
           createdAt: faker.date.recent().toISOString(),
@@ -459,11 +412,21 @@ export default async function seed() {
   // TRANSACTION
   const bookingsCount = await db.select().from(BookingsTable);
   for (const booking of bookingsCount) {
+    let status: "paid" | "partially-paid" | "voided";
+
+    if (booking.paymentTerms === "installment") {
+      status = "partially-paid";
+    } else {
+      status = "paid";
+    } 
+
     try {
       const row = await db
         .insert(TransactionsTable)
         .values({
           bookingId: booking.bookingId,
+          transactionStatus: status,
+          remainingBalance: booking.totalAmount,
         })
         .execute();
     } catch (e) {
@@ -472,132 +435,132 @@ export default async function seed() {
     }
   }
 
-  // PAYMENTS
-  const transactionId = (await db.query.TransactionsTable.findMany()).map(
-    (val) => val.transactionId
-  );
+  // // PAYMENTS
+  // const transactionId = (await db.query.TransactionsTable.findMany()).map(
+  //   (val) => val.transactionId
+  // );
 
-  for (let i = 0; i < 10; i++) {
-    try {
-      const transaction = faker.helpers.arrayElement(transactionId);
+  // for (let i = 0; i < 10; i++) {
+  //   try {
+  //     const transaction = faker.helpers.arrayElement(transactionId);
 
-      // Select Booking ID from the Transactions table
-      const selectedBookingId = await db.query.TransactionsTable.findFirst({
-        where: eq(TransactionsTable.transactionId, transaction),
-      });
+  //     // Select Booking ID from the Transactions table
+  //     const selectedBookingId = await db.query.TransactionsTable.findFirst({
+  //       where: eq(TransactionsTable.transactionId, transaction),
+  //     });
 
-      if (!selectedBookingId) {
-        continue;
-      }
+  //     if (!selectedBookingId) {
+  //       continue;
+  //     }
 
-      // Select TotalAmount from the Bookings table using the Booking ID
-      const selectedBooking = await db.query.BookingsTable.findFirst({
-        where: eq(BookingsTable.bookingId, selectedBookingId.bookingId),
-      });
-      if (!selectedBooking) {
-        continue;
-      }
+  //     // Select TotalAmount from the Bookings table using the Booking ID
+  //     const selectedBooking = await db.query.BookingsTable.findFirst({
+  //       where: eq(BookingsTable.bookingId, selectedBookingId.bookingId),
+  //     });
+  //     if (!selectedBooking) {
+  //       continue;
+  //     }
 
-      const remainingBalance = selectedBooking.totalAmount;
+  //     const remainingBalance = selectedBooking.totalAmount;
 
-      // Check if latest payment is existing through transactionId
-      const latestPayment = await db.query.PaymentsTable.findFirst({
-        where: eq(PaymentsTable.transactionId, transaction),
-        orderBy: [desc(PaymentsTable.paidAt)],
-      });
+  //     // Check if latest payment is existing through transactionId
+  //     const latestPayment = await db.query.PaymentsTable.findFirst({
+  //       where: eq(PaymentsTable.transactionId, transaction),
+  //       orderBy: [desc(PaymentsTable.paidAt)],
+  //     });
 
-      // If latest payment exists, check its status
-      if (latestPayment) {
-        // Check if the latest payment is voided
-        if (latestPayment.paymentStatus === "voided") {
-          continue;
-        }
-        // Check if the latest payment is already paid
-        if (latestPayment?.paymentStatus === "paid") {
-          continue;
-        }
+  //     // If latest payment exists, check its status
+  //     if (latestPayment) {
+  //       // Check if the latest payment is voided
+  //       if (latestPayment.paymentStatus === "voided") {
+  //         continue;
+  //       }
+  //       // Check if the latest payment is already paid
+  //       if (latestPayment?.paymentStatus === "paid") {
+  //         continue;
+  //       }
 
-        // Get the remainingBalance of the latest payment to amountPaid
-        const amountPaid = latestPayment.remainingBalance;
+  //       // Get the remainingBalance of the latest payment to amountPaid
+  //       const amountPaid = latestPayment.remainingBalance;
 
-        const mode = faker.helpers.arrayElement(["gcash", "cash"]);
-        if (mode === "gcash") {
-          await db.insert(PaymentsTable).values({
-            transactionId: transaction,
-            imageUrl: faker.image.urlLoremFlickr(),
-            amountPaid: amountPaid,
-            remainingBalance: 0,
-            mode: mode,
-            reference: faker.string.uuid(),
-            senderName: faker.person.fullName(),
-            paymentStatus: "paid",
-          });
-        } else {
-          await db.insert(PaymentsTable).values({
-            transactionId: transaction,
-            amountPaid: amountPaid,
-            remainingBalance: 0,
-            mode: mode,
-            senderName: faker.person.fullName(),
-            paymentStatus: "paid",
-          });
-        }
-      } else {
-        const paymentTerms = selectedBooking.paymentTerms;
-        const mode = faker.helpers.arrayElement(["gcash", "cash"]);
-        if (paymentTerms === "installment") {
-          if (mode === "gcash") {
-            await db.insert(PaymentsTable).values({
-              transactionId: transaction,
-              imageUrl: faker.image.urlLoremFlickr(),
-              downPaymentAmount: 3000,
-              amountPaid: 3000,
-              remainingBalance: remainingBalance - 3000,
-              mode: mode,
-              reference: faker.string.uuid(),
-              senderName: faker.person.fullName(),
-              paymentStatus: "partially-paid",
-            });
-          } else {
-            await db.insert(PaymentsTable).values({
-              transactionId: transaction,
-              downPaymentAmount: 3000,
-              amountPaid: 3000,
-              remainingBalance: remainingBalance - 3000,
-              mode: mode,
-              senderName: faker.person.fullName(),
-              paymentStatus: "partially-paid",
-            });
-          }
-        } else {
-          if (mode === "gcash") {
-            await db.insert(PaymentsTable).values({
-              transactionId: transaction,
-              imageUrl: faker.image.urlLoremFlickr(),
-              amountPaid: remainingBalance,
-              remainingBalance: 0,
-              mode: mode,
-              reference: faker.string.uuid(),
-              senderName: faker.person.fullName(),
-              paymentStatus: "paid",
-            });
-          } else {
-            await db.insert(PaymentsTable).values({
-              transactionId: transaction,
-              amountPaid: remainingBalance,
-              remainingBalance: 0,
-              mode: mode,
-              senderName: faker.person.fullName(),
-              paymentStatus: "paid",
-            });
-          }
-        }
-      }
-    } catch (e) {
-      console.error(e);
-      continue;
-    }
-  }
+  //       const mode = faker.helpers.arrayElement(["gcash", "cash"]);
+  //       if (mode === "gcash") {
+  //         await db.insert(PaymentsTable).values({
+  //           transactionId: transaction,
+  //           imageUrl: faker.image.urlLoremFlickr(),
+  //           amountPaid: amountPaid,
+  //           remainingBalance: 0,
+  //           mode: mode,
+  //           reference: faker.string.uuid(),
+  //           senderName: faker.person.fullName(),
+  //           paymentStatus: "paid",
+  //         });
+  //       } else {
+  //         await db.insert(PaymentsTable).values({
+  //           transactionId: transaction,
+  //           amountPaid: amountPaid,
+  //           remainingBalance: 0,
+  //           mode: mode,
+  //           senderName: faker.person.fullName(),
+  //           paymentStatus: "paid",
+  //         });
+  //       }
+  //     } else {
+  //       const paymentTerms = selectedBooking.paymentTerms;
+  //       const mode = faker.helpers.arrayElement(["gcash", "cash"]);
+  //       if (paymentTerms === "installment") {
+  //         if (mode === "gcash") {
+  //           await db.insert(PaymentsTable).values({
+  //             transactionId: transaction,
+  //             imageUrl: faker.image.urlLoremFlickr(),
+  //             downPaymentAmount: 3000,
+  //             amountPaid: 3000,
+  //             remainingBalance: remainingBalance - 3000,
+  //             mode: mode,
+  //             reference: faker.string.uuid(),
+  //             senderName: faker.person.fullName(),
+  //             paymentStatus: "partially-paid",
+  //           });
+  //         } else {
+  //           await db.insert(PaymentsTable).values({
+  //             transactionId: transaction,
+  //             downPaymentAmount: 3000,
+  //             amountPaid: 3000,
+  //             remainingBalance: remainingBalance - 3000,
+  //             mode: mode,
+  //             senderName: faker.person.fullName(),
+  //             paymentStatus: "partially-paid",
+  //           });
+  //         }
+  //       } else {
+  //         if (mode === "gcash") {
+  //           await db.insert(PaymentsTable).values({
+  //             transactionId: transaction,
+  //             imageUrl: faker.image.urlLoremFlickr(),
+  //             amountPaid: remainingBalance,
+  //             remainingBalance: 0,
+  //             mode: mode,
+  //             reference: faker.string.uuid(),
+  //             senderName: faker.person.fullName(),
+  //             paymentStatus: "paid",
+  //           });
+  //         } else {
+  //           await db.insert(PaymentsTable).values({
+  //             transactionId: transaction,
+  //             amountPaid: remainingBalance,
+  //             remainingBalance: 0,
+  //             mode: mode,
+  //             senderName: faker.person.fullName(),
+  //             paymentStatus: "paid",
+  //           });
+  //         }
+  //       }
+  //     }
+  //   } catch (e) {
+  //     console.error(e);
+  //     continue;
+  //   }
+  // }
 
   for (let i = 0; i < 10; i++) {
     try {
@@ -639,6 +602,12 @@ export default async function seed() {
         .from(CatalogAddOnsTable)
         .where(eq(CatalogAddOnsTable.catalogAddOnId, catalogAddOnId))
         .then((rows) => rows[0]);
+      const selectedTransaction = await db.query.TransactionsTable.findFirst({
+        where: eq(TransactionsTable.transactionId, bookingId)
+      })
+      if (!selectedTransaction) {
+        continue;
+      }
 
       const price = selectedCatalogAddOn.price;
 
@@ -657,6 +626,13 @@ export default async function seed() {
         .where(eq(BookingsTable.bookingId, bookingId))
         .returning()
         .execute();
+
+      await db
+        .update(TransactionsTable)
+        .set({ remainingBalance: selectedTransaction.remainingBalance + price })
+        .where(eq(TransactionsTable.transactionId, selectedTransaction.transactionId))
+        .execute();
+
     } catch (e) {
       console.error(e);
       continue;
