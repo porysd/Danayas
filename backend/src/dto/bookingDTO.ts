@@ -9,10 +9,6 @@ export const BookingDTO = z.object({
     description: "The ID of the user who made the booking",
     example: 3,
   }),
-  // createdBy: z.number().int().nullable().optional().openapi({
-  //     description: "The ID of the admin or staff who created the booking",
-  //     example: 1,
-  // }),
   checkInDate: z.string().openapi({
     description: "The check-in date of the booking (MM-DD-YYYY)",
     example: "03-19-2025",
@@ -78,7 +74,7 @@ export const BookingDTO = z.object({
     example: 12000,
   }),
   bookStatus: z
-    .enum(["pending", "reserved", "cancelled", "completed", "rescheduled"])
+    .enum(["pending", "reserved", "cancelled", "completed", "rescheduled", "pending-cancellation"])
     .nullable()
     .optional()
     .openapi({
@@ -88,6 +84,18 @@ export const BookingDTO = z.object({
   reservationType: z.enum(["online", "walk-in"]).nullable().optional().openapi({
     description: "The type of reservation",
     example: "online",
+  }),
+  cancelReason: z.string().nullable().optional().openapi({
+    description: "The reason for cancellation",
+    example: "Change of plans",
+  }),
+  cancelCategory: z.enum(["natural-disaster", "others"]).nullable().optional().openapi({
+    description: "The category of cancellation",
+    example: "others",
+  }),
+  hasRescheduled: z.coerce.boolean().nullable().optional().openapi({
+    description: "Indicates whether the booking has been rescheduled",
+    example: false,
   }),
   createdAt: z.string().openapi({
     description: "The date when the booking was created",
@@ -101,7 +109,6 @@ export const UpdateBookingDTO = BookingDTO.omit({
   discountId: true,
   createdAt: true,
   userId: true,
-  // createdBy: true,
   firstName: true,
   lastName: true,
   contactNo: true,
@@ -123,8 +130,18 @@ export const CreateBookingDTO = BookingDTO.omit({
   bookingId: true,
   createdAt: true,
   totalAmount: true,
+  bookStatus: true,
+  cancelReason: true,
+  cancelCategory: true,
 }).extend({
   catering: z.preprocess(
+    (val) => (val === null ? 0 : val), // Convert null to 0
+    z
+      .union([z.boolean(), z.number().int().min(0).max(1)])
+      .transform((val) => Number(val))
+      .optional()
+  ),
+  hasRescheduled: z.preprocess(
     (val) => (val === null ? 0 : val), // Convert null to 0
     z
       .union([z.boolean(), z.number().int().min(0).max(1)])
