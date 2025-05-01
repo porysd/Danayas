@@ -134,7 +134,7 @@ export const useFaqsStore = defineStore("faqs", {
     // Get FAQs by ID
     async getFaqsById(faqsId) {
       try {
-        const auth = useAuthStore;
+        const auth = useAuthStore();
         if (!auth.isLoggedIn) return;
 
         const res = await fetch(`http://localhost:3000/faqs/${faqsId}`, {
