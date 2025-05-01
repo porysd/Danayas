@@ -9,9 +9,9 @@ export const DiscountDTO = z.object({
     description: "Name of the discount",
     example: "Senior Citizen Discount",
   }),
-  percentage: z.number().min(0).max(1).openapi({
-    description: "Discount percentage applied in decimal form",
-    example: 0.5,
+  percentage: z.number().min(0).max(100).openapi({
+    description: "Discount percentage applied",
+    example: 50,
   }),
   typeFor: z.string().openapi({
     description: "Type of discount (e.g. pwd, senior, student)",
