@@ -11,7 +11,7 @@ import {
   PaymentsTable,
   TransactionsTable,
 } from "../schemas/schema";
-import { desc, eq, like, or } from "drizzle-orm";
+import { desc, and, ne, eq, like, or } from "drizzle-orm";
 import {
   BadRequestError,
   ForbiddenError,
@@ -215,74 +215,129 @@ paymentRoutes.openapi(
         where: eq(BookingsTable.bookingId, transaction.bookingId),
       });
 
+      //TODO: ONLY ALLOW REFUND ONCE
+
       if (!booking) {
         throw new NotFoundError("Booking not found.");
       }
-      // Gets the total amount due from the booking
-      const remainingBalance = booking.totalAmount;
+
+      if (booking.bookStatus === "completed") {
+        return c.json(
+          { error: "Cannot refund payment for this booking status" },
+          400
+        );
+      }
+
+      // Gets the remaining balance from the transaction
+      const remainingBalance = transaction.remainingBalance;
 
       // Check if latest payment is existing
       const latestPayment = await db.query.PaymentsTable.findFirst({
         where: eq(PaymentsTable.transactionId, transactionId),
         orderBy: [desc(PaymentsTable.paidAt)],
       });
+
+      const allValidPayments = await db.query.PaymentsTable.findMany({
+        where: and(
+          eq(PaymentsTable.transactionId, transactionId),
+          ne(PaymentsTable.paymentStatus, "voided")
+        ),
+      });
+
+
+      if (!allValidPayments.length) {
+        return c.json(
+          { error: "No valid previous payments found for this transaction" },
+          400
+        );
+      }
+
       // If latest payment exists, check its status
-      if (latestPayment) {
-        // Check if the latest payment is voided
-        if (latestPayment.paymentStatus === "voided") {
+      if (!latestPayment) {
+        return c.json(
+          { error: "No previous payment found for this transaction" },
+          400
+        );
+      }
+
+      // Check if the latest payment is voided
+      if (latestPayment.paymentStatus === "voided") {
+        return c.json(
+          { error: "Cannot proceed, latest payment is voided" },
+          400
+        );
+      }
+
+      const totalPaid = allValidPayments.reduce((sum, payment) => {
+        return sum + payment.amountPaid;
+      }, 0);
+
+      const refundRate = 0.5;
+      const refundAmount = totalPaid * refundRate;
+
+      // refund through cash
+      if (mode === "cash") {
+        const created = await db
+          .insert(PaymentsTable)
+          .values({
+            ...parsed,
+            amountPaid: refundAmount,
+            category: "refund",
+          })
+          .returning();
+        await db
+          .update(TransactionsTable)
+          .set({
+            remainingBalance: remainingBalance + refundAmount,
+            refundStatus: "refunded",
+          })
+          .where(eq(TransactionsTable.transactionId, transactionId))
+          .execute();
+        await db
+          .update(BookingsTable)
+          .set({
+            bookStatus: "cancelled",
+          })
+          .where(eq(BookingsTable.bookingId, booking.bookingId))
+          .execute();
+
+        return c.json(PaymentDTO.parse(created[0]), 201);
+      }
+      // refund through gcash
+      else {
+        if (!parsed.reference || !parsed.imageUrl) {
           return c.json(
-            { error: "Cannot proceed, latest payment is voided" },
+            {
+              error: "Reference and imageUrl are required for online payments",
+            },
             400
           );
         }
-        // refund through cash
-        if (mode === "cash") {
-          const created = await db
-            .insert(PaymentsTable)
-            .values({
-              ...parsed,
-              mode: "cash",
-              amountPaid: 0, // Negative amount for refund
-              refundAmount: latestPayment.amountPaid / 2, // Refund amount is half of the amount paid
-              paymentStatus: "voided", // Set payment status to voided for refund record
-              refundStatus: "pending", // Set refund status to pending
-              remainingBalance:
-                latestPayment.remainingBalance + latestPayment.amountPaid / 2, // Adjust remaining balance by adding back the refund amount
-            })
-            .returning();
-          return c.json(PaymentDTO.parse(created[0]), 201);
-        }
-        // refund through gcash
-        else {
-          if (!parsed.reference || !parsed.imageUrl) {
-            return c.json(
-              {
-                error:
-                  "Reference and imageUrl are required for online payments",
-              },
-              400
-            );
-          }
-          const created = await db
-            .insert(PaymentsTable)
-            .values({
-              ...parsed,
-              mode: "gcash",
-              amountPaid: 0, // Negative amount for refund
-              refundAmount: latestPayment.amountPaid / 2, // Refund amount is half of the amount paid
-              paymentStatus: "voided", // Set payment status to voided for refund record
-              refundStatus: "pending", // Set refund status to pending
-              remainingBalance:
-                latestPayment.remainingBalance + latestPayment.amountPaid / 2, // Adjust remaining balance by adding back the refund amount
-            })
-            .returning();
-          return c.json(PaymentDTO.parse(created[0]), 201);
-        }
-      } else {
-        return c.json(
-          { error: "No previous payment found for this booking" },
-          400
-        );
+        const created = await db
+          .insert(PaymentsTable)
+          .values({
+            ...parsed,
+            amountPaid: refundAmount, // Negative amount for refund
+            category: "refund",
+          })
+          .returning();
+        await db
+          .update(TransactionsTable)
+          .set({
+            remainingBalance: remainingBalance + refundAmount,
+            refundStatus: "refunded",
+          })
+          .where(eq(TransactionsTable.transactionId, transactionId))
+          .execute();
+        await db
+          .update(BookingsTable)
+          .set({
+            bookStatus: "cancelled",
+          })
+          .where(eq(BookingsTable.bookingId, booking.bookingId))
+          .execute();
+
+        return c.json(PaymentDTO.parse(created[0]), 201);
       }
     } catch (err) {
       return errorHandler(err, c);
@@ -352,30 +407,39 @@ paymentRoutes.openapi(
         throw new NotFoundError("Booking not found.");
       }
 
-      // Gets the total amount due from the booking
-      const remainingBalance = booking.totalAmount;
+      if (
+        booking.bookStatus === "cancelled" ||
+        booking.bookStatus === "completed"
+      ) {
+        return c.json(
+          { error: "Cannot create payment for this booking status" },
+          400
+        );
+      }
+      // Gets the remaining balance from the transaction
+      const remainingBalance = transaction.remainingBalance;
 
       // Check if latest payment is existing through transactionId
       const latestPayment = await db.query.PaymentsTable.findFirst({
         where: eq(PaymentsTable.transactionId, transactionId),
         orderBy: [desc(PaymentsTable.paidAt)],
       });
-      // If latest payment exists, check its status
+      // If latest payment exists
       if (latestPayment) {
-        // Check if the latest payment is voided
-        if (latestPayment.paymentStatus === "voided") {
+        // Check if the transaction status is voided
+        if (transaction.transactionStatus === "voided") {
           return c.json(
             { error: "Cannot proceed, latest payment is voided" },
             400
           );
         }
-        // Check if the latest payment is already paid
-        if (latestPayment?.paymentStatus === "paid") {
+        // Check if the transaction status is already paid
+        if (transaction.transactionStatus === "paid") {
           return c.json({ error: "Booking already paid" }, 400);
         }
 
         // Get the remainingBalance of the latest payment to amountPaid
-        const amountPaid = latestPayment.remainingBalance;
+        const amountPaid = remainingBalance;
 
         if (mode === "gcash") {
           if (!parsed.reference || !parsed.imageUrl) {
@@ -391,23 +455,36 @@ paymentRoutes.openapi(
             .insert(PaymentsTable)
             .values({
               ...parsed,
+              category: "payment",
               amountPaid: amountPaid,
-              remainingBalance: 0,
-              paymentStatus: "paid",
             })
             .returning();
-
+          await db
+            .update(TransactionsTable)
+            .set({
+              remainingBalance: remainingBalance - amountPaid,
+              transactionStatus: "paid",
+            })
+            .where(eq(TransactionsTable.transactionId, transactionId))
+            .execute();
           return c.json(PaymentDTO.parse(created[0]), 201);
         } else {
           const created = await db
             .insert(PaymentsTable)
             .values({
               ...parsed,
+              category: "payment",
               amountPaid: amountPaid,
-              remainingBalance: 0,
-              paymentStatus: "paid",
             })
             .returning();
+          await db
+            .update(TransactionsTable)
+            .set({
+              remainingBalance: remainingBalance - amountPaid,
+              transactionStatus: "paid",
+            })
+            .where(eq(TransactionsTable.transactionId, transactionId))
+            .execute();
 
           return c.json(PaymentDTO.parse(created[0]), 201);
         }
@@ -426,17 +503,24 @@ paymentRoutes.openapi(
                 400
               );
             }
+
             const created = await db
               .insert(PaymentsTable)
               .values({
                 ...parsed,
                 downPaymentAmount: 3000,
                 amountPaid: 3000,
-                remainingBalance: remainingBalance - 3000,
-                paymentStatus: "partially-paid",
-                mode: "gcash",
+                category: "payment",
               })
               .returning();
+            await db
+              .update(TransactionsTable)
+              .set({
+                remainingBalance: remainingBalance - 3000,
+                transactionStatus: "partially-paid",
+              })
+              .where(eq(TransactionsTable.transactionId, transactionId))
+              .execute();
             return c.json(PaymentDTO.parse(created[0]), 201);
           } else {
             const created = await db
@@ -445,26 +529,39 @@ paymentRoutes.openapi(
                 ...parsed,
                 downPaymentAmount: 3000,
                 amountPaid: 3000,
-                remainingBalance: remainingBalance - 3000,
-                paymentStatus: "partially-paid",
-                mode: "cash",
+                category: "payment",
               })
               .returning();
+
+            await db
+              .update(TransactionsTable)
+              .set({
+                remainingBalance: remainingBalance - 3000,
+                transactionStatus: "partially-paid",
+              })
+              .where(eq(TransactionsTable.transactionId, transactionId))
+              .execute();
             return c.json(PaymentDTO.parse(created[0]), 201);
           }
         } else {
-          // If paymentTerms is "full-payment", check if the amountPaid is equal to the totalAmountDue
+          // If paymentTerms is "full-payment"
           if (mode === "cash") {
             const created = await db
               .insert(PaymentsTable)
               .values({
                 ...parsed,
-                amountPaid: booking.totalAmount,
-                remainingBalance: 0,
-                paymentStatus: "paid",
-                mode: "cash",
+                amountPaid: transaction.remainingBalance,
+                category: "payment",
               })
               .returning();
+            await db
+              .update(TransactionsTable)
+              .set({
+                remainingBalance: 0,
+                transactionStatus: "paid",
+              })
+              .where(eq(TransactionsTable.transactionId, transactionId))
+              .execute();
             return c.json(PaymentDTO.parse(created[0]), 201);
           } else {
             if (!parsed.reference || !parsed.imageUrl) {
@@ -480,12 +577,18 @@ paymentRoutes.openapi(
               .insert(PaymentsTable)
               .values({
                 ...parsed,
-                amountPaid: booking.totalAmount,
-                remainingBalance: 0,
-                paymentStatus: "paid",
-                mode: "gcash",
+                amountPaid: transaction.remainingBalance,
+                category: "payment",
               })
               .returning();
+            await db
+              .update(TransactionsTable)
+              .set({
+                remainingBalance: 0,
+                transactionStatus: "paid",
+              })
+              .where(eq(TransactionsTable.transactionId, transactionId))
+              .execute();
             return c.json(PaymentDTO.parse(created[0]), 201);
           }
         }
