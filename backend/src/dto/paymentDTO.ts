@@ -21,9 +21,10 @@ export const PaymentDTO = z.object({
     description: "Amount paid by the user",
     example: 1000.0,
   }),
-  remainingBalance: z.number().openapi({
-    description: "Total amount due for the booking",
-    example: 1500.0,
+  category: z.enum(["payment", "refund"]).openapi({
+    description: "Category of the payment",
+    example: "payment",
+    default: "payment",
   }),
   mode: z.enum(["gcash", "cash"]).openapi({
     description: "Mode of payment",
@@ -37,19 +38,10 @@ export const PaymentDTO = z.object({
     description: "Name of the sender for the payment",
     example: "John Doe",
   }),
-  refundAmount: z.number().nullable().optional().openapi({
-    description: "Amount refunded to the user",
-    example: 1000.0,
-  }),
-  paymentStatus: z.enum(["partially-paid", "paid", "voided"]).openapi({
+  paymentStatus: z.enum(["valid", "voided"]).openapi({
     description: "Status of the payment",
-    example: "paid",
-    default: "partially-paid",
-  }),
-  refundStatus: z.enum(["none", "pending", "refunded", "cancelled"]).openapi({
-    description: "Status of the refund",
-    example: "refunded",
-    default: "none",
+    example: "valid",
+    default: "valid",
   }),
   paidAt: z.string().openapi({
     description: "Timestamp when the payment was made",
