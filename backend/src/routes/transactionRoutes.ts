@@ -203,11 +203,32 @@ transactionRoutes.openapi(
       }
 
       const parsed = CreateTransactionDTO.parse(await c.req.json());
+      // TODO: Add validation to check if the bookingId already exists in the transaction table
+
+      const booking = await db.query.BookingsTable.findFirst({
+        where: eq(BookingsTable.bookingId, parsed.bookingId),
+      });
+
+      if (!booking) {
+        throw new NotFoundError("Booking not found.");
+      }
+
+      // Check if the booking is installment or full payment
+      let status: "paid" | "partially-paid" | "voided";
+
+      if (booking.paymentTerms === "installment") {
+        status = "partially-paid";
+      } else {
+        status = "paid";
+      } 
+
       const created = (
         await db
           .insert(TransactionsTable)
           .values({
             bookingId: parsed.bookingId,
+            transactionStatus: status,
+            remainingBalance: booking.totalAmount,
           })
           .returning()
           .execute()

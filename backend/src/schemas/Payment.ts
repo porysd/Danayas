@@ -11,26 +11,14 @@ import { TransactionsTable } from "./Transaction";
 
 export const PaymentsTable = sqliteTable("PAYMENT", {
   paymentId: integer("paymentId").primaryKey({ autoIncrement: true }),
-  transactionId: integer("transactionId")
-    .references(() => TransactionsTable.transactionId)
-    .notNull(),
+  transactionId: integer("transactionId").references(() => TransactionsTable.transactionId).notNull(),
   imageUrl: text("imageUrl"),
   downPaymentAmount: real("downPaymentAmount"),
   amountPaid: real("amountPaid").notNull(),
-  remainingBalance: real("remainingBalance").notNull(),
+  category: text("category", { enum: ["payment", "refund"] }).notNull(),
   mode: text("mode", { enum: ["gcash", "cash"] }).notNull(),
   reference: text("reference"),
   senderName: text("senderName").notNull(),
-  refundAmount: real("refundAmount"),
-  paymentStatus: text("paymentStatus", {
-    enum: ["partially-paid", "paid", "voided"],
-  }).notNull(),
-  refundStatus: text("refundStatus", {
-    enum: ["none", "pending", "refunded", "cancelled"],
-  })
-    .notNull()
-    .default("none"),
-  paidAt: text("paidAt")
-    .notNull()
-    .default(sql`(current_timestamp)`),
+  paymentStatus: text("paymentStatus", {enum: ["valid", "voided"]}).notNull().default("valid"),
+  paidAt: text("paidAt").notNull().default(sql`(current_timestamp)`),
 });
