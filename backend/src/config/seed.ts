@@ -9,6 +9,7 @@ import {
   BookingAddOnsTable,
   TransactionsTable,
   FaqsTable,
+  TermsAndConditionTable,
 } from "../schemas/schema.ts";
 import { faker } from "@faker-js/faker";
 import { grantPermission } from "../utils/permissionUtils.ts";
@@ -418,7 +419,7 @@ export default async function seed() {
       status = "partially-paid";
     } else {
       status = "paid";
-    } 
+    }
 
     try {
       const row = await db
@@ -603,8 +604,8 @@ export default async function seed() {
         .where(eq(CatalogAddOnsTable.catalogAddOnId, catalogAddOnId))
         .then((rows) => rows[0]);
       const selectedTransaction = await db.query.TransactionsTable.findFirst({
-        where: eq(TransactionsTable.transactionId, bookingId)
-      })
+        where: eq(TransactionsTable.transactionId, bookingId),
+      });
       if (!selectedTransaction) {
         continue;
       }
@@ -630,30 +631,119 @@ export default async function seed() {
       await db
         .update(TransactionsTable)
         .set({ remainingBalance: selectedTransaction.remainingBalance + price })
-        .where(eq(TransactionsTable.transactionId, selectedTransaction.transactionId))
+        .where(
+          eq(TransactionsTable.transactionId, selectedTransaction.transactionId)
+        )
         .execute();
-
     } catch (e) {
       console.error(e);
       continue;
     }
   }
 
-  // for FAQS
-  for (let i = 0; i < 20; i++) {
+  const realFAQs = [
+    {
+      question: "Where is Danayas Resorts Events Venue located?",
+      answer:
+        "We are conveniently located in #27 Jones St. Extension Dulong Bayan 2, San Mateo Rizal. Please contact us directly or visit our Facebook page for detailed directions.",
+    },
+    {
+      question: "What are your rates?",
+      answer:
+        "Rates vary depending on the event type, package, and time (Daytime, Overnight, or Whole Day). Please message us directly for updated pricing.",
+    },
+    {
+      question: "Are pencil bookings allowed?",
+      answer:
+        "We do not allow pencil bookings. A reservation is only confirmed once the required down payment is made.",
+    },
+    {
+      question: "Is a deposit required for bookings?",
+      answer:
+        "Yes, a reservation fee of ₱3,000 is required to secure your booking. Without a down payment, your schedule will not be confirmed.",
+    },
+    {
+      question: "Do you offer installment payment options?",
+      answer:
+        "Yes. We allow a reservation fee in advance, and full payment must be made upon arrival. Any excess charges will be settled at check-out.",
+    },
+    {
+      question: "What payment methods do you accept?",
+      answer:
+        "We accept GCash and cash payments. Please message us for account details or confirmation of payment methods.",
+    },
+    {
+      question: "How can I check for available dates?",
+      answer:
+        "You can look for the booking calendar in the website or inquire about available dates through our Facebook page or by calling/texting our official contact number.",
+    },
+    {
+      question: "Can I modify or cancel my reservation?",
+      answer:
+        "You may request to reschedule your booking subject to availability. Cancellations do not qualify for a refund unless due to a natural disaster, in which 50% of your down payment may be refunded.",
+    },
+    {
+      question: "Can I request a refund?",
+      answer:
+        "As stated in our policy, all reservation fees are non-refundable. However, 50% of the fee may be refunded if the cancellation is due to a natural disaster.",
+    },
+    {
+      question: "What are your special packages?",
+      answer:
+        "We offer packages for birthdays, weddings, family reunions, team buildings, and more. Each package includes various amenities depending on the package type. Message us for details and custom package options.",
+    },
+    {
+      question: "Do you offer discounts?",
+      answer: "As of now, discount are still not being offer.",
+    },
+    {
+      question: "What amenities does the resort have?",
+      answer:
+        "Danayas Resorts offers swimming pools, event halls, air-conditioned rooms, karaoke, grilling areas, parking, and more. Some facilities vary depending on the package or schedule.",
+    },
+    {
+      question: "Are pets allowed?",
+      answer:
+        "Pets are allowed in general areas but not in the pool premises for hygiene and safety reasons.",
+    },
+    {
+      question: "What is your smoking policy?",
+      answer:
+        "Smoking is allowed only in designated areas. Please dispose of cigarette butts properly to maintain the cleanliness of the resort.",
+    },
+    {
+      question: "What happens if I arrive late for my check-in?",
+      answer:
+        "We allow up to 2 days grace period after the agreed schedule. Without prior notice, the reservation will be cancelled and the down payment forfeited.",
+    },
+  ] as const;
+
+  for (const faqsData of realFAQs) {
+    try {
+      const row = await db
+        .insert(FaqsTable)
+        .values(faqsData)
+        .returning()
+        .execute();
+    } catch (err) {
+      continue;
+    }
+  }
+
+  // For Terms and Condition
+  for (let x = 0; x < 20; x++) {
     try {
       await db
-        .insert(FaqsTable)
+        .insert(TermsAndConditionTable)
         .values({
-          question: faker.lorem.sentence(),
-          answer: faker.lorem.paragraph(),
+          content: faker.lorem.paragraph(),
           createdAt: faker.date.past().toISOString(),
           updatedAt: faker.date.recent().toISOString(),
         })
         .execute();
+      console.log(`Inserted Terms and Condition #${x + 1}`);
     } catch (e) {
-      console.error(`Error inserting FAQ #${i + 1}:`, e);
-      continue;
+      console.error(`Error inserting Terms and Condition #${x + 1}:`, e);
     }
   }
 }
@@ -663,6 +753,23 @@ seed(); //Call this function when seeding.
 
 // TODO: generate fake payments
 
+// // for FAQS
+// for (let i = 0; i < 20; i++) {
+//   try {
+//     await db
+//       .insert(FaqsTable)
+//       .values({
+//         question: faker.lorem.sentence(),
+//         answer: faker.lorem.paragraph(),
+//         createdAt: faker.date.past().toISOString(),
+//         updatedAt: faker.date.recent().toISOString(),
+//       })
+//       .execute();
+//   } catch (e) {
+//     console.error(`Error inserting FAQ #${i + 1}:`, e);
+//     continue;
+//   }
+// }
 /* Old Code
 export async function seedRoles() {
   for (const roleName of roles) {

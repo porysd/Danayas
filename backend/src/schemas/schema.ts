@@ -10,4 +10,5 @@ export * from "./Transaction.ts";
 export * from "./BookingAddOns.ts";
 export * from "./CatalogAddOns.ts";
 export * from "./FaqsTable.ts";
+export * from "./TermsAndCondition.ts";
 // export * from './ContentManagement.ts';
