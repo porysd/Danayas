@@ -1,15 +1,67 @@
 <script setup>
-import { ref } from "vue";
+import { ref, onMounted } from "vue";
 import NavBar from "../components/NavBar.vue";
 import Footer from "../components/Footer.vue";
 import DatePicker from "primevue/datepicker";
+import { useBookingStore } from "../stores/bookingStore";
+import { useUserStore } from "../stores/userStore";
+import { formatDates } from "../utility/dateFormat";
+import { usePackageStore } from "../stores/packageStore";
+import Tag from "primevue/tag";
 
 const isMenuOpen1 = ref(false);
 const isMenuOpen2 = ref(false);
 const Reschedule = ref(false);
+const bookingStore = useBookingStore();
+const userStore = useUserStore();
+const packageStore = usePackageStore();
 
-const toggleMenu = () => {
-  isMenuOpen.value = !isMenuOpen.value;
+const userBookings = ref([]);
+const bookingDone = ref([]);
+
+onMounted(async () => {
+  await packageStore.fetchAllPackages();
+  await packageStore.fetchAllPromos();
+  try {
+    // Fetch bookings and user data
+    await bookingStore.fetchUserBookings();
+    await userStore.fetchCustomer();
+
+    const userNo = 4;
+    const user = await userStore.getUserById(userNo);
+    const userId = user?.userId;
+
+    if (userId) {
+      userBookings.value = bookingStore.bookings.filter(
+        (booking) =>
+          (booking.userId === userId && booking.bookStatus === "pending") ||
+          (booking.userId === userId && booking.bookStatus === "reserved") ||
+          (booking.userId === userId && booking.bookStatus === "rescheduled")
+      );
+    } else {
+      console.error("No userId found in userStore.");
+    }
+
+    if (userId) {
+      bookingDone.value = bookingStore.bookings.filter(
+        (booking) =>
+          (booking.userId === userId && booking.bookStatus === "cancelled") ||
+          (booking.userId === userId && booking.bookStatus === "completed")
+      );
+    } else {
+      console.error("No userId found in userStore.");
+    }
+  } catch (error) {
+    console.error("Error fetching data:", error);
+  }
+});
+
+// Get Package Name using packageId
+const getPackageName = (packageId) => {
+  const pkg =
+    packageStore.packages.find((p) => p.packageId === packageId) ||
+    packageStore.promos.find((p) => p.packageId === packageId);
+  return pkg ? pkg.name : "Unknown Package";
 };
 
 const showRescheduleModal = () => {
@@ -29,6 +81,23 @@ function checkCalendar() {
     alert("Please select your preferred date.");
   }
 }
+
+const getStatusSeverity = (status) => {
+  switch (status) {
+    case "pending":
+      return "pending";
+    case "reserved":
+      return "reserved";
+    case "rescheduled":
+      return "rescheduled";
+    case "completed":
+      return "success";
+    case "cancelled":
+      return "danger";
+    default:
+      return "secondary";
+  }
+};
 </script>
 ~
 <template>
@@ -124,10 +193,30 @@ function checkCalendar() {
         </div>
       </div>
 
-      <div class="information">
-        <p>Package name:</p>
-        <p>Date:</p>
-        <p>Personal Information:</p>
+      <div v-if="userBookings.length > 0">
+        <div v-for="booking in userBookings" :key="booking.bookingId">
+          <div class="information">
+            <p>Package Name: {{ getPackageName(booking.packageId) }}</p>
+
+            <p>
+              Date: {{ formatDates(booking.checkInDate) }} to
+              {{ formatDates(booking.checkOutDate) }}
+            </p>
+            <p>
+              Personal Information: {{ booking.firstName }}
+              {{ booking.lastName }}
+            </p>
+          </div>
+          <div class="flex justify-end mr-3">
+            <Tag
+              :severity="getStatusSeverity(booking.bookStatus)"
+              :value="booking.bookStatus"
+            />
+          </div>
+        </div>
+      </div>
+      <div v-else>
+        <p>No bookings found for this user.</p>
       </div>
     </div>
   </div>
@@ -152,10 +241,29 @@ function checkCalendar() {
         </div>
       </div>
 
-      <div class="information">
-        <p>Package name:</p>
-        <p>Date:</p>
-        <p>Personal Information:</p>
+      <div v-if="bookingDone.length > 0">
+        <div v-for="booking in bookingDone" :key="booking.bookingId">
+          <div class="information">
+            <p>Package Name: {{ getPackageName(booking.packageId) }}</p>
+            <p>
+              Date: {{ formatDates(booking.checkInDate) }} to
+              {{ formatDates(booking.checkOutDate) }}
+            </p>
+            <p>
+              Personal Information: {{ booking.firstName }}
+              {{ booking.lastName }}
+            </p>
+          </div>
+        </div>
+        <div class="flex justify-end mr-3">
+          <Tag
+            :severity="getStatusSeverity(booking.bookStatus)"
+            :value="booking.bookStatus"
+          />
+        </div>
+      </div>
+      <div v-else>
+        <p>No bookings found for this user.</p>
       </div>
     </div>
   </div>
@@ -223,11 +331,12 @@ img {
   position: static;
 }
 .information {
-  font-size: 1.2rem;
   font-weight: 600;
   color: green;
+  display: inline-block;
+  position: relative;
   width: 100%;
-  margin-left: 20px;
+  line-height: 1.9rem;
 }
 
 .logsBox {
@@ -236,10 +345,10 @@ img {
   flex-direction: column;
   height: 10rem;
   justify-content: center;
-  align-items: center;
   margin: auto;
+  padding: 1rem;
   border-radius: 10px;
-  width: 90%;
+  width: 70%;
   background: transparent;
   border: 1px solid #41ab5d;
 }
@@ -252,23 +361,25 @@ img {
   font-weight: bolder;
   font-size: 1.3rem;
   margin-top: 20px;
-  margin-bottom: 5px;
+  margin-bottom: 2rem;
   color: rgb(2, 2, 2);
   text-align: center;
   height: 1.5rem;
-  margin-bottom: 2rem;
 }
 
 .Header::before {
   content: "";
   position: absolute;
-  background: #000000;
-  left: 0;
-  margin-left: 10rem;
-  font-weight: bolder;
   top: 50%;
-  width: 70rem;
+  left: 50%;
+  transform: translate(
+    -50%,
+    -50%
+  ); /* Center the line horizontally and vertically */
+  background: #000000;
+  width: 50%; /* or a percentage like 80% if you want shorter lines */
   height: 1.2px;
+  z-index: -1; /* Optional: keeps the line behind the text */
 }
 
 .Header::after {
