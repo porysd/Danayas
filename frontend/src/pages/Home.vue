@@ -1,84 +1,31 @@
 <script setup>
-import { ref, onMounted, onUnmounted } from "vue";
+import { ref, onMounted, onUnmounted, computed } from "vue";
 import DatePicker from "primevue/datepicker";
+import { useRouter } from "vue-router";
 import FloatLabel from "primevue/floatlabel";
 import img from "../assets/danayas_day.jpg";
 import img1 from "../assets/danayas_night.jpg";
 import img2 from "../assets/danayas_event.jpg";
 import img3 from "../assets/danayas_event1.jpg";
-import image1 from "../assets/feedback1.jpg";
-import image2 from "../assets/feedback2.jpg";
-import image3 from "../assets/feedback3.jpg";
-import image4 from "../assets/danayas.jpg";
-import "cally";
 import HomePackage from "../components/HomePackage.vue";
+import Reviews from "../components/Reviews.vue";
 import NavBar from "../components/NavBar.vue";
 import Footer from "../components/Footer.vue";
 import { useBookingStore } from "../stores/bookingStore";
+import FullCalendar from "@fullcalendar/vue3";
+import dayGridPlugin from "@fullcalendar/daygrid";
+import timeGridPlugin from "@fullcalendar/timegrid";
+import interactionPlugin from "@fullcalendar/interaction";
+import Dialog from "primevue/dialog";
 
 const bookingStore = useBookingStore();
+const router = useRouter();
 
 onMounted(() => {
   bookingStore.fetchUserBookings();
 });
 
-// Process booking days
-const getBookingStyle = (slotDate) => {
-  const jsDate = new Date(slotDate.year, slotDate.month - 1, slotDate.day);
-
-  const formattedDate = jsDate.toISOString().split("T")[0];
-
-  const booking = bookingStore.bookings.find((b) =>
-    b.checkInDate.startsWith(formattedDate)
-  );
-
-  if (!booking) {
-    return {
-      backgroundColor: "#90EE94",
-      color: "#15803D",
-      width: "40px",
-      height: "40px",
-      display: "inline-flex",
-      justifyContent: "center",
-      alignItems: "center",
-      borderRadius: "10rem",
-      fontSize: "17px",
-    };
-  }
-
-  let backgroundColor;
-  let color;
-  switch (booking.mode) {
-    case "day-time":
-      backgroundColor = "#FFD5";
-      color = "white";
-      break;
-    case "night-time":
-      backgroundColor = "#6A5ACD";
-      color = "white";
-      break;
-    case "whole-day":
-      backgroundColor = "#FF6B6B";
-      color = "white";
-      break;
-    default:
-      backgroundColor = "#90EE94";
-      color = "#15803D";
-  }
-
-  return {
-    backgroundColor,
-    color,
-    width: "40px",
-    height: "40px",
-    display: "inline-flex",
-    justifyContent: "center",
-    alignItems: "center",
-    borderRadius: "10rem",
-    fontSize: "18px",
-  };
-};
-
+// Image and Text on first section
 let images = [img, img1, img2, img3];
 const texts = [
   "Danayas Resort",
@@ -104,97 +51,87 @@ onMounted(() => {
 
 onUnmounted(() => {
   clearInterval(interval);
-
   return { currentImage };
 });
 
-const carousel = ref(null);
-const rotation = ref(0);
-const rotation2 = ref(0);
-let timeTillSwap = ref(0);
-let autoRotate = null;
+// From and to Date logic
 
-const items = [
-  { id: 1, image: image1 },
-  { id: 2, image: image2 },
-  { id: 3, image: image3 },
-  { id: 4, image: image4 },
-];
-
-// Function to interpolate values smoothly
-function tween(a, b, t) {
-  return a + (b - a) * t;
-}
-
-// Move to Previous Slide
-const prevSlide = () => {
-  rotation.value += 90;
-  timeTillSwap.value = 600;
-  resetAutoRotate();
-};
-
-// Move to Next Slide
-const nextSlide = () => {
-  rotation.value -= 90;
-  timeTillSwap.value = 600;
-  resetAutoRotate();
-};
-
-// Animation Loop
-const animate = () => {
-  if (!carousel.value) return;
-
-  if (timeTillSwap.value <= 0) {
-    timeTillSwap.value = 200;
-  }
-  timeTillSwap.value--;
-
-  rotation2.value = tween(rotation2.value, rotation.value, 0.1);
-
-  carousel.value.style.transform = `perspective(45cm) rotateY(${rotation2.value}deg)`;
-
-  requestAnimationFrame(animate);
-};
-
-// Auto-Rotate Function
-const startAutoRotate = () => {
-  autoRotate = setInterval(() => {
-    nextSlide();
-  }, 4000); // Change slide every 3 seconds
-};
-
-// Reset Auto-Rotate when clicking a button
-const resetAutoRotate = () => {
-  clearInterval(autoRotate);
-  startAutoRotate();
-};
-
-// Lifecycle Hooks
-onMounted(() => {
-  animate();
-  startAutoRotate();
-});
-
-onUnmounted(() => {
-  clearInterval(autoRotate);
-});
-//calendar apperance
-
-const date = ref("");
 const showDatePicker = ref(false);
+const checkInDate = ref(null);
+const checkOutDate = ref(null);
 
-// Dark mode
-const isDarkMode = ref(false);
+const handleCheckAvailability = () => {
+  if (checkInDate.value && checkOutDate.value) {
+    router.push("/booking");
+  } else {
+    showDatePicker.value = !showDatePicker.value;
+  }
+};
 
-onMounted(() => {
-  isDarkMode.value = document.documentElement.classList.contains("my-app-dark");
+// Process booking days
+const mapBookingsToEvents = (bookings) => {
+  return bookings
+    .filter((b) => b.bookStatus === "reserved")
+    .map((b) => {
+      let backgroundColor;
+      let textColor = "white";
+      let title;
+
+      switch (b.mode) {
+        case "day-time": // if someone booked day status it will give Night Available
+          backgroundColor = "#6A5ACD";
+          textColor = "white";
+          title = "Night Available";
+          break;
+        case "night-time": // if someone booked night status it will give Day Available
+          backgroundColor = "#FFD580";
+          textColor = "black";
+          title = "Day Available";
+          break;
+        case "whole-day": // if someone booked day and night status and whole day status it will give Fully Booked
+          backgroundColor = "#FF6B6B";
+          title = "Fully Booked";
+          break;
+        default:
+          backgroundColor = "#90EE94";
+          textColor = "#15803D";
+      }
+
+      return {
+        id: b.bookingId,
+        title: title,
+        start: b.checkInDate,
+        // end: b.checkOutDate,
+        backgroundColor: backgroundColor,
+        textColor: textColor,
+        allDay: true,
+      };
+    });
+};
+
+const calendarOptions = ref({
+  plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin],
+  headerToolbar: {
+    left: "prev,next today",
+    center: "title",
+    right: "dayGridMonth,timeGridWeek,timeGridDay",
+  },
+  initialView: "dayGridMonth",
+  editable: false,
+  selectable: false,
+  selectMirror: false,
+  dayMaxEvents: false,
+  weekends: true,
+  events: computed(() => mapBookingsToEvents(bookingStore.bookings)),
 });
 
-function toggleDarkMode() {
-  document.documentElement.classList.toggle("my-app-dark");
-  isDarkMode.value = !isDarkMode.value;
-}
-const checkOutDate = ref(null);
+// MAp Dialog
+
+const showMapDialog = ref(false);
+
+const openMapDialog = () => {
+  showMapDialog.value = true;
+};
 </script>
 
 <template>
@@ -242,10 +179,7 @@ const checkOutDate = ref(null);
           </FloatLabel>
         </div>
 
-        <button
-          @click="showDatePicker = !showDatePicker"
-          class="availability-btn"
-        >
+        <button @click="handleCheckAvailability" class="availability-btn">
           Check Availability
         </button>
       </div>
@@ -264,28 +198,11 @@ const checkOutDate = ref(null);
         align-items: center;
       "
     >
-      <DatePicker
-        v-model="date"
-        inline
-        class="dateChart w-full sm:w-[20rem] mr-10 ml-10"
-      >
-        <template #date="slotProps">
-          <span>
-            <strong :style="getBookingStyle(slotProps.date)" class="date-box">
-              {{ slotProps.date.day }}
-            </strong>
-          </span>
+      <FullCalendar class="fullCalendar" :options="calendarOptions">
+        <template #eventContent="{ event, timeText }">
+          <b>{{ timeText }}</b> <i>{{ event.title }}</i>
         </template>
-      </DatePicker>
-      <DatePicker v-model="date" inline class="dateChart w-full sm:w-[20rem]">
-        <template #date="slotProps">
-          <span>
-            <strong :style="getBookingStyle(slotProps.date)" class="date-box">
-              {{ slotProps.date.day }}
-            </strong>
-          </span>
-        </template>
-      </DatePicker>
+      </FullCalendar>
 
       <div class="Status">
         <h1
@@ -349,9 +266,9 @@ const checkOutDate = ref(null);
       }"
     >
       <p id="p-text" class="text-black" style="font-size: 20px">
-        The ordinary and experience the best comfort zone at Danayas Resort
+        "Step into the enchanting world of Danayas Resorts Events Venue,
         <br />
-        where every sunrise brings serenity and tells every story.”
+        where every corner tells a story of simplicity and elegance"
       </p>
     </div>
     <div style="height: 12x"></div>
@@ -380,6 +297,7 @@ const checkOutDate = ref(null);
             style="
               font-weight: bold;
               font-family: Libre Baskerville;
+              letter-spacing: 10px;
               font-size: 40px;
               color: #194d1d;
               text-shadow: 0px 0px 4px rgb(255, 255, 255);
@@ -389,17 +307,17 @@ const checkOutDate = ref(null);
           </h1>
           <hr
             class="line dark:bg-white"
-            style="width: 500px; margin-bottom: 2rem"
+            style="width: 500px; margin-bottom: 1rem"
           />
-          <p style="font-size: 22px; font-family: 'poppins'">
-            Relax and rejuvenate your body and soul experience the best of
-            luxury and comfort Immerse yourself in the seamless fusion of
-            timeless architecture and modern design, where each home tells a
-            story of its own
+          <p style="font-size: 20px; font-family: 'poppins'">
+            Danayas Resorts Events Venue offers affordable events packages
+            including comfortable guest accommodations, event spaces for
+            weddings. conferences, and celebrations, in a serene, stree-free
+            environment. With versatile spaces and excellent services, it's the
+            perfect choice for hosting memorable occasions.
           </p>
           <button
             style="
-              background-color: #41ab5d;
               color: #ffffff;
               border-radius: 6px;
               width: 200px;
@@ -412,8 +330,10 @@ const checkOutDate = ref(null);
               padding: 5px;
               text-align: center;
               word-wrap: break-word;
+              cursor: pointer;
             "
-            @click="toggleDarkMode"
+            @click="$router.push('/about-us')"
+            class="bg-[#41ab5d] hover:bg-[#194d1d]"
           >
             Learn more
           </button>
@@ -460,14 +380,15 @@ const checkOutDate = ref(null);
             font-weight: 400;
             color: black;
             text-align: center;
-            margin-bottom: 10px;
+            margin-bottom: 2rem;
             word-wrap: break-word;
             margin-top: 10px;
           "
         >
-          “Immerse yourself in the seamless fusion of timeless architecture
-          and<br />
-          modern design, where each home tells a story of its own”
+          “Danayas Resorts Events Venue offers flexible options that cater to
+          your unique needs and budget.<br />
+          Enjoy added perks and special promos that make your dream occasion
+          extra ordinary.”
         </p>
         <div class="SeeAllBtn content-center justify-center m-auto">
           <button @click="$router.push('/packages')">SEE ALL PACKAGES</button>
@@ -510,12 +431,16 @@ const checkOutDate = ref(null);
         </div>
         <div
           id="Address-p"
-          style="font-size: 20px; font-weight: 400; color: black"
+          style="
+            font-size: 20px;
+            font-weight: 400;
+            color: black;
+            margin-bottom: 2rem;
+          "
         >
           #27 Jones St. Extension Dulong Bayan 2, San Mateo <br />
           Rizal Philippines
         </div>
-        <div style="height: 5px"></div>
         <div
           class="googleMap"
           v-animateonscroll="{
@@ -537,59 +462,45 @@ const checkOutDate = ref(null);
             referrerpolicy="no-referrer-when-downgrade"
           ></iframe>
         </div>
-        <button onclick="ViewMap" class="MapBtn" id="MapBtn">
+        <button @click="openMapDialog" class="MapBtn" id="MapBtn">
           VIEW LARGE MAP
         </button>
       </div>
     </div>
+
     <div id="wrapper">
-      <div
-        class="reviewHeader content-center align-center m-auto w-[50%] h-auto"
-      >
-        <h1
-          style="
-            text-align: center;
-            font-weight: bold;
-            font-size: 65px;
-            font-family: 'Poppins';
-            margin-top: 3rem;
-            color: #194d1d;
-
-            margin-bottom: 20px;
-            text-shadow: 0px 2px 2px rgb(40, 135, 21);
-          "
-        >
-          Guest Reviews
-        </h1>
-        <p
-          style="
-            text-align: center;
-            font-size: 20px;
-            font-weight: 400;
-            margin-bottom: 50px;
-            margin-top: 10px;
-          "
-        >
-          YOUR OPINIONS MATTERS
-        </p>
-
-        <div id="carousel" ref="carousel">
-          <div
-            class="carousel-item"
-            v-for="(item, index) in items"
-            :key="index"
-          >
-            <img :src="item.image" :alt="'Slide ' + (index + 1)" />
-          </div>
-        </div>
-
-        <div class="controls">
-          <button @click="prevSlide" id="BtnControls1">❮</button>
-          <button @click="nextSlide" id="BtnControls2">❯</button>
-        </div>
-      </div>
+      <Reviews />
     </div>
   </div>
+
+  <Dialog
+    v-model:visible="showMapDialog"
+    header="Danayas Resorts Events Venue Address"
+    :modal="true"
+    :closable="true"
+    :style="{ width: '80vw' }"
+  >
+    <div
+      class="googleMap"
+      v-animateonscroll="{
+        enterClass:
+          'animate-enter fade-in-10 slide-in-from-l-8 animate-duration-1000',
+        leaveClass: 'animate-leave fade-out-0',
+      }"
+    >
+      <iframe
+        src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d1929.608118783353!2d121
+            .12431473799222!3d14.7003600939651!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3397bb19868e1b37%3A0x429ae5ae7c94d0f2!2s7%20Jones%20Dulong%20Bayan
+            %202%2C%20San%20Mateo%2C%20Rizal%20Philippines!5e0!3m2!1sen!2sph!4v1741699299438!5m2!1sen!2sph"
+        width="1200"
+        height="510"
+        style="border: 0; border-radius: 10px"
+        allowfullscreen=""
+        loading="lazy"
+        referrerpolicy="no-referrer-when-downgrade"
+      ></iframe>
+    </div>
+  </Dialog>
   <Footer />
 </template>
 
@@ -599,6 +510,7 @@ const checkOutDate = ref(null);
   align-items: center;
   align-content: center;
 }
+
 .homeSlider {
   position: relative;
   display: flex;
@@ -613,40 +525,6 @@ const checkOutDate = ref(null);
   flex-wrap: wrap;
   border-radius: 25px;
   overflow: hidden;
-}
-
-.packageComponent {
-  margin-top: 10px;
-}
-.SeeAllBtn {
-  background-color: #41ab5d;
-  color: #ffffff;
-  border-radius: 6px;
-  width: 300px;
-  height: 50px;
-  text-align: center;
-  font-size: 20px;
-  font-weight: 400;
-  padding: 10px;
-  word-wrap: break-word;
-}
-.SeeAllBtn:hover {
-  background-color: #194d1d;
-}
-.MapBtn {
-  background-color: #41ab5d;
-  color: #ffffff;
-  border-radius: 6px;
-  width: 300px;
-  height: 50px;
-  text-align: center;
-  font-size: 20px;
-  font-weight: 400;
-  padding: 10px;
-  word-wrap: break-word;
-}
-.MapBtn:hover {
-  background-color: #194d1d;
 }
 
 .danayas-slide {
@@ -679,6 +557,42 @@ const checkOutDate = ref(null);
   align-content: center;
   align-items: center;
 }
+
+.datePickerbackground {
+  background-color: #fcfcfc;
+  width: 1065px;
+  height: 174px;
+  top: -80px;
+  position: relative;
+  display: flex;
+  margin: auto;
+  filter: drop-shadow(0px 4px 4px rgb(106, 104, 104));
+  border-radius: 20px;
+  padding: 66px;
+}
+
+.booking-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0px;
+  gap: 10px;
+  position: relative;
+  right: 1.5rem;
+}
+
+.date-picker-wrapper {
+  display: flex;
+  flex-direction: column;
+}
+
+:deep(.date-picker-wrapper) {
+  .p-datepicker-input {
+    border: none;
+    background-color: #c7e3b6;
+  }
+}
+
 #from,
 #to {
   margin-top: 10px;
@@ -698,125 +612,86 @@ const checkOutDate = ref(null);
   align-items: center;
 }
 
-#wrapper {
-  display: flex;
-  width: 100%;
-  height: auto;
-  position: relative;
-  flex-wrap: nowrap;
-  justify-content: center;
-  align-content: center;
-  align-items: center;
+.label {
+  font-size: 14px;
+  font-weight: 500;
+  margin: 0 8px;
 }
 
-.reviewHeader {
+.availability-btn {
+  background-color: #41ab5d;
+  color: white;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 18px;
+  font-weight: bold;
+  text-align: center;
+  width: 180px;
+  height: 50px;
+  cursor: pointer;
+}
+
+.availability-btn:hover {
+  background-color: #194d1d;
+}
+
+:deep(.fullCalendar) {
+  margin: 0 auto;
+  width: 750px;
+  height: 320px;
+  font-size: 10px;
+  padding: 10px;
+  background: white;
+  border-radius: 10px;
+
+  .fc {
+    font-family: Poppins, sans-serif;
+  }
+
+  .fc-toolbar-title {
+    font-size: 14px;
+  }
+
+  .fc-button {
+    background-color: #41ab5d;
+    color: white;
+    border-radius: 6px;
+    padding: 2px 6px;
+    font-size: 10px;
+    height: 24px;
+    min-width: 24px;
+  }
+
+  .fc-button .fc-icon {
+    font-size: 10px;
+  }
+
+  .fc-daygrid-event {
+    font-size: 10px;
+    padding: 1px 2px;
+    white-space: normal;
+  }
+
+  .fc-daygrid-more-link {
+    font-size: 9px;
+  }
+
+  .fc-event-title {
+    font-weight: 600;
+  }
+
+  .fc-daygrid-event-dot {
+    display: none;
+  }
+}
+
+.Status {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  text-align: center;
-  flex-wrap: nowrap;
+  gap: 10px;
+  margin: 0 auto;
 }
 
-#carousel {
-  position: relative;
-  height: 300px;
-  transform-style: preserve-3d;
-  transition: transform 0.5s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: auto;
-  flex-wrap: nowrap;
-  justify-content: center;
-  align-content: center;
-  align-items: center;
-}
-
-.carousel-item {
-  position: absolute;
-  width: 300px;
-  height: 300px;
-  border-radius: 2rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: auto;
-  flex-wrap: nowrap;
-  justify-content: center;
-  align-content: center;
-  align-items: center;
-}
-.carousel-item:nth-child(1) {
-  transform: translateZ(250px) rotateY(0deg);
-}
-
-.carousel-item:nth-child(2) {
-  transform: translateZ(-250px) rotateY(180deg);
-}
-
-.carousel-item:nth-child(3) {
-  transform: translateX(-250px) rotateY(-90deg);
-}
-
-.carousel-item:nth-child(4) {
-  transform: translateX(200px) rotateY(90deg);
-}
-
-.carousel-item img {
-  width: 100%;
-  height: 100%;
-  margin-top: 2rem;
-  border-radius: 2rem;
-  flex-wrap: nowrap;
-  justify-content: center;
-  align-content: center;
-  align-items: center;
-}
-
-.controls {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 250px;
-  position: absolute;
-  top: 75%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  pointer-events: none;
-}
-
-#BtnControls1,
-#BtnControls2 {
-  font-size: 50px;
-  cursor: pointer;
-  color: #194d1d;
-  background: none;
-  border: none;
-  pointer-events: auto;
-}
-
-#BtnControls1 {
-  position: absolute;
-  left: -250px;
-}
-
-#BtnControls2 {
-  position: absolute;
-  right: -250px;
-}
-
-h1 {
-  color: #0d0d0d;
-}
-
-.cally {
-  display: inline-flex;
-  align-items: center;
-  margin-top: 10px;
-  padding: 10px;
-  margin-left: 6rem;
-  margin-bottom: 10px;
-}
 .dot {
   height: 25px;
   width: 25px;
@@ -825,41 +700,6 @@ h1 {
   display: flex;
   flex-direction: column;
   margin-bottom: 10px; /* Adds space between dots */
-}
-.Status {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-left: 40px;
-  margin-right: 20px;
-}
-
-.datePickerbackground {
-  background-color: #fcfcfc;
-  width: 1065px;
-  height: 174px;
-  top: -80px;
-  position: relative;
-  display: flex;
-  margin: auto;
-  filter: drop-shadow(0px 4px 4px rgb(106, 104, 104));
-  border-radius: 20px;
-  padding: 66px;
-}
-
-.textWrap {
-  width: 999px;
-  height: 128px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  margin: auto;
-  font-family: "Fraunces", serif;
-  font-weight: bold;
-  color: #f1eaea;
-  text-align: center;
-  line-height: 1.9;
-  margin-bottom: 10rem;
 }
 
 .features-background {
@@ -877,28 +717,83 @@ h1 {
   margin-left: 5rem;
 }
 
-.text {
-  margin-top: 5rem;
-  margin-bottom: 13%;
-  border-radius: 10px;
-  margin-right: 9rem;
-  margin-left: 6rem;
-  text-align: justify;
-  line-height: 1.9;
-  width: 1500px;
-}
 .DiscountBackground {
   background-color: #c1f2b0;
   height: 250px;
   color: #194d1d;
   margin-bottom: 2rem;
 }
+
 .discount-text {
   color: #194d1d;
   line-height: 1.2;
   padding: 4rem;
   width: 687px;
 }
+
+.SeeAllBtn {
+  background-color: #41ab5d;
+  color: #ffffff;
+  border-radius: 6px;
+  width: 300px;
+  height: 50px;
+  text-align: center;
+  font-size: 20px;
+  font-weight: 400;
+  padding: 10px;
+  word-wrap: break-word;
+  margin-bottom: 2rem;
+}
+
+.SeeAllBtn:hover {
+  background-color: #194d1d;
+}
+
+.MapBtn {
+  background-color: #41ab5d;
+  color: #ffffff;
+  border-radius: 6px;
+  width: 300px;
+  height: 50px;
+  text-align: center;
+  font-size: 20px;
+  font-weight: 400;
+  padding: 10px;
+  word-wrap: break-word;
+}
+
+.MapBtn:hover {
+  background-color: #194d1d;
+}
+
+h1 {
+  color: #0d0d0d;
+}
+
+.textWrap {
+  width: 999px;
+  height: 128px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: auto;
+  font-family: "Fraunces", serif;
+  font-weight: bold;
+  color: #f1eaea;
+  text-align: center;
+  line-height: 1.9;
+  margin-bottom: 10rem;
+}
+
+.text {
+  margin-top: 2rem;
+  margin-right: 9rem;
+  margin-left: 6rem;
+  text-align: justify;
+  line-height: 1.9;
+  width: 1500px;
+}
+
 #title {
   color: #194d1d;
   width: 811px;
@@ -909,6 +804,7 @@ h1 {
   margin-bottom: 20px;
   text-shadow: 0px 4px 4px rgb(255, 255, 255);
 }
+
 #discountText {
   font-weight: normal;
   color: #000;
@@ -936,43 +832,6 @@ hr {
   overflow: visible;
   text-align: center;
   height: 5px;
-}
-
-.booking-container {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0px;
-  gap: 10px;
-  position: relative;
-  right: 1.5rem;
-}
-
-.date-picker-wrapper {
-  display: flex;
-  flex-direction: column;
-}
-
-.label {
-  font-size: 14px;
-  font-weight: 500;
-  margin: 0 8px;
-}
-
-.availability-btn {
-  background-color: #41ab5d;
-  color: white;
-  border: none;
-  padding: 12px 20px;
-  border-radius: 18px;
-  font-weight: bold;
-  text-align: center;
-  width: 180px;
-  height: 50px;
-  cursor: pointer;
-}
-.availability-btn:hover {
-  background-color: #194d1d;
 }
 
 #MapBtn {
@@ -1019,36 +878,6 @@ hr {
   .carousel {
     flex-wrap: wrap;
     justify-content: center;
-  }
-}
-
-:deep(.date-picker-wrapper) {
-  .p-datepicker-input {
-    border: none;
-    background-color: #c7e3b6;
-  }
-}
-
-:deep(.dateChart) {
-  .p-datepicker-panel {
-    border: none;
-    background: #fcfcfc;
-  }
-  .p-datepicker-header {
-    background: #fcfcfc;
-  }
-  .p-datepicker-day {
-    border-radius: 0;
-  }
-  .p-datepicker-day:hover {
-    border-radius: 0;
-    font-size: 20px;
-  }
-
-  .my-app-dark .p-datepicker-panel,
-  .my-app-dark .p-datepicker-header {
-    border: none;
-    background: #18181b;
   }
 }
 </style>
