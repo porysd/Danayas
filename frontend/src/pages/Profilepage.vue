@@ -1,6 +1,67 @@
 <script setup>
 import NavBar from "../components/NavBar.vue";
 import Footer from "../components/Footer.vue";
+import { ref, onMounted, computed } from "vue";
+import { useAuthStore } from "../stores/authStore";
+import { useUserStore } from "../stores/userStore";
+
+const authStore = useAuthStore();
+const userStore = useUserStore();
+
+const userData = ref({
+  username: "",
+  firstName: "",
+  lastName: "",
+  contactNo: "",
+  email: "",
+  address: "",
+});
+
+onMounted(async () => {
+  console.log("Auth initialized:", authStore.user, authStore.role);
+
+  const userId = authStore.user?.userId;
+
+  if (!userId) {
+    console.error("No userId found in authStore.user");
+    return;
+  }
+
+  console.log("Fetching user details for userId:", userId);
+  const fetchedUser = await userStore.getUserById(userId);
+
+  console.log("Fetched user:", fetchedUser);
+
+  userData.value = {
+    username: fetchedUser.username,
+    firstName: fetchedUser.firstName,
+    lastName: fetchedUser.lastName,
+    contactNo: fetchedUser.contactNo,
+    email: fetchedUser.email,
+    address: fetchedUser.address,
+  };
+
+  console.log("Populated userData:", userData.value);
+});
+
+const isEditing = ref(false);
+const isLoading = ref(false);
+
+const toggleEdit = async () => {
+  isEditing.value = !isEditing.value;
+
+  if (!isEditing.value) {
+    isLoading.value = true;
+    try {
+      const userUpdate = await userStore.updateUser(userData.value);
+      console.log("Saved:", userUpdate);
+    } catch (error) {
+      console.error("Error saving user data:", error);
+    } finally {
+      isLoading.value = false;
+    }
+  }
+};
 </script>
 <template>
   <NavBar />
@@ -29,35 +90,70 @@ import Footer from "../components/Footer.vue";
 
   <div class="profile-Container">
     <div class="modify-Pass">
-      <div><h1 class="Name">Hi, Shaina May Tendenilla!</h1></div>
+      <div>
+        <h1 class="Name">
+          Hi, {{ userData.firstName }} {{ userData.lastName }}!
+        </h1>
+      </div>
 
       <div class="modify-container">
         <div>
           <label>Username:</label>
-          <input class="packEvents" id="username" />
+          <input
+            class="packEvents"
+            id="username"
+            v-model="userData.username"
+            :disabled="!isEditing"
+          />
         </div>
         <div>
           <label>Email Address:</label>
-          <input class="packEvents" id="address" />
+          <input
+            class="packEvents"
+            id="address"
+            v-model="userData.email"
+            :disabled="!isEditing"
+          />
         </div>
 
         <div>
           <label>First Name:</label>
-          <input class="packEvents" id="firstname" />
+          <input
+            class="packEvents"
+            id="firstname"
+            v-model="userData.firstName"
+            :disabled="!isEditing"
+          />
         </div>
         <div>
           <label>Last Name:</label>
-          <input class="packEvents" id="lastname" />
+          <input
+            class="packEvents"
+            id="lastname"
+            v-model="userData.lastName"
+            :disabled="!isEditing"
+          />
         </div>
         <div>
           <label>Contact Number:</label>
-          <input type="number" class="packEvents" id="contact" />
+          <input
+            type="tel"
+            class="packEvents"
+            v-model="userData.contactNo"
+            :disabled="!isEditing"
+          />
         </div>
         <div>
           <label>Address: </label>
-          <input class="packEvents" />
+          <input
+            class="packEvents"
+            v-model="userData.address"
+            :disabled="!isEditing"
+          />
         </div>
-        <button class="modifyBtn">Modify</button>
+        <button class="modifyBtn" @click="toggleEdit" :disabled="isLoading">
+          {{ isEditing ? (isLoading ? "Saving..." : "Save") : "Modify" }}
+        </button>
       </div>
       <div class="ChangePass">
         <h1 class="TitlePass">Change Password</h1>
