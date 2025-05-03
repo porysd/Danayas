@@ -5,10 +5,8 @@ import { useAuthStore } from "./authStore";
 export const usePaymentStore = defineStore("payment", {
   state: () => ({
     payments: [],
-    payPartially: [],
-    payFull: [],
-    payVoided: [],
-    payRefund: [],
+    valid: [],
+    voided: [],
   }),
 
   actions: {
@@ -19,10 +17,8 @@ export const usePaymentStore = defineStore("payment", {
         if (!auth.isLoggedIn) return;
 
         this.payments = [];
-        this.payPartially = [];
-        this.payFull = [];
-        this.payVoided = [];
-        this.payRefund = [];
+        this.valid = [];
+        this.voided = [];
         const limit = 50;
         let page = 1;
         let hasMoreData = true;
@@ -42,20 +38,12 @@ export const usePaymentStore = defineStore("payment", {
           if (paymentData.items && paymentData.items.length > 0) {
             this.payments = paymentData.items;
 
-            this.payPartially = paymentData.items.filter(
-              (p) => p.paymentStatus === "partially-paid"
+            this.valid = paymentData.items.filter(
+              (p) => p.paymentStatus === "valid"
             );
 
-            this.payFull = paymentData.items.filter(
-              (p) => p.paymentStatus === "paid"
-            );
-
-            this.payVoided = paymentData.items.filter(
+            this.voided = paymentData.items.filter(
               (p) => p.paymentStatus === "voided"
-            );
-
-            this.payRefund = paymentData.items.filter(
-              (p) => p.refundStatus === "pending"
             );
 
             this.payments.unshift(...paymentData.items.reverse());

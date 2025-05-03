@@ -9,6 +9,7 @@ export const useBookingStore = defineStore("booking", {
     bookingPending: [],
     bookingReserved: [],
     bookingRescheduled: [],
+    bookingCancellation: [],
     bookingCancelled: [],
     bookingCompleted: [],
   }),
@@ -23,6 +24,7 @@ export const useBookingStore = defineStore("booking", {
       this.bookingPending = [];
       this.bookingReserved = [];
       this.bookingRescheduled = [];
+      this.bookingCancellation = [];
       this.bookingCancelled = [];
       this.bookingCompleted = [];
       const limit = 50;
@@ -58,6 +60,9 @@ export const useBookingStore = defineStore("booking", {
           );
           this.bookingReserved = bookingData.items.filter(
             (booking) => booking.bookStatus === "reserved"
+          );
+          this.bookingCancellation = bookingData.items.filter(
+            (booking) => booking.bookStatus === "pending-cancellation"
           );
           this.bookingCompleted = bookingData.items.filter(
             (booking) => booking.bookStatus === "completed"
@@ -133,6 +138,15 @@ export const useBookingStore = defineStore("booking", {
       const auth = useAuthStore();
       if (!auth.isLoggedIn) return;
 
+      const body = { bookStatus: booking.bookStatus };
+
+      if (booking.bookStatus === "cancelled") {
+        body.cancelCategory = booking.cancelCategory;
+        if (booking.cancelCategory === "others") {
+          body.cancelReason = booking.cancelReason;
+        }
+      }
+
       const res = await fetch(
         `http://localhost:3000/bookings/${booking.bookingId}/status`,
         {
@@ -141,17 +155,19 @@ export const useBookingStore = defineStore("booking", {
             "Content-Type": "application/json",
             Authorization: `Bearer ${auth.accessToken}`,
           },
-          body: JSON.stringify({ bookStatus: booking.bookStatus }),
+          body: JSON.stringify(body),
         }
       );
 
       if (!res.ok) {
+        const errorDetails = await res.text(); // Get response text for error details
+        console.error("Error response from backend:", errorDetails);
         throw new Error("Failed to update booking status");
       }
 
       const updatedBooking = await res.json();
       const index = this.bookings.findIndex(
-        (b) => b.bookingId === booking.bookStatus
+        (b) => b.bookingId === booking.bookingId
       );
       if (index !== -1) {
         this.bookings[index].bookStatus = booking.bookStatus;
@@ -195,6 +211,7 @@ export const useBookingStore = defineStore("booking", {
         this.bookings[index].checkInDate = updatedBooking.checkInDate;
         this.bookings[index].checkOutDate = updatedBooking.checkOutDate;
       }
+      await this.fetchUserBookings();
     },
 
     //Delete BOOKING

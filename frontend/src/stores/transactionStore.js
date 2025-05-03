@@ -4,6 +4,10 @@ import { useAuthStore } from "./authStore";
 export const useTransactionStore = defineStore("transaction", {
   state: () => ({
     transactions: [],
+    partially: [],
+    full: [],
+    voided: [],
+    refund: [],
   }),
 
   actions: {
@@ -14,6 +18,10 @@ export const useTransactionStore = defineStore("transaction", {
         if (!auth.isLoggedIn) return;
 
         this.transactions = [];
+        this.partially = [];
+        this.full = [];
+        this.voided = [];
+        this.refund = [];
 
         const limit = 50;
         let page = 1;
@@ -33,9 +41,26 @@ export const useTransactionStore = defineStore("transaction", {
           const transactionData = await response.json();
 
           if (transactionData.items && transactionData.items.length > 0) {
-            this.transactions.unshift(...transactionData.items.reverse());
+            this.transactions = transactionData.items;
 
-            if (transactionData.items.length === 0) {
+            this.partially = transactionData.items.filter(
+              (p) => p.transactionStatus === "partially-paid"
+            );
+
+            this.full = transactionData.items.filter(
+              (p) => p.transactionStatus === "paid"
+            );
+
+            this.voided = transactionData.items.filter(
+              (p) => p.transactionStatus === "voided"
+            );
+
+            this.refund = transactionData.items.filter(
+              (p) => p.transactionStatus === "pending"
+            );
+
+            this.transactions.unshift(...transactionData.items.reverse());
+            if (transactionData.length === 0) {
               hasMoreData = false;
             } else {
               page++;

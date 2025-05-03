@@ -267,5 +267,45 @@ export const useUserStore = defineStore("user", {
         console.error("Error enabling user:", error);
       }
     },
+
+    // Update User
+    async updateUser(userData) {
+      try {
+        const auth = useAuthStore();
+        if (!auth.isLoggedIn) return;
+
+        const res = await fetch(
+          `http://localhost:3000/users/${userData.userId}`,
+          {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${auth.accessToken}`,
+            },
+            body: JSON.stringify(userData),
+          }
+        );
+
+        if (!res.ok) {
+          throw new Error("Failed to update user data");
+        }
+
+        const updatedUser = await res.json();
+        console.log("User updated successfully:", updatedUser);
+
+        // Optionally update the local store
+        const userIndex = this.users.findIndex(
+          (user) => user.userId === userData.userId
+        );
+        if (userIndex !== -1) {
+          this.users[userIndex] = updatedUser;
+        }
+
+        return updatedUser;
+      } catch (error) {
+        console.error("Error updating user:", error);
+        throw error;
+      }
+    },
   },
 });
