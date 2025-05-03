@@ -102,12 +102,12 @@ onUnmounted(() => {
 
     <div v-if="showMenu" ref="hideMenu" class="dropdown-menu">
       <ul>
-        <li
+        <!--<li
           class="hover:bg-gray-100 dark:hover:bg-gray-700"
           @click="openArchiveModal"
         >
           Archive
-        </li>
+        </li>-->
         <li
           v-if="customer.status !== 'disable'"
           class="hover:bg-gray-100 dark:hover:bg-gray-700"

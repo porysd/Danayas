@@ -16,92 +16,62 @@ import TabList from "primevue/tablist";
 import Tab from "primevue/tab";
 import TabPanels from "primevue/tabpanels";
 import TabPanel from "primevue/tabpanel";
-import DataTable from "primevue/datatable";
-import Column from "primevue/column";
+import { formatPeso } from "../../utility/pesoFormat.js";
+import { formatDates } from "../../utility/dateFormat.js";
 import { usePaymentStore } from "../../stores/paymentStore.js";
+import { useTransactionStore } from "../../stores/transactionStore.js";
+import { useBookingStore } from "../../stores/bookingStore.js";
 
 const paymentStore = usePaymentStore();
+const transactionStore = useTransactionStore();
+const bookingStore = useBookingStore();
 
 onMounted(() => {
   paymentStore.fetchPayments();
+  transactionStore.fetchTransaction();
+  bookingStore.fetchUserBookings();
 });
 
-const totalPayments = computed(() => filteredPayment.value.length);
+const getBookingName = (bookingId) => {
+  const booking = bookingStore.bookings.find((b) => b.bookingId === bookingId);
+  return booking ? booking.firstName + " " + booking.lastName : "Unknown";
+};
 
-// Delete Payment by Id
-// const deletePaymentHandler = async (payment) => {
-//   try {
-//     const response = await fetch(`http://localhost:3000/payments/${payment.userId}`, {
-//       method: 'delete',
-//     });
-//     if (!response.ok) throw new Error('Failed to delete payment');
-//     payment.value = payment.value.filter(c => c.userId !== payment.userId);
-//   } catch (error) {
-//     console.error('Error deleting payment:', error);
-//   }
-// };
-
-// Update Payment by ID
-const updatePaymentHandler = async (payment) => {
+const secondPaymentHandler = async (payment) => {
   try {
-    const response = await fetch(
-      `http://localhost:3000/payments/${payment.paymentId}`,
-      {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payment),
-      }
-    );
+    const paymentData = await paymentStore.addPayment(payment);
 
-    if (!response.ok) throw new Error("Failed to update payment");
-
-    const updatedPayment = await response.json();
-    const index = payments.value.findIndex(
-      (p) => p.paymentId === payment.paymentId
-    );
-    if (index !== -1) {
-      Object.assign(payments.value[index], payment);
-    }
+    console.log("Payment successfully processed", paymentData);
+    await fetchPayments();
   } catch (error) {
-    console.error("Error updating payment:", error);
+    console.error("Payment failed:", error.message);
   }
 };
 
-//Fix Date Format
-function formatDate(dateString) {
-  const date = new Date(dateString);
-  const options = { year: "numeric", month: "short", day: "numeric" };
-  return date.toLocaleDateString("en-US", options);
-}
-
-// Peso Currency Format
-function formatPeso(value) {
-  return new Intl.NumberFormat("en-PH", {
-    style: "currency",
-    currency: "PHP",
-  }).format(value);
-}
+// Update Payment by ID
+const updatePaymentHandler = async (payment) => {
+  await paymentStore.updatePayment(payment);
+};
 
 // Payment Details
 const selectedPayment = ref(null);
+const selectedTransaction = ref(null);
 const paymentDetails = ref(false);
-const billingDetails = ref(false);
+const transactionDetails = ref(false);
 
 const openPaymentDetails = (payment) => {
   selectedPayment.value = payment;
   paymentDetails.value = true;
 };
 
-const openBillingDetails = (payment) => {
-  selectedPayment.value = payment;
-  billingDetails.value = true;
+const openTransactionDetails = (transaction) => {
+  selectedTransaction.value = transaction;
+  transactionDetails.value = true;
 };
 
 const closeModal = () => {
   paymentDetails.value = false;
-  billingDetails.value = false;
+  transactionDetails.value = false;
 };
 
 // Checks Severity of Status of the Payment
@@ -120,12 +90,28 @@ const getStatusSeverity = (status) => {
   }
 };
 
+const totalPayments = computed(() => filteredPayment.value.length);
+const totalFull = computed(() => filteredFull.value.length);
+const totalRefund = computed(() => filteredRefund.value.length);
+const totalVoid = computed(() => filteredVoid.value.length);
 // Paginator or pagination of the tables
 const first = ref(0);
 const rows = ref(10);
 
 const paginatedPayments = computed(() => {
   return filteredPayment.value.slice(first.value, first.value + rows.value);
+});
+
+const paginatedFull = computed(() => {
+  return filteredFull.value.slice(first.value, first.value + rows.value);
+});
+
+const paginatedRefund = computed(() => {
+  return filteredRefund.value.slice(first.value, first.value + rows.value);
+});
+
+const paginatedVoided = computed(() => {
+  return filteredVoid.value.slice(first.value, first.value + rows.value);
 });
 
 const onPageChange = (event) => {
@@ -143,12 +129,9 @@ const filterStatuses = ref({
   failed: false,
   refund: false,
 });
-const filterMode = ref({
-  cash: false,
-  gcash: false,
-});
+
 const filteredPayment = computed(() => {
-  let result = paymentStore.payments;
+  let result = transactionStore.partially;
 
   if (searchQuery.value !== "") {
     result = result.filter((payment) =>
@@ -167,12 +150,69 @@ const filteredPayment = computed(() => {
     );
   }
 
-  const selectedMode = Object.keys(filterMode.value).filter(
-    (mode) => filterMode.value[mode]
+  return result;
+});
+const filteredFull = computed(() => {
+  let result = transactionStore.full;
+
+  if (searchQuery.value !== "") {
+    result = result.filter((payment) =>
+      Object.values(payment).some((val) =>
+        String(val).toLowerCase().includes(searchQuery.value.toLowerCase())
+      )
+    );
+  }
+
+  const selectedStatuses = Object.keys(filterStatuses.value).filter(
+    (status) => filterStatuses.value[status]
   );
-  if (selectedMode.length > 0) {
-    result = result.filter((mode) =>
-      selectedMode.includes(mode.mode.toLowerCase())
+  if (selectedStatuses.length > 0) {
+    result = result.filter((payment) =>
+      selectedStatuses.includes(payment.paymentStatus.toLowerCase())
+    );
+  }
+
+  return result;
+});
+const filteredRefund = computed(() => {
+  let result = transactionStore.refund;
+
+  if (searchQuery.value !== "") {
+    result = result.filter((payment) =>
+      Object.values(payment).some((val) =>
+        String(val).toLowerCase().includes(searchQuery.value.toLowerCase())
+      )
+    );
+  }
+
+  const selectedStatuses = Object.keys(filterStatuses.value).filter(
+    (status) => filterStatuses.value[status]
+  );
+  if (selectedStatuses.length > 0) {
+    result = result.filter((payment) =>
+      selectedStatuses.includes(payment.paymentStatus.toLowerCase())
+    );
+  }
+
+  return result;
+});
+const filteredVoid = computed(() => {
+  let result = transactionStore.voided;
+
+  if (searchQuery.value !== "") {
+    result = result.filter((payment) =>
+      Object.values(payment).some((val) =>
+        String(val).toLowerCase().includes(searchQuery.value.toLowerCase())
+      )
+    );
+  }
+
+  const selectedStatuses = Object.keys(filterStatuses.value).filter(
+    (status) => filterStatuses.value[status]
+  );
+  if (selectedStatuses.length > 0) {
+    result = result.filter((payment) =>
+      selectedStatuses.includes(payment.paymentStatus.toLowerCase())
     );
   }
 
@@ -237,22 +277,6 @@ const filteredPayment = computed(() => {
                   <label for="refund">Refund</label>
                 </li>
               </ul>
-              <Divider />
-              <h2 class="font-bold mb-1">Mode</h2>
-              <ul>
-                <li class="hover:bg-gray-100 flex items-center gap-2">
-                  <input type="checkbox" id="cash" v-model="filterMode.cash" />
-                  <label for="cash">Cash</label>
-                </li>
-                <li class="hover:bg-gray-100 flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="gcash"
-                    v-model="filterMode.gcash"
-                  />
-                  <label for="gcash">GCash</label>
-                </li>
-              </ul>
             </div>
           </div>
         </div>
@@ -261,11 +285,11 @@ const filteredPayment = computed(() => {
       <div class="tabPayBill">
         <Tabs value="0">
           <TabList>
-            <Tab value="0">BILLING</Tab>
-            <Tab value="1">PARTIALLY PAID</Tab>
-            <Tab value="2">FULLY PAID</Tab>
-            <Tab value="3">REFUND</Tab>
-            <Tab value="4">VOIDED</Tab>
+            <Tab value="0">PARTIALLY PAID</Tab>
+            <Tab value="1">FULLY PAID</Tab>
+            <Tab value="2">REFUND</Tab>
+            <Tab value="3">VOIDED</Tab>
+            <Tab value="4">TRANSACTION</Tab>
           </TabList>
           <TabPanels>
             <TabPanel value="0">
@@ -274,48 +298,46 @@ const filteredPayment = computed(() => {
                   <thead>
                     <tr class="header-style">
                       <th>ID</th>
-                      <td>BOOKING ID</td>
-                      <th>DOWNPAYMENT AMOUNT</th>
-                      <th>AMOUNT PAID</th>
-                      <th>BAlANCE</th>
-                      <th>MODE</th>
-                      <th>REFERENCE</th>
+                      <th>BOOKING ID</th>
+                      <th>NAME</th>
                       <th>STATUS</th>
-                      <th>PAID AT</th>
+                      <th>BALANCE</th>
+                      <th>CREATED</th>
                       <th></th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr
                       class="cRow"
-                      v-for="payment in paginatedPayments"
-                      :key="payment.paymentId"
-                      @click="openBillingDetails(payment)"
+                      v-for="transaction in paginatedPayments"
+                      :key="transaction.transactionId"
+                      @click="openTransactionDetails(transaction)"
                     >
-                      <td class="w-[3%]">{{ payment.paymentId }}</td>
-                      <td class="w-[3%]">{{ payment.bookingId }}</td>
-                      <td class="w-[15%]">
-                        {{ formatPeso(payment.downPaymentAmount) }}
-                      </td>
+                      <td class="w-[3%]">{{ transaction.transactionId }}</td>
+                      <td class="w-[5%]">{{ transaction.bookingId }}</td>
                       <td class="w-[10%]">
-                        {{ formatPeso(payment.amountPaid) }}
+                        {{ getBookingName(transaction.bookingId) }}
                       </td>
-                      <td class="w-[10%]">
-                        {{ formatPeso(payment.remainingBalance) }}
-                      </td>
-                      <td class="w-[8%]">{{ payment.mode }}</td>
-                      <td class="w-[15%]">{{ payment.reference }}</td>
                       <td class="w-[12%]">
                         <Tag
-                          :severity="getStatusSeverity(payment.paymentStatus)"
-                          :value="payment.paymentStatus"
+                          :severity="
+                            getStatusSeverity(transaction.transactionStatus)
+                          "
+                          :value="transaction.transactionStatus"
                         />
                       </td>
-                      <td>{{ formatDate(payment.paidAt) }}</td>
-                      <td @click.stop>
+                      <td class="w-[7%]">
+                        {{ formatPeso(transaction.remainingBalance) }}
+                      </td>
+                      <td class="w-[15%]">
+                        {{ formatDates(transaction.createdAt) }}
+                      </td>
+                      <td class="w-[3%]" @click.stop>
                         <T3ButtonTransaction
-                          :payment="payment"
+                          :payment="transaction"
+                          :bookingName="getBookingName(transaction.bookingId)"
                           @voidPayment="updatePaymentHandler"
+                          @payPayment="secondPaymentHandler"
                         />
                       </td>
                     </tr>
@@ -338,40 +360,45 @@ const filteredPayment = computed(() => {
                   <thead>
                     <tr class="header-style">
                       <th>ID</th>
-                      <th>DOWNPAYMENT AMOUNT</th>
-                      <th>AMOUNT PAID</th>
-                      <th>BALANCE</th>
-                      <th>MODE</th>
-                      <th>REFERENCE</th>
+                      <th>BOOKING ID</th>
+                      <th>NAME</th>
                       <th>STATUS</th>
-                      <th>PAID AT</th>
+                      <th>BALANCE</th>
+                      <th>CREATED</th>
                       <th></th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr
                       class="cRow"
-                      v-for="payment in paymentStore.payPartially"
-                      :key="payment.paymentId"
-                      @click="openPaymentDetails(payment)"
+                      v-for="transaction in paginatedFull"
+                      :key="transaction.transactionId"
+                      @click="openTransactionDetails(transaction)"
                     >
-                      <td class="w-[3%]">{{ payment.paymentId }}</td>
-                      <td class="w-[15%]">{{ payment.downPaymentAmount }}</td>
-                      <td class="w-[10%]">{{ payment.amountPaid }}</td>
-                      <td class="w-[10%]">{{ payment.remainingBalance }}</td>
-                      <td class="w-[8%]">{{ payment.mode }}</td>
-                      <td class="w-[15%]">{{ payment.reference }}</td>
+                      <td class="w-[3%]">{{ transaction.transactionId }}</td>
+                      <td class="w-[5%]">{{ transaction.bookingId }}</td>
+                      <td class="w-[10%]">
+                        {{ getBookingName(transaction.bookingId) }}
+                      </td>
                       <td class="w-[12%]">
                         <Tag
-                          :severity="getStatusSeverity(payment.paymentStatus)"
-                          :value="payment.paymentStatus"
+                          :severity="
+                            getStatusSeverity(transaction.transactionStatus)
+                          "
+                          :value="transaction.transactionStatus"
                         />
                       </td>
-                      <td>{{ formatDate(payment.paidAt) }}</td>
-                      <td @click.stop>
+                      <td class="w-[7%]">
+                        {{ formatPeso(transaction.remainingBalance) }}
+                      </td>
+                      <td class="w-[15%]">
+                        {{ formatDates(transaction.createdAt) }}
+                      </td>
+                      <td class="w-[3%]" @click.stop>
                         <T3ButtonTransaction
-                          :payment="payment"
+                          :payment="transaction"
                           @voidPayment="updatePaymentHandler"
+                          @payPayment="secondPaymentHandler"
                         />
                       </td>
                     </tr>
@@ -380,7 +407,7 @@ const filteredPayment = computed(() => {
                 <Paginator
                   :first="first"
                   :rows="rows"
-                  :totalRecords="totalPayments"
+                  :totalRecords="totalFull"
                   :rowsPerPageOptions="[5, 10, 20, 30]"
                   @page="onPageChange"
                   class="rowPagination"
@@ -394,40 +421,45 @@ const filteredPayment = computed(() => {
                   <thead>
                     <tr class="header-style">
                       <th>ID</th>
-                      <th>DOWNPAYMENT AMOUNT</th>
-                      <th>AMOUNT PAID</th>
-                      <th>TOTAL DUE</th>
-                      <th>MODE</th>
-                      <th>REFERENCE</th>
+                      <th>BOOKING ID</th>
+                      <th>NAME</th>
                       <th>STATUS</th>
-                      <th>PAID AT</th>
+                      <th>BALANCE</th>
+                      <th>CREATED</th>
                       <th></th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr
                       class="cRow"
-                      v-for="payment in paymentStore.payFull"
-                      :key="payment.paymentId"
-                      @click="openPaymentDetails(payment)"
+                      v-for="transaction in paginatedRefund"
+                      :key="transaction.transactionId"
+                      @click="openTransactionDetails(transaction)"
                     >
-                      <td class="w-[3%]">{{ payment.paymentId }}</td>
-                      <td class="w-[15%]">{{ payment.downPaymentAmount }}</td>
-                      <td class="w-[10%]">{{ payment.amountPaid }}</td>
-                      <td class="w-[10%]">{{ payment.remainingBalance }}</td>
-                      <td class="w-[8%]">{{ payment.mode }}</td>
-                      <td class="w-[15%]">{{ payment.reference }}</td>
+                      <td class="w-[3%]">{{ transaction.transactionId }}</td>
+                      <td class="w-[5%]">{{ transaction.bookingId }}</td>
+                      <td class="w-[10%]">
+                        {{ getBookingName(transaction.bookingId) }}
+                      </td>
                       <td class="w-[12%]">
                         <Tag
-                          :severity="getStatusSeverity(payment.paymentStatus)"
-                          :value="payment.paymentStatus"
+                          :severity="
+                            getStatusSeverity(transaction.transactionStatus)
+                          "
+                          :value="transaction.transactionStatus"
                         />
                       </td>
-                      <td>{{ formatDate(payment.paidAt) }}</td>
-                      <td @click.stop>
+                      <td class="w-[7%]">
+                        {{ formatPeso(transaction.remainingBalance) }}
+                      </td>
+                      <td class="w-[15%]">
+                        {{ formatDates(transaction.createdAt) }}
+                      </td>
+                      <td class="w-[3%]" @click.stop>
                         <T3ButtonTransaction
-                          :payment="payment"
+                          :payment="transaction"
                           @voidPayment="updatePaymentHandler"
+                          @payPayment="secondPaymentHandler"
                         />
                       </td>
                     </tr>
@@ -436,53 +468,59 @@ const filteredPayment = computed(() => {
                 <Paginator
                   :first="first"
                   :rows="rows"
-                  :totalRecords="totalPayments"
+                  :totalRecords="totalRefund"
                   :rowsPerPageOptions="[5, 10, 20, 30]"
                   @page="onPageChange"
                   class="rowPagination"
                 />
               </div>
             </TabPanel>
+
             <TabPanel value="3">
               <div class="tableContainer">
                 <table class="dTable">
                   <thead>
                     <tr class="header-style">
                       <th>ID</th>
-                      <th>DOWNPAYMENT AMOUNT</th>
-                      <th>AMOUNT PAID</th>
-                      <th>TOTAL DUE</th>
-                      <th>MODE</th>
-                      <th>REFERENCE</th>
+                      <th>BOOKING ID</th>
+                      <th>NAME</th>
                       <th>STATUS</th>
-                      <th>PAID AT</th>
+                      <th>BALANCE</th>
+                      <th>CREATED</th>
                       <th></th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr
                       class="cRow"
-                      v-for="payment in paymentStore.payRefund"
-                      :key="payment.paymentId"
-                      @click="openPaymentDetails(payment)"
+                      v-for="transaction in paginatedVoided"
+                      :key="transaction.transactionId"
+                      @click="openTransactionDetails(transaction)"
                     >
-                      <td class="w-[3%]">{{ payment.paymentId }}</td>
-                      <td class="w-[15%]">{{ payment.downPaymentAmount }}</td>
-                      <td class="w-[10%]">{{ payment.amountPaid }}</td>
-                      <td class="w-[10%]">{{ payment.remainingBalance }}</td>
-                      <td class="w-[8%]">{{ payment.mode }}</td>
-                      <td class="w-[15%]">{{ payment.reference }}</td>
+                      <td class="w-[3%]">{{ transaction.transactionId }}</td>
+                      <td class="w-[5%]">{{ transaction.bookingId }}</td>
+                      <td class="w-[10%]">
+                        {{ getBookingName(transaction.bookingId) }}
+                      </td>
                       <td class="w-[12%]">
                         <Tag
-                          :severity="getStatusSeverity(payment.refundStatus)"
-                          :value="payment.refundStatus"
+                          :severity="
+                            getStatusSeverity(transaction.transactionStatus)
+                          "
+                          :value="transaction.transactionStatus"
                         />
                       </td>
-                      <td>{{ formatDate(payment.paidAt) }}</td>
-                      <td @click.stop>
+                      <td class="w-[7%]">
+                        {{ formatPeso(transaction.remainingBalance) }}
+                      </td>
+                      <td class="w-[15%]">
+                        {{ formatDates(transaction.createdAt) }}
+                      </td>
+                      <td class="w-[3%]" @click.stop>
                         <T3ButtonTransaction
-                          :payment="payment"
+                          :payment="transaction"
                           @voidPayment="updatePaymentHandler"
+                          @payPayment="secondPaymentHandler"
                         />
                       </td>
                     </tr>
@@ -491,55 +529,59 @@ const filteredPayment = computed(() => {
                 <Paginator
                   :first="first"
                   :rows="rows"
-                  :totalRecords="totalPayments"
+                  :totalRecords="totalVoid"
                   :rowsPerPageOptions="[5, 10, 20, 30]"
                   @page="onPageChange"
                   class="rowPagination"
                 />
               </div>
             </TabPanel>
+
             <TabPanel value="4">
               <div class="tableContainer">
                 <table class="dTable">
                   <thead>
                     <tr class="header-style">
                       <th>ID</th>
-                      <th>DISCOUNT AMOUNT</th>
-                      <th>DOWNPAYMENT AMOUNT</th>
-                      <th>AMOUNT PAID</th>
-                      <th>TOTAL DUE</th>
-                      <th>MODE</th>
-                      <th>REFERENCE</th>
+                      <th>BOOKING ID</th>
+                      <th>NAME</th>
                       <th>STATUS</th>
-                      <th>PAID AT</th>
+                      <th>BALANCE</th>
+                      <th>CREATED</th>
                       <th></th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr
                       class="cRow"
-                      v-for="payment in paymentStore.payVoided"
-                      :key="payment.paymentId"
-                      @click="openPaymentDetails(payment)"
+                      v-for="transaction in transactionStore.transactions"
+                      :key="transaction.transactionId"
+                      @click="openTransactionDetails(transaction)"
                     >
-                      <td class="w-[3%]">{{ payment.paymentId }}</td>
-                      <td class="w-[10%]">{{ payment.discountAmount }}</td>
-                      <td class="w-[15%]">{{ payment.downpaymentAmount }}</td>
-                      <td class="w-[10%]">{{ payment.amountPaid }}</td>
-                      <td class="w-[10%]">{{ payment.totalAmountDue }}</td>
-                      <td class="w-[8%]">{{ payment.mode }}</td>
-                      <td class="w-[15%]">{{ payment.reference }}</td>
+                      <td class="w-[3%]">{{ transaction.transactionId }}</td>
+                      <td class="w-[5%]">{{ transaction.bookingId }}</td>
+                      <td class="w-[10%]">
+                        {{ getBookingName(transaction.bookingId) }}
+                      </td>
                       <td class="w-[12%]">
                         <Tag
-                          :severity="getStatusSeverity(payment.paymentStatus)"
-                          :value="payment.paymentStatus"
+                          :severity="
+                            getStatusSeverity(transaction.transactionStatus)
+                          "
+                          :value="transaction.transactionStatus"
                         />
                       </td>
-                      <td>{{ formatDate(payment.paidAt) }}</td>
-                      <td @click.stop>
+                      <td class="w-[7%]">
+                        {{ formatPeso(transaction.remainingBalance) }}
+                      </td>
+                      <td class="w-[15%]">
+                        {{ formatDates(transaction.createdAt) }}
+                      </td>
+                      <td class="w-[3%]" @click.stop>
                         <T3ButtonTransaction
-                          :payment="payment"
+                          :payment="transaction"
                           @voidPayment="updatePaymentHandler"
+                          @payPayment="secondPaymentHandler"
                         />
                       </td>
                     </tr>
@@ -560,42 +602,24 @@ const filteredPayment = computed(() => {
       </div>
     </div>
 
-    <div v-if="billingDetails" class="modal">
+    <div v-if="transactionDetails" class="modal">
       <div class="modal-content font-[Poppins]">
         <h2 class="text-xl font-bold m-auto justify-center align-center flex">
-          Billing Details
+          Transaction Details
         </h2>
         <Divider />
         <div class="flex flex-col gap-2">
-          <p><strong>Billing ID:</strong> {{ selectedPayment?.paymentId }}</p>
-          <p><strong>Booking ID:</strong> {{ selectedPayment?.bookingId }}</p>
           <p>
-            <strong>Customer Name:</strong>
-            {{ selectedPayment?.bookingId.firstName }}
-            {{ selectedPayment?.bookingId.lastName }}
+            <strong>Transaction ID:</strong>
+            {{ selectedTransaction?.transactionId }}
           </p>
           <p>
-            <strong>Total Amount Due: </strong
-            >{{ selectedPayment?.totalAmountDue }}
+            <strong>Booking ID:</strong> {{ selectedTransaction?.bookingId }}
           </p>
-          <p><strong>Total Paid:</strong> {{ selectedPayment?.amountPaid }}</p>
-          <p>
-            <strong>Remaining Balance: </strong
-            >{{ selectedPayment?.totalAmountDue - selectedPayment?.amountPaid }}
-          </p>
-          <p><strong>Mode:</strong> {{ selectedPayment?.mode }}</p>
-          <p>
-            <strong>Payment Status: </strong
-            >{{ selectedPayment?.paymentStatus }}
-          </p>
-          <DataTable :value="payments" tableStyle="min-width: 50rem">
-            <Column field="paymentId" header="Payment ID"></Column>
-            <Column field="amountPaid" header="AmountPaid"></Column>
-            <Column field="mode" header="Mode"></Column>
-            <Column field="paidAt" header="Date"></Column>
-          </DataTable>
 
-          <p><strong>Paid At: </strong>{{ selectedPayment?.paidAt }}</p>
+          <p>
+            <strong>Created At: </strong>{{ selectedTransaction?.createdAt }}
+          </p>
           <Divider />
           <button class="closeDetails mt-5 w-[100%]" @click="closeModal">
             Close
@@ -612,19 +636,18 @@ const filteredPayment = computed(() => {
         <Divider />
         <div class="flex flex-col gap-2">
           <p><strong>Payment ID:</strong> {{ selectedPayment?.paymentId }}</p>
-          <p><strong>Booking ID:</strong> {{ selectedPayment?.bookingId }}</p>
           <p>
-            <strong>Discount Amount:</strong>
-            {{ selectedPayment?.discountAmount }}
+            <strong>Transaction ID:</strong>
+            {{ selectedPayment?.transactionId }}
           </p>
           <p>
             <strong>Downpayment Amount: </strong
-            >{{ selectedPayment?.downpaymentAmount }}
+            >{{ selectedPayment?.downPaymentAmount }}
           </p>
           <p><strong>Amount Paid:</strong> {{ selectedPayment?.amountPaid }}</p>
           <p>
-            <strong>Total Amount Due: </strong
-            >{{ selectedPayment?.totalAmountDue }}
+            <strong>Remaining Balance: </strong
+            >{{ selectedPayment?.remainingBalance }}
           </p>
           <p><strong>Mode:</strong> {{ selectedPayment?.mode }}</p>
           <p><strong>Reference: </strong>{{ selectedPayment?.reference }}</p>
@@ -692,8 +715,7 @@ td {
 
 .tableContainer {
   max-height: 75%;
-  overflow-y: auto;
-
+  overflow: visible;
   border-radius: 5px;
 }
 
@@ -723,7 +745,8 @@ td {
 .cRow {
   width: 100%;
   font-size: 15px;
-  height: auto;
+  height: 50px;
+  min-height: auto;
   text-align: center;
   border-bottom: 1px solid #194d1d;
   cursor: pointer;
@@ -775,35 +798,49 @@ td {
     background: transparent;
   }
 }
-
 :deep(.tabPayBill) {
   max-height: 75%;
   overflow-y: auto;
+
   .p-tabpanels {
     background: transparent;
     padding: 0;
   }
+
   .p-tablist {
     --p-tabs-tablist-background: transparent;
+    display: flex;
+    gap: 8px;
+    padding-bottom: 4px;
+    border-bottom: 2px solid #e0e0e0;
   }
+
   .p-tab {
     font-size: 15px;
-    font-weight: bold;
-    padding: 10px;
-    margin-top: 0;
-    border-radius: 5px 5px 0 0;
-    border: 1px solid #194d1d;
+    font-weight: 600;
+    padding: 10px 16px;
+    border-radius: 12px 12px 0 0;
+    background-color: transparent;
+    color: #194d1d;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: none;
+    position: relative;
   }
+
   .p-tab.p-tab-active {
-    background-color: #194d1d;
-    color: white;
+    background: #194d1d;
+    color: #ffffff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   }
-  .p-tab:hover {
-    background-color: #b5d9b5;
+
+  .p-tab:hover:not(.p-tab-active) {
+    background-color: #e8f5e9;
+    color: #194d1d;
   }
+
   .p-tablist-active-bar {
-    color: transparent;
-    background: white;
+    display: none;
   }
 }
 </style>

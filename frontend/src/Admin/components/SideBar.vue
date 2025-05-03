@@ -48,12 +48,20 @@ const toggleContentMenu = () => {
         Booking</router-link
       >
       <router-link
-        to="/admin/transaction"
+        to="/admin/payment"
         class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
         active-class="active-route"
       >
         <i class="pi pi-credit-card"></i>
-        Transaction</router-link
+        Payment Management</router-link
+      >
+      <router-link
+        to="/admin/transaction"
+        class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
+        active-class="active-route"
+      >
+        <i class="pi pi-receipt"></i>
+        Transaction Management</router-link
       >
       <router-link
         to="/admin/employee-management"
@@ -168,14 +176,14 @@ const toggleContentMenu = () => {
         >
       </div>
 
-      <router-link
+      <!--<router-link
         to="/admin/archived"
         class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
         active-class="active-route"
       >
         <i class="pi pi-history"></i>
         Archived</router-link
-      >
+      >-->
     </nav>
   </div>
 

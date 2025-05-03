@@ -23,7 +23,12 @@ const openEditModal = () => {
 };
 
 const openStatusModal = () => {
-  formData.value = { ...props.booking };
+  formData.value = {
+    bookStatus: props.booking.bookStatus || "pending",
+    cancelCategory: props.booking.cancelCategory || "",
+    cancelReason: props.booking.cancelReason || "",
+    ...props.booking,
+  };
   showStatusModal.value = true;
   showMenu.value = false;
 };
@@ -34,6 +39,31 @@ const closeModals = () => {
 };
 
 const confirmStatusUpdate = () => {
+  if (formData.value.bookStatus === "cancelled") {
+    if (!formData.value.cancelCategory) {
+      toast.add({
+        severity: "error",
+        summary: "Error",
+        detail: "Cancel Category is required",
+        life: 3000,
+      });
+      return;
+    }
+
+    if (
+      formData.value.cancelCategory === "others" &&
+      !formData.value.cancelReason
+    ) {
+      toast.add({
+        severity: "error",
+        summary: "Error",
+        detail: 'Cancel Reason is required for "Others" category',
+        life: 3000,
+      });
+      return;
+    }
+  }
+  console.log("Payload:", formData.value);
   emit("updateStatus", formData.value);
   toast.add({
     severity: "success",
@@ -115,8 +145,19 @@ onUnmounted(() => {
       </select>
       <div>
         <template v-if="formData.bookStatus === 'cancelled'">
-          <label>Reason for Cancellation:</label>
-          <input v-model="formData.cancelReason" />
+          <label>Cancel Category:</label>
+          <select
+            v-model="formData.cancelCategory"
+            class="border p-2 rounded w-full"
+            required
+          >
+            <option value="natural-disaster">Natural Disaster</option>
+            <option value="others">Others:</option>
+          </select>
+          <template v-if="formData.cancelCategory === 'others'">
+            <label>Reason for Cancellation:</label>
+            <input class="w-full" v-model="formData.cancelReason" />
+          </template>
         </template>
       </div>
     </div>

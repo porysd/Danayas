@@ -1,20 +1,29 @@
 <script setup>
-import { ref, defineProps, defineEmits } from "vue";
+import { ref, defineProps, defineEmits, onMounted, onUnmounted } from "vue";
 import Button from "primevue/button";
 import Dialog from "primevue/dialog";
 import Toast from "primevue/toast";
 import { useToast } from "primevue/usetoast";
+import { formatPeso } from "../../utility/pesoFormat";
 
 const toast = useToast();
 const showMenu = ref(false);
 const showVoidModal = ref(false);
+const showPayModal = ref(false);
 const formData = ref({});
 
-// const showArchiveModal = ref(false);
-// const showUpdateModal = ref(false);
-
-const prop = defineProps(["payment"]);
-const emit = defineEmits(["voidPayment"]);
+const prop = defineProps({
+  payment: Object,
+  bookingName: {
+    type: String,
+    default: "Unknown",
+  },
+  showPay: {
+    type: Boolean,
+    default: true,
+  },
+});
+const emit = defineEmits(["voidPayment", "payPayment"]);
 let previousStatus = null;
 
 const openVoidModal = () => {
@@ -24,13 +33,26 @@ const openVoidModal = () => {
   showMenu.value = false;
 };
 
+const openPayModal = () => {
+  formData.value = { ...prop.payment };
+  showPayModal.value = true;
+  showMenu.value = false;
+};
+
 const closeModals = () => {
   //   showArchiveModal.value = false;
   showVoidModal.value = false;
+  showPayModal.value = false;
   // showUpdateModal.value = false;
 };
+
+const confirmPay = () => {
+  emit("payPayment", formData.value);
+  closeModals();
+};
+
 const confirmVoid = () => {
-  formData.value.paymentStatus = "failed";
+  formData.value.paymentStatus = "voided";
   emit("voidPayment", formData.value);
   toast.add({
     severity: "warn",
@@ -42,7 +64,7 @@ const confirmVoid = () => {
 };
 
 const revertPayment = () => {
-  formData.value.paymentStatus = previousStatus;
+  formData.value.paymentStatus = "valid";
   emit("voidPayment", formData.value);
   toast.add({
     severity: "success",
@@ -52,6 +74,25 @@ const revertPayment = () => {
   });
   showMenu.value = false;
 };
+
+const hideMenu = ref(false);
+
+const closeMenu = (event) => {
+  if (hideMenu.value && !hideMenu.value.contains(event.target)) {
+    showMenu.value = false;
+  }
+};
+
+onMounted(() => {
+  document.addEventListener("click", closeMenu);
+});
+
+onUnmounted(() => {
+  document.addEventListener("click", closeMenu);
+});
+
+// const showArchiveModal = ref(false);
+// const showUpdateModal = ref(false);
 
 // const openArchiveModal = () => {
 //   formData.value = { ...prop.customer };
@@ -94,13 +135,29 @@ const revertPayment = () => {
       class="adminButton pi pi-ellipsis-v"
     ></button>
 
-    <div v-if="showMenu" class="dropdown-menu">
+    <div v-if="showMenu" ref="hideMenu" class="dropdown-menu">
       <ul>
-        <li>Pay</li>
-        <li v-if="payment.paymentStatus !== 'failed'" @click="openVoidModal">
+        <li
+          class="hover:bg-gray-100 dark:hover:bg-gray-700"
+          v-if="showPay"
+          @click="openPayModal"
+        >
+          Pay
+        </li>
+        <li
+          v-if="payment.paymentStatus !== 'voided'"
+          @click="openVoidModal"
+          class="hover:bg-gray-100 dark:hover:bg-gray-700"
+        >
           Void
         </li>
-        <li v-else @click="revertPayment">Revert</li>
+        <li
+          v-else
+          @click="revertPayment"
+          class="hover:bg-gray-100 dark:hover:bg-gray-700"
+        >
+          Revert
+        </li>
       </ul>
     </div>
   </div>
@@ -133,6 +190,86 @@ const revertPayment = () => {
         label="Void"
         severity="danger"
         @click="confirmVoid"
+        class="font-bold w-full"
+      />
+    </div>
+  </Dialog>
+
+  <Dialog v-model:visible="showPayModal" modal :style="{ width: '30rem' }">
+    <template #header>
+      <div class="flex flex-col items-center justify-center w-full">
+        <h2 class="text-xl font-bold font-[Poppins]">Confirm Payment</h2>
+      </div>
+    </template>
+
+    <div class="space-y-4 font-[Poppins] px-4">
+      <p class="text-center text-lg">
+        Are you sure you want to
+        <strong class="text-green-600">complete</strong> this partial payment?
+      </p>
+
+      <div class="text-left text-base space-y-2">
+        <p>
+          <strong>Name:</strong>
+          {{ bookingName }}
+        </p>
+        <p><strong>Payment Mode: </strong> {{ payment.mode }}</p>
+        <p>
+          <strong>Amount Paid: </strong>{{ formatPeso(payment.amountPaid) }}
+        </p>
+        <p>
+          <strong>Remaining Balance: </strong
+          >{{ formatPeso(payment.remainingBalance) }}
+        </p>
+        <label>Sender Name:</label>
+        <input class="w-full" v-model="formData.senderName" />
+        <label class="block text-lg mb-2">Mode:</label>
+        <select v-model="formData.mode" class="border p-2 rounded w-full">
+          <option value="gcash">GCash</option>
+          <option value="cash">Cash</option>
+        </select>
+
+        <template v-if="formData.mode === 'gcash'">
+          <label>GCash Reference No:</label>
+          <input class="w-full" v-model="formData.reference" />
+          <label>Proof of Payment:</label>
+          <input class="w-full" v-model="formData.imageUrl" />
+        </template>
+
+        <!--<div class="mb-4">
+          <label class="block text-lg mb-2">Excess Charge</label>
+          <select
+            v-model="formData.bookStatus"
+            class="border p-2 rounded w-full"
+          >
+            <option value="cancelled">Yes</option>
+            <option value="completed">No</option>
+          </select>
+          <div class="flex flex-col">
+            <template v-if="formData.bookStatus === 'cancelled'">
+              <label>Extra Guest:</label>
+              <input v-model="formData.cancelReason" />
+              <label>Add ons:</label>
+              <input v-model="formData.cancelReason" />
+            </template>
+          </div>
+        </div>-->
+      </div>
+    </div>
+
+    <div class="flex justify-center gap-2 mt-6 font-[Poppins] px-4">
+      <Button
+        type="button"
+        label="Cancel"
+        severity="secondary"
+        @click="closeModals"
+        class="font-bold w-full"
+      />
+      <Button
+        type="button"
+        label="Pay"
+        severity="success"
+        @click="confirmPay"
         class="font-bold w-full"
       />
     </div>
@@ -189,7 +326,7 @@ const revertPayment = () => {
   position: absolute;
   right: 0;
   top: 100%;
-  background: #fcf5f5;
+  background: #fcfcfc;
   color: #333;
   border-radius: 5px;
   padding: 5px;
@@ -210,11 +347,6 @@ const revertPayment = () => {
   display: flex;
   align-items: center;
   gap: 5px;
-}
-
-.dropdown-menu li:hover {
-  background: #555;
-  color: #fcf5f5;
 }
 
 .modal-overlay {
@@ -298,5 +430,21 @@ const revertPayment = () => {
   border-radius: 5px;
   cursor: pointer;
   margin-left: 10px;
+}
+
+label {
+  display: block;
+  text-align: left;
+  font-size: 16px;
+  font-weight: 400;
+  margin-bottom: 10px;
+  margin-top: 10px;
+}
+
+input {
+  padding: 8px;
+  border: 1px solid #e2e8f0;
+  background-color: #ffffff;
+  border-radius: 5px;
 }
 </style>
