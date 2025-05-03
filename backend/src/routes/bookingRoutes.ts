@@ -361,32 +361,35 @@ bookingRoutes.openapi(
       }
 
       const requestData = UpdateBookingDTO.parse(await c.req.json());
-      // Cancel Category and Reason Validation if booking status is cancelled
-      if (requestData.bookStatus === "cancelled") {
-        if (!requestData.cancelCategory) {
-          throw new BadRequestError(
-            "Cancel category is required for cancellation"
-          );
-        }
-        if (!requestData.cancelReason) {
-          throw new BadRequestError(
-            "Cancel reason is required for cancellation"
-          );
-        }
-        if (requestData.cancelCategory === "natural-disaster") {
-          await db
-            .update(TransactionsTable)
-            .set({ refundStatus: "pending" })
-            .where(eq(TransactionsTable.bookingId, bookingId))
-            .execute();
-        }
-      }
+      // // Cancel Category and Reason Validation if booking status is cancelled
+      // if (requestData.bookStatus === "cancelled") {
+      //   if (!requestData.cancelCategory) {
+      //     throw new BadRequestError(
+      //       "Cancel category is required for cancellation"
+      //     );
+      //   }
+      //   if (!requestData.cancelReason) {
+      //     throw new BadRequestError(
+      //       "Cancel reason is required for cancellation"
+      //     );
+      //   }
+      //   if (requestData.cancelCategory === "natural-disaster") {
+      //     await db
+      //       .update(TransactionsTable)
+      //       .set({ refundStatus: "pending" })
+      //       .where(eq(TransactionsTable.bookingId, bookingId))
+      //       .execute();
+      //   }
+      // }
       const booking = await db.query.BookingsTable.findFirst({
         where: eq(BookingsTable.bookingId, bookingId),
       });
 
       let hasRescheduled = false;
-      if (requestData.checkInDate !== booking?.checkInDate || requestData.checkOutDate !== booking?.checkOutDate) {
+      if (
+        requestData.checkInDate !== booking?.checkInDate ||
+        requestData.checkOutDate !== booking?.checkOutDate
+      ) {
         hasRescheduled = true;
       }
 
@@ -394,9 +397,7 @@ bookingRoutes.openapi(
 
       const updatedBooking = await db
         .update(BookingsTable)
-        .set({...processedData,
-          hasRescheduled: hasRescheduled ? 1 : 0,
-        })
+        .set({ ...processedData, hasRescheduled: hasRescheduled ? 1 : 0 })
         .where(eq(BookingsTable.bookingId, bookingId))
         .returning()
         .execute();
@@ -437,6 +438,8 @@ bookingRoutes.openapi(
                 "rescheduled",
                 "pending-cancellation",
               ]),
+              cancelCategory: z.enum(["natural-disaster", "others"]).optional(),
+              cancelReason: z.string().optional(),
             }),
           },
         },
@@ -472,7 +475,32 @@ bookingRoutes.openapi(
       }
 
       const bookingId = Number(c.req.param("id"));
-      const { bookStatus } = await c.req.json();
+      const { bookStatus, cancelCategory, cancelReason } = await c.req.json();
+
+      if (bookStatus === "cancelled") {
+        if (!cancelCategory) {
+          throw new BadRequestError(
+            "Cancel category is required for cancellation"
+          );
+        }
+
+        if (
+          cancelCategory === "others" &&
+          (!cancelReason || cancelReason.trim() === "")
+        ) {
+          throw new BadRequestError(
+            "Cancel Reason is required for 'others' category"
+          );
+        }
+
+        if (cancelCategory === "natural-disaster") {
+          await db
+            .update(TransactionsTable)
+            .set({ refundStatus: "pending" })
+            .where(eq(TransactionsTable.bookingId, bookingId))
+            .execute();
+        }
+      }
 
       const existingBooking = await db
         .select()
@@ -486,7 +514,12 @@ bookingRoutes.openapi(
 
       const updatedBooking = await db
         .update(BookingsTable)
-        .set({ bookStatus })
+        .set({
+          bookStatus,
+          cancelCategory: bookStatus === "cancelled" ? cancelCategory : null,
+          cancelReason:
+            bookStatus === "cancelled" ? cancelReason ?? null : null,
+        })
         .where(eq(BookingsTable.bookingId, bookingId))
         .returning()
         .execute();
