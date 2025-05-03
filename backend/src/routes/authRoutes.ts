@@ -8,8 +8,9 @@ import { AccessTokenDTO } from "../dto/authDTO";
 import { ErrorSchema } from "../utils/ErrorSchema";
 import { UnauthorizedError, ConflictError } from "../utils/errors";
 import { errorHandler } from "../middlewares/errorHandler";
+import type { AuthContext } from "../types";
 
-export default new OpenAPIHono()
+export default new OpenAPIHono<AuthContext>()
   .openapi(
     createRoute({
       tags: ["Authentication"],
