@@ -3,6 +3,8 @@ import { ref } from "vue";
 import { useRouter } from "vue-router";
 import ProgressSpinner from "primevue/progressspinner";
 import { useAuthStore } from "../stores/authStore";
+import InputText from "primevue/inputtext";
+import Button from "primevue/button";
 
 const authStore = useAuthStore();
 const router = useRouter();
@@ -129,7 +131,7 @@ const CloseSignUpModal = () => {
   <button class="SignUp-btn" @click="OpenSignUpModal">Sign Up</button>
 
   <div v-if="showSignUpModal" class="modal">
-    <div class="SignUpBox">
+    <div class="SignUpBox bg-white/30 backdrop-blur-md shadow-2xl">
       <div class="signup">
         <i
           class="pi pi-times"
@@ -137,89 +139,106 @@ const CloseSignUpModal = () => {
           style="
             color: green;
             align-self: flex-end;
-            margin-left: 49rem;
-            font-size: 1.5rem;
+            font-size: 1.3rem;
             cursor: pointer;
+            margin-right: 20px;
+            margin-top: 20px;
+            margin-bottom: 10px;
+            margin-left: 50rem;
+            font-weight: bold;
           "
         ></i>
 
         <div class="SignCred">
-          <h1 class="signUp text-5xl" style="text-align: center">SIGN UP</h1>
-          <p
-            style="
-              text-align: center;
-              color: green;
-              margin-top: -30px;
-              margin-bottom: 10px;
-            "
+          <h1
+            class="Login text-center mb-4 mt-1 text-4xl font-bold text-gray-800"
+            style="letter-spacing: 5px"
           >
+            SIGN UP
+          </h1>
+          <h6 class="text-gray-600 font-bold text-sm mb-4 text-center">
             Create an account to enjoy all the features of our website.
-          </p>
+          </h6>
         </div>
 
         <form @submit.prevent="SignUp">
           <div class="SignCred">
             <div class="bookAddress">
               <div>
-                <label>Username:</label>
-                <input
+                <label for="usename" class="text-sm text-gray-600 font-bold"
+                  >Username:</label
+                >
+                <InputText
+                  type="text"
                   class="packEvents"
                   v-model="newUser.username"
-                  placeholder="Username"
                 />
               </div>
             </div>
 
             <div class="packEvent">
               <div>
-                <label>First Name:</label>
-                <input
+                <label for="firstname" class="text-sm text-gray-600 font-bold"
+                  >Firstname:</label
+                >
+                <InputText
+                  type="text"
                   class="packEvents"
                   v-model="newUser.firstName"
-                  placeholder="First Name"
                 />
               </div>
               <div>
-                <label>Last Name:</label>
-                <input
+                <label for="lastname" class="text-sm text-gray-600 font-bold"
+                  >Lastname:</label
+                >
+                <InputText
+                  type="text"
                   class="packEvents"
                   v-model="newUser.lastName"
-                  placeholder="Last Name"
                 />
               </div>
               <div>
-                <label>Contact No.:</label>
-                <input
+                <label for="contactNo" class="text-sm text-gray-600 font-bold"
+                  >Contact No:</label
+                >
+                <InputText
+                  type="tel"
                   class="packEvents"
                   v-model="newUser.contactNo"
-                  placeholder="Contact No"
                 />
               </div>
+
               <div>
-                <label>Email Address</label>
-                <input
+                <label for="email" class="text-sm text-gray-600 font-bold"
+                  >Email:</label
+                >
+                <InputText
+                  type="text"
                   class="packEvents"
                   v-model="newUser.email"
-                  placeholder="Email Address"
                 />
               </div>
             </div>
 
             <div class="bookAddress">
               <div>
-                <label>Address:</label>
-                <input
+                <label for="address" class="text-sm text-gray-600 font-bold"
+                  >Address:</label
+                >
+                <InputText
+                  type="text"
                   class="packEvents"
                   v-model="newUser.address"
-                  placeholder="Address"
                 />
               </div>
             </div>
 
             <div class="packEvent">
               <div>
-                <label>Password:</label>
-                <input
+                <label for="password" class="text-sm text-gray-600 font-bold"
+                  >Password:</label
+                >
+                <InputText
                   type="password"
                   class="packEvents"
                   v-model="newUser.password"
@@ -227,12 +246,14 @@ const CloseSignUpModal = () => {
                 />
               </div>
               <div>
-                <label>Confirm Password:</label>
-                <input
+                <label for="password" class="text-sm text-gray-600 font-bold"
+                  >Confirm password:</label
+                >
+                <InputText
                   type="password"
                   class="packEvents"
-                  v-model="newUser.confirmPass"
-                  placeholder="Confirm Password"
+                  v-model="newUser.password"
+                  placeholder="Password"
                 />
               </div>
             </div>
@@ -243,7 +264,9 @@ const CloseSignUpModal = () => {
             </div>
 
             <div class="modal-actions">
-              <button class="submitBtn" type="submit">Sign Up</button>
+              <Button class="submitBtn" type="submit" value="Login"
+                >Sign Up</Button
+              >
             </div>
           </div>
         </form>
@@ -332,11 +355,7 @@ const CloseSignUpModal = () => {
   justify-content: center;
 }
 .SignUpBox {
-  padding: 20px;
-  filter: drop-shadow(0px 0px 10px rgba(97, 95, 95, 0.5));
   background: #eef9eb;
-  box-shadow: 0px 0px 10px rgba(28, 216, 34, 0.5);
-  border: 1px solid #38dc87;
   border-radius: 10px;
 }
 input {
@@ -345,7 +364,6 @@ input {
   background-color: #f0f0f0;
   border-radius: 5px;
   margin-top: 5px;
-  border: 1px solid #38dc87;
 }
 .modal-actions {
   display: flex;
@@ -357,10 +375,8 @@ input {
 .submitBtn {
   width: 15rem;
   height: auto;
-  padding: 15px;
   font-size: 1.2rem;
   font-family: "Poppins";
-  background: #194d1d;
   color: white;
   border: none;
   font-weight: bold;

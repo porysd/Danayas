@@ -57,16 +57,16 @@ onUnmounted(() => {
     <div class="nav-links" :class="{ active: isMenuOpen }">
       <ul>
         <li>
-          <router-link to="/" active-class="active-route">Home</router-link>
+          <router-link to="/" active-class="active-route">HOME</router-link>
         </li>
         <li>
           <router-link to="/packages" active-class="active-route"
-            >Packages</router-link
+            >PACKAGES</router-link
           >
         </li>
         <li>
           <router-link to="/booking" active-class="active-route"
-            >Booking</router-link
+            >BOOKING</router-link
           >
         </li>
         <li>
@@ -74,17 +74,17 @@ onUnmounted(() => {
         </li>
         <li>
           <router-link to="/gallery" active-class="active-route"
-            >Gallery</router-link
+            >GALLERY</router-link
           >
         </li>
         <li>
           <router-link to="/about-us" active-class="active-route"
-            >About Us</router-link
+            >ABOUT US</router-link
           >
         </li>
         <li>
           <router-link to="/contact-us" active-class="active-route"
-            >Contact Us</router-link
+            >CONTACT US</router-link
           >
         </li>
       </ul>
@@ -92,7 +92,9 @@ onUnmounted(() => {
 
     <div class="signup-btn-container">
       <template v-if="isLoggedIn">
-        <router-link to="/logs" active-class="active-route">Logs</router-link>
+        <router-link to="/logs" active-class="active-route " class="logs"
+          >HISTORY</router-link
+        >
         <div class="profilepage">
           <Avatar
             icon="pi pi-user"
@@ -137,9 +139,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px;
   border: none;
-  position: relative;
 }
 
 #logo {
@@ -147,6 +147,7 @@ onUnmounted(() => {
   height: auto;
   display: block;
   margin-left: 5rem;
+  margin-right: 8rem;
 }
 
 .drevsLogo {
@@ -156,9 +157,6 @@ onUnmounted(() => {
 
 .nav-links ul {
   display: flex;
-  list-style: none;
-  padding: 0;
-  margin: 0;
 }
 
 .nav-links ul li {
@@ -168,7 +166,7 @@ onUnmounted(() => {
 .nav-links ul li a {
   text-decoration: none;
   color: black;
-  font-size: 18px;
+  font-size: 16px;
   transition: color 0.3s;
 }
 
@@ -180,10 +178,21 @@ onUnmounted(() => {
 .active-route {
   color: #54d6a4;
 }
+.logs {
+  bottom: -10px;
+  position: relative;
+  margin-right: 10px;
+}
+
+.logs:hover {
+  color: #00ab5e;
+  text-decoration: underline;
+}
 
 .signup-btn-container {
   display: flex;
   gap: 10px;
+
   margin-right: 100px;
 }
 
@@ -245,7 +254,7 @@ onUnmounted(() => {
 
 .dropdown-menu {
   position: absolute;
-  bottom: -2.5rem;
+
   right: 8.5rem;
   background: #fcfcfc;
   color: #333;

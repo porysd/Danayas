@@ -4,6 +4,8 @@ import { useRouter } from "vue-router";
 import SignUp from "./SignUp.vue";
 import ProgressSpinner from "primevue/progressspinner";
 import { useAuthStore } from "../stores/authStore";
+import Button from "primevue/button";
+import InputText from "primevue/inputtext";
 
 const authStore = useAuthStore();
 const router = useRouter();
@@ -85,47 +87,54 @@ const login = async () => {
   <button class="login-btn" @click="openLogInModal">Login</button>
 
   <div v-if="showLogInModal" class="modal">
-    <div class="loginBox">
+    <div
+      class="loginBox bg-white/30 backdrop-blur-md shadow-2xl rounded-2xl flex flex-col items-center gap-6 w-full max-w-md"
+    >
       <i
         class="pi pi-times"
         @click="closeModal"
         style="
           color: green;
           align-self: flex-end;
-          font-size: 1.5rem;
+          font-size: 1.3rem;
           cursor: pointer;
-          margin-right: 10px;
+          margin-right: 15px;
+          margin-top: 10px;
           margin-bottom: 10px;
-          margin-top: -10px;
           margin-left: 20rem;
           font-weight: bold;
         "
       ></i>
       <div class="loginCred">
         <h1
-          class="Login text-center text-5xl font-black font-[Poppins] mb-4 mt-1 text-[#194D1D]"
+          class="Login text-center mb-4 mt-1 text-4xl font-bold text-gray-800"
+          style="letter-spacing: 5px"
         >
           LOGIN
         </h1>
-        <h6 style="color: green">
+        <h6 class="text-gray-600 text-sm mb-4">
           Welcome back! Please login to your account.
         </h6>
       </div>
-      <form @submit.prevent="login">
-        <div class="loginCred">
-          <label for="username" style="color: green">Username:</label>
-          <input
+      <form @submit.prevent="login" class="w-[85%]">
+        <div class="loginCred flex flex-col gap-2 w-full">
+          <label for="username" class="text-sm text-gray-600 font-bold"
+            >Email:</label
+          >
+          <InputText
             v-model="email"
             type="text"
             id="username"
             name="username"
-            placeholder="Username"
+            placeholder="Email"
             required
           />
         </div>
-        <div class="loginCred" id="password">
-          <label for="password" style="color: green">Password:</label>
-          <input
+        <div class="loginCred flex flex-col gap-2 w-full mt-2" id="password">
+          <label for="password" class="text-sm text-gray-600 font-bold"
+            >Password:</label
+          >
+          <InputText
             v-model="password"
             type="password"
             id="password"
@@ -140,7 +149,7 @@ const login = async () => {
         </div>
 
         <div class="modal-actions">
-          <button class="submitBtn" type="submit" value="Login">Login</button>
+          <Button class="submitBtn" type="submit" value="Login">Login</Button>
         </div>
 
         <hr class="hr-text" data-content="OR" />
@@ -268,32 +277,14 @@ const login = async () => {
 
 .loginBox {
   background-color: #eef9eb;
-  padding: 20px;
-  border-radius: 10px;
-  box-shadow: 0px 0px 10px rgba(28, 216, 34, 0.5);
-  border: 1px solid #38dc87;
+  padding: 10px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
 }
 
-.loginCred {
-  padding: 8px;
-  width: 100%;
-  justify-content: center;
-  border-radius: 10px;
-  filter: drop-shadow(0px 4px 4px rgba(97, 95, 95, 0.5));
-}
 label {
   display: block;
   text-align: left;
-}
-
-input {
-  width: 100%;
-  padding: 8px;
-  background-color: #f0f0f0;
-  border: 1px solid #38dc87;
-  border-radius: 5px;
-  margin-top: 5px;
-  border-radius: 5px;
 }
 
 .modal-actions {
@@ -309,7 +300,7 @@ input {
 .submitBtn {
   width: 250px;
   padding: 8px 15px;
-  background: #194d1d;
+
   color: white;
   border: none;
   font-weight: bold;
