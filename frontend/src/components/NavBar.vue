@@ -4,9 +4,12 @@ import { useRouter } from "vue-router";
 import Login from "../components/Login.vue";
 import SignUp from "../components/SignUp.vue";
 import { useAuthStore } from "../stores/authStore";
+import { useUserStore } from "../stores/userStore";
 import Avatar from "primevue/avatar";
 
 const authStore = useAuthStore();
+const userStore = useUserStore();
+
 const isLoggedIn = computed(() => authStore.isLoggedIn);
 const showMenu = ref(false);
 const hideMenu = ref(null);
@@ -36,6 +39,49 @@ onMounted(() => {
 
 onUnmounted(() => {
   document.addEventListener("click", closeMenu);
+});
+
+const userData = ref({
+  firstName: "",
+  lastName: "",
+});
+
+onMounted(async () => {
+  console.log("Auth initialized:", authStore.user, authStore.role);
+
+  const userId = authStore.user?.userId;
+
+  if (!userId) {
+    console.error("No userId found in authStore.user");
+    return;
+  }
+
+  console.log("Fetching user details for userId:", userId);
+  const fetchedUser = await userStore.getUserById(userId);
+
+  console.log("Fetched user:", fetchedUser);
+
+  userData.value = {
+    username: fetchedUser.username,
+    firstName: fetchedUser.firstName,
+    lastName: fetchedUser.lastName,
+    contactNo: fetchedUser.contactNo,
+    email: fetchedUser.email,
+    address: fetchedUser.address,
+  };
+
+  console.log("Populated userData:", userData.value);
+});
+
+const Initials = computed(() => {
+  try {
+    const first = userData.value.firstName?.charAt(0) || "";
+    const last = userData.value.lastName?.charAt(0) || "";
+    return first + last;
+  } catch (err) {
+    console.log("cannot fin d the character", err);
+    return "";
+  }
 });
 </script>
 
@@ -97,7 +143,7 @@ onUnmounted(() => {
         >
         <div class="profilepage">
           <Avatar
-            icon="pi pi-user"
+            :label="Initials"
             class="mr-2"
             size="large"
             style="
