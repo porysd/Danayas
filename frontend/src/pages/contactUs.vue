@@ -18,10 +18,13 @@ import Footer from "../components/Footer.vue";
       Connect With Us!
     </h2>
     <p class="text1 m-auto mb-15 text-center w-200 mt-5">
-      Established in the historic quarter, where cultural legacy meets the
-      sought-after culinary scene, Brook St. is the best kept secret of town,
-      just across the sea front. Its urban renaissance is infusing new vibes and
-      brings back creatives, trend setters and smart investors.
+      At Danayas Resorts, we are here to help you create the perfect event.
+      Whether you’re planning a wedding, a corporate retreat, or a family
+      gathering, our team is ready to assist with every detail. Feel free to
+      reach out to us for inquiries, bookings, or more information about our
+      services. We look forward to helping you bring your vision to life and
+      making your event a truly unforgettable experience. Contact us today, and
+      let’s start planning!
     </p>
 
     <div class="contactSec m-auto justify-center content-center mt-20">

@@ -17,6 +17,7 @@ import AdminDashboard from "../Admin/pages/AdminDashboard.vue";
 import AdminLogin from "../Admin/pages/AdminLogin.vue";
 import EmployeeManagement from "../Admin/pages/EmployeeManagement.vue";
 import Booking from "../Admin/pages/Booking.vue";
+import Payment from "../Admin/pages/Payment.vue";
 import Transaction from "../Admin/pages/Transaction.vue";
 import Reports from "../Admin/pages/Reports.vue";
 import PackagesAndPromos from "../Admin/pages/PackagesAndPromos.vue";
@@ -67,6 +68,11 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
+    path: "/admin/payment",
+    component: Payment,
+    meta: { requiresAuth: true },
+  },
+  {
     path: "/admin/transaction",
     component: Transaction,
     meta: { requiresAuth: true },
@@ -110,11 +116,11 @@ const routes = [
     component: TermsAndCondition,
     meta: { requiresAuth: true },
   },
-  {
-    path: "/admin/archived",
-    component: Archived,
-    meta: { requiresAuth: true },
-  },
+  // {
+  //   path: "/admin/archived",
+  //   component: Archived,
+  //   meta: { requiresAuth: true },
+  // },
   { path: "/admin/profile", component: Profile, meta: { requiresAuth: true } },
 
   // Not Found Page

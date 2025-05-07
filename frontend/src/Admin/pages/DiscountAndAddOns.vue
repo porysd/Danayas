@@ -548,7 +548,8 @@ const getStatusSeverity = (status) => {
 .paRow {
   width: 100%;
   font-size: 15px;
-  height: auto;
+  height: 50px;
+  min-height: auto;
   border-bottom: 1px solid #194d1d;
   text-align: center;
   cursor: pointer;

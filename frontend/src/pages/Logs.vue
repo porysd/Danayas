@@ -1,36 +1,106 @@
 <script setup>
-import { ref } from "vue";
+import { ref, onMounted, onUnmounted, computed } from "vue";
 import NavBar from "../components/NavBar.vue";
 import Footer from "../components/Footer.vue";
 import DatePicker from "primevue/datepicker";
+import { useBookingStore } from "../stores/bookingStore";
+import { useUserStore } from "../stores/userStore";
+import { formatDates } from "../utility/dateFormat";
+import { usePackageStore } from "../stores/packageStore";
+import { useAuthStore } from "../stores/authStore";
+import Tag from "primevue/tag";
+import Logger from "../components/Logger.vue";
 
 const isMenuOpen1 = ref(false);
 const isMenuOpen2 = ref(false);
-const Reschedule = ref(false);
-
-const toggleMenu = () => {
-  isMenuOpen.value = !isMenuOpen.value;
-};
-
-const showRescheduleModal = () => {
-  RescheduleModal.value = true;
-};
-
-const closemodal = () => {
-  RescheduleModal.value = false;
-};
-const calendar = ref(null);
 const RescheduleModal = ref(false);
-function checkCalendar() {
-  if (calendar.value) {
-    RescheduleModal.value = false;
-  } else {
-    RescheduleModal.value = true;
-    alert("Please select your preferred date.");
+const calendar = ref(null);
+const date = ref(null);
+
+const bookingStore = useBookingStore();
+const userStore = useUserStore();
+const packageStore = usePackageStore();
+const authStore = useAuthStore();
+
+const userBookings = ref([]);
+const bookingDone = ref([]);
+
+const openMenuBookingId = ref(null);
+const rescheduleBookingId = ref(null);
+
+onMounted(async () => {
+  await packageStore.fetchAllPackages();
+  await packageStore.fetchAllPromos();
+  await bookingStore.fetchUserBookings();
+
+  try {
+    const userId = authStore.user?.userId;
+    if (!userId) {
+      console.error("User ID not found in authStore");
+      return;
+    }
+
+    const fetchedUser = await userStore.getUserById(userId);
+    console.log("Fetched user:", fetchedUser);
+
+    if (fetchedUser?.userId) {
+      const id = fetchedUser.userId;
+      // Filter bookings for the user based on status
+      userBookings.value = bookingStore.bookings.filter(
+        (booking) =>
+          booking.userId === id &&
+          ["pending", "reserved", "rescheduled"].includes(booking.bookStatus)
+      );
+
+      bookingDone.value = bookingStore.bookings.filter(
+        (booking) =>
+          booking.userId === id &&
+          ["cancelled", "completed"].includes(booking.bookStatus)
+      );
+
+      console.log("User bookings:", userBookings.value);
+      console.log("Booking done:", bookingDone.value);
+    } else {
+      console.error("User ID not found in fetched data.");
+    }
+  } catch (error) {
+    console.error("Error fetching data:", error);
   }
-}
+});
+
+const rescheduleHandler = async (updatedDate) => {
+  await bookingStore.updateBookingDates(updatedDate);
+};
+
+const cancelHandler = async (cancelStatus) => {
+  await bookingStore.updateBookingStatus(cancelStatus);
+};
+
+const getPackageName = (packageId) => {
+  const pkg =
+    packageStore.packages.find((p) => p.packageId === packageId) ||
+    packageStore.promos.find((p) => p.packageId === packageId);
+  return pkg ? pkg.name : "Unknown Package";
+};
+
+const getStatusSeverity = (status) => {
+  switch (status) {
+    case "pending":
+      return "warn";
+    case "reserved":
+      return "info";
+    case "rescheduled":
+      return "secondary";
+    case "completed":
+      return "success";
+    case "cancelled":
+      return "danger";
+    default:
+      return "secondary";
+  }
+};
 </script>
-~
+
 <template>
   <NavBar />
   <div class="ContainerAbout">
@@ -45,96 +115,66 @@ function checkCalendar() {
 
   <div class="Logs-Container">
     <hr class="Header" data-content=" On Going" />
-    <div class="logsBox">
-      <div class="w-full relative inline-block">
-        <div class="flex justify-end mr-3">
-          <button
-            @click.stop="isMenuOpen1 = !isMenuOpen1"
-            class="pi pi-ellipsis-v"
-            style="font-size: 1.5rem"
-          ></button>
+  </div>
 
-          <div
-            v-if="isMenuOpen1"
-            class="absolute right-2 mt-4 w-35 shadow-md z-50 bg-[#fcfcfc] p-4 rounded"
-          >
-            <ul>
-              <li class="hover:bg-[#C1F2B0]">
-                <button @click="showRescheduleModal">Reschedule</button>
-              </li>
-            </ul>
-          </div>
-          <div v-if="RescheduleModal" class="modal">
-            2
-            <div
-              class="DelBox p-10 bg-[#eef9eb]"
-              style="
-                border: 1px solid #38dc87;
-                border-radius: 10px;
-                box-shadow: 0px 0px 10px rgba(28, 216, 34, 0.5);
-                align-items: center;
-                flex-direction: column;
-                justify-content: center;
-                text-align: center;
-                font-weight: 600;
-                font-size: large;
-              "
-            >
-              <i
-                class="pi pi-times"
-                style="
-                  font-size: 1.5rem;
-                  color: green;
-                  align-self: flex-end;
-                  margin-left: 30rem;
-                  font-size: 1.5rem;
-                  cursor: pointer;
-                  margin-right: 10px;
-                "
-                @click="closemodal"
-              ></i>
+  <div class="w-[70%] m-auto justify-center">
+    <div v-if="userBookings.length > 0"></div>
+    <div v-else>
+      <p class="flex justify-center m-auto">No bookings found for this user.</p>
+    </div>
 
-              <h2 class="mb-[30px]">SELECT PREPARE DATE</h2>
-              <DatePicker
-                v-model="date"
-                inline
-                showWeek
-                class="w-full sm:w-[30rem]"
-              />
-
-              <div class="text-left relative mt-[20px]">
-                <p>Check-in:</p>
-                <p>Check-out:</p>
-                <p></p>
-                <p
-                  class="text-green-500 top-[-1rem] relative flex m-auto justify-center content-center text-center"
-                  style="margin-top: 20px; position: relative; display: flex"
-                >
-                  "Your selected date is currently available!"
-                </p>
-              </div>
-              <button
-                class="mt-[10px] bg-[#41ab5d] p-2 rounded-xl m-auto w-[6rem] text-center text-white"
-                @click="checkCalendar"
-              >
-                OK
-              </button>
-            </div>
-          </div>
-        </div>
+    <div
+      class="logsBox"
+      v-for="booking in userBookings"
+      :key="booking.bookingId"
+    >
+      <div class="w-full mt-10 text-right">
+        <Logger
+          :booking="booking"
+          @rescheduleBooking="rescheduleHandler"
+          @cancelBooking="cancelHandler"
+        />
       </div>
 
       <div class="information">
-        <p>Package name:</p>
-        <p>Date:</p>
-        <p>Personal Information:</p>
+        <p>Package Name: {{ getPackageName(booking.packageId) }}</p>
+
+        <p>
+          Date: {{ formatDates(booking.checkInDate) }} to
+          {{ formatDates(booking.checkOutDate) }}
+        </p>
+        <p>
+          Personal Information: {{ booking.firstName }}
+          {{ booking.lastName }}
+        </p>
+      </div>
+      <div class="flex justify-end mb-10" style="position: relative">
+        <Tag
+          class="mb"
+          :severity="getStatusSeverity(booking.bookStatus)"
+          :value="booking.bookStatus"
+        />
       </div>
     </div>
   </div>
 
   <div class="Logs-Container">
     <hr class="Header" data-content="History" />
-    <div class="logsBox">
+  </div>
+
+  <div class="w-[70%] m-auto justify-center">
+    <div v-if="bookingDone.length > 0"></div>
+    <div v-else>
+      <p class="flex justify-center m-auto">
+        No completed or cancelled bookings found.
+      </p>
+    </div>
+
+    <div
+      class="logsBox"
+      v-for="booking in bookingDone"
+      :key="booking.bookingId"
+    >
       <div class="w-full relative inline-block">
         <div class="flex justify-end mr-3">
           <button
@@ -153,9 +193,22 @@ function checkCalendar() {
       </div>
 
       <div class="information">
-        <p>Package name:</p>
-        <p>Date:</p>
-        <p>Personal Information:</p>
+        <p>Package Name: {{ getPackageName(booking.packageId) }}</p>
+        <p>
+          Date: {{ formatDates(booking.checkInDate) }} to
+          {{ formatDates(booking.checkOutDate) }}
+        </p>
+        <p>
+          Personal Information: {{ booking.firstName }} {{ booking.lastName }}
+        </p>
+      </div>
+
+      <div class="flex justify-end mb-10" style="position: relative">
+        <Tag
+          class="mb"
+          :severity="getStatusSeverity(booking.bookStatus)"
+          :value="booking.bookStatus"
+        />
       </div>
     </div>
   </div>
@@ -196,6 +249,18 @@ textarea {
   background: lightgreen;
 }
 
+.DelBox {
+  border: 1px solid #38dc87;
+  border-radius: 10px;
+  box-shadow: 0px 0px 10px rgba(28, 216, 34, 0.5);
+  align-items: center;
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+  font-weight: 600;
+  font-size: large;
+}
+
 .Button {
   display: flex;
   gap: 50px;
@@ -223,25 +288,24 @@ img {
   position: static;
 }
 .information {
-  font-size: 1.2rem;
   font-weight: 600;
-  color: green;
+
   width: 100%;
-  margin-left: 20px;
+  line-height: 1.9rem;
 }
 
 .logsBox {
-  position: relative;
   display: flex;
   flex-direction: column;
   height: 10rem;
   justify-content: center;
-  align-items: center;
   margin: auto;
+  padding: 2rem;
   border-radius: 10px;
-  width: 90%;
+  width: auto;
   background: transparent;
   border: 1px solid #41ab5d;
+  margin-bottom: 2rem;
 }
 
 .Header {
@@ -252,23 +316,25 @@ img {
   font-weight: bolder;
   font-size: 1.3rem;
   margin-top: 20px;
-  margin-bottom: 5px;
+  margin-bottom: 2rem;
   color: rgb(2, 2, 2);
   text-align: center;
   height: 1.5rem;
-  margin-bottom: 2rem;
 }
 
 .Header::before {
   content: "";
   position: absolute;
-  background: #000000;
-  left: 0;
-  margin-left: 10rem;
-  font-weight: bolder;
   top: 50%;
-  width: 70rem;
+  left: 50%;
+  transform: translate(
+    -50%,
+    -50%
+  ); /* Center the line horizontally and vertically */
+  background: #000000;
+  width: 50%; /* or a percentage like 80% if you want shorter lines */
   height: 1.2px;
+  z-index: -1; /* Optional: keeps the line behind the text */
 }
 
 .Header::after {

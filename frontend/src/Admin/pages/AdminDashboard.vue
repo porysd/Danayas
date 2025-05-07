@@ -115,6 +115,15 @@ const countRescheduledBooking = computed(() => {
   ).length;
 });
 
+// Get PENDING CANCELLATION Booking Status
+const countPendingCancellationBookings = computed(() => {
+  return bookingStore.bookingCancelled.filter(
+    (b) =>
+      b.bookStatus &&
+      b.bookStatus.trim().toLowerCase() === "pending_cancellation"
+  ).length;
+});
+
 // Get CANCELLED Booking Status
 const countCancelledBookings = computed(() => {
   return bookingStore.bookingCancelled.filter(
@@ -152,7 +161,7 @@ const mapBookingsToEvents = (bookings) => {
       switch (b.mode) {
         case "day-time": // if someone booked day status it will give Night Available
           backgroundColor = "#6A5ACD";
-          textColor = "black";
+          textColor = "white";
           title = "Night Available";
           break;
         case "night-time": // if someone booked night status it will give Day Available
@@ -230,10 +239,10 @@ const calendarOptions = ref({
               </h3>
             </div>
             <div
-              class="flex items-center justify-center bg-orange-200 dark:bg-orange-400/10 rounded-xl"
+              class="flex items-center justify-center bg-yellow-200 dark:bg-yellow-400/10 rounded-xl"
               style="width: 2.5rem; height: 2.5rem"
             >
-              <i class="pi pi-spinner text-orange-600 !text-xl" />
+              <i class="pi pi-spinner text-yellow-600 !text-xl" />
             </div>
           </div>
         </div>
@@ -289,6 +298,33 @@ const calendarOptions = ref({
             </div>
           </div>
         </div>
+        <!--<div
+          class="cancelledBook p-4 md:p-5 shadow-lg bg-red-50 dark:bg-red-100/10"
+        >
+          <div class="flex justify-between mb-4">
+            <div>
+              <p class="text-xs uppercase text-gray-500">
+                PENDING CANCELLATION<i
+                  class="pi pi-question-circle ml-2"
+                  style="font-size: 12px"
+                  v-tooltip="'Total Number of Pending Cancellation'"
+                />
+              </p>
+              <h3
+                class="text-xl sm:text-3xl font-medium text-gray-800 dark:text-white mt-1"
+              >
+                {{ countPendingCancellationBookings }}
+              </h3>
+            </div>
+            <div
+              class="flex items-center justify-center bg-orange-200 dark:bg-orange-400/10 rounded-xl"
+              style="width: 2.5rem; height: 2.5rem"
+            >
+              <i class="pi pi-hourglass text-orange-600 !text-xl" />
+            </div>
+          </div>
+        </div>-->
+
         <div
           class="cancelledBook p-4 md:p-5 shadow-lg bg-red-50 dark:bg-red-100/10"
         >
@@ -397,7 +433,7 @@ const calendarOptions = ref({
             </template>
           </DatePicker>-->
 
-          <div class="mt-2 flex flex-wrap items-center gap-2 text-sm">
+          <!--<div class="mt-2 flex flex-wrap items-center gap-2 text-sm">
             <div class="flex items-center gap-2">
               <span class="w-4 h-4 rounded-full bg-[#90EE90]"></span>
               <span>Available</span>
@@ -414,7 +450,7 @@ const calendarOptions = ref({
               <span class="w-4 h-4 rounded-full bg-[#FF6B6B]"></span>
               <span>Fully Booked</span>
             </div>
-          </div>
+          </div>-->
         </div>
 
         <div
@@ -436,32 +472,9 @@ const calendarOptions = ref({
 </template>
 
 <style scoped>
-:deep(.dateChart) {
-  .p-datepicker-panel {
-    border: none;
-    background: #fcfcfc;
-  }
-  .p-datepicker-header {
-    background: #fcfcfc;
-  }
-  .p-datepicker-day {
-    border-radius: 0;
-  }
-  .p-datepicker-day:hover {
-    border-radius: 0;
-    font-size: 20px;
-  }
-
-  .my-app-dark .p-datepicker-panel,
-  .my-app-dark .p-datepicker-header {
-    border: none;
-    background: #18181b;
-  }
-}
-
 :deep(.fullCalendar) {
   margin: 0 auto;
-  width: 470px;
+  width: 530px;
   height: 320px;
   font-size: 10px;
 

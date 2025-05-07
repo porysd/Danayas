@@ -1,5 +1,6 @@
 <script setup>
 import { onMounted, ref, computed } from "vue";
+import { useRouter } from "vue-router";
 import Stepper from "primevue/stepper";
 import StepList from "primevue/steplist";
 import StepPanels from "primevue/steppanels";
@@ -24,13 +25,17 @@ import { formatPeso } from "../utility/pesoFormat";
 import { formatDate } from "../utility/dateFormat";
 import { formatDates } from "../utility/dateFormat";
 import { useTransactionStore } from "../stores/transactionStore";
-import Select from "primevue/select";
+import Message from "primevue/message";
 import FullCalendar from "@fullcalendar/vue3";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
+import { useAuthStore } from "../stores/authStore";
+import { useUserStore } from "../stores/userStore";
+import TermsCondition from "../components/TermsCondition.vue";
 
 const toast = useToast();
+const router = useRouter();
 
 const bookingStore = useBookingStore();
 const transactionStore = useTransactionStore();
@@ -73,7 +78,7 @@ const newBooking = ref({
 const paymentDetails = ref({
   mode: "gcash",
   reference: "",
-  imageUrl: "",
+  imageUrl: "blahblah",
   senderName: "",
 });
 
@@ -128,6 +133,7 @@ const stepOneBtn = (activateCallback) => {
   } else {
     activateCallback("2");
   }
+  // activateCallback("2");
 };
 
 //STEP 2
@@ -149,6 +155,7 @@ const stepTwoBtn = (activateCallback) => {
   } else {
     activateCallback("3");
   }
+  // activateCallback("3");
 };
 
 //STEP 3
@@ -158,6 +165,53 @@ const stepThreeBtn = (activateCallback) => {
   } else {
     activateCallback("4");
   }
+  // activateCallback("4");
+};
+
+const authStore = useAuthStore();
+const userStore = useUserStore();
+
+const userData = ref({
+  username: "",
+  firstName: "",
+  lastName: "",
+  contactNo: "",
+  email: "",
+  address: "",
+});
+
+onMounted(async () => {
+  const userId = authStore.user?.userId;
+
+  if (!userId) {
+    console.error("No userId found in authStore.user");
+    return;
+  }
+
+  const fetchedUser = await userStore.getUserById(userId);
+
+  userData.value = {
+    username: fetchedUser.username,
+    firstName: fetchedUser.firstName,
+    lastName: fetchedUser.lastName,
+    contactNo: fetchedUser.contactNo,
+    email: fetchedUser.email,
+    address: fetchedUser.address,
+  };
+});
+
+let visible = ref(false);
+let visible1 = ref(false);
+const termsVisible = ref(false);
+
+const showMessage = () => {
+  visible.value = true;
+  visible1.value = false;
+};
+
+const showMessage1 = () => {
+  visible1.value = true;
+  visible.value = false;
 };
 
 //STEP 4
@@ -176,6 +230,7 @@ const OpenContinueModal = async () => {
 
   setTimeout(() => {
     showContinueModal.value = false;
+    router.push("/logs");
   }, 3000);
 };
 
@@ -289,7 +344,7 @@ const calendarOptions = ref({
               style="font-size: 3rem"
             ></i>
             <div class="absolute bottom-0 left-[-1] right-58 top-25">
-              Guest <br />Information
+              Contact <br />Information
             </div>
           </Step>
           <Step value="4">
@@ -512,7 +567,10 @@ const calendarOptions = ref({
                     Select Package
                   </h1>
                   <div class="overflow-auto">
-                    <BookPackage @availPackage="availPackageHandler" />
+                    <BookPackage
+                      :mode="newBooking.mode"
+                      @availPackage="availPackageHandler"
+                    />
                     <!--availPackage comes from the BookPackage and holds the selected-->
                   </div>
                 </div>
@@ -531,22 +589,18 @@ const calendarOptions = ref({
 
                   <div class="bg-[#fcfcfc] rounded-sm p-2 mb-2">
                     <div class="flex">
-                      <p>Date:</p>
+                      <p>
+                        Date: {{ formatDates(newBooking.checkInDate) }} to
+                        {{ formatDates(newBooking.checkOutDate) }}
+                      </p>
                     </div>
                     <div class="w-full flex">
                       <p>Check-in: {{ formatDates(newBooking.checkInDate) }}</p>
-                      <button><i class="pi pi-calendar"></i></button>
                     </div>
-                    <div class="w-full flex border-1">
+                    <div class="w-full flex">
                       <p>
                         Check-out: {{ formatDates(newBooking.checkOutDate) }}
                       </p>
-                      <div
-                        class="relative inline-block text-right border-1"
-                        style="right: -20rem"
-                      >
-                        <i class="pi pi-calendar"></i>
-                      </div>
                     </div>
                   </div>
 
@@ -561,8 +615,10 @@ const calendarOptions = ref({
                     <div class="flex flex-col bg-[#fcfcfc] p-1 rounded-sm">
                       <p>Package Name: {{ selectedPackage?.name }}</p>
                       <p>Inclusion:</p>
-                      <pre>{{ selectedPackage?.inclusion }}</pre>
-                      <p>Mode:{{ selectedPackage?.mode }}</p>
+                      <p class="whitespace-pre-wrap">
+                        {{ selectedPackage?.inclusion }}
+                      </p>
+                      <p>Mode: {{ selectedPackage?.mode }}</p>
                     </div>
                     <div class="bg-[#CDDA54] p-1 rounde-sm">
                       <p>VAT Charged:</p>
@@ -604,32 +660,52 @@ const calendarOptions = ref({
                   <h1
                     class="text-left w-[100%] flex font-black text-4xl font-[Poppins] mt-10"
                   >
-                    Personal Information:
+                    Contact Information:
                   </h1>
                   <div class="mt-10">
                     <div class="personalInfo">
                       <div>
                         <label>First Name:</label>
-                        <input class="packEvents" placeholder="First Name" />
+                        <input
+                          class="packEvents"
+                          placeholder="First Name"
+                          v-model="userData.firstName"
+                        />
                       </div>
                       <div>
                         <label>Last Name:</label>
-                        <input class="packEvents" placeholder="Last Name" />
+                        <input
+                          class="packEvents"
+                          placeholder="Last Name"
+                          v-model="userData.lastName"
+                        />
                       </div>
                       <div>
                         <label>Contact No.:</label>
-                        <input class="packEvents" placeholder="Contact No" />
+                        <input
+                          class="packEvents"
+                          placeholder="Contact No"
+                          v-model="userData.contactNo"
+                        />
                       </div>
                       <div>
                         <label>Email Address</label>
-                        <input class="packEvents" placeholder="Email Address" />
+                        <input
+                          class="packEvents"
+                          placeholder="Email Address"
+                          v-model="userData.email"
+                        />
                       </div>
                     </div>
 
                     <div class="bookAddress">
                       <div>
                         <label>Address:</label>
-                        <input class="packEvents" placeholder="Address" />
+                        <input
+                          class="packEvents"
+                          placeholder="Address"
+                          v-model="userData.address"
+                        />
                       </div>
                     </div>
 
@@ -682,7 +758,7 @@ const calendarOptions = ref({
                       Payment Terms:
                     </h1>
 
-                    <div class="flex items-center gap-5 ml-20 mt-5">
+                    <div class="flex items-center gap-5 ml-20 mt-5 mb-5">
                       <div class="flex items-center gap-2">
                         <RadioButton
                           v-model="newBooking.paymentTerms"
@@ -690,6 +766,7 @@ const calendarOptions = ref({
                           name="paymentTerm"
                           value="installment"
                           size="large"
+                          @click="showMessage"
                         />
                         <label for="dayMode" class="text-xl font-[Poppins]"
                           >Installment</label
@@ -702,13 +779,38 @@ const calendarOptions = ref({
                           name="paymentTerm"
                           value="full-payment"
                           size="large"
+                          @click="showMessage1"
                         />
                         <label for="nightMode" class="text-xl font-[Poppins]"
                           >Full Payment</label
                         >
                       </div>
                     </div>
+                    <Message v-if="visible" severity="error"
+                      >You are required to pay a ₱3,000 down payment. The
+                      remaining balance must be settled on the reserved date.<br />📌
+                      Bookings are non-refundable.<br /><br />
+                      <span
+                        class="text-blue-600 underline cursor-pointer"
+                        @click="termsVisible = true"
+                      >
+                        View full Terms and Conditions
+                      </span></Message
+                    >
+                    <Message v-if="visible1" severity="error"
+                      >You are required to pay the total amount upon booking to
+                      secure your reservation.<br />📌 Bookings are
+                      non-refundable.
+                      <span
+                        class="text-blue-600 underline cursor-pointer"
+                        @click="termsVisible = true"
+                      >
+                        View full Terms and Conditions
+                      </span></Message
+                    >
                   </div>
+
+                  <TermsCondition v-model:visible="termsVisible" />
                 </div>
               </div>
               <div
@@ -722,23 +824,24 @@ const calendarOptions = ref({
                   </h1>
 
                   <div class="bg-[#fcfcfc] mb-2 p-2 rounded-sm">
-                    <div class="flex gap-[20rem]">
-                      <p>Date:</p>
+                    <div class="flex">
+                      <p>
+                        Date: {{ formatDates(newBooking.checkInDate) }} to
+                        {{ formatDates(newBooking.checkOutDate) }}
+                      </p>
                     </div>
-                    <div class="flex gap-[19rem]">
-                      <p>Check-in:</p>
-                      <button><i class="pi pi-calendar"></i></button>
+                    <div class="w-full flex">
+                      <p>Check-in: {{ formatDates(newBooking.checkInDate) }}</p>
                     </div>
-                    <div class="flex gap-[18rem]">
-                      <p>Check-out:</p>
-                      <button class="">
-                        <i class="pi pi-calendar"></i>
-                      </button>
+                    <div class="w-full flex">
+                      <p>
+                        Check-out: {{ formatDates(newBooking.checkOutDate) }}
+                      </p>
                     </div>
                   </div>
 
                   <div class="bg-[#fcfcfc] p-2 rounded-sm">
-                    <p>Mode:</p>
+                    <p>Mode: {{ newBooking.mode }}</p>
                   </div>
 
                   <div class="flex flex-col gap-2">
@@ -748,8 +851,10 @@ const calendarOptions = ref({
                     <div class="flex flex-col bg-[#fcfcfc] p-1 rounded-sm">
                       <p>Package Name: {{ selectedPackage?.name }}</p>
                       <p>Inclusion:</p>
-                      <pre>{{ selectedPackage?.inclusion }}</pre>
-                      <p>Mode:{{ selectedPackage?.mode }}</p>
+                      <p class="whitespace-pre-wrap">
+                        {{ selectedPackage?.inclusion }}
+                      </p>
+                      <p>Mode: {{ selectedPackage?.mode }}</p>
                     </div>
                     <div class="bg-[#CDDA54] p-1 rounded-sm">
                       <p>VAT Charged:</p>
@@ -769,7 +874,7 @@ const calendarOptions = ref({
                         Payment Terms:
                       </h1>
                       <div class="bg-[#4BB344]">
-                        <p>TOTAL CHARGED:</p>
+                        <p>TOTAL CHARGED: {{ selectedPacakge?.price }}</p>
                       </div>
                       <h1 class="text-m font-[Poppins]">
                         GCASH Reference Code:
@@ -787,7 +892,7 @@ const calendarOptions = ref({
                         <h1 class="text-xl font-bold font-[Poppins] mb-3 mt-3">
                           Proof of Payment:
                         </h1>
-                        <!--<FileUpload
+                        <FileUpload
                           ref="fileupload"
                           v-model="paymentDetails.imageUrl"
                           mode="basic"
@@ -796,12 +901,24 @@ const calendarOptions = ref({
                           accept="image/*"
                           :maxFileSize="1000000"
                           @upload="onUpload"
-                        />-->
-                        <input
-                          class="p-2"
-                          placeholder="LINK"
-                          v-model="paymentDetails.imageUrl"
                         />
+                        <!--<div class="bg-[#fcfcfc] mb-2 p-1 rounded-sm">
+                          <input
+                            class="p-2"
+                            placeholder="image url"
+                            v-model="paymentDetails.imageUrl"
+                          />
+                        </div>-->
+                      </div>
+                      <div>
+                        <h1 class="text-m font-[Poppins]">
+                          Name of the Sender:
+                        </h1>
+                        <div class="bg-[#fcfcfc] mb-2 p-1 rounded-sm">
+                          <div>
+                            <input class="p-2" placeholder="Juan Dela Cruz" />
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -832,7 +949,7 @@ const calendarOptions = ref({
               class="flex-col flex justify-center items-center font-medium h-auto w-[100%] mt-5"
             >
               <div
-                class="bg-[#C1F2B0] p-5 rounded-lg w-[70rem] h-[55rem] mt-10 mb-10"
+                class="bg-[#c7e3b6] p-5 rounded-lg w-[70rem] h-auto mt-10 mb-10"
               >
                 <h1
                   class="font-black font-[Poppins] text-3xl p-5 flex align-center justify-center m-auto"
@@ -842,26 +959,26 @@ const calendarOptions = ref({
 
                 <div class="bg-[#fcfcfc] mb-2 p-2 rounded-sm">
                   <div class="flex gap-2">
-                    <p>Date:</p>
+                    <p>
+                      Date: {{ formatDates(newBooking.checkInDate) }} to
+                      {{ formatDates(newBooking.checkOutDate) }}
+                    </p>
                   </div>
                   <div class="flex gap-2">
-                    <p>Check-in:</p>
-                    <button><i class="pi pi-calendar"></i></button>
+                    <p>Check-in: {{ formatDates(newBooking.checkInDate) }}</p>
                   </div>
                   <div class="flex gap-2">
-                    <p>Check-out:</p>
-                    <button class="">
-                      <i class="pi pi-calendar"></i>
-                    </button>
+                    <p>Check-out: {{ formatDates(newBooking.checkOutDate) }}</p>
+                    <button class=""></button>
                   </div>
                   <div class="">
-                    <p>Mode:</p>
+                    <p>Mode: {{ newBooking.mode }}</p>
                   </div>
                   <div class="">
-                    <p>Arrival Time:</p>
+                    <p>Arrival Time: {{ newBooking.arrivalTime }}</p>
                   </div>
                   <div class="">
-                    <p>Catering:</p>
+                    <p>Catering: {{ newBooking.catering }}</p>
                   </div>
                 </div>
 
@@ -871,16 +988,18 @@ const calendarOptions = ref({
                   </h1>
                   <div class="bg-[#fcfcfc] mb-2 p-2 rounded-sm">
                     <div class="">
-                      <p>Name:</p>
+                      <p>
+                        Name: {{ userData.firstName }} {{ userData.lastName }}
+                      </p>
                     </div>
                     <div class="">
-                      <p>Contact No.:</p>
+                      <p>Contact No.: {{ userData.contactNo }}</p>
                     </div>
                     <div class="">
-                      <p>Email Address:</p>
+                      <p>Email Address: {{ userData.email }}</p>
                     </div>
                     <div class="">
-                      <p>Address:</p>
+                      <p>Address: {{ userData.address }}</p>
                     </div>
                   </div>
                 </div>
@@ -889,11 +1008,13 @@ const calendarOptions = ref({
                   <h1 class="text-lg font-bold font-[Poppins]">
                     Package Selected:
                   </h1>
-                  <div class="flex bg-[#fcfcfc] p-1 rounded-sm">
+                  <div class="flex flex-col bg-[#fcfcfc] p-1 rounded-sm">
                     <p>Package Name: {{ selectedPackage?.name }}</p>
-                    <p>Inclusion: {{ selectedPackage?.inclusion }}</p>
-                    <p>Mode:{{ selectedPackage?.mode }}</p>
-                    <p>Price</p>
+                    <p>Inclusion:</p>
+                    <p class="whitespace-pre-wrap">
+                      {{ selectedPackage?.inclusion }}
+                    </p>
+                    <p>Mode: {{ selectedPackage?.mode }}</p>
                   </div>
                   <div class="bg-[#CDDA54] p-1 rounded-sm">
                     <p>VAT Charged:</p>
@@ -902,16 +1023,6 @@ const calendarOptions = ref({
                     <p>
                       TOTAL CHARGED:{{ formatPeso(selectedPackage?.price) }}
                     </p>
-                  </div>
-                </div>
-
-                <div>
-                  <h1 class="text-lg font-bold font-[Poppins]">Payment:</h1>
-                  <h1 class="text-m font-[Poppins]">Name of the Sender:</h1>
-                  <div class="bg-[#fcfcfc] mb-2 p-1 rounded-sm">
-                    <div>
-                      <input class="p-2" placeholder="Juan Dela Cruz" />
-                    </div>
                   </div>
                 </div>
 

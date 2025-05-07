@@ -129,12 +129,12 @@ const changeRole = () => {
         >
           Roles
         </li>
-        <li
+        <!--<li
           class="hover:bg-gray-100 dark:hover:bg-gray-700"
           @click="openArchiveModal"
         >
           Archive
-        </li>
+        </li>-->
         <li
           v-if="employee.status != 'disable'"
           class="hover:bg-gray-100 dark:hover:bg-gray-700"

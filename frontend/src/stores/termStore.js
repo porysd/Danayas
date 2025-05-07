@@ -2,23 +2,24 @@ import { defineStore } from "pinia";
 import { useAuthStore } from "./authStore";
 
 export const useTermsStore = defineStore("terms", {
-  state: () => {
-    terms: [];
-  },
+  state: () => ({
+    terms: [],
+  }),
 
   actions: {
+    //Fetch All Terms
     async fetchAlltermAndCondition() {
       const auth = useAuthStore();
       if (!auth.isLoggedIn) return;
       try {
         this.terms = [];
-        const limit = 20;
+        const limit = 50;
         let page = 1;
         let hasMoreData = true;
 
         while (hasMoreData) {
           const res = await fetch(
-            `http://localhost:3000/terms?limit=${limit}&page=${page}`,
+            `http://localhost:3000/termAndCondition?limit=${limit}&page=${page}`,
             {
               headers: {
                 "Content-Type": "application/json",
@@ -26,7 +27,7 @@ export const useTermsStore = defineStore("terms", {
               },
             }
           );
-          if (!res.okay) {
+          if (!res.ok) {
             console.error("Failed to fetch terms and conditions");
             break;
           }
@@ -49,14 +50,40 @@ export const useTermsStore = defineStore("terms", {
       }
     },
   },
-  // Update FAQs
+  // Add Terms
+
+  async addTerms(termsData) {
+    try {
+      const auth = useAuthStore();
+      if (!auth.isLoggedIn) return;
+
+      const res = await fetch("http://localhost:3000/termAndCondition", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${auth.accessToken}`,
+        },
+        body: JSON.stringify(termsData),
+      });
+      if (!res.ok) {
+        throw new Error("Failed to add Terms");
+      }
+      const newTerms = await res.json();
+      this.terms.push(newTerms);
+
+      await this.fetchAlltermAndCondition();
+    } catch (err) {
+      console.error("Error adding Terms:", err);
+    }
+  },
+  // Update Terms
   async updateTerms(termsData) {
     try {
       const auth = useAuthStore();
       if (!auth.isLoggedIn) return;
 
       const res = await fetch(
-        `http://localhost:3000/faqs/${termsData.termsId}`,
+        `http://localhost:3000/termAndCondition/${termsData.termsId}`,
         {
           method: "PATCH",
           headers: {
@@ -78,12 +105,14 @@ export const useTermsStore = defineStore("terms", {
       console.error("Error updating terms and condition,", err);
     }
   },
+
+  // delete Terms
   async deleteTerms(termsData) {
     try {
       const auth = useAuthStore();
       if (!auth.isLoggedIn) return;
       const res = await fetch(
-        `http://localhost:3000/faqs/${termsData.termsId}`,
+        `http://localhost:3000/termAndCondition/${termsData.termsId}`,
         {
           method: "Delete",
           headers: {

@@ -21,6 +21,9 @@ import DarkModeButton from "../components/DarkModeButton.vue";
 import Toast from "primevue/toast";
 import { useToast } from "primevue/usetoast";
 import { usePackageStore } from "../../stores/packageStore.js";
+import { formatPeso } from "../../utility/pesoFormat";
+import { formatDates } from "../../utility/dateFormat";
+import Inplace from "primevue/inplace";
 
 const toast = useToast();
 const packageStore = usePackageStore();
@@ -127,20 +130,18 @@ const filteredPromos = computed(() => {
   return result;
 });
 
-//Fix Date Format
-function formatDate(dateString) {
-  const date = new Date(dateString);
-  const options = { year: "numeric", month: "short", day: "numeric" };
-  return date.toLocaleDateString("en-US", options);
-}
-
-// Peso Currency Format
-function formatPeso(value) {
-  return new Intl.NumberFormat("en-PH", {
-    style: "currency",
-    currency: "PHP",
-  }).format(value);
-}
+const getMode = (mode) => {
+  switch (mode) {
+    case "day-time":
+      return "warn";
+    case "night-time":
+      return "info";
+    case "whole-day":
+      return "danger";
+    default:
+      return "secondary";
+  }
+};
 
 //Checks Severity of Status of the Package
 const getStatusSeverity = (status) => {
@@ -204,7 +205,6 @@ const getStatusSeverity = (status) => {
                       <th>MODE</th>
                       <th>STATUS</th>
                       <th>CREATED</th>
-                      <th>UPDATED</th>
                       <th></th>
                     </tr>
                   </thead>
@@ -218,7 +218,12 @@ const getStatusSeverity = (status) => {
                       <td class="w-[5%]">{{ packageT.packageId }}</td>
                       <td class="w-[20%]">{{ packageT.name }}</td>
                       <td class="w-[10%]">{{ formatPeso(packageT.price) }}</td>
-                      <td class="w-[10%]">{{ packageT.mode }}</td>
+                      <td class="w-[10%]">
+                        <Tag
+                          :severity="getMode(packageT.mode)"
+                          :value="packageT.mode"
+                        />
+                      </td>
                       <td class="w-[15%]">
                         <Tag
                           :severity="getStatusSeverity(packageT.status)"
@@ -226,10 +231,7 @@ const getStatusSeverity = (status) => {
                         />
                       </td>
                       <td class="w-[10%]">
-                        {{ formatDate(packageT.createdAt) }}
-                      </td>
-                      <td class="w-[10%]">
-                        {{ formatDate(packageT.updatedAt) }}
+                        {{ formatDates(packageT.createdAt) }}
                       </td>
                       <td class="w-[5%]" @click.stop>
                         <T3ButtonPackages
@@ -265,7 +267,6 @@ const getStatusSeverity = (status) => {
                       <th>STATUS</th>
                       <td>PROMO START & END</td>
                       <th>CREATED</th>
-                      <th>UPDATED</th>
                       <th></th>
                     </tr>
                   </thead>
@@ -279,7 +280,12 @@ const getStatusSeverity = (status) => {
                       <td>{{ promo.packageId }}</td>
                       <td>{{ promo.name }}</td>
                       <td>{{ formatPeso(promo.price) }}</td>
-                      <td>{{ promo.mode }}</td>
+                      <td>
+                        <Tag
+                          :severity="getMode(promo.mode)"
+                          :value="promo.mode"
+                        />
+                      </td>
                       <td>
                         <Tag
                           :severity="getStatusSeverity(promo.status)"
@@ -287,8 +293,7 @@ const getStatusSeverity = (status) => {
                         />
                       </td>
                       <td>{{ promo.promoStart }} - {{ promo.promoEnd }}</td>
-                      <td>{{ formatDate(promo.createdAt) }}</td>
-                      <td>{{ formatDate(promo.updatedAt) }}</td>
+                      <td>{{ formatDates(promo.createdAt) }}</td>
                       <td @click.stop>
                         <T3ButtonPromos
                           :packageT="promo"
@@ -323,16 +328,45 @@ const getStatusSeverity = (status) => {
         <div class="flex flex-col gap-2">
           <p><strong>Package ID:</strong> {{ selectedPackage?.packageId }}</p>
           <p><strong>Package Name:</strong> {{ selectedPackage?.name }}</p>
-          <p><strong>Package Price: </strong>{{ selectedPackage?.price }}</p>
+          <p>
+            <strong>Package Price: </strong
+            >{{ formatPeso(selectedPackage?.price) }}
+          </p>
           <p>
             <strong>Package Inclusion:</strong>
             {{ selectedPackage?.inclusion }}
           </p>
           <p><strong>Package Mode:</strong> {{ selectedPackage?.mode }}</p>
           <p><strong>Package Status:</strong> {{ selectedPackage?.status }}</p>
-          <p><strong>Package Image:</strong> {{ selectedPackage?.imageUrl }}</p>
-          <p><strong>Created At:</strong> {{ selectedPackage?.createdAt }}</p>
-          <p><strong>Updated At:</strong> {{ selectedPackage?.updatedAt }}</p>
+          <p><strong>Package Image:</strong></p>
+          <Inplace>
+            <template #display>
+              <span class="inline-flex items-center gap-2">
+                <span class="pi pi-image"></span>
+                <span>View Photo</span>
+              </span>
+            </template>
+            <template #content>
+              <div v-if="selectedPackage?.imageUrl">
+                <img
+                  class="w-full sm:w-80 shadow-md"
+                  alt="Package Image"
+                  :src="selectedPackage?.imageUrl"
+                />
+              </div>
+              <div v-else>
+                <p>No image available for this promo.</p>
+              </div>
+            </template>
+          </Inplace>
+          <p>
+            <strong>Created At:</strong>
+            {{ formatDates(selectedPackage?.createdAt) }}
+          </p>
+          <p>
+            <strong>Updated At:</strong>
+            {{ formatDates(selectedPackage?.updatedAt) }}
+          </p>
           <Divider />
           <button class="closeDetails mt-5 w-[100%]" @click="closeModal">
             Close
@@ -350,7 +384,9 @@ const getStatusSeverity = (status) => {
         <div class="flex flex-col gap-2">
           <p><strong>Package ID:</strong> {{ selectedPromo?.packageId }}</p>
           <p><strong>Promo Name:</strong> {{ selectedPromo?.name }}</p>
-          <p><strong>Promo Price: </strong>{{ selectedPromo?.price }}</p>
+          <p>
+            <strong>Promo Price: </strong>{{ formatPeso(selectedPromo?.price) }}
+          </p>
           <p>
             <strong>Promo Inclusion:</strong>
             {{ selectedPromo?.inclusion }}
@@ -359,9 +395,35 @@ const getStatusSeverity = (status) => {
           <p><strong>Promo Status:</strong> {{ selectedPromo?.status }}</p>
           <p><strong>Promo Start:</strong> {{ selectedPromo?.promoStart }}</p>
           <p><strong>Promo End:</strong> {{ selectedPromo?.promoEnd }}</p>
-          <p><strong>Promo Image:</strong> {{ selectedPromo?.imageUrl }}</p>
-          <p><strong>Created At:</strong> {{ selectedPromo?.createdAt }}</p>
-          <p><strong>Updated At:</strong> {{ selectedPromo?.updatedAt }}</p>
+          <p><strong>Promo Image: </strong></p>
+          <Inplace>
+            <template #display>
+              <span class="inline-flex items-center gap-2">
+                <span class="pi pi-image"></span>
+                <span>View Photo</span>
+              </span>
+            </template>
+            <template #content>
+              <div v-if="selectedPromo?.imageUrl">
+                <img
+                  class="w-full sm:w-80 shadow-md"
+                  alt="Promo Image"
+                  :src="selectedPromo?.imageUrl"
+                />
+              </div>
+              <div v-else>
+                <p>No image available for this promo.</p>
+              </div>
+            </template>
+          </Inplace>
+          <p>
+            <strong>Created At:</strong>
+            {{ formatDates(selectedPromo?.createdAt) }}
+          </p>
+          <p>
+            <strong>Updated At:</strong>
+            {{ formatDates(selectedPromo?.updatedAt) }}
+          </p>
           <Divider />
           <button class="closeDetails mt-5 w-[100%]" @click="closeModal">
             Close
@@ -447,7 +509,8 @@ const getStatusSeverity = (status) => {
 .paRow {
   width: 100%;
   font-size: 15px;
-  height: auto;
+  height: 50px;
+  min-height: auto;
   text-align: center;
   border-bottom: 1px solid #194d1d;
   cursor: pointer;

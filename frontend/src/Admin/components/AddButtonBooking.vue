@@ -81,7 +81,7 @@ const formatDate = (date) => {
   return `${month}-${day}-${year}`;
 };
 
-const confirmBooking = () => {
+const confirmBooking = async () => {
   if (
     !newBooking.value.packageId ||
     !newBooking.value.checkInDate ||
@@ -99,11 +99,21 @@ const confirmBooking = () => {
       d.name.toLowerCase() === newBooking.value.discountId?.toLowerCase()
   );
 
+  if (!discount) {
+    toast.add({
+      severity: "error",
+      summary: "Discount not found",
+      detail: "Please check the Discount ID or Name.",
+    });
+    return;
+  }
+
   const bookingData = {
     ...newBooking.value,
     checkInDate: formatDate(newBooking.value.checkInDate),
     checkOutDate: formatDate(newBooking.value.checkOutDate),
     discountId: discount?.discountId || null,
+    bookingAddOns: newBooking.value.bookingAddOns || [],
   };
 
   emit("addBooking", bookingData, paymentDetails.value);
