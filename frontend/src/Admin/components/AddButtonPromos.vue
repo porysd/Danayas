@@ -12,12 +12,17 @@ const showAddPackageModal = ref(false);
 const newPackage = ref({
   name: "",
   price: "",
-  description: "",
+  inclusion: "",
   status: "",
+  mode: "",
+  imageUrl: "",
+  isPromo: true,
+  promoStart: "",
+  promoEnd: "",
 });
 
 defineProps(["data"]);
-const emit = defineEmits(["addPackage"]);
+const emit = defineEmits(["addPromos"]);
 
 const openAddPackageModal = () => {
   showAddPackageModal.value = true;
@@ -28,17 +33,12 @@ const closeAddPackageModal = () => {
 };
 
 const addPackage = () => {
-  emit("addPackage", {
-    name: newPackage.value.name,
-    price: newPackage.value.price,
-    description: newPackage.value.description,
-    status: newPackage.value.status,
-  });
+  emit("addPromos", { ...newPackage.value });
 
   closeAddPackageModal();
 };
 
-//name, price, description, status, timestamp (limit)
+//name, price, description, status
 </script>
 
 <template>
@@ -64,20 +64,22 @@ const addPackage = () => {
       <div class="addPack flex flex-col justify-center m-auto content-center">
         <div class="addPackInput">
           <label>Name:</label>
-          <input v-model="newPackage.name" placeholder="Package Name" />
+          <input v-model="newPackage.name" placeholder="Promo Name" />
         </div>
         <div class="addPackInput">
           <label>Price:</label>
           <input v-model="newPackage.price" placeholder="Price" />
         </div>
         <div class="addPackInput">
-          <label>Description:</label>
+          <label>Inclusion:</label>
           <Textarea
-            v-model="newPackage.description"
+            v-model="newPackage.inclusion"
             autoResize
             rows="3"
             cols="30"
-            placeholder="Description"
+            placeholder="Inclusions:
+            - example
+            - example"
           />
         </div>
         <div class="addPackInput">
@@ -85,20 +87,35 @@ const addPackage = () => {
           <select v-model="newPackage.status" class="border p-2 rounded w-full">
             <option value="active">Active</option>
             <option value="inactive">Inactive</option>
-            <option value="coming-soon">Coming Soon</option>
-            <option value="sold-out">Sold Out</option>
+          </select>
+        </div>
+        <div class="addPackInput">
+          <label>Mode:</label>
+          <select v-model="newPackage.mode" class="border p-2 rounded w-full">
+            <option value="day-time">Day Time</option>
+            <option value="night-time">Night Time</option>
+            <option value="whole-day">Whole Day</option>
           </select>
         </div>
         <div class="addPackInput">
           <label>Image URL:</label>
           <FileUpload
             ref="fileupload"
+            v-model="newPackage.imageUrl"
             mode="basic"
             name="demo[]"
             url="/api/upload"
             accept="image/*"
             :maxFileSize="1000000"
           />
+        </div>
+        <div class="addPackInput">
+          <label>Promo Start:</label>
+          <input v-model="newPackage.promoStart" placeholder="Start" />
+        </div>
+        <div class="addPackInput">
+          <label>Promo End:</label>
+          <input v-model="newPackage.promoEnd" placeholder="End" />
         </div>
       </div>
     </div>
@@ -140,10 +157,11 @@ const addPackage = () => {
   gap: 10px;
 }
 
-.addPack input {
+.addPack input,
+.addPack select {
   padding: 10px;
-  border: 1px solid #ccc;
-  background-color: #fcfcfc;
+  border: 1px solid #cbd5e1;
+  background-color: #ffffff;
   border-radius: 5px;
   height: 40px;
 }

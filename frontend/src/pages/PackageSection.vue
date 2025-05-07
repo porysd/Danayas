@@ -19,8 +19,7 @@ import Footer from "../components/Footer.vue";
     </div>
 
     <div class="pSec flex flex-col gap-20">
-      <HomePackage />
-      <HomePackage />
+      <Packages />
     </div>
   </section>
   <Footer />

@@ -11,8 +11,10 @@ const showMenu = ref(false);
 const hideMenu = ref(false);
 const showArchiveModal = ref(false);
 const showDeleteModal = ref(false);
+const showEnableModal = ref(false);
 const showRoleModel = ref(false);
 const formData = ref({});
+let previousState = null;
 
 const closeMenu = (event) => {
   if (hideMenu.value && !hideMenu.value.contains(event.target)) {
@@ -29,7 +31,12 @@ onUnmounted(() => {
 });
 
 const prop = defineProps(["employee"]);
-const emit = defineEmits(["archiveEmployee", "deleteEmployee", "changeRole"]);
+const emit = defineEmits([
+  "archiveEmployee",
+  "disableEmployee",
+  "changeRole",
+  "enableEmployee",
+]);
 
 const openArchiveModal = () => {
   formData.value = { ...prop.employee };
@@ -49,10 +56,17 @@ const openRoleModal = () => {
   showMenu.value = false;
 };
 
+const openEnableModal = () => {
+  formData.value = { ...prop.employee };
+  showEnableModal.value = true;
+  showMenu.value = false;
+};
+
 const closeModals = () => {
   showArchiveModal.value = false;
   showDeleteModal.value = false;
   showRoleModel.value = false;
+  showEnableModal.value = false;
 };
 
 const archiveEmployee = () => {
@@ -60,18 +74,29 @@ const archiveEmployee = () => {
   toast.add({
     severity: "warn",
     summary: "Archive",
-    detail: "Archived User",
+    detail: "Successfully Archived a User",
     life: 3000,
   });
   closeModals();
 };
 
 const confirmDisable = () => {
-  emit("deleteEmployee", formData.value);
+  emit("disableEmployee", formData.value);
   toast.add({
     severity: "error",
-    summary: "Disable",
-    detail: "Disable User",
+    summary: "Disabled",
+    detail: "Successfully Disable a User",
+    life: 3000,
+  });
+  closeModals();
+};
+
+const enableUser = () => {
+  emit("enableEmployee", formData.value);
+  toast.add({
+    severity: "success",
+    summary: "Enabled",
+    detail: "Successfully Enabled a User",
     life: 3000,
   });
   closeModals();
@@ -79,6 +104,12 @@ const confirmDisable = () => {
 
 const changeRole = () => {
   emit("changeRole", formData.value);
+  toast.add({
+    severity: "success",
+    summary: "Success",
+    detail: "Successfully Changed Role a User",
+    life: 3000,
+  });
   closeModals();
 };
 </script>
@@ -92,9 +123,32 @@ const changeRole = () => {
 
     <div v-if="showMenu" ref="hideMenu" class="dropdown-menu">
       <ul>
-        <li @click="openRoleModal">Roles</li>
-        <li @click="openArchiveModal">Archive</li>
-        <li @click="openDeleteModal">Disable</li>
+        <li
+          class="hover:bg-gray-100 dark:hover:bg-gray-700"
+          @click="openRoleModal"
+        >
+          Roles
+        </li>
+        <!--<li
+          class="hover:bg-gray-100 dark:hover:bg-gray-700"
+          @click="openArchiveModal"
+        >
+          Archive
+        </li>-->
+        <li
+          v-if="employee.status != 'disable'"
+          class="hover:bg-gray-100 dark:hover:bg-gray-700"
+          @click="openDeleteModal"
+        >
+          Disable
+        </li>
+        <li
+          v-else
+          class="hover:bg-gray-100 dark:hover:bg-gray-700"
+          @click="openEnableModal"
+        >
+          Enable
+        </li>
       </ul>
     </div>
   </div>
@@ -169,6 +223,41 @@ const changeRole = () => {
     </div>
   </Dialog>
 
+  <Dialog v-model:visible="showEnableModal" modal :style="{ width: '30rem' }">
+    <template #header>
+      <div class="flex flex-col items-center justify-center w-full">
+        <h2 class="text-xl font-bold font-[Poppins]">Enable User</h2>
+      </div>
+    </template>
+
+    <span
+      class="text-lg text-surface-700 dark:text-surface-400 block mb-8 text-center font-[Poppins]"
+    >
+      Are you sure you want to
+      <strong class="text-green-500">ENABLE</strong> this user:
+      <span class="font-black font-[Poppins]"
+        >{{ employee.firstName }} {{ employee.lastName }}</span
+      >?
+    </span>
+
+    <div class="flex justify-center gap-2 font-[Poppins]">
+      <Button
+        type="button"
+        label="Cancel"
+        severity="secondary"
+        @click="closeModals"
+        class="font-bold w-full"
+      />
+      <Button
+        type="button"
+        label="Enable"
+        severity="success"
+        @click="enableUser"
+        class="font-bold w-full"
+      />
+    </div>
+  </Dialog>
+
   <Dialog v-model:visible="showRoleModel" modal :style="{ width: '60rem' }">
     <template #header>
       <div class="flex flex-col items-center justify-center w-full">
@@ -193,40 +282,29 @@ const changeRole = () => {
       <div class="role1">
         <label class="switch">
           Admin
-          <ToggleSwitch v-model="checked" />
+          <ToggleSwitch
+            :modelValue="formData.role === 'admin'"
+            @update:modelValue="
+              (value) => {
+                if (value) formData.role = 'admin';
+              }
+            "
+          />
         </label>
-
-        <!--<label class="switch">
-            Employee Management
-            <ToggleSwitch v-model="checked" />
-          </label>
-
-          <label class="switch">
-            Packages and Promos
-            <ToggleSwitch v-model="checked" />
-          </label>
-
-          <label class="switch">
-            Discount and Add Ons
-            <ToggleSwitch v-model="checked" />
-          </label>-->
       </div>
 
       <div class="role2">
         <label class="switch">
           Staff
-          <ToggleSwitch v-model="checked" />
+          <ToggleSwitch
+            :modelValue="formData.role === 'staff'"
+            @update:modelValue="
+              (value) => {
+                if (value) formData.role = 'staff';
+              }
+            "
+          />
         </label>
-
-        <!--<label class="switch">
-          Booking Management
-          <ToggleSwitch v-model="checked" />
-        </label>
-
-        <label class="switch">
-          Transaction
-          <ToggleSwitch v-model="checked" />
-        </label>-->
       </div>
     </div>
 
@@ -263,7 +341,7 @@ const changeRole = () => {
   position: absolute;
   right: 0;
   top: 100%;
-  background: #fcf5f5;
+  background: #fcfcfc;
   color: #333;
   border-radius: 5px;
   padding: 5px;
@@ -284,11 +362,6 @@ const changeRole = () => {
   display: flex;
   align-items: center;
   gap: 5px;
-}
-
-.dropdown-menu li:hover {
-  background: #555;
-  color: #fcf5f5;
 }
 
 .role-container {

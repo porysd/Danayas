@@ -1,5 +1,5 @@
 <script setup>
-import { ref, defineProps, defineEmits } from "vue";
+import { ref, defineProps, defineEmits, onUnmounted, onMounted } from "vue";
 import Button from "primevue/button";
 import Dialog from "primevue/dialog";
 import Toast from "primevue/toast";
@@ -8,11 +8,16 @@ import { useToast } from "primevue/usetoast";
 const toast = useToast();
 const showMenu = ref(false);
 const showArchiveModal = ref(false);
-const showDeleteModal = ref(false);
+const showDisableModal = ref(false);
+const showEnableModal = ref(false);
 const formData = ref({});
 
 const prop = defineProps(["customer"]);
-const emit = defineEmits(["archiveCustomer", "deleteCustomer"]);
+const emit = defineEmits([
+  "archiveCustomer",
+  "disableCustomer",
+  "enableCustomer",
+]);
 
 const openArchiveModal = () => {
   formData.value = { ...prop.customer };
@@ -20,15 +25,22 @@ const openArchiveModal = () => {
   showMenu.value = false;
 };
 
-const openDeleteModal = () => {
+const openDisableModal = () => {
   formData.value = { ...prop.customer };
-  showDeleteModal.value = true;
+  showDisableModal.value = true;
+  showMenu.value = false;
+};
+
+const openEnableModal = () => {
+  formData.value = { ...prop.customer };
+  showEnableModal.value = true;
   showMenu.value = false;
 };
 
 const closeModals = () => {
   showArchiveModal.value = false;
-  showDeleteModal.value = false;
+  showDisableModal.value = false;
+  showEnableModal.value = false;
 };
 
 const archiveCustomer = () => {
@@ -42,8 +54,8 @@ const archiveCustomer = () => {
   closeModals();
 };
 
-const confirmDelete = () => {
-  emit("deleteCustomer", formData.value);
+const confirmDisable = () => {
+  emit("disableCustomer", formData.value);
   toast.add({
     severity: "error",
     summary: "Disable",
@@ -52,6 +64,33 @@ const confirmDelete = () => {
   });
   closeModals();
 };
+
+const enableUser = () => {
+  emit("enableCustomer", formData.value);
+  toast.add({
+    severity: "success",
+    summary: "Enabled",
+    detail: "Successfully Enabled a User",
+    life: 3000,
+  });
+  closeModals();
+};
+
+const hideMenu = ref(false);
+
+const closeMenu = (event) => {
+  if (hideMenu.value && !hideMenu.value.contains(event.target)) {
+    showMenu.value = false;
+  }
+};
+
+onMounted(() => {
+  document.addEventListener("click", closeMenu);
+});
+
+onUnmounted(() => {
+  document.addEventListener("click", closeMenu);
+});
 </script>
 
 <template>
@@ -61,10 +100,28 @@ const confirmDelete = () => {
       class="adminButton pi pi-ellipsis-v"
     ></button>
 
-    <div v-if="showMenu" class="dropdown-menu">
+    <div v-if="showMenu" ref="hideMenu" class="dropdown-menu">
       <ul>
-        <li @click="openArchiveModal">Archive</li>
-        <li @click="openDeleteModal">Disable</li>
+        <!--<li
+          class="hover:bg-gray-100 dark:hover:bg-gray-700"
+          @click="openArchiveModal"
+        >
+          Archive
+        </li>-->
+        <li
+          v-if="customer.status !== 'disable'"
+          class="hover:bg-gray-100 dark:hover:bg-gray-700"
+          @click="openDisableModal"
+        >
+          Disable
+        </li>
+        <li
+          v-else
+          class="hover:bg-gray-100 dark:hover:bg-gray-700"
+          @click="openEnableModal"
+        >
+          Enable
+        </li>
       </ul>
     </div>
   </div>
@@ -104,7 +161,7 @@ const confirmDelete = () => {
     </div>
   </Dialog>
 
-  <Dialog v-model:visible="showDeleteModal" modal :style="{ width: '30rem' }">
+  <Dialog v-model:visible="showDisableModal" modal :style="{ width: '30rem' }">
     <template #header>
       <div class="flex flex-col items-center justify-center w-full">
         <h2 class="text-xl font-bold font-[Poppins]">Disable User</h2>
@@ -133,7 +190,42 @@ const confirmDelete = () => {
         type="button"
         label="Disable"
         severity="danger"
-        @click="confirmDelete"
+        @click="confirmDisable"
+        class="font-bold w-full"
+      />
+    </div>
+  </Dialog>
+
+  <Dialog v-model:visible="showEnableModal" modal :style="{ width: '30rem' }">
+    <template #header>
+      <div class="flex flex-col items-center justify-center w-full">
+        <h2 class="text-xl font-bold font-[Poppins]">Enable User</h2>
+      </div>
+    </template>
+
+    <span
+      class="text-lg text-surface-700 dark:text-surface-400 block mb-8 text-center font-[Poppins]"
+    >
+      Are you sure you want to
+      <strong class="text-green-500">ENABLE</strong> this user:
+      <span class="font-black font-[Poppins]"
+        >{{ customer.firstName }} {{ customer.lastName }}</span
+      >?
+    </span>
+
+    <div class="flex justify-center gap-2 font-[Poppins]">
+      <Button
+        type="button"
+        label="Cancel"
+        severity="secondary"
+        @click="closeModals"
+        class="font-bold w-full"
+      />
+      <Button
+        type="button"
+        label="Enable"
+        severity="success"
+        @click="enableUser"
         class="font-bold w-full"
       />
     </div>
@@ -155,7 +247,7 @@ const confirmDelete = () => {
   position: absolute;
   right: 0;
   top: 100%;
-  background: #fcf5f5;
+  background: #fcfcfc;
   color: #333;
   border-radius: 5px;
   padding: 5px;
@@ -176,11 +268,6 @@ const confirmDelete = () => {
   display: flex;
   align-items: center;
   gap: 5px;
-}
-
-.dropdown-menu li:hover {
-  background: #555;
-  color: #fcf5f5;
 }
 
 .modal-overlay {

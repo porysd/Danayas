@@ -7,10 +7,13 @@ import {
   PaymentsTable,
   CatalogAddOnsTable,
   BookingAddOnsTable,
+  TransactionsTable,
+  FaqsTable,
+  TermsAndConditionTable,
 } from "../schemas/schema.ts";
 import { faker } from "@faker-js/faker";
 import { grantPermission } from "../utils/permissionUtils.ts";
-import { eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 
 // Seed roles
 const roles = ["admin", "staff", "customer"];
@@ -61,50 +64,212 @@ export default async function seed() {
     }
   }
   // packages
-  for (let i = 0; i < 10; i++) {
+  const realPackages = [
+    {
+      name: "Teresa's Package (Events Venue)",
+      inclusion:
+        "- Swimming Pool\n- Tables and Chairs\n- Fully Airconditioned Events Venue (Teresa Hall)\n- Function Hall Ground Floor (Cruz Hall)",
+      price: 12000,
+      mode: "day-time",
+      status: "active",
+      imageUrl: "https://example.com/images/conference-package.jpg",
+      isPromo: 0,
+      promoStart: null,
+      promoEnd: null,
+    },
+    {
+      name: "Cruz Package (Package A)",
+      inclusion:
+        "- Swimming Pool\n- Tables and Chairs\n- Function Hall Ground Floor (Cruz Hall)\n- Nipa Hut\n- Griller\n- Kitchen Table\n- 2 Toilet and Bath",
+      price: 7000,
+      mode: "day-time",
+      status: "active",
+      imageUrl: "https://example.com/images/conference-package.jpg",
+      isPromo: 0,
+      promoStart: null,
+      promoEnd: null,
+    },
+    {
+      name: "Cruz Package (Package A)",
+      inclusion:
+        "- Swimming Pool\n- Tables and Chairs\n- Function Hall Ground Floor (Cruz Hall)\n- Nipa Hut\n- Griller\n- Kitchen Table\n- 2 Toilet and Bath",
+      price: 9000,
+      mode: "night-time",
+      status: "active",
+      imageUrl: "https://example.com/images/conference-package.jpg",
+      isPromo: 0,
+      promoStart: null,
+      promoEnd: null,
+    },
+    {
+      name: "Cruz Package (Package A)",
+      inclusion:
+        "- Swimming Pool\n- Tables and Chairs\n- Function Hall Ground Floor (Cruz Hall)\n- Nipa Hut\n- Griller\n- Kitchen Table\n- 2 Toilet and Bath",
+      price: 14000,
+      mode: "whole-day",
+      status: "active",
+      imageUrl: "https://example.com/images/conference-package.jpg",
+      isPromo: 0,
+      promoStart: null,
+      promoEnd: null,
+    },
+    {
+      name: "Cruz Package (Package B)",
+      inclusion:
+        "- Swimming Pool\n- Tables and Chairs\n- Function Hall Ground Floor (Cruz Hall)\n- Nipa Hut\n- Griller\n- Kitchen Table\n- 2 Toilet and Bath\n- Karaoke\n- 2 Airconditioned Rooms",
+      price: 10000,
+      mode: "day-time",
+      status: "active",
+      imageUrl: "https://example.com/images/conference-package.jpg",
+      isPromo: 0,
+      promoStart: null,
+      promoEnd: null,
+    },
+    {
+      name: "Cruz Package (Package B)",
+      inclusion:
+        "- Swimming Pool\n- Tables and Chairs\n- Function Hall Ground Floor (Cruz Hall)\n- Nipa Hut\n- Griller\n- Kitchen Table\n- 2 Toilet and Bath\n- Karaoke\n- 2 Airconditioned Rooms",
+      price: 12000,
+      mode: "night-time",
+      status: "active",
+      imageUrl: "https://example.com/images/conference-package.jpg",
+      isPromo: 0,
+      promoStart: null,
+      promoEnd: null,
+    },
+    {
+      name: "Cruz Package (Package B)",
+      inclusion:
+        "- Swimming Pool\n- Tables and Chairs\n- Function Hall Ground Floor (Cruz Hall)\n- Nipa Hut\n- Griller\n- Kitchen Table\n- 2 Toilet and Bath\n- Karaoke\n- 2 Airconditioned Rooms",
+      price: 20000,
+      mode: "whole-day",
+      status: "active",
+      imageUrl: "https://example.com/images/conference-package.jpg",
+      isPromo: 0,
+      promoStart: null,
+      promoEnd: null,
+    },
+    {
+      name: "Cruz Package (Package C - SMALL GROUP PACKAGES)",
+      inclusion:
+        "- Swimming Pool\n- 3 Sets Tables and Chairs\n- Function Hall Ground Floor (Cruz Hall)\n- Nipa Hut\n- Griller\n- 2 Toilet and Bath",
+      price: 5000,
+      mode: "day-time",
+      status: "active",
+      imageUrl: "https://example.com/images/conference-package.jpg",
+      isPromo: 1,
+      promoStart: null,
+      promoEnd: null,
+    },
+    {
+      name: "Cruz Package (Package C - SMALL GROUP PACKAGES)",
+      inclusion:
+        "- Swimming Pool\n- 3 Sets Tables and Chairs\n- Function Hall Ground Floor (Cruz Hall)\n- Nipa Hut\n- Griller\n- 2 Toilet and Bath",
+      price: 7000,
+      mode: "night-time",
+      status: "active",
+      imageUrl: "https://example.com/images/conference-package.jpg",
+      isPromo: 1,
+      promoStart: null,
+      promoEnd: null,
+    },
+    {
+      name: "Cruz Package (Package C - SMALL GROUP PACKAGES)",
+      inclusion:
+        "- Swimming Pool\n- 3 Sets Tables and Chairs\n- Function Hall Ground Floor (Cruz Hall)\n- Nipa Hut\n- Griller\n- 2 Toilet and Bath",
+      price: 12000,
+      mode: "whole-day",
+      status: "active",
+      imageUrl: "https://example.com/images/conference-package.jpg",
+      isPromo: 1,
+      promoStart: null,
+      promoEnd: null,
+    },
+
+    {
+      name: "Package A (Private)",
+      inclusion:
+        "- Swimming Pool\n- Tables and Chairs\n- Function Hall Ground Floor (Cruz Hall)\n- Nipa Hut\n- Griller\n- 1 Airconditioned Room\n -Karaoke",
+      price: 8000,
+      mode: "day-time",
+      status: "active",
+      imageUrl: "https://example.com/images/conference-package.jpg",
+      isPromo: 1,
+      promoStart: null,
+      promoEnd: null,
+    },
+    {
+      name: "Package A (Private)",
+      inclusion:
+        "- Swimming Pool\n- Tables and Chairs\n- Function Hall Ground Floor (Cruz Hall)\n- Nipa Hut\n- Griller\n- 1 Airconditioned Room\n -Karaoke",
+      price: 10000,
+      mode: "night-time",
+      status: "active",
+      imageUrl: "https://example.com/images/conference-package.jpg",
+      isPromo: 1,
+      promoStart: null,
+      promoEnd: null,
+    },
+    {
+      name: "Package B (Private)",
+      inclusion:
+        "- Swimming Pool\n- Tables and Chairs\n- Function Hall Ground Floor (Cruz Hall)\n- Griller\n- 2 Airconditioned Room\n -Karaoke\n- 2 Toilet and Bath",
+      price: 10000,
+      mode: "day-time",
+      status: "active",
+      imageUrl: "https://example.com/images/conference-package.jpg",
+      isPromo: 1,
+      promoStart: null,
+      promoEnd: null,
+    },
+    {
+      name: "Package B (Private)",
+      inclusion:
+        "- Swimming Pool\n- Tables and Chairs\n- Function Hall Ground Floor (Cruz Hall)\n- Griller\n- 2 Airconditioned Room\n -Karaoke\n- 2 Toilet and Bath",
+      price: 12000,
+      mode: "day-time",
+      status: "active",
+      imageUrl: "https://example.com/images/conference-package.jpg",
+      isPromo: 1,
+      promoStart: null,
+      promoEnd: null,
+    },
+    {
+      name: "Small Package (Private)",
+      inclusion:
+        "- Swimming Pool\n- 5 Sets Tables and Chairs\n- Function Hall Ground Floor (Cruz Hall)\n- Griller\n -Karaoke",
+      price: 6000,
+      mode: "day-time",
+      status: "active",
+      imageUrl: "https://example.com/images/conference-package.jpg",
+      isPromo: 1,
+      promoStart: null,
+      promoEnd: null,
+    },
+    {
+      name: "Small Package (Private)",
+      inclusion:
+        "- Swimming Pool\n- 5 Sets Tables and Chairs\n- Function Hall Ground Floor (Cruz Hall)\n- Griller\n -Karaoke\n- 1 Airconditioned Room",
+      price: 7500,
+      mode: "night-time",
+      imageUrl: "https://example.com/images/conference-package.jpg",
+      status: "active",
+      isPromo: 1,
+      promoStart: null,
+      promoEnd: null,
+    },
+  ] as const;
+  for (const packageData of realPackages) {
     try {
       const row = await db
         .insert(PackagesTable)
-        .values({
-          description: faker.word.words(20),
-          inclusion: faker.word.words(10),
-          price: faker.helpers.rangeToNumber({ min: 1000, max: 12000 }),
-          name: faker.commerce.productName(),
-          status: faker.helpers.arrayElement([
-            "active",
-            "inactive",
-          ]),
-          imageUrl: faker.image.urlLoremFlickr(),
-          isPromo: faker.datatype.boolean() ? 1 : 0,
-          promoStart: faker.date.recent().toISOString(), 
-          promoEnd: faker.date.soon().toISOString(),
-        })
+        .values(packageData)
         .returning()
         .execute();
-      //await grantPermission(row[0].userId, "PACKAGES", "read");
-    } catch (e) {
-      console.error(e);
+    } catch (err) {
       continue;
     }
   }
-  // discounts
-  // for (let i = 0; i < 100; i++) {
-  //   try {
-  //     const row = await db
-  //       .insert(DiscountsTable)
-  //       .values({
-  //         name: faker.commerce.product(),
-  //         percentage: faker.helpers.rangeToNumber({ min: 0.1, max: 1.0 }),
-  //         typeFor: faker.helpers.arrayElement(["pwd", "student", "senior"]),
-  //       })
-  //       .returning()
-  //       .execute();
-  //     //await grantPermission(row[0].userId, "PACKAGES", "read");
-  //   } catch (e) {
-  //     console.error(e);
-  //     continue;
-  //   }
-  // }
 
   const uniqueDiscounts: {
     typeFor: "pwd" | "student" | "senior" | "birthday";
@@ -113,15 +278,30 @@ export default async function seed() {
     status: "active" | "inactive";
   }[] = [
     { typeFor: "pwd", name: "PWD Discount", percentage: 0.2, status: "active" },
-    { typeFor: "student", name: "Student Discount", percentage: 0.15, status: "active" },
-    { typeFor: "senior", name: "Senior Citizen Discount", percentage: 0.25, status: "active" },
-    { typeFor: "birthday", name: "Birthday Discount", percentage: 0.1, status: "active" }
+    {
+      typeFor: "student",
+      name: "Student Discount",
+      percentage: 15,
+      status: "active",
+    },
+    {
+      typeFor: "senior",
+      name: "Senior Citizen Discount",
+      percentage: 25,
+      status: "active",
+    },
+    {
+      typeFor: "birthday",
+      name: "Birthday Discount",
+      percentage: 1,
+      status: "active",
+    },
   ];
 
   for (const discount of uniqueDiscounts) {
     try {
       const row = await db.insert(DiscountsTable).values(discount).execute();
-      // console.log(`Inserted discount for ${discount.typeFor}`);
+      // console.log(Inserted discount for ${discount.typeFor});
     } catch (e) {
       console.error(e);
       continue;
@@ -152,15 +332,27 @@ export default async function seed() {
     ])
   );
   const packageMap = new Map(
-    (await db.query.PackagesTable.findMany()).map((p) => [
-      p.packageId,
-      p.price,
-    ])
+    (await db.query.PackagesTable.findMany()).map((p) => [p.packageId, p.price])
   );
 
+  // BOOKINGS
   for (let i = 0; i < 10; i++) {
     try {
-      const selectedPackageId = faker.helpers.arrayElement(packages)
+      const selectedUserId = faker.helpers.arrayElement(customers);
+
+      const selectedUser = await db
+        .select({
+          firstName: UsersTable.firstName,
+          lastName: UsersTable.lastName,
+          contactNo: UsersTable.contactNo,
+          email: UsersTable.email,
+          address: UsersTable.address,
+        })
+        .from(UsersTable)
+        .where(eq(UsersTable.userId, selectedUserId))
+        .then((rows) => rows[0]);
+
+      const selectedPackageId = faker.helpers.arrayElement(packages);
       const packagePrice = packageMap.get(selectedPackageId) || 0;
 
       const selectedDiscountId = faker.helpers.arrayElement(discounts);
@@ -169,12 +361,10 @@ export default async function seed() {
       const discountAmount = packagePrice * discountPercent;
       const finalAmount = packagePrice - discountAmount;
 
-
       const row = await db
         .insert(BookingsTable)
         .values({
-          userId: faker.helpers.arrayElement(customers),
-          createdBy: faker.helpers.arrayElement(admins),
+          userId: selectedUserId,
           checkInDate: faker.date.past().toISOString(),
           checkOutDate: faker.date.future().toISOString(),
           mode: faker.helpers.arrayElement([
@@ -183,8 +373,11 @@ export default async function seed() {
             "whole-day",
           ]),
           packageId: selectedPackageId,
-          firstName: faker.person.firstName(),
-          lastName: faker.person.lastName(),
+          firstName: selectedUser.firstName,
+          lastName: selectedUser.lastName,
+          contactNo: selectedUser.contactNo,
+          emailAddress: selectedUser.email,
+          address: selectedUser.address,
           arrivalTime: faker.date.recent().toISOString(),
           eventType: faker.helpers.arrayElement([
             "wedding",
@@ -193,9 +386,6 @@ export default async function seed() {
           ]),
           numberOfGuest: faker.helpers.rangeToNumber({ min: 10, max: 500 }),
           catering: faker.helpers.rangeToNumber({ min: 0, max: 1 }),
-          contactNo: faker.phone.number(),
-          emailAddress: faker.internet.email(),
-          address: faker.location.streetAddress(),
           discountId: selectedDiscountId,
           paymentTerms: faker.helpers.arrayElement([
             "installment",
@@ -204,74 +394,187 @@ export default async function seed() {
           totalAmount: finalAmount,
           bookStatus: faker.helpers.arrayElement([
             "pending",
-            "confirmed",
-            "cancelled",
-            "completed",
-            "rescheduled",
+            // "reserved",
+            // "cancelled",
+            // "completed",
+            // "rescheduled",
+            // "pending-cancellation",
           ]),
           reservationType: faker.helpers.arrayElement(["online", "walk-in"]),
           createdAt: faker.date.recent().toISOString(),
         })
         .execute();
-      //await grantPermission(row[0].userId, "PACKAGES", "read");
     } catch (e) {
       console.error(e);
       continue;
     }
   }
 
-  const bookingId = (await db.query.BookingsTable.findMany()).map(
-    (val) => val.bookingId
-  );
+  // TRANSACTION
+  const bookingsCount = await db.select().from(BookingsTable);
+  for (const booking of bookingsCount) {
+    let status: "paid" | "partially-paid" | "voided";
+
+    if (booking.paymentTerms === "installment") {
+      status = "partially-paid";
+    } else {
+      status = "paid";
+    }
+
+    try {
+      const row = await db
+        .insert(TransactionsTable)
+        .values({
+          bookingId: booking.bookingId,
+          transactionStatus: status,
+          remainingBalance: booking.totalAmount,
+        })
+        .execute();
+    } catch (e) {
+      console.error(e);
+      continue;
+    }
+  }
+
+  // // PAYMENTS
+  // const transactionId = (await db.query.TransactionsTable.findMany()).map(
+  //   (val) => val.transactionId
+  // );
+
+  // for (let i = 0; i < 10; i++) {
+  //   try {
+  //     const transaction = faker.helpers.arrayElement(transactionId);
+
+  //     // Select Booking ID from the Transactions table
+  //     const selectedBookingId = await db.query.TransactionsTable.findFirst({
+  //       where: eq(TransactionsTable.transactionId, transaction),
+  //     });
+
+  //     if (!selectedBookingId) {
+  //       continue;
+  //     }
+
+  //     // Select TotalAmount from the Bookings table using the Booking ID
+  //     const selectedBooking = await db.query.BookingsTable.findFirst({
+  //       where: eq(BookingsTable.bookingId, selectedBookingId.bookingId),
+  //     });
+  //     if (!selectedBooking) {
+  //       continue;
+  //     }
+
+  //     const remainingBalance = selectedBooking.totalAmount;
+
+  //     // Check if latest payment is existing through transactionId
+  //     const latestPayment = await db.query.PaymentsTable.findFirst({
+  //       where: eq(PaymentsTable.transactionId, transaction),
+  //       orderBy: [desc(PaymentsTable.paidAt)],
+  //     });
+
+  //     // If latest payment exists, check its status
+  //     if (latestPayment) {
+  //       // Check if the latest payment is voided
+  //       if (latestPayment.paymentStatus === "voided") {
+  //         continue;
+  //       }
+  //       // Check if the latest payment is already paid
+  //       if (latestPayment?.paymentStatus === "paid") {
+  //         continue;
+  //       }
+
+  //       // Get the remainingBalance of the latest payment to amountPaid
+  //       const amountPaid = latestPayment.remainingBalance;
+
+  //       const mode = faker.helpers.arrayElement(["gcash", "cash"]);
+  //       if (mode === "gcash") {
+  //         await db.insert(PaymentsTable).values({
+  //           transactionId: transaction,
+  //           imageUrl: faker.image.urlLoremFlickr(),
+  //           amountPaid: amountPaid,
+  //           remainingBalance: 0,
+  //           mode: mode,
+  //           reference: faker.string.uuid(),
+  //           senderName: faker.person.fullName(),
+  //           paymentStatus: "paid",
+  //         });
+  //       } else {
+  //         await db.insert(PaymentsTable).values({
+  //           transactionId: transaction,
+  //           amountPaid: amountPaid,
+  //           remainingBalance: 0,
+  //           mode: mode,
+  //           senderName: faker.person.fullName(),
+  //           paymentStatus: "paid",
+  //         });
+  //       }
+  //     } else {
+  //       const paymentTerms = selectedBooking.paymentTerms;
+  //       const mode = faker.helpers.arrayElement(["gcash", "cash"]);
+  //       if (paymentTerms === "installment") {
+  //         if (mode === "gcash") {
+  //           await db.insert(PaymentsTable).values({
+  //             transactionId: transaction,
+  //             imageUrl: faker.image.urlLoremFlickr(),
+  //             downPaymentAmount: 3000,
+  //             amountPaid: 3000,
+  //             remainingBalance: remainingBalance - 3000,
+  //             mode: mode,
+  //             reference: faker.string.uuid(),
+  //             senderName: faker.person.fullName(),
+  //             paymentStatus: "partially-paid",
+  //           });
+  //         } else {
+  //           await db.insert(PaymentsTable).values({
+  //             transactionId: transaction,
+  //             downPaymentAmount: 3000,
+  //             amountPaid: 3000,
+  //             remainingBalance: remainingBalance - 3000,
+  //             mode: mode,
+  //             senderName: faker.person.fullName(),
+  //             paymentStatus: "partially-paid",
+  //           });
+  //         }
+  //       } else {
+  //         if (mode === "gcash") {
+  //           await db.insert(PaymentsTable).values({
+  //             transactionId: transaction,
+  //             imageUrl: faker.image.urlLoremFlickr(),
+  //             amountPaid: remainingBalance,
+  //             remainingBalance: 0,
+  //             mode: mode,
+  //             reference: faker.string.uuid(),
+  //             senderName: faker.person.fullName(),
+  //             paymentStatus: "paid",
+  //           });
+  //         } else {
+  //           await db.insert(PaymentsTable).values({
+  //             transactionId: transaction,
+  //             amountPaid: remainingBalance,
+  //             remainingBalance: 0,
+  //             mode: mode,
+  //             senderName: faker.person.fullName(),
+  //             paymentStatus: "paid",
+  //           });
+  //         }
+  //       }
+  //     }
+  //   } catch (e) {
+  //     console.error(e);
+  //     continue;
+  //   }
+  // }
 
   for (let i = 0; i < 10; i++) {
     try {
       const row = await db
-        .insert(PaymentsTable)
+        .insert(CatalogAddOnsTable)
         .values({
-          bookingId: faker.helpers.arrayElement(bookingId),
-          imageUrl: faker.image.urlLoremFlickr(),
-          discountAmount: faker.helpers.rangeToNumber({ min: 0, max: 500 }),
-          downpaymentAmount: faker.helpers.rangeToNumber({
-            min: 1000,
-            max: 2000,
-          }),
-          amountPaid: faker.helpers.rangeToNumber({ min: 100, max: 5000 }),
-          totalAmountDue: faker.helpers.rangeToNumber({
-            min: 1000,
-            max: 10000,
-          }),
-          mode: faker.helpers.arrayElement(["gcash", "cash"]),
-          reference: faker.string.uuid(),
-          paymentStatus: faker.helpers.arrayElement([
-            "refund",
-            "partially-paid",
-            "paid",
-            "failed",
-          ]),
-          paidAt: faker.date.recent().toISOString(),
+          itemName: faker.commerce.productName(),
+          price: faker.helpers.rangeToNumber({ min: 100, max: 500 }),
+          status: faker.helpers.arrayElement(["active", "inactive"]),
+          createdAt: faker.date.recent().toISOString(),
         })
         .execute();
-      //await grantPermission(row[0].userId, "PACKAGES", "read");
     } catch (e) {
-      console.error(e);
-      continue;
-    }
-  }
-
-  for(let i = 0; i < 10; i++){
-    try {
-      const row = await db.insert(CatalogAddOnsTable).values({
-        itemName: faker.commerce.productName(),
-        price: faker.helpers.rangeToNumber({ min: 100, max: 500 }),
-        status: faker.helpers.arrayElement([
-          "active",
-          "inactive",
-        ]),
-        createdAt: faker.date.recent().toISOString(),
-      }).execute();
-    }
-    catch(e){
       console.error(e);
       continue;
     }
@@ -300,6 +603,12 @@ export default async function seed() {
         .from(CatalogAddOnsTable)
         .where(eq(CatalogAddOnsTable.catalogAddOnId, catalogAddOnId))
         .then((rows) => rows[0]);
+      const selectedTransaction = await db.query.TransactionsTable.findFirst({
+        where: eq(TransactionsTable.transactionId, bookingId),
+      });
+      if (!selectedTransaction) {
+        continue;
+      }
 
       const price = selectedCatalogAddOn.price;
 
@@ -319,10 +628,122 @@ export default async function seed() {
         .returning()
         .execute();
 
-      
+      await db
+        .update(TransactionsTable)
+        .set({ remainingBalance: selectedTransaction.remainingBalance + price })
+        .where(
+          eq(TransactionsTable.transactionId, selectedTransaction.transactionId)
+        )
+        .execute();
     } catch (e) {
       console.error(e);
       continue;
+    }
+  }
+
+  const realFAQs = [
+    {
+      question: "Where is Danayas Resorts Events Venue located?",
+      answer:
+        "We are conveniently located in #27 Jones St. Extension Dulong Bayan 2, San Mateo Rizal. Please contact us directly or visit our Facebook page for detailed directions.",
+    },
+    {
+      question: "What are your rates?",
+      answer:
+        "Rates vary depending on the event type, package, and time (Daytime, Overnight, or Whole Day). Please message us directly for updated pricing.",
+    },
+    {
+      question: "Are pencil bookings allowed?",
+      answer:
+        "We do not allow pencil bookings. A reservation is only confirmed once the required down payment is made.",
+    },
+    {
+      question: "Is a deposit required for bookings?",
+      answer:
+        "Yes, a reservation fee of ₱3,000 is required to secure your booking. Without a down payment, your schedule will not be confirmed.",
+    },
+    {
+      question: "Do you offer installment payment options?",
+      answer:
+        "Yes. We allow a reservation fee in advance, and full payment must be made upon arrival. Any excess charges will be settled at check-out.",
+    },
+    {
+      question: "What payment methods do you accept?",
+      answer:
+        "We accept GCash and cash payments. Please message us for account details or confirmation of payment methods.",
+    },
+    {
+      question: "How can I check for available dates?",
+      answer:
+        "You can look for the booking calendar in the website or inquire about available dates through our Facebook page or by calling/texting our official contact number.",
+    },
+    {
+      question: "Can I modify or cancel my reservation?",
+      answer:
+        "You may request to reschedule your booking subject to availability. Cancellations do not qualify for a refund unless due to a natural disaster, in which 50% of your down payment may be refunded.",
+    },
+    {
+      question: "Can I request a refund?",
+      answer:
+        "As stated in our policy, all reservation fees are non-refundable. However, 50% of the fee may be refunded if the cancellation is due to a natural disaster.",
+    },
+    {
+      question: "What are your special packages?",
+      answer:
+        "We offer packages for birthdays, weddings, family reunions, team buildings, and more. Each package includes various amenities depending on the package type. Message us for details and custom package options.",
+    },
+    {
+      question: "Do you offer discounts?",
+      answer: "As of now, discount are still not being offer.",
+    },
+    {
+      question: "What amenities does the resort have?",
+      answer:
+        "Danayas Resorts offers swimming pools, event halls, air-conditioned rooms, karaoke, grilling areas, parking, and more. Some facilities vary depending on the package or schedule.",
+    },
+    {
+      question: "Are pets allowed?",
+      answer:
+        "Pets are allowed in general areas but not in the pool premises for hygiene and safety reasons.",
+    },
+    {
+      question: "What is your smoking policy?",
+      answer:
+        "Smoking is allowed only in designated areas. Please dispose of cigarette butts properly to maintain the cleanliness of the resort.",
+    },
+    {
+      question: "What happens if I arrive late for my check-in?",
+      answer:
+        "We allow up to 2 days grace period after the agreed schedule. Without prior notice, the reservation will be cancelled and the down payment forfeited.",
+    },
+  ] as const;
+
+  for (const faqsData of realFAQs) {
+    try {
+      const row = await db
+        .insert(FaqsTable)
+        .values(faqsData)
+        .returning()
+        .execute();
+    } catch (err) {
+      continue;
+    }
+  }
+
+  // For Terms and Condition
+  for (let x = 0; x < 20; x++) {
+    try {
+      await db
+        .insert(TermsAndConditionTable)
+        .values({
+          content: faker.lorem.paragraph(),
+          createdAt: faker.date.past().toISOString(),
+          updatedAt: faker.date.recent().toISOString(),
+        })
+        .execute();
+      console.log(`Inserted Terms and Condition #${x + 1}`);
+    } catch (e) {
+      console.error(`Error inserting Terms and Condition #${x + 1}:`, e);
     }
   }
 }
@@ -332,6 +753,23 @@ seed(); //Call this function when seeding.
 
 // TODO: generate fake payments
 
+// // for FAQS
+// for (let i = 0; i < 20; i++) {
+//   try {
+//     await db
+//       .insert(FaqsTable)
+//       .values({
+//         question: faker.lorem.sentence(),
+//         answer: faker.lorem.paragraph(),
+//         createdAt: faker.date.past().toISOString(),
+//         updatedAt: faker.date.recent().toISOString(),
+//       })
+//       .execute();
+//   } catch (e) {
+//     console.error(`Error inserting FAQ #${i + 1}:`, e);
+//     continue;
+//   }
+// }
 /* Old Code
 export async function seedRoles() {
   for (const roleName of roles) {
@@ -341,9 +779,9 @@ export async function seedRoles() {
 
     if (existingRole.length === 0) {
       await db.insert(Role).values({ name: roleName });
-      console.log(`Role "${roleName}" added.`);
+      console.log(Role "${roleName}" added.);
     } else {
-      console.log(`Role "${roleName}" already exists.`);
+      console.log(Role "${roleName}" already exists.);
     }
   }
 }
@@ -366,8 +804,8 @@ export async function seedRoles() {
 //         lastName: faker.person.lastName(),
 //         contactNo: faker.phone.number(),
 //         address: faker.location.streetAddress(),
-//         email: `${role}@email.com`,
-//         password: await Bun.password.hash(`${role}-123`),
+//         email: ${role}@email.com,
+//         password: await Bun.password.hash(${role}-123),
 //         role: role as any,
 //       }).execute();
 //     } catch (e) {
@@ -413,9 +851,9 @@ export async function seedRoles() {
 
 //     if (existingRole.length === 0) {
 //       await db.insert(Role).values({ name: roleName });
-//       console.log(`Role "${roleName}" added.`);
+//       console.log(Role "${roleName}" added.);
 //     } else {
-//       console.log(`Role "${roleName}" already exists.`);
+//       console.log(Role "${roleName}" already exists.);
 //     }
 //   }
 // }

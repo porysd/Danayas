@@ -40,14 +40,6 @@ const toggleContentMenu = () => {
         Dashboard</router-link
       >
       <router-link
-        to="/admin/employee-management"
-        class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
-        active-class="active-route"
-      >
-        <i class="pi pi-user"></i>
-        Employee Management</router-link
-      >
-      <router-link
         to="/admin/booking"
         class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
         active-class="active-route"
@@ -56,12 +48,36 @@ const toggleContentMenu = () => {
         Booking</router-link
       >
       <router-link
-        to="/admin/transaction"
+        to="/admin/payment"
         class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
         active-class="active-route"
       >
         <i class="pi pi-credit-card"></i>
-        Transaction</router-link
+        Payment Management</router-link
+      >
+      <router-link
+        to="/admin/transaction"
+        class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
+        active-class="active-route"
+      >
+        <i class="pi pi-receipt"></i>
+        Transaction Management</router-link
+      >
+      <router-link
+        to="/admin/employee-management"
+        class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
+        active-class="active-route"
+      >
+        <i class="pi pi-user"></i>
+        Employee Management</router-link
+      >
+      <router-link
+        to="/admin/customer-management"
+        class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
+        active-class="active-route"
+      >
+        <i class="pi pi-users"></i>
+        Customer Management</router-link
       >
       <router-link
         to="/admin/reports"
@@ -72,7 +88,7 @@ const toggleContentMenu = () => {
         Reports</router-link
       >
       <router-link
-        to="/admin/packages-amd-promos"
+        to="/admin/packages-and-promos"
         class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
         active-class="active-route"
       >
@@ -86,14 +102,6 @@ const toggleContentMenu = () => {
       >
         <i class="pi pi-percentage"></i>
         Discount and Add Ons</router-link
-      >
-      <router-link
-        to="/admin/customer-management"
-        class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
-        active-class="active-route"
-      >
-        <i class="pi pi-users"></i>
-        Customer Management</router-link
       >
 
       <button
@@ -168,14 +176,14 @@ const toggleContentMenu = () => {
         >
       </div>
 
-      <router-link
+      <!--<router-link
         to="/admin/archived"
         class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
         active-class="active-route"
       >
         <i class="pi pi-history"></i>
         Archived</router-link
-      >
+      >-->
     </nav>
   </div>
 

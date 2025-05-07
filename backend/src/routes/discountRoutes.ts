@@ -7,11 +7,17 @@ import {
   UpdateDiscountDTO,
 } from "../dto/discountDTO";
 import { eq } from "drizzle-orm";
-import { BadRequestError, NotFoundError } from "../utils/errors";
+import { BadRequestError, ForbiddenError, NotFoundError } from "../utils/errors";
 import { errorHandler } from "../middlewares/errorHandler";
+import { authMiddleware } from "../middlewares/authMiddleware";
+import { verifyPermission } from "../utils/permissionUtils";
+import type { AuthContext } from "../types";
 
-export default new OpenAPIHono()
-  .openapi(
+const discountRoutes = new OpenAPIHono<AuthContext>();
+
+discountRoutes.use("/*", authMiddleware);
+
+discountRoutes.openapi(
     createRoute({
       tags: ["Discounts"],
       summary: "Get all discount",
@@ -51,6 +57,13 @@ export default new OpenAPIHono()
     }),
     async (c) => {
       try {
+        const userId = c.get("userId");
+        const hasPermission = await verifyPermission(userId, "DISCOUNTS", "read");
+
+        if(!hasPermission) {
+          throw new ForbiddenError("No permission to get discounts.");
+        }
+
         const { limit, page } = c.req.valid("query");
 
         if (limit < 1 || page < 1) {
@@ -79,7 +92,8 @@ export default new OpenAPIHono()
       }
     }
   )
-  .openapi(
+
+discountRoutes.openapi(
     createRoute({
       tags: ["Discounts"],
       summary: "Get discount by ID",
@@ -112,6 +126,13 @@ export default new OpenAPIHono()
     }),
     async (c) => {
       try {
+        const userId = c.get("userId");
+        const hasPermission = await verifyPermission(userId, "DISCOUNTS", "read");
+
+        if(!hasPermission) {
+          throw new ForbiddenError("No permission to get discount.");
+        }
+
         const { id } = c.req.valid("param");
 
         const discount = await db.query.DiscountsTable.findFirst({
@@ -128,7 +149,8 @@ export default new OpenAPIHono()
       }
     }
   )
-  .openapi(
+
+discountRoutes.openapi(
     createRoute({
       tags: ["Discounts"],
       summary: "Create discount",
@@ -163,6 +185,13 @@ export default new OpenAPIHono()
     }),
     async (c) => {
       try {
+        const userId = c.get("userId");
+        const hasPermission = await verifyPermission(userId, "DISCOUNTS", "create");
+
+        if(!hasPermission) {
+          throw new ForbiddenError("No permission to create discount.");
+        }
+
         const parsed = CreateDiscountDTO.parse(await c.req.json());
 
         const created = (
@@ -179,7 +208,8 @@ export default new OpenAPIHono()
       }
     }
   )
-  .openapi(
+
+discountRoutes.openapi(
     createRoute({
       tags: ["Discounts"],
       summary: "Update discount by ID",
@@ -221,6 +251,13 @@ export default new OpenAPIHono()
     }),
     async (c) => {
       try {
+        const userId = c.get("userId");
+        const hasPermission = await verifyPermission(userId, "DISCOUNTS", "update");
+
+        if(!hasPermission) {
+          throw new ForbiddenError("No permission to update discount.");
+        }
+
         const { id } = c.req.valid("param");
         const updates = UpdateDiscountDTO.parse(await c.req.json());
 
@@ -243,8 +280,8 @@ export default new OpenAPIHono()
       }
     }
   )
-  // TODO: check if discountid exist first
-  .openapi(
+
+discountRoutes.openapi(
     createRoute({
       tags: ["Discounts"],
       summary: "Delete discount by ID",
@@ -266,6 +303,13 @@ export default new OpenAPIHono()
     }),
     async (c) => {
       try {
+        const userId = c.get("userId");
+        const hasPermission = await verifyPermission(userId, "DISCOUNTS", "delete");
+
+        if(!hasPermission) {
+          throw new ForbiddenError("No permission to delete discount.");
+        }
+
         const { id } = c.req.valid("param");
 
         const deletedDiscount = await db.query.DiscountsTable.findFirst({
@@ -290,3 +334,5 @@ export default new OpenAPIHono()
       }
     }
   );
+
+export default discountRoutes;

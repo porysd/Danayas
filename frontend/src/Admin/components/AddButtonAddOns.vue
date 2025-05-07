@@ -25,17 +25,6 @@ const closeModals = () => {
 };
 
 const addAddOn = () => {
-  const { itemName, price, status } = newAddOns.value;
-  if (!itemName || !price || !status) {
-    toast.add({
-      severity: "warn",
-      summary: "Missing Fields",
-      detail: "Please fill in all fields before saving.",
-      life: 3000,
-    });
-    return;
-  }
-
   emit("addAddOns", { ...newAddOns.value });
   toast.add({
     severity: "success",
@@ -44,8 +33,6 @@ const addAddOn = () => {
     life: 3000,
   });
   closeModals();
-
-  newAddOns.value = { itemName: "", price: "", status: "" };
 };
 </script>
 
@@ -68,11 +55,11 @@ const addAddOn = () => {
       <div class="addPack flex flex-col justify-center m-auto content-center">
         <div class="addPackInput">
           <label>Add Ons Name:</label>
-          <input v-model="newAddOns.itemName" placeholder="Discount Name" />
+          <input v-model="newAddOns.itemName" placeholder="Add Ons Name" />
         </div>
         <div class="addPackInput">
           <label>Price:</label>
-          <input v-model="newAddOns.price" placeholder="Type" />
+          <input v-model="newAddOns.price" placeholder="Price" />
         </div>
         <div class="addPackInput">
           <label>Status:</label>

@@ -1,11 +1,14 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from "vue";
-import { useRouter } from "vue-router";
 import Avatar from "primevue/avatar";
+import { useAuthStore } from "../../stores/authStore";
+import { useRouter } from "vue-router";
+
+const authStore = useAuthStore();
 const router = useRouter();
 
 const logout = () => {
-  localStorage.removeItem("isLoggedIn");
+  authStore.logout();
   router.replace("/admin/admin-login");
 };
 
@@ -38,8 +41,12 @@ onUnmounted(() => {
   />
   <div v-if="showMenu" ref="hideMenu" class="dropdown-menu">
     <ul>
-      <li><router-link to="/admin/profile">My Profile</router-link></li>
-      <li @click="logout">Log Out</li>
+      <li class="hover:bg-gray-100 dark:hover:bg-gray-700">
+        <router-link to="/admin/profile">My Profile</router-link>
+      </li>
+      <li class="hover:bg-gray-100 dark:hover:bg-gray-700" @click="logout">
+        Log Out
+      </li>
     </ul>
   </div>
 </template>
@@ -48,7 +55,7 @@ onUnmounted(() => {
 .dropdown-menu {
   position: absolute;
   top: 3.5rem;
-  background: #fcf5f5;
+  background: #fcfcfc;
   color: #333;
   border-radius: 5px;
   padding: 5px;
@@ -69,10 +76,5 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 5px;
-}
-
-.dropdown-menu li:hover {
-  background: #555;
-  color: #fcf5f5;
 }
 </style>

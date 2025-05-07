@@ -5,7 +5,7 @@ import Footer from "../components/Footer.vue";
 
 <template>
   <NavBar />
-  <div class="row">
+  <div class="row w-3/5">
     <div class="column">
       <img src="../assets/img1.jpg" alt="" />
       <img src="../assets/img2.jpg" alt="" />
@@ -48,31 +48,27 @@ import Footer from "../components/Footer.vue";
 
 <style scoped>
 .row {
-  display: -ms-flexbox;
   display: flex;
   -ms-flex-wrap: wrap;
   flex-wrap: wrap;
-  padding: 0 4px;
-  width: 100%;
   gap: 10px;
   justify-content: center;
   align-items: center;
-  margin: 15px;
+  align-content: center;
+  margin: auto;
 }
 
 /* Create four equal columns that sits next to each other */
 .column {
   -ms-flex: 25%; /* IE10 */
   flex: 25%;
-  max-width: 25%;
+  width: 20%;
   padding: 0 px;
-  width: 100%;
 }
 
 .column img {
   margin-top: 8px;
   vertical-align: middle;
-  width: 100%;
   border-radius: 8px;
 }
 img:hover {
