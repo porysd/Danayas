@@ -1,3 +1,4 @@
+import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { makeError } from "../utils/errors";
 import { type Context } from "hono";
 
@@ -13,5 +14,5 @@ export async function errorHandler(err: unknown, c: Context){
     message: error.message,
   }
 
-  return c.json(errorResponse, {statusCode: statusCode} as any);
+  return c.json(errorResponse, { status: statusCode as any});
 }

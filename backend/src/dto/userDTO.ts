@@ -36,7 +36,7 @@ export const UserDTO = z.object({
     description: "The date where the user registered",
     example: new Date().toUTCString(),
   }),
-  status: z.enum(["active", "inactive"]).openapi({
+  status: z.enum(["active", "inactive", "disable"]).openapi({
     description: "Status of the user",
     example: "active",
     default: "active",
@@ -61,6 +61,7 @@ export const CreateUserDTO = UserDTO.pick({
   address: true,
   email: true,
   password: true,
+  role: true,
 });
 
 // Delete User DTO just in case if needed

@@ -8,10 +8,10 @@ import TermsCondition from "./TermsCondition.vue";
       <div class="text">
         <ul>
           <li>
-            <router-link to="/aboutUs">ABOUT US</router-link>
+            <router-link to="/about-us">ABOUT US</router-link>
           </li>
           <li>
-            <router-link to="/contactUs">CONTACT US</router-link>
+            <router-link to="/contact-us">CONTACT US</router-link>
           </li>
           <li>
             <router-link to="/faqs">FAQs</router-link>

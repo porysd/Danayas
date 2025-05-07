@@ -3,7 +3,9 @@
 <template>
   <div class="not-found">
     <div class="content">
+      <img src="../assets/cat.gif" alt="" />
       <h1>404</h1>
+
       <p>Oops! The page you're looking for doesn't exist.</p>
       <router-link to="/" class="home-btn">Go Back Home</router-link>
     </div>

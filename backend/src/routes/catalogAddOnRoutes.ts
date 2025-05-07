@@ -7,11 +7,17 @@ import {
   UpdateCatalogAddOnDTO,
 } from "../dto/catalogAddOnDTO";
 import { eq } from "drizzle-orm";
-import { BadRequestError, NotFoundError } from "../utils/errors";
+import { BadRequestError, ForbiddenError, NotFoundError } from "../utils/errors";
 import { errorHandler } from "../middlewares/errorHandler";
+import { authMiddleware } from "../middlewares/authMiddleware";
+import { verifyPermission } from "../utils/permissionUtils";
+import type { AuthContext } from "../types";
 
-export default new OpenAPIHono()
-  .openapi(
+const catalogAddOnRoutes = new OpenAPIHono<AuthContext>();
+
+catalogAddOnRoutes.use("/*", authMiddleware);
+
+catalogAddOnRoutes.openapi(
     createRoute({
       tags: ["Catalog Add-Ons"],
       summary: "Get all catalog add-ons",
@@ -51,6 +57,13 @@ export default new OpenAPIHono()
     }),
     async (c) => {
       try {
+        const userId = c.get("userId");
+        const hasPermission = await verifyPermission(userId, "CATALOG_ADD_ONS", "read");
+
+        if(!hasPermission) {
+          throw new ForbiddenError("No permission to get catalog add-ons.")
+        }
+
         const { limit, page } = c.req.valid("query");
 
         if (limit < 1 || page < 1) {
@@ -79,7 +92,8 @@ export default new OpenAPIHono()
       }
     }
   )
-  .openapi(
+  
+catalogAddOnRoutes.openapi(
     createRoute({
       tags: ["Catalog Add-Ons"],
       summary: "Get Catalog Add-On by ID",
@@ -112,6 +126,13 @@ export default new OpenAPIHono()
     }),
     async (c) => {
       try {
+        const userId = c.get("userId");
+        const hasPermission = await verifyPermission(userId, "CATALOG_ADD_ONS", "read");
+
+        if(!hasPermission) {
+          throw new ForbiddenError("No permission to get catalog add-on.")
+        }
+
         const { id } = c.req.valid("param");
         const catalogAddOn = await db.query.CatalogAddOnsTable.findFirst({
           where: eq(CatalogAddOnsTable.catalogAddOnId, id),
@@ -127,7 +148,8 @@ export default new OpenAPIHono()
       }
     }
   )
-  .openapi(
+  
+catalogAddOnRoutes.openapi(
     createRoute({
       tags: ["Catalog Add-Ons"],
       summary: "Create Catalog Add-On",
@@ -163,6 +185,13 @@ export default new OpenAPIHono()
     }),
     async (c) => {
       try {
+        const userId = c.get("userId");
+        const hasPermission = await verifyPermission(userId, "CATALOG_ADD_ONS", "create");
+
+        if(!hasPermission) {
+          throw new ForbiddenError("No permission to create catalog add-on.")
+        }
+
         const parsed = CreateCatalogAddOnDTO.parse(await c.req.json());
 
         const created = (
@@ -179,7 +208,8 @@ export default new OpenAPIHono()
       }
     }
   )
-  .openapi(
+
+catalogAddOnRoutes.openapi(
     createRoute({
       tags: ["Catalog Add-Ons"],
       summary: "Update Catalog Add-On by ID",
@@ -218,6 +248,13 @@ export default new OpenAPIHono()
     }),
     async (c) => {
       try {
+        const userId = c.get("userId");
+        const hasPermission = await verifyPermission(userId, "CATALOG_ADD_ONS", "update");
+
+        if(!hasPermission) {
+          throw new ForbiddenError("No permission to update catalog add-on.")
+        }
+
         const { id } = c.req.valid("param");
 
         const existingCatalogAddOn =
@@ -247,7 +284,8 @@ export default new OpenAPIHono()
       }
     }
   )
-  .openapi(
+
+catalogAddOnRoutes.openapi(
     createRoute({
       tags: ["Catalog Add-Ons"],
       summary: "Delete Catalog Add-On by ID",
@@ -278,6 +316,13 @@ export default new OpenAPIHono()
     }),
     async (c) => {
       try {
+        const userId = c.get("userId");
+        const hasPermission = await verifyPermission(userId, "CATALOG_ADD_ONS", "delete");
+
+        if(!hasPermission) {
+          throw new ForbiddenError("No permission to delete catalog add-on.")
+        }
+      
         const { id } = c.req.valid("param");
 
         const deletedCatalog = await db.query.CatalogAddOnsTable.findFirst({
@@ -302,3 +347,5 @@ export default new OpenAPIHono()
       }
     }
   );
+
+export default catalogAddOnRoutes;

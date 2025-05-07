@@ -1,5 +1,5 @@
 <script setup>
-import { ref, defineProps, defineEmits } from "vue";
+import { ref, defineProps, defineEmits, onMounted, onUnmounted } from "vue";
 import Button from "primevue/button";
 import Dialog from "primevue/dialog";
 import Toast from "primevue/toast";
@@ -10,11 +10,10 @@ const toast = useToast();
 const showMenu = ref(false);
 const showEditModal = ref(false);
 const showDeleteModal = ref(false);
-const showDisableModal = ref(false);
 const formData = ref({});
 
-const props = defineProps(["catalog"]);
-const emit = defineEmits(["updateCatalog", "deleteCatalog", "disableCatalog"]);
+const props = defineProps(["bookingAddOn"]);
+const emit = defineEmits(["updateAddOns", "cancelAddOns"]);
 
 const openEditModal = () => {
   formData.value = { ...props.catalog };
@@ -25,12 +24,6 @@ const openEditModal = () => {
 const openDeleteModal = () => {
   formData.value = { ...props.catalog };
   showDeleteModal.value = true;
-  showMenu.value = false;
-};
-
-const openDisableModal = () => {
-  formData.value = { ...props.catalog };
-  showDisableModal.value = true;
   showMenu.value = false;
 };
 
@@ -62,16 +55,21 @@ const confirmDelete = () => {
   closeModals();
 };
 
-const confirmDisable = () => {
-  emit("disableCatalog", formData.value);
-  toast.add({
-    severity: "success",
-    summary: "Disable catalog",
-    detail: "Successfully Disable catalog",
-    life: 3000,
-  });
-  closeModals();
+const hideMenu = ref(false);
+
+const closeMenu = (event) => {
+  if (hideMenu.value && !hideMenu.value.contains(event.target)) {
+    showMenu.value = false;
+  }
 };
+
+onMounted(() => {
+  document.addEventListener("click", closeMenu);
+});
+
+onUnmounted(() => {
+  document.addEventListener("click", closeMenu);
+});
 </script>
 
 <template>
@@ -81,11 +79,20 @@ const confirmDisable = () => {
       class="adminButton pi pi-ellipsis-v"
     ></button>
 
-    <div v-if="showMenu" class="dropdown-menu">
+    <div v-if="showMenu" ref="hideMenu" class="dropdown-menu">
       <ul>
-        <li @click="openEditModal">Update</li>
-        <li @click="openDeleteModal">Delete</li>
-        <li @click="openDisableModal">Disable</li>
+        <li
+          class="hover:bg-gray-100 dark:hover:bg-gray-700"
+          @click="openEditModal"
+        >
+          Update
+        </li>
+        <li
+          class="hover:bg-gray-100 dark:hover:bg-gray-700"
+          @click="openDeleteModal"
+        >
+          Delete
+        </li>
       </ul>
     </div>
     <Dialog v-model:visible="showEditModal" modal :style="{ width: '25rem' }">
@@ -175,7 +182,7 @@ const confirmDisable = () => {
   position: absolute;
   right: 0;
   top: 100%;
-  background: #fcf5f5;
+  background: #fcfcfc;
   color: #333;
   border-radius: 5px;
   padding: 5px;
@@ -196,11 +203,6 @@ const confirmDisable = () => {
   display: flex;
   align-items: center;
   gap: 5px;
-}
-
-.dropdown-menu li:hover {
-  background: #555;
-  color: #fcf5f5;
 }
 .addPack {
   gap: 10px;

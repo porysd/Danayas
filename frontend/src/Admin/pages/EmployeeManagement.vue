@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, computed } from "vue";
+import { ref, onMounted, computed, onUnmounted } from "vue";
 import SearchBar from "../components/SearchBar.vue";
 import T3ButtonEmployee from "../components/T3ButtonEmployee.vue";
 import AddButtonEmployee from "../components/AddButtonEmployee.vue";
@@ -11,112 +11,32 @@ import DarkModeButton from "../components/DarkModeButton.vue";
 import Divider from "primevue/divider";
 import ProfileAvatar from "../components/ProfileAvatar.vue";
 import Paginator from "primevue/paginator";
+import Checkbox from "primevue/checkbox";
+import { useUserStore } from "../../stores/userStore.js";
 
-const employees = ref([]);
+const userStore = useUserStore();
 
-const getAllEmployee = async () => {
-  employees.value = [];
-  const limit = 50;
-  let page = 1;
-  let hasMoreData = true;
-
-  while (hasMoreData) {
-    const response = await fetch(
-      `http://localhost:3000/users?limit=${limit}&page=${page}`
-    );
-    if (!response.ok) throw new Error("Failed to fetch users");
-
-    const users = await response.json();
-
-    if (users.items && users.items.length > 0) {
-      const employeeData = users.items.filter(
-        (user) => user.role === "staff" || user.role === "admin"
-      );
-      if (employeeData.length === 0) {
-        hasMoreData = false;
-      } else {
-        employees.value.push(...employeeData);
-        page++;
-      }
-    } else {
-      hasMoreData = false;
-    }
-  }
-};
-onMounted(() => getAllEmployee());
-
-const totalEmployees = computed(() => filteredEmployee.value.length);
-
-const deleteEmployeeHandler = async (employee) => {
-  try {
-    const response = await fetch(
-      `http://localhost:3000/user/${employee.userId}`,
-      {
-        method: "delete",
-      }
-    );
-    if (!response.ok) throw new Error("Failed to delete employee");
-    employees.value = employees.value.filter(
-      (e) => e.userId !== employee.userId
-    );
-    getAllEmployee();
-  } catch (error) {
-    console.error("Error deleting employee:", error);
-  }
-};
+onMounted(() => {
+  userStore.fetchEmployee();
+});
 
 const addEmployeeHandler = async (employee) => {
-  try {
-    const response = await fetch("http://localhost:3000/users", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        firstName: employee.firstName,
-        lastName: employee.lastName,
-        contactNo: employee.contactNo,
-        address: employee.address,
-        email: employee.email,
-        password: employee.password,
-        role: employee.role,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Failed to add employee: ${errorText}`);
-    }
-    getAllEmployee();
-    console.log("Employee added successfully");
-  } catch (error) {
-    console.error("Error adding employee:", error);
-  }
+  await userStore.addEmployee(employee);
 };
 
-//Fix Date Format
-function formatDate(dateString) {
-  const date = new Date(dateString);
-  const options = { year: "numeric", month: "short", day: "numeric" };
-  return date.toLocaleDateString("en-US", options);
-}
-
-//Employee Details
-const selectedEmployee = ref(null);
-const employeeDetails = ref(false);
-
-const openEmployeeDetails = (employee) => {
-  selectedEmployee.value = employee;
-  employeeDetails.value = true;
+const disableEmployeeHandler = async (employee) => {
+  await userStore.disableUser(employee);
 };
 
-const closeModal = () => {
-  employeeDetails.value = false;
-  showFilterModal.value = false;
+const enableEmployeeHandler = async (employee) => {
+  await userStore.enableUser(employee);
 };
 
-// Checks Severity of Status of each Users
-const getStatusSeverity = (status) => {
-  return status === "active" ? "success" : "danger";
+const changeRoleHandler = async (employee) => {
+  await userStore.changeRole(employee);
 };
+
+const totalEmployees = computed(() => filteredEmployee.value.length);
 
 // Paginator or pagination of the tables
 const first = ref(0);
@@ -142,14 +62,11 @@ const filterRoles = ref({
 const filterStatuses = ref({
   active: false,
   inactive: false,
-});
-const filterState = ref({
-  enable: false,
   disable: false,
 });
 
 const filteredEmployee = computed(() => {
-  let result = employees.value;
+  let result = userStore.users;
 
   if (searchQuery.value !== "") {
     result = result.filter((employee) =>
@@ -177,17 +94,63 @@ const filteredEmployee = computed(() => {
     );
   }
 
-  // Filter Btn for State
-  // const state = Object.keys(filterStatuses.value).filter(
-  //   (status) => filterStatuses.value[status]
-  // );
-  // if (state.length > 0) {
-  //   result = result.filter((emp) =>
-  //     state.includes(emp.status.toLowerCase())
-  //   );
-  // }
+  // Sort customers: active > inactive > disable
+  result = result.sort((a, b) => {
+    const statusOrder = { active: 1, inactive: 2, disable: 3 };
+    return statusOrder[a.status] - statusOrder[b.status];
+  });
 
   return result;
+});
+
+//Employee Details
+const selectedEmployee = ref(null);
+const employeeDetails = ref(false);
+
+const openEmployeeDetails = (employee) => {
+  selectedEmployee.value = employee;
+  employeeDetails.value = true;
+};
+
+const closeModal = () => {
+  employeeDetails.value = false;
+  showFilterModal.value = false;
+};
+
+//Fix Date Format
+function formatDate(dateString) {
+  const date = new Date(dateString);
+  const options = { year: "numeric", month: "short", day: "numeric" };
+  return date.toLocaleDateString("en-US", options);
+}
+
+// Checks Severity of Status of each Users
+const getStatusSeverity = (status) => {
+  switch (status) {
+    case "active":
+      return "success";
+    case "inactive":
+      return "warning";
+    case "disable":
+      return "danger";
+    default:
+      return null;
+  }
+};
+const hideMenu = ref(false);
+
+const closeMenu = (event) => {
+  if (hideMenu.value && !hideMenu.value.contains(event.target)) {
+    showMenu.value = false;
+  }
+};
+
+onMounted(() => {
+  document.addEventListener("click", closeMenu);
+});
+
+onUnmounted(() => {
+  document.addEventListener("click", closeMenu);
 });
 </script>
 
@@ -211,62 +174,96 @@ const filteredEmployee = computed(() => {
 
             <div
               v-if="showMenu"
-              class="absolute -left-20 mt-2 w-35 shadow-md z-50 bg-[#fcf5f5] p-4 rounded"
+              ref="hideMenu"
+              class="absolute -left-20 mt-2 w-40 shadow-md z-50 bg-[#fcfcfc] dark:bg-stone-900 p-3 rounded-lg border border-gray-200 dark:border-gray-700"
             >
-              <h2 class="font-bold mb-1">Roles</h2>
-              <ul>
-                <li class="hover:bg-gray-100 flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="admin"
+              <h2
+                class="font-medium text-gray-700 dark:text-gray-300 mb-2 text-sm"
+              >
+                Filter by Roles
+              </h2>
+              <ul class="space-y-1">
+                <li
+                  class="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 p-1 rounded-md"
+                >
+                  <Checkbox
                     v-model="filterRoles.admin"
+                    binary
+                    inputId="admin"
                   />
-                  <label for="admin">Admin</label>
+                  <label
+                    for="admin"
+                    class="text-gray-600 dark:text-gray-300 text-sm"
+                    >Admin</label
+                  >
                 </li>
-                <li class="hover:bg-gray-100 flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="staff"
+                <li
+                  class="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 p-1 rounded-md"
+                >
+                  <Checkbox
                     v-model="filterRoles.staff"
+                    binary
+                    inputId="staff"
                   />
-                  <label for="staff">Staff</label>
+                  <label
+                    for="staff"
+                    class="text-gray-600 dark:text-gray-300 text-sm"
+                    >Staff</label
+                  >
                 </li>
               </ul>
-              <Divider />
-              <h2 class="font-bold mb-1">Status</h2>
-              <ul>
-                <li class="hover:bg-gray-100 flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="active"
+              <Divider class="my-2" />
+              <h2
+                class="font-medium text-gray-700 dark:text-gray-300 mb-2 text-sm"
+              >
+                Filter by Status
+              </h2>
+              <ul class="space-y-1">
+                <li
+                  class="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 p-1 rounded-md"
+                >
+                  <Checkbox
                     v-model="filterStatuses.active"
+                    binary
+                    inputId="active"
                   />
-                  <label class="" for="active">Active</label>
+                  <label
+                    for="active"
+                    class="text-gray-600 dark:text-gray-300 text-sm"
+                    >Active</label
+                  >
                 </li>
-                <li class="hover:bg-gray-100 flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="inactive"
+                <li
+                  class="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 p-1 rounded-md"
+                >
+                  <Checkbox
                     v-model="filterStatuses.inactive"
+                    binary
+                    inputId="inactive"
                   />
-                  <label for="inactive">Inactive</label>
+                  <label
+                    for="inactive"
+                    class="text-gray-600 dark:text-gray-300 text-sm"
+                    >Inactive</label
+                  >
                 </li>
-              </ul>
-              <Divider />
-              <h2 class="font-bold mb-1">State</h2>
-              <ul>
-                <li class="hover:bg-gray-100 flex items-center gap-2">
-                  <input type="checkbox" id="enable" />
-                  <label for="enable">Enable</label>
-                </li>
-                <li class="hover:bg-gray-100 flex items-center gap-2">
-                  <input type="checkbox" id="disable" />
-                  <label for="disable">Disable</label>
+                <li
+                  class="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 p-1 rounded-md"
+                >
+                  <Checkbox
+                    v-model="filterStatuses.disable"
+                    binary
+                    inputId="disable"
+                  />
+                  <label
+                    for="disable"
+                    class="text-gray-600 dark:text-gray-300 text-sm"
+                    >Disable</label
+                  >
                 </li>
               </ul>
             </div>
           </div>
-
           <AddButtonEmployee
             class="addBtn"
             data="Staff"
@@ -291,6 +288,7 @@ const filteredEmployee = computed(() => {
           <tbody>
             <tr
               class="eRow border-[#194D1D] dark:border-[#18181b]"
+              :class="{ 'disabled-row': employee.status === 'disable' }"
               v-for="employee in paginatedEmployees"
               :key="employee.userId"
               @click="openEmployeeDetails(employee)"
@@ -307,14 +305,16 @@ const filteredEmployee = computed(() => {
                 <Tag
                   style="font-size: 12px"
                   :severity="getStatusSeverity(employee.status)"
-                  :value="employee.status === 'active' ? 'Active' : 'Inactive'"
+                  :value="employee.status"
                 />
               </td>
               <td class="w-[20%]">{{ formatDate(employee.dateReg) }}</td>
               <td class="w-[5%]" @click.stop>
                 <T3ButtonEmployee
                   :employee="employee"
-                  @deleteEmployee="deleteEmployeeHandler"
+                  @disableEmployee="disableEmployeeHandler"
+                  @enableEmployee="enableEmployeeHandler"
+                  @changeRole="changeRoleHandler"
                 />
               </td>
             </tr>
@@ -451,6 +451,16 @@ td {
 
 .my-app-dark .eRow {
   background-color: #1e1e1e;
+}
+
+.disabled-row {
+  background-color: #4d4d4d20;
+  color: grey;
+  opacity: 0.8;
+}
+
+.disabled-row:hover {
+  background-color: #4d4d4d20;
 }
 
 .modal {

@@ -1,27 +1,103 @@
 <script setup>
-import { ref } from "vue";
+import { ref, onMounted, onUnmounted, computed } from "vue";
 import NavBar from "../components/NavBar.vue";
 import Footer from "../components/Footer.vue";
+import DatePicker from "primevue/datepicker";
+import { useBookingStore } from "../stores/bookingStore";
+import { useUserStore } from "../stores/userStore";
+import { formatDates } from "../utility/dateFormat";
+import { usePackageStore } from "../stores/packageStore";
+import { useAuthStore } from "../stores/authStore";
+import Tag from "primevue/tag";
+import Logger from "../components/Logger.vue";
 
 const isMenuOpen1 = ref(false);
 const isMenuOpen2 = ref(false);
+const RescheduleModal = ref(false);
+const calendar = ref(null);
+const date = ref(null);
 
-const toggleMenu = () => {
-  isMenuOpen.value = !isMenuOpen.value;
+const bookingStore = useBookingStore();
+const userStore = useUserStore();
+const packageStore = usePackageStore();
+const authStore = useAuthStore();
+
+const userBookings = ref([]);
+const bookingDone = ref([]);
+
+const openMenuBookingId = ref(null);
+const rescheduleBookingId = ref(null);
+
+onMounted(async () => {
+  await packageStore.fetchAllPackages();
+  await packageStore.fetchAllPromos();
+  await bookingStore.fetchUserBookings();
+
+  try {
+    const userId = authStore.user?.userId;
+    if (!userId) {
+      console.error("User ID not found in authStore");
+      return;
+    }
+
+    const fetchedUser = await userStore.getUserById(userId);
+    console.log("Fetched user:", fetchedUser);
+
+    if (fetchedUser?.userId) {
+      const id = fetchedUser.userId;
+      // Filter bookings for the user based on status
+      userBookings.value = bookingStore.bookings.filter(
+        (booking) =>
+          booking.userId === id &&
+          ["pending", "reserved", "rescheduled"].includes(booking.bookStatus)
+      );
+
+      bookingDone.value = bookingStore.bookings.filter(
+        (booking) =>
+          booking.userId === id &&
+          ["cancelled", "completed"].includes(booking.bookStatus)
+      );
+
+      console.log("User bookings:", userBookings.value);
+      console.log("Booking done:", bookingDone.value);
+    } else {
+      console.error("User ID not found in fetched data.");
+    }
+  } catch (error) {
+    console.error("Error fetching data:", error);
+  }
+});
+
+const rescheduleHandler = async (updatedDate) => {
+  await bookingStore.updateBookingDates(updatedDate);
 };
 
-const cancelModal = ref(false);
-const showpendingmodal = ref(false);
+const cancelHandler = async (cancelStatus) => {
+  await bookingStore.updateBookingStatus(cancelStatus);
+};
 
-const showcancelModal = () => {
-  cancelModal.value = true;
+const getPackageName = (packageId) => {
+  const pkg =
+    packageStore.packages.find((p) => p.packageId === packageId) ||
+    packageStore.promos.find((p) => p.packageId === packageId);
+  return pkg ? pkg.name : "Unknown Package";
 };
-const closemodal = () => {
-  cancelModal.value = false;
-};
-const OpenPendingModal = () => {
-  cancelModal.value = false;
-  showpendingmodal.value = true;
+
+const getStatusSeverity = (status) => {
+  switch (status) {
+    case "pending":
+      return "warn";
+    case "reserved":
+      return "info";
+    case "rescheduled":
+      return "secondary";
+    case "completed":
+      return "success";
+    case "cancelled":
+      return "danger";
+    default:
+      return "secondary";
+  }
 };
 </script>
 
@@ -39,96 +115,66 @@ const OpenPendingModal = () => {
 
   <div class="Logs-Container">
     <hr class="Header" data-content=" On Going" />
-    <div class="logsBox">
-      <div class="w-full relative inline-block">
-        <div class="flex justify-end mr-3">
-          <button
-            @click.stop="isMenuOpen1 = !isMenuOpen1"
-            class="pi pi-ellipsis-v"
-            style="font-size: 1.5rem"
-          ></button>
+  </div>
 
-          <div
-            v-if="isMenuOpen1"
-            class="absolute right-2 mt-4 w-35 shadow-md z-50 bg-[#fcf5f5] p-4 rounded"
-          >
-            <button class="hover:bg-[#C1F2B0]">Reschedule</button>
-            <button class="hover:bg-[#C1F2B0]" @click="showcancelModal">
-              Cancel
-            </button>
+  <div class="w-[70%] m-auto justify-center">
+    <div v-if="userBookings.length > 0"></div>
+    <div v-else>
+      <p class="flex justify-center m-auto">No bookings found for this user.</p>
+    </div>
 
-            <div v-if="cancelModal" class="modal">
-              <div
-                class="DelBox p-10 bg-[#eef9eb]"
-                style="
-                  border: 1px solid #38dc87;
-                  border-radius: 10px;
-                  box-shadow: 0px 0px 10px rgba(28, 216, 34, 0.5);
-                  align-items: center;
-                  justify-content: center;
-                  text-align: center;
-                  font-weight: 600;
-                  font-size: large;
-                "
-              >
-                <h2>Are you sure you want to cancel your reservation?</h2>
-                <div class="Button">
-                  <button
-                    class="btn1 hover:bg-[#FF8080]"
-                    @click="OpenPendingModal"
-                  >
-                    YES
-                  </button>
-
-                  <button class="btn2 hover:bg-[#194d1d]" @click="closemodal">
-                    NO
-                  </button>
-                </div>
-              </div>
-            </div>
-            <div v-if="showpendingmodal" class="modal">
-              <div
-                class="pendingBox p-10 bg-[#eef9eb] w-120"
-                style="
-                  border: 1px solid #38dc87;
-                  border-radius: 10px;
-                  box-shadow: 0px 0px 10px rgba(28, 216, 34, 0.5);
-                  align-items: center;
-                  justify-content: center;
-                  text-align: center;
-                  font-weight: 600;
-                  font-size: large;
-                "
-              >
-                <h2 style="word-wrap: break-word">
-                  Your refund will be processed and sent to your email from 3 to
-                  5 working days.
-                </h2>
-                <div class="flex justify-center">
-                  <button
-                    class="btn1 hover:bg-[#41AB5D] mt-[2rem]"
-                    @click="showpendingmodal = false"
-                  >
-                    OK
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+    <div
+      class="logsBox"
+      v-for="booking in userBookings"
+      :key="booking.bookingId"
+    >
+      <div class="w-full mt-10 text-right">
+        <Logger
+          :booking="booking"
+          @rescheduleBooking="rescheduleHandler"
+          @cancelBooking="cancelHandler"
+        />
       </div>
 
       <div class="information">
-        <p>Package name:</p>
-        <p>Date:</p>
-        <p>Personal Information:</p>
+        <p>Package Name: {{ getPackageName(booking.packageId) }}</p>
+
+        <p>
+          Date: {{ formatDates(booking.checkInDate) }} to
+          {{ formatDates(booking.checkOutDate) }}
+        </p>
+        <p>
+          Personal Information: {{ booking.firstName }}
+          {{ booking.lastName }}
+        </p>
+      </div>
+      <div class="flex justify-end mb-10" style="position: relative">
+        <Tag
+          class="mb"
+          :severity="getStatusSeverity(booking.bookStatus)"
+          :value="booking.bookStatus"
+        />
       </div>
     </div>
   </div>
 
   <div class="Logs-Container">
     <hr class="Header" data-content="History" />
-    <div class="logsBox">
+  </div>
+
+  <div class="w-[70%] m-auto justify-center">
+    <div v-if="bookingDone.length > 0"></div>
+    <div v-else>
+      <p class="flex justify-center m-auto">
+        No completed or cancelled bookings found.
+      </p>
+    </div>
+
+    <div
+      class="logsBox"
+      v-for="booking in bookingDone"
+      :key="booking.bookingId"
+    >
       <div class="w-full relative inline-block">
         <div class="flex justify-end mr-3">
           <button
@@ -147,9 +193,22 @@ const OpenPendingModal = () => {
       </div>
 
       <div class="information">
-        <p>Package name:</p>
-        <p>Date:</p>
-        <p>Personal Information:</p>
+        <p>Package Name: {{ getPackageName(booking.packageId) }}</p>
+        <p>
+          Date: {{ formatDates(booking.checkInDate) }} to
+          {{ formatDates(booking.checkOutDate) }}
+        </p>
+        <p>
+          Personal Information: {{ booking.firstName }} {{ booking.lastName }}
+        </p>
+      </div>
+
+      <div class="flex justify-end mb-10" style="position: relative">
+        <Tag
+          class="mb"
+          :severity="getStatusSeverity(booking.bookStatus)"
+          :value="booking.bookStatus"
+        />
       </div>
     </div>
   </div>
@@ -157,6 +216,21 @@ const OpenPendingModal = () => {
 </template>
 
 <style scoped>
+calendar-range {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+}
+textarea {
+  background-color: #f7f0f0;
+  border: 1px solid green;
+  padding: 2px;
+  height: 10vh;
+  width: 100%;
+  break-inside: auto;
+  object-fit: cover;
+  display: flex;
+}
 .Logs-Container {
   margin-top: 5rem;
   margin-bottom: 2rem;
@@ -173,6 +247,18 @@ const OpenPendingModal = () => {
 }
 .btn2:hover {
   background: lightgreen;
+}
+
+.DelBox {
+  border: 1px solid #38dc87;
+  border-radius: 10px;
+  box-shadow: 0px 0px 10px rgba(28, 216, 34, 0.5);
+  align-items: center;
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+  font-weight: 600;
+  font-size: large;
 }
 
 .Button {
@@ -202,31 +288,24 @@ img {
   position: static;
 }
 .information {
-  position: relative;
-  display: inline-block;
-  width: full;
-  font-size: 1.2rem;
-  align-items: center;
-  justify-content: center;
-  width: 15rem;
-  display: flex;
-  flex-direction: column;
-  justify-content: start;
-  margin-right: 70rem;
+  font-weight: 600;
+
+  width: 100%;
+  line-height: 1.9rem;
 }
 
 .logsBox {
-  position: relative;
   display: flex;
   flex-direction: column;
   height: 10rem;
   justify-content: center;
-  align-items: center;
   margin: auto;
+  padding: 2rem;
   border-radius: 10px;
-  width: 90%;
+  width: auto;
   background: transparent;
   border: 1px solid #41ab5d;
+  margin-bottom: 2rem;
 }
 
 .Header {
@@ -237,23 +316,25 @@ img {
   font-weight: bolder;
   font-size: 1.3rem;
   margin-top: 20px;
-  margin-bottom: 5px;
+  margin-bottom: 2rem;
   color: rgb(2, 2, 2);
   text-align: center;
   height: 1.5rem;
-  margin-bottom: 2rem;
 }
 
 .Header::before {
   content: "";
   position: absolute;
-  background: #000000;
-  left: 0;
-  margin-left: 10rem;
-  font-weight: bolder;
   top: 50%;
-  width: 70rem;
+  left: 50%;
+  transform: translate(
+    -50%,
+    -50%
+  ); /* Center the line horizontally and vertically */
+  background: #000000;
+  width: 50%; /* or a percentage like 80% if you want shorter lines */
   height: 1.2px;
+  z-index: -1; /* Optional: keeps the line behind the text */
 }
 
 .Header::after {

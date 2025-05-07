@@ -9,13 +9,14 @@ import { useToast } from "primevue/usetoast";
 const toast = useToast();
 const showAddEmployeeModal = ref(false);
 const newEmployee = ref({
+  username: "",
   firstName: "",
   lastName: "",
   email: "",
   contactNo: "",
   address: "",
   password: "",
-  role: "staff",
+  role: "",
 });
 
 defineProps(["data"]);
@@ -31,24 +32,18 @@ const closeAddEmployeeModal = () => {
 
 const addEmployee = () => {
   if (
+    !newEmployee.value.username ||
     !newEmployee.value.firstName ||
     !newEmployee.value.lastName ||
     !newEmployee.value.email ||
-    !newEmployee.value.password
+    !newEmployee.value.password ||
+    !newEmployee.value.role
   ) {
     alert("Please fill in all required fields.");
     return;
   }
   console.log("Sending Employee Data:", newEmployee.value);
-  emit("addEmployee", {
-    firstName: newEmployee.value.firstName,
-    lastName: newEmployee.value.lastName,
-    email: newEmployee.value.email,
-    contactNo: newEmployee.value.contactNo,
-    address: newEmployee.value.address,
-    password: newEmployee.value.password,
-    role: newEmployee.value.role || "staff",
-  });
+  emit("addEmployee", { ...newEmployee.value });
 
   toast.add({
     severity: "success",
@@ -163,10 +158,34 @@ const addEmployee = () => {
         <div class="role1">
           <label class="switch">
             Admin
-            <ToggleSwitch v-model="checked" />
+            <ToggleSwitch
+              :modelValue="newEmployee.role === 'admin'"
+              @update:modelValue="
+                (value) => {
+                  if (value) newEmployee.role = 'admin';
+                }
+              "
+            />
           </label>
+        </div>
 
-          <!--<label class="switch">
+        <div class="role2">
+          <label class="switch">
+            Staff
+            <ToggleSwitch
+              :modelValue="newEmployee.role === 'staff'"
+              @update:modelValue="
+                (value) => {
+                  if (value) newEmployee.role = 'staff';
+                }
+              "
+            />
+          </label>
+        </div>
+      </div>
+
+      <div class="role2">
+        <!--<label class="switch">
             Employee Management
             <ToggleSwitch v-model="checked" />
           </label>
@@ -180,15 +199,8 @@ const addEmployee = () => {
             Discount and Add Ons
             <ToggleSwitch v-model="checked" />
           </label>-->
-        </div>
 
-        <div class="role2">
-          <label class="switch">
-            Staff
-            <ToggleSwitch v-model="checked" />
-          </label>
-
-          <!--<label class="switch">
+        <!--<label class="switch">
           Booking Management
           <ToggleSwitch v-model="checked" />
         </label>
@@ -197,7 +209,6 @@ const addEmployee = () => {
           Transaction
           <ToggleSwitch v-model="checked" />
         </label>-->
-        </div>
       </div>
 
       <div class="flex justify-center gap-2 mt-6">

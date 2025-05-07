@@ -27,7 +27,12 @@ const closeModals = () => {
 
 const addDiscount = () => {
   emit("addDiscount", { ...newDiscount.value });
-
+  toast.add({
+    severity: "success",
+    summary: "Added Discount",
+    detail: "Successfully Added Discount",
+    life: 3000,
+  });
   closeModals();
 };
 </script>
@@ -91,6 +96,7 @@ const addDiscount = () => {
       />
     </div>
   </Dialog>
+  <Toast />
 </template>
 
 <style scoped>

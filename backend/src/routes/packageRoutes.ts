@@ -7,9 +7,17 @@ import {
   UpdatePackageDTO,
   CreatePackageDTO,
 } from "../dto/packageDTO";
+import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from "../utils/errors";
+import { errorHandler } from "../middlewares/errorHandler";
+import { authMiddleware } from "../middlewares/authMiddleware";
+import type { AuthContext } from "../types";
+import { verifyPermission } from "../utils/permissionUtils";
 
-export default new OpenAPIHono()
-  .openapi(
+const packageRoutes = new OpenAPIHono<AuthContext>();
+
+packageRoutes.use("/*", authMiddleware);
+
+packageRoutes.openapi(
     createRoute({
       tags: ["Packages"],
       summary: "Get all packages",
@@ -29,25 +37,43 @@ export default new OpenAPIHono()
       },
       responses: {
         200: {
-          description: "Successful registration, redirecting to /login",
+          description: "Retrieves all packages successfully",
+        },
+        404: {
+          description: "No packages found",
+        },
+        500: {
+          description: "Internal server error",
         },
       },
     }),
     async (c) => {
-      const { limit, page } = c.req.valid("query");
+      try{
+        const userId = c.get("userId");
+        const hasPermission = await verifyPermission(userId, "PACKAGES", "read");
 
-      const packages = await db.query.PackagesTable.findMany({
-        limit,
-        offset: (page - 1) * limit,
-      });
+        if (!hasPermission) {
+          throw new ForbiddenError("No permission to get all packages.");
+        }        
 
-      return c.json({
-        total: packages.length,
-        items: packages,
-      });
+        const { limit, page } = c.req.valid("query");
+
+        const packages = await db.query.PackagesTable.findMany({
+          limit,
+          offset: (page - 1) * limit,
+        });
+  
+        return c.json({
+          total: packages.length,
+          items: packages,
+        });        
+      } catch(err){
+        return errorHandler(err, c);
+      }
     }
   )
-  .openapi(
+
+packageRoutes.openapi(
     createRoute({
       tags: ["Packages"],
       summary: "Search packages",
@@ -67,26 +93,58 @@ export default new OpenAPIHono()
       },
       responses: {
         200: {
-          description: "Successful registration, redirecting to /login",
+          description: "Packages found successfully",
+        },
+        400: {
+          description: "Invalid limit value or missing query",
+        },
+        404: {
+          description: "No packages found",
+        },
+        500: {
+          description: "Internal server error",
         },
       },
     }),
     async (c) => {
-      const { limit, query } = c.req.valid("query");
+      try{
+        const userId = c.get("userId");
+        const hasPermission = await verifyPermission(userId, "PACKAGES", "read");
 
-      const packages = await db.query.PackagesTable.findMany({
-        limit,
-        where: like(PackagesTable.name, `%${query}%`),
-      });
+        if (!hasPermission) {
+          throw new ForbiddenError("No permission to search packages.");
+        }        
 
-      return c.json({
-        total: packages.length,
-        items: packages,
-      });
+        const { limit, query } = c.req.valid("query");
+
+        if(limit < 1){
+          throw new BadRequestError("Limit must be greater than 0.");
+        }
+
+        if(!query){
+          throw new BadRequestError("Query is required.");
+        }
+
+        const packages = await db.query.PackagesTable.findMany({
+          where: like(PackagesTable.name, `%${query}%`),
+          limit,
+        });
+
+        if(!packages || packages.length === 0){
+          throw new NotFoundError("No packages found.");
+        }
+
+        return c.json({
+          total: packages.length,
+          items: packages,
+        });
+      } catch(err){
+        return errorHandler(err, c);
+      }
     }
   )
-
-  .openapi(
+  
+packageRoutes.openapi(
     createRoute({
       tags: ["Packages"],
       summary: "Get specific package",
@@ -101,21 +159,41 @@ export default new OpenAPIHono()
         200: {
           description: "Successful package retrieval",
         },
+        404: {
+          description: "Package not found",
+        },
+        500: {
+          description: "Internal server error",
+        },
       },
     }),
     async (c) => {
-      const { id } = c.req.valid("param");
+      try{
+        const userId = c.get("userId");
+        const hasPermission = await verifyPermission(userId, "PACKAGES", "read");
 
-      const dbPackage = await db.query.PackagesTable.findFirst({
-        where: eq(PackagesTable.packageId, id),
-      });
+        if (!hasPermission) {
+          throw new ForbiddenError("No permission to get package.");
+        }        
 
-      if (!dbPackage) return c.json({ error: "Package not found" }, 404);
+        const { id } = c.req.valid("param");
 
-      return c.json(dbPackage);
+        const dbPackage = await db.query.PackagesTable.findFirst({
+          where: eq(PackagesTable.packageId, id),
+        });
+
+        if(!dbPackage){
+          throw new NotFoundError("Package not found");
+        }
+
+        return c.json(dbPackage);
+      } catch (err){
+        return errorHandler(err, c);
+      }
     }
   )
-  .openapi(
+
+packageRoutes.openapi(
     createRoute({
       tags: ["Packages"],
       summary: "Update Package",
@@ -135,34 +213,62 @@ export default new OpenAPIHono()
       },
       responses: {
         200: {
-          description: "Successful registration, redirecting to /login",
+          description: "Package updated successfully",
+        },
+        400: {
+          description: "Invalid input data for update",
         },
         404: {
-          description: "Successful registration, redirecting to /login",
+          description: "Package not found",
+        },
+        500: {
+          description: "Internal server error",
         },
       },
     }),
     async (c) => {
-      const { id } = c.req.valid("param");
-      const body = c.req.valid("json");
-      const updatedBody = {
-        ...body,
-        updatedAt: new Date().toISOString().slice(0, 19).replace("T", " "),
-      };
+      try{
+        const userId = c.get("userId");
+        const hasPermission = await verifyPermission(userId, "PACKAGES", "update");
+        
+        if(!hasPermission){
+          throw new ForbiddenError("No permission to update package.");
+        }
 
-      const dbPackage = (
-        await db
-          .update(PackagesTable)
-          .set(updatedBody)
-          .where(eq(PackagesTable.packageId, id))
-          .returning()
-          .execute()
-      )[0];
+        const { id } = c.req.valid("param");
+        const body = c.req.valid("json");
 
-      return c.json(dbPackage);
+	      const updatedBody = {
+          ...body,
+          updatedAt: new Date().toISOString().slice(0, 19).replace("T", " "),
+          isPromo: body.isPromo ? 1 : 0,
+      	};
+	
+        const dbPackage = (
+          await db
+            .update(PackagesTable)
+            .set(updatedBody)
+            .where(eq(PackagesTable.packageId, id))
+            .returning()
+            .execute()
+        )[0];
+  
+        if(!dbPackage){
+          throw new NotFoundError("Package not found");
+        }
+
+        return c.json({
+          ...dbPackage,
+          isPromo: dbPackage.isPromo === 1,
+          imageUrl: dbPackage.imageUrl || ""
+        });
+      } catch(err){
+        return errorHandler(err, c);
+      }
     }
   )
-  .openapi(
+
+packageRoutes.openapi(
     createRoute({
       tags: ["Packages"],
       summary: "Delete Package",
@@ -170,32 +276,55 @@ export default new OpenAPIHono()
       path: "/:id",
       request: {
         params: z.object({
-          id: z.coerce.number().openapi({ description: "Id to find" }),
+          id: z.coerce.number().openapi({ description: "ID to delete" }),
         }),
       },
       responses: {
         200: {
-          description: "Successful registration, redirecting to /login",
+          description: "Package deleted successfully",
         },
         404: {
-          description: "Successful registration, redirecting to /login",
+          description: "Package not found",
+        },
+        500: {
+          description: "Internal server error",
         },
       },
     }),
     async (c) => {
-      const { id } = c.req.valid("param");
+      try{
+        const userId = c.get("userId");
+        const hasPermission = await verifyPermission(userId, "PACKAGES", "delete");
 
-      await db
-        .delete(PackagesTable)
-        .where(eq(PackagesTable.packageId, id))
-        .execute();
+        if(!hasPermission){
+          throw new ForbiddenError("No permission to delete package.");
+        }  
 
-      return c.json({
-        message: "Package deleted successfully",
-      });
+        const { id } = c.req.valid("param");
+
+        const dbPackage = await db.query.PackagesTable.findFirst({
+          where: eq(PackagesTable.packageId, id),
+        });
+
+        if(!dbPackage){
+          throw new NotFoundError("Package not found");
+        }
+
+        await db
+          .delete(PackagesTable)
+          .where(eq(PackagesTable.packageId, id))
+          .execute();
+
+        return c.json({
+          message: "Package deleted successfully",
+        });
+      } catch(err){
+        return errorHandler(err, c);
+      }
     }
   )
-  .openapi(
+  
+packageRoutes.openapi(
     createRoute({
       tags: ["Packages"],
       summary: "Create Package",
@@ -211,23 +340,63 @@ export default new OpenAPIHono()
         },
       },
       responses: {
-        200: {
+        201: {
           content: {
             "application/json": {
               schema: PackageDTO,
             },
           },
-          description: "Successful registration, redirecting to /login",
+          description: "Package Created",
+        },
+        400: {
+          description: "Invalid package data",
+        },
+        500: {
+          description: "Internal server error",
         },
       },
     }),
     async (c) => {
-      const body = c.req.valid("json");
+      try {
+        const userId = c.get("userId");
+        const hasPermission = await verifyPermission(userId, "PACKAGES", "create");
 
-      const dbPackage = (
-        await db.insert(PackagesTable).values(body).returning().execute()
-      )[0];
+        if(!hasPermission){
+          throw new ForbiddenError("No permission to create package.");
+        }
 
-      return c.json(dbPackage);
+        const body = c.req.valid("json");
+  
+        const existingPackage = await db.query.PackagesTable.findFirst({
+          where: eq(PackagesTable.name, body.name),
+        });
+  
+        if (existingPackage) {
+          throw new ConflictError("Package already exists.");
+        }
+  
+        const updatedBody = {
+          ...body,
+          isPromo: body.isPromo ? 1 : 0,
+        };
+  
+        const dbPackage = (
+          await db
+            .insert(PackagesTable)
+            .values(updatedBody)
+            .returning()
+            .execute()
+        )[0];
+  
+        return c.json({
+          ...dbPackage,
+          isPromo: dbPackage.isPromo === 1,
+          imageUrl: dbPackage.imageUrl || "",
+        }, 201);
+      } catch (err) {
+        return errorHandler(err, c);
+      }
     }
   );
+
+export default packageRoutes;
