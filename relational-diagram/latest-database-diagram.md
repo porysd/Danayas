@@ -171,7 +171,7 @@ erDiagram
     PUBLIC_ENTRY ||--o{ PUBLIC_ENTRY_PERSON : includes
     PUBLIC_ENTRY ||--|{ PUBLIC_ENTRY_ADD_ONS : includes
     PUBLIC_ENTRY_ADD_ONS }|--|| CATALOG_ADD_ON : references
-    PUBLIC_ENTRY ||--o{ PAYMENT : receives_payment
+    PUBLIC_ENTRY ||--|{ PAYMENT : receives_payment
 
     BOOKING ||--|{ PACKAGES : includes
     BOOKING ||--|{ PAYMENT : contains
