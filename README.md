@@ -18,7 +18,7 @@ flowchart LR
     K -->|includes| L[PUBLIC_ENTRY_PERSON]
     K -->|includes| M[PUBLIC_ENTRY_ADD_ONS]
     M -->|references| J
-    K -->|has| N[PUBLIC_ENTRY_PAYMENT]
-    
+    K -->|receives_payment| N[PAYMENT]
+
 
 ```
