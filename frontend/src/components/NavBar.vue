@@ -9,6 +9,7 @@ import Avatar from "primevue/avatar";
 
 const authStore = useAuthStore();
 const userStore = useUserStore();
+const router = useRouter();
 
 const isLoggedIn = computed(() => authStore.isLoggedIn);
 const showMenu = ref(false);
@@ -62,14 +63,9 @@ onMounted(async () => {
   console.log("Fetched user:", fetchedUser);
 
   userData.value = {
-    username: fetchedUser.username,
     firstName: fetchedUser.firstName,
     lastName: fetchedUser.lastName,
-    contactNo: fetchedUser.contactNo,
-    email: fetchedUser.email,
-    address: fetchedUser.address,
   };
-
   console.log("Populated userData:", userData.value);
 });
 
@@ -100,7 +96,7 @@ const Initials = computed(() => {
 
     <button class="menu-toggle" @click="toggleMenu">☰</button>
 
-    <div class="nav-links" :class="{ active: isMenuOpen }">
+    <div class="nav-links">
       <ul>
         <li>
           <router-link to="/" active-class="active-route">HOME</router-link>
@@ -147,8 +143,9 @@ const Initials = computed(() => {
             class="mr-2"
             size="large"
             style="
-              background-color: rgb(127, 241, 150);
+              background-color: #41ab5d;
               box-shadow: 0px 4px 4px #41ab5d;
+              color: white;
             "
             shape="circle"
             @click.stop="showMenu = !showMenu"
@@ -211,8 +208,9 @@ const Initials = computed(() => {
 
 .nav-links ul li a {
   text-decoration: none;
-  color: black;
+  color: rgb(52, 48, 48);
   font-size: 16px;
+  font-weight: 500;
   transition: color 0.3s;
 }
 
@@ -223,11 +221,14 @@ const Initials = computed(() => {
 
 .active-route {
   color: #54d6a4;
+  font-size: 13px;
 }
 .logs {
   bottom: -10px;
   position: relative;
   margin-right: 10px;
+  font-weight: 500;
+  color: rgb(52, 48, 48);
 }
 
 .logs:hover {

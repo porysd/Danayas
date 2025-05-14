@@ -18,19 +18,31 @@ import Footer from "../components/Footer.vue";
   <div class="AboutSection">
     <div
       class="flex gap-20 w-full max-w-6xl px-4 justify-center content-center align-center m-auto"
-      style="position: relative; bottom: -5rem"
+      style="position: relative; bottom: -10rem; margin-bottom: 100px"
     >
       <img
+        v-animateonscroll="{
+          enterClass:
+            'animate-enter fade-in-10 slide-in-from-r-9 animate-duration-1000',
+          leaveClass: 'animate-leave fade-out-0',
+        }"
         src="../assets/aboutUs1.jpg"
         class="w-2/5 rounded-[20px] mb-4"
         style="border-radius: 20px"
       />
-      <div class="flex flex-col justify-center items-center text-center w-4/5">
+      <div
+        class="flex flex-col justify-center items-center text-center w-4/5"
+        v-animateonscroll="{
+          enterClass:
+            'animate-enter fade-in-10 slide-in-from-l-8 animate-duration-1000',
+          leaveClass: 'animate-leave fade-out-0',
+        }"
+      >
         <h2 class="font-[Poppins] font-black relative text-5xl mb-3">
           Vision & Mission
         </h2>
 
-        <hr class="w-40 border-2 mb-4" />
+        <hr class="w-40 border-2" />
 
         <p class="mt-10 mb-20">
           At Danayas Resorts, we strive to be the leading destination for
@@ -51,7 +63,14 @@ import Footer from "../components/Footer.vue";
   <div
     class="flex gap-20 w-full max-w-6xl px-4 content-center align-center justify-center m-auto bottom-[-10rem] relative"
   >
-    <div class="flex flex-col justify-center items-center text-center w-4/5">
+    <div
+      class="flex flex-col justify-center items-center text-center w-4/5"
+      v-animateonscroll="{
+        enterClass:
+          'animate-enter fade-in-10 slide-in-from-l-8 animate-duration-1000',
+        leaveClass: 'animate-leave fade-out-0',
+      }"
+    >
       <h2 class="font-[Poppins] font-black relative text-5xl mb-3">
         Our Story
       </h2>
@@ -71,6 +90,11 @@ import Footer from "../components/Footer.vue";
       </p>
     </div>
     <img
+      v-animateonscroll="{
+        enterClass:
+          'animate-enter fade-in-10 slide-in-from-r-9 animate-duration-1000',
+        leaveClass: 'animate-leave fade-out-0',
+      }"
       src="../assets/aboutUs1.jpg"
       class="w-2/5 rounded-[20px] mb-4"
       style="border-radius: 20px"
@@ -87,7 +111,13 @@ import Footer from "../components/Footer.vue";
 
     <!-- Ensure this container stays in a row -->
     <div class="staff-image flex justify-center gap-10">
-      <div class="staff-card">
+      <div
+        class="staff-card"
+        v-animateonscroll="{
+          enterClass:
+            'animate-enter fade-in-10 zoom-in-50 slide-in-from-t-20 animate-duration-1000',
+        }"
+      >
         <img src="../assets/staff.jpg" alt="Shaina" />
         <div class="staff-overlay">
           <h3>Shaina May Tendenilla</h3>
@@ -111,7 +141,13 @@ import Footer from "../components/Footer.vue";
         </div>
       </div>
 
-      <div class="staff-card">
+      <div
+        class="staff-card"
+        v-animateonscroll="{
+          enterClass:
+            'animate-enter fade-in-10 zoom-in-50 slide-in-from-t-20 animate-duration-1000',
+        }"
+      >
         <img src="../assets/staff.jpg" alt="Shaina" />
         <div class="staff-overlay">
           <h3>Shaina May Tendenilla</h3>
@@ -135,7 +171,13 @@ import Footer from "../components/Footer.vue";
         </div>
       </div>
 
-      <div class="staff-card">
+      <div
+        class="staff-card"
+        v-animateonscroll="{
+          enterClass:
+            'animate-enter fade-in-10 zoom-in-50 slide-in-from-t-20 animate-duration-1000',
+        }"
+      >
         <img src="../assets/staff.jpg" alt="Shaina" />
         <div class="staff-overlay">
           <h3>Shaina May Tendenilla</h3>
@@ -159,7 +201,13 @@ import Footer from "../components/Footer.vue";
         </div>
       </div>
 
-      <div class="staff-card">
+      <div
+        class="staff-card"
+        v-animateonscroll="{
+          enterClass:
+            'animate-enter fade-in-10 zoom-in-50 slide-in-from-t-20 animate-duration-1000',
+        }"
+      >
         <img src="../assets/staff.jpg" alt="Shaina" />
         <div class="staff-overlay">
           <h3>Shaina May Tendenilla</h3>
