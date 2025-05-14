@@ -277,7 +277,7 @@ export default async function seed() {
     percentage: number;
     status: "active" | "inactive";
   }[] = [
-    { typeFor: "pwd", name: "PWD Discount", percentage: 20, status: "active" },
+    { typeFor: "pwd", name: "PWD Discount", percentage: 0.2, status: "active" },
     {
       typeFor: "student",
       name: "Student Discount",
@@ -293,7 +293,7 @@ export default async function seed() {
     {
       typeFor: "birthday",
       name: "Birthday Discount",
-      percentage: 10,
+      percentage: 1,
       status: "active",
     },
   ];

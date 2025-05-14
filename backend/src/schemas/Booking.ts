@@ -12,17 +12,11 @@ import { DiscountsTable } from "./Discounts";
 
 export const BookingsTable = sqliteTable("BOOKING", {
   bookingId: integer("bookingId").primaryKey({ autoIncrement: true }),
-  userId: integer("userId")
-    .references(() => UsersTable.userId)
-    .notNull(), // Admin, Staff, and Customer
+  userId: integer("userId").references(() => UsersTable.userId).notNull(), // Admin, Staff, and Customer
   checkInDate: text("checkInDate").notNull(),
   checkOutDate: text("checkOutDate").notNull(),
-  mode: text("mode", {
-    enum: ["day-time", "night-time", "whole-day"],
-  }).notNull(),
-  packageId: integer("packageId")
-    .references(() => PackagesTable.packageId)
-    .notNull(),
+  mode: text("mode", {enum: ["day-time", "night-time", "whole-day"],}).notNull(),
+  packageId: integer("packageId").references(() => PackagesTable.packageId).notNull(),
   firstName: text("firstName"), // Nullable for Online (Customer)
   lastName: text("lastName"), // Nullable for Online (Customer)
   arrivalTime: text("arrivalTime"),
@@ -33,29 +27,12 @@ export const BookingsTable = sqliteTable("BOOKING", {
   emailAddress: text("emailAddress"), // Nullable for Online (Customer)
   address: text("address"), // Nullable for Online (Customer)
   discountId: integer("discountId").references(() => DiscountsTable.discountId), // Nullable if no discount applied
-  paymentTerms: text("paymentTerms", {
-    enum: ["installment", "full-payment"],
-  }).notNull(),
+  paymentTerms: text("paymentTerms", {enum: ["installment", "full-payment"],}).notNull(),
   totalAmount: real("totalAmount").notNull(),
-  bookStatus: text("bookStatus", {
-    enum: [
-      "pending",
-      "reserved",
-      "cancelled",
-      "completed",
-      "rescheduled",
-      "pending-cancellation",
-    ],
-  }).default("pending"),
-  reservationType: text("reservationType", {
-    enum: ["online", "walk-in"],
-  }).notNull(), // Online or Walk-in
+  bookStatus: text("bookStatus", {enum: ["pending", "reserved", "cancelled", "completed", "rescheduled", "pending-cancellation"],}).default("pending"),
+  reservationType: text("reservationType", {enum: ["online", "walk-in"],}).notNull(), // Online or Walk-in
   cancelReason: text("cancelReason"), // Nullable
-  cancelCategory: text("cancelCategory", {
-    enum: ["natural-disaster", "others"],
-  }), // Nullable
+  cancelCategory: text("cancelCategory", {enum: ["natural-disaster", "others"],}), // Nullable
   hasRescheduled: integer("hasRescheduled").default(0),
-  createdAt: text("createdAt")
-    .notNull()
-    .default(sql`(current_timestamp)`),
+  createdAt: text("createdAt").notNull().default(sql`(current_timestamp)`),
 });

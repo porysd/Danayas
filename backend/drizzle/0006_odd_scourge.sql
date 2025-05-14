@@ -1,1 +1,0 @@
-ALTER TABLE `FAQS` ADD `updatedAt` text DEFAULT (current_timestamp) NOT NULL;

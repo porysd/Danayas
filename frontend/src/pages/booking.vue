@@ -78,16 +78,9 @@ const newBooking = ref({
 const paymentDetails = ref({
   mode: "gcash",
   reference: "",
-  imageUrl: "",
-  senderName: null,
+  imageUrl: "blahblah",
+  senderName: "",
 });
-
-const onFileSelect = (event) => {
-  const file = event.files[0]; // Get the first selected file
-  if (file) {
-    paymentDetails.value.imageUrl = file; // Update the imageUrl in paymentDetails
-  }
-};
 
 // Find the discount by ID or name
 const discount = discountStore.discounts.find(
@@ -370,73 +363,26 @@ const calendarOptions = ref({
             <div class="flex h-auto">
               <div class="date m-auto h-auto">
                 <div
-                  class="flex m-auto justify-center align-center mt-20 mb-20"
+                  class="flex gap-30 m-auto justify-center align-center mt-10"
                 >
-                  <div class="flex gap-40">
-                    <div>
-                      <h1 class="mb-10 text-center font-[600] text-lg">
-                        Check-in & Check-out
-                      </h1>
-                      <div class="flex gap-10">
-                        <FloatLabel variant="on">
-                          <DatePicker
-                            v-model="newBooking.checkInDate"
-                            inputId="on_label"
-                            showIcon
-                            iconDisplay="input"
-                          />
-                          <label for="on_label">Check-In</label>
-                        </FloatLabel>
-                        <FloatLabel variant="on">
-                          <DatePicker
-                            v-model="newBooking.checkOutDate"
-                            inputId="on_label"
-                            showIcon
-                            iconDisplay="input"
-                          />
-                          <label for="on_label">Check-Out</label>
-                        </FloatLabel>
-                      </div>
-                    </div>
-                    <div class="flex">
-                      <div class="ml-10">
-                        <h1 class="mb-10 text-center font-[600] c">Mode</h1>
-                        <div class="flex items-center gap-2">
-                          <RadioButton
-                            v-model="newBooking.mode"
-                            inputId="dayMode"
-                            name="bookingMode"
-                            value="day-time"
-                            size="large"
-                          />
-                          <label for="dayMode" class="text-xl font-[Poppins]"
-                            >DAY TIME</label
-                          >
-
-                          <RadioButton
-                            v-model="newBooking.mode"
-                            inputId="nightMode"
-                            name="bookingMode"
-                            value="night-time"
-                            size="large"
-                          />
-                          <label for="nightMode" class="text-xl font-[Poppins]"
-                            >NIGHT TIME</label
-                          >
-                          <RadioButton
-                            v-model="newBooking.mode"
-                            inputId="wholeDay"
-                            name="bookingMode"
-                            value="whole-day"
-                            size="large"
-                          />
-                          <label for="wholeDay" class="text-xl font-[Poppins]"
-                            >WHOLE DAY</label
-                          >
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                  <FloatLabel variant="on">
+                    <DatePicker
+                      v-model="newBooking.checkInDate"
+                      inputId="on_label"
+                      showIcon
+                      iconDisplay="input"
+                    />
+                    <label for="on_label">Check-In</label>
+                  </FloatLabel>
+                  <FloatLabel variant="on">
+                    <DatePicker
+                      v-model="newBooking.checkOutDate"
+                      inputId="on_label"
+                      showIcon
+                      iconDisplay="input"
+                    />
+                    <label for="on_label">Check-Out</label>
+                  </FloatLabel>
                 </div>
                 <FullCalendar class="fullCalendar" :options="calendarOptions">
                   <template #eventContent="{ event, timeText }">
@@ -561,6 +507,43 @@ const calendarOptions = ref({
             </div>
 
             <div class="flex items-center gap-5 ml-20">
+              <div class="flex items-center gap-2">
+                <RadioButton
+                  v-model="newBooking.mode"
+                  inputId="dayMode"
+                  name="bookingMode"
+                  value="day-time"
+                  size="large"
+                />
+                <label for="dayMode" class="text-xl font-[Poppins]"
+                  >DAY TIME</label
+                >
+              </div>
+              <div class="flex items-center gap-2">
+                <RadioButton
+                  v-model="newBooking.mode"
+                  inputId="nightMode"
+                  name="bookingMode"
+                  value="night-time"
+                  size="large"
+                />
+                <label for="nightMode" class="text-xl font-[Poppins]"
+                  >NIGHT TIME</label
+                >
+              </div>
+              <div class="flex items-center gap-2">
+                <RadioButton
+                  v-model="newBooking.mode"
+                  inputId="wholeDay"
+                  name="bookingMode"
+                  value="whole-day"
+                  size="large"
+                />
+                <label for="wholeDay" class="text-xl font-[Poppins]"
+                  >WHOLE DAY</label
+                >
+              </div>
+
               <button
                 @click="
                   nextBtn();
@@ -913,11 +896,11 @@ const calendarOptions = ref({
                           ref="fileupload"
                           v-model="paymentDetails.imageUrl"
                           mode="basic"
-                          name="imageUrl"
+                          name="demo[]"
                           url="/api/upload"
                           accept="image/*"
                           :maxFileSize="1000000"
-                          @select="onFileSelect"
+                          @upload="onUpload"
                         />
                         <!--<div class="bg-[#fcfcfc] mb-2 p-1 rounded-sm">
                           <input
