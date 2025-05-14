@@ -9,10 +9,11 @@ export const PaymentDTO = z.object({
     description: "Identifier for the associated transaction",
     example: 101,
   }),
-  imageUrl: z.string().nullable().optional().openapi({
+  imageUrl: z.string().optional().openapi({
     description: "URL of the proof of payment image",
     example: "https://example.com/uploads/payment-proof.jpg",
   }),
+
   downPaymentAmount: z.number().nullable().optional().openapi({
     description: "Downpayment amount for the booking",
     example: 500.0,
@@ -48,6 +49,7 @@ export const PaymentDTO = z.object({
     example: new Date().toISOString(),
   }),
 });
+
 export const CreatePaymentDTO = PaymentDTO.pick({
   transactionId: true,
   senderName: true,
