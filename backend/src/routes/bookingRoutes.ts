@@ -7,7 +7,7 @@ import {
   UpdateBookingDTO,
 } from "../dto/bookingDTO";
 import { DiscountsTable } from "../schemas/Discounts";
-import { and, eq, ne } from "drizzle-orm";
+import { and, eq, ne, sql } from "drizzle-orm";
 import { processBookingData } from "../utils/dateHelpers";
 import { PackagesTable } from "../schemas/Packages";
 import { PaymentsTable } from "../schemas/Payment";
@@ -142,16 +142,26 @@ bookingRoutes.openapi(
         throw new ForbiddenError("No permission to get booking.");
       }
 
-      const { id } = c.req.valid("param");
+      const paramId = Number(c.req.param("id"))
+
+      if(isNaN(paramId)){
+        throw new BadRequestError("Invalid user ID");
+      }
+
       const booking = await db.query.BookingsTable.findFirst({
-        where: eq(BookingsTable.bookingId, id),
+        where: eq(BookingsTable.bookingId, paramId),
       });
 
       if (!booking) {
         throw new NotFoundError("Booking not found.");
       }
 
-      return c.json(BookingDTO.parse(booking));
+      try {
+        const validatedUser = BookingDTO.parse(booking);
+        return c.json(validatedUser);
+      } catch (error) {
+        throw new BadRequestError("Invalid booking data structure");
+      }
     } catch (err) {
       return errorHandler(err, c);
     }
@@ -292,6 +302,37 @@ bookingRoutes.openapi(
         address: body.address || userDetails?.address || null,
       };
 
+      // Check for date conflicts
+      const conflictingBooking = await db.query.BookingsTable.findFirst({
+        where: sql`
+          bookStatus NOT IN ('cancelled', 'completed')
+          AND date(checkInDate) = date(${processedBody.checkInDate})
+          AND (
+            (${body.mode} = 'whole-day')
+            OR
+            (mode = 'whole-day')
+            OR
+            (mode = ${body.mode})
+          )
+        `
+      });
+
+      if (conflictingBooking) {
+        if (body.mode === 'whole-day') {
+          throw new BadRequestError(
+            `Cannot make a whole-day booking as there are existing bookings on this date.`
+          );
+        } else if (conflictingBooking.mode === 'whole-day') {
+          throw new BadRequestError(
+            `Cannot book on this date as it is already booked for whole day.`
+          );
+        } else {
+          throw new BadRequestError(
+            `This date is already booked for ${body.mode}. Please choose a different date or time mode.`
+          );
+        }
+      }
+
       const insertedBooking = (
         await db
           .insert(BookingsTable)
@@ -367,26 +408,54 @@ bookingRoutes.openapi(
         where: eq(BookingsTable.bookingId, bookingId),
       });
 
-      let hasRescheduled = false;
-      if (
-        requestData.checkInDate !== booking?.checkInDate ||
-        requestData.checkOutDate !== booking?.checkOutDate
-      ) {
-        hasRescheduled = true;
+      if (!booking) {
+        throw new NotFoundError("Booking not found.");
       }
 
       const processedData = processBookingData(requestData);
 
+      // Check for date conflicts
+      const conflictingBooking = await db.query.BookingsTable.findFirst({
+        where: sql`
+          bookingId != ${bookingId}
+          AND bookStatus NOT IN ('cancelled', 'completed')
+          AND date(checkInDate) = date(${processedData.checkInDate})
+          AND (
+            (${requestData.mode} = 'whole-day')
+            OR
+            (mode = 'whole-day')
+            OR
+            (mode = ${requestData.mode})
+          )
+        `
+      });
+
+      if (conflictingBooking) {
+        if (requestData.mode === 'whole-day') {
+          throw new BadRequestError(
+            `Cannot make a whole-day booking as there are existing bookings on this date.`
+          );
+        } else if (conflictingBooking.mode === 'whole-day') {
+          throw new BadRequestError(
+            `Cannot book on this date as it is already booked for whole day.`
+          );
+        } else {
+          throw new BadRequestError(
+            `This date is already booked for ${requestData.mode}. Please choose a different date or time mode.`
+          );
+        }
+      }
+
+      const hasRescheduled =
+        processedData.checkInDate !== booking.checkInDate.split("T")[0] ||
+        processedData.checkOutDate !== booking.checkOutDate.split("T")[0];
+        
       const updatedBooking = await db
         .update(BookingsTable)
         .set({ ...processedData, hasRescheduled: hasRescheduled ? 1 : 0 })
         .where(eq(BookingsTable.bookingId, bookingId))
         .returning()
         .execute();
-
-      if (updatedBooking.length === 0) {
-        throw new NotFoundError("Booking not found.");
-      }
 
       return c.json({
         status: "success",
