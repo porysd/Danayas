@@ -7,18 +7,24 @@ import {
 } from "drizzle-orm/sqlite-core";
 import { BookingsTable } from "./Booking";
 import { sql } from "drizzle-orm";
-import { TransactionsTable } from "./Transaction";
+import { UsersTable } from "./User";
 
 export const PaymentsTable = sqliteTable("PAYMENT", {
+  // PRIMARY & FOREIGN KEYS
   paymentId: integer("paymentId").primaryKey({ autoIncrement: true }),
-  transactionId: integer("transactionId").references(() => TransactionsTable.transactionId).notNull(),
-  imageUrl: text("imageUrl"),
-  downPaymentAmount: real("downPaymentAmount"),
-  amountPaid: real("amountPaid").notNull(),
-  category: text("category", { enum: ["payment", "refund"] }).notNull(),
-  mode: text("mode", { enum: ["gcash", "cash"] }).notNull(),
-  reference: text("reference"),
+  bookingId: integer("bookingId").references(() => BookingsTable.bookingId).notNull(),
+  verifiedBy: integer("verifiedBy").references(() => UsersTable.userId),
+  // PAYMENT DETAILS
+  paymentMethod: text("mode", { enum: ["gcash", "cash"] }).notNull(),
+  tenderedAmount: real("amount").notNull(),
+  changeAmount: real("changeAmount").notNull().default(0),
+  netPaidAmount: real("netPaidAmount").notNull(), 
+  // TRANSACTION INFO
   senderName: text("senderName").notNull(),
-  paymentStatus: text("paymentStatus", {enum: ["valid", "voided"]}).notNull().default("valid"),
-  paidAt: text("paidAt").notNull().default(sql`(current_timestamp)`),
+  reference: text("reference"),
+  imageUrl: text("imageUrl"),
+  // STATUS & METADATA
+  paymentStatus: text("paymentStatus", {enum: ["pending","valid","invalid", "voided"]}).notNull().default("pending"),
+  remarks: text("remarks"),
+  createdAt: text("createdAt").notNull().default(sql`(current_timestamp)`),
 });

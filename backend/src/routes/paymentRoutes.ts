@@ -3,14 +3,9 @@ import {
   PaymentDTO,
   CreatePaymentDTO,
   UpdatePaymentDTO,
-  RefundPaymentDTO,
 } from "../dto/paymentDTO";
 import db from "../config/database";
-import {
-  BookingsTable,
-  PaymentsTable,
-  TransactionsTable,
-} from "../schemas/schema";
+import { BookingsTable, PaymentsTable } from "../schemas/schema";
 import { desc, and, ne, eq, like, or } from "drizzle-orm";
 import {
   BadRequestError,
@@ -161,193 +156,6 @@ paymentRoutes.openapi(
 paymentRoutes.openapi(
   createRoute({
     tags: ["Payments"],
-    summary: "Refund Payment",
-    method: "post",
-    path: "/refund",
-    request: {
-      body: {
-        content: {
-          "application/json": {
-            schema: CreatePaymentDTO,
-          },
-        },
-      },
-    },
-    responses: {
-      201: {
-        content: {
-          "application/json": {
-            schema: PaymentDTO,
-          },
-        },
-        description: "Successful refund creation",
-      },
-      400: {
-        description: "Invalid refund data",
-      },
-      500: {
-        description: "Internal server error",
-      },
-    },
-  }),
-  async (c) => {
-    try {
-      const userId = c.get("userId");
-      const hasPermission = await verifyPermission(userId, "PAYMENT", "create");
-
-      if (!hasPermission) {
-        throw new ForbiddenError("No permission to create payment.");
-      }
-
-      const parsed = RefundPaymentDTO.parse(await c.req.json());
-      const { transactionId, mode } = parsed;
-
-      // Select the transactionId by transactionId
-      const transaction = await db.query.TransactionsTable.findFirst({
-        where: eq(TransactionsTable.transactionId, transactionId),
-      });
-      if (!transaction) {
-        throw new NotFoundError("Transaction not found.");
-      }
-
-      // Select the booking by bookingId
-      const booking = await db.query.BookingsTable.findFirst({
-        where: eq(BookingsTable.bookingId, transaction.bookingId),
-      });
-
-      //TODO: ONLY ALLOW REFUND ONCE
-
-      if (!booking) {
-        throw new NotFoundError("Booking not found.");
-      }
-
-      if (booking.bookStatus === "completed") {
-        return c.json(
-          { error: "Cannot refund payment for this booking status" },
-          400
-        );
-      }
-
-      // Gets the remaining balance from the transaction
-      const remainingBalance = transaction.remainingBalance;
-
-      // Check if latest payment is existing
-      const latestPayment = await db.query.PaymentsTable.findFirst({
-        where: eq(PaymentsTable.transactionId, transactionId),
-        orderBy: [desc(PaymentsTable.paidAt)],
-      });
-
-      const allValidPayments = await db.query.PaymentsTable.findMany({
-        where: and(
-          eq(PaymentsTable.transactionId, transactionId),
-          ne(PaymentsTable.paymentStatus, "voided")
-        ),
-      });
-
-
-      if (!allValidPayments.length) {
-        return c.json(
-          { error: "No valid previous payments found for this transaction" },
-          400
-        );
-      }
-
-      // If latest payment exists, check its status
-      if (!latestPayment) {
-        return c.json(
-          { error: "No previous payment found for this transaction" },
-          400
-        );
-      }
-
-      // Check if the latest payment is voided
-      if (latestPayment.paymentStatus === "voided") {
-        return c.json(
-          { error: "Cannot proceed, latest payment is voided" },
-          400
-        );
-      }
-
-      const totalPaid = allValidPayments.reduce((sum, payment) => {
-        return sum + payment.amountPaid;
-      }, 0);
-
-      const refundRate = 0.5;
-      const refundAmount = totalPaid * refundRate;
-
-      // refund through cash
-      if (mode === "cash") {
-        const created = await db
-          .insert(PaymentsTable)
-          .values({
-            ...parsed,
-            amountPaid: refundAmount,
-            category: "refund",
-          })
-          .returning();
-        await db
-          .update(TransactionsTable)
-          .set({
-            remainingBalance: remainingBalance + refundAmount,
-            refundStatus: "refunded",
-          })
-          .where(eq(TransactionsTable.transactionId, transactionId))
-          .execute();
-        await db
-          .update(BookingsTable)
-          .set({
-            bookStatus: "cancelled",
-          })
-          .where(eq(BookingsTable.bookingId, booking.bookingId))
-          .execute();
-
-        return c.json(PaymentDTO.parse(created[0]), 201);
-      }
-      // refund through gcash
-      else {
-        if (!parsed.reference || !parsed.imageUrl) {
-          return c.json(
-            {
-              error: "Reference and imageUrl are required for online payments",
-            },
-            400
-          );
-        }
-        const created = await db
-          .insert(PaymentsTable)
-          .values({
-            ...parsed,
-            amountPaid: refundAmount, // Negative amount for refund
-            category: "refund",
-          })
-          .returning();
-        await db
-          .update(TransactionsTable)
-          .set({
-            remainingBalance: remainingBalance + refundAmount,
-            refundStatus: "refunded",
-          })
-          .where(eq(TransactionsTable.transactionId, transactionId))
-          .execute();
-        await db
-          .update(BookingsTable)
-          .set({
-            bookStatus: "cancelled",
-          })
-          .where(eq(BookingsTable.bookingId, booking.bookingId))
-          .execute();
-
-        return c.json(PaymentDTO.parse(created[0]), 201);
-      }
-    } catch (err) {
-      return errorHandler(err, c);
-    }
-  }
-);
-
-paymentRoutes.openapi(
-  createRoute({
-    tags: ["Payments"],
     summary: "Create Payments",
     method: "post",
     path: "/",
@@ -379,6 +187,7 @@ paymentRoutes.openapi(
   }),
   async (c) => {
     try {
+      // TODO: Auto-validating payments created by admins or staff
       const userId = c.get("userId");
       const hasPermission = await verifyPermission(userId, "PAYMENT", "create");
 
@@ -387,20 +196,11 @@ paymentRoutes.openapi(
       }
 
       const parsed = CreatePaymentDTO.parse(await c.req.json());
-      const { transactionId, mode } = parsed;
+      const { bookingId, paymentMethod, tenderedAmount } = parsed;
 
-      // Select the transactionId by transactionId
-      const transaction = await db.query.TransactionsTable.findFirst({
-        where: eq(TransactionsTable.transactionId, transactionId),
-      });
-
-      if (!transaction) {
-        throw new NotFoundError("Transaction not found.");
-      }
-
-      // Select the booking by transactionId
+      // Select the booking by bookingId
       const booking = await db.query.BookingsTable.findFirst({
-        where: eq(BookingsTable.bookingId, transaction.bookingId),
+        where: eq(BookingsTable.bookingId, bookingId),
       });
 
       if (!booking) {
@@ -416,32 +216,27 @@ paymentRoutes.openapi(
           400
         );
       }
-      // Gets the remaining balance from the transaction
-      const remainingBalance = transaction.remainingBalance;
 
-      // Check if latest payment is existing through transactionId
+      // Check if the booking payment status is already paid
+      if (booking.bookingPaymentStatus === "paid") {
+        return c.json({ error: "Booking already paid" }, 400);
+      }
+
+      // Gets the remaining balance from the booking
+      const remainingBalance = booking.remainingBalance;
+
+      // Check if latest payment is existing through bookingId
       const latestPayment = await db.query.PaymentsTable.findFirst({
-        where: eq(PaymentsTable.transactionId, transactionId),
-        orderBy: [desc(PaymentsTable.paidAt)],
+        where: eq(PaymentsTable.bookingId, bookingId),
+        orderBy: [desc(PaymentsTable.createdAt)],
       });
-      // If latest payment exists
+      if (latestPayment?.paymentStatus === "pending") {
+        return c.json({ error: "Previous payment is still pending" }, 400);
+      }
+
+      // If latest payment is existing, its either installment or extra pax/add-ons
       if (latestPayment) {
-        // Check if the transaction status is voided
-        if (transaction.transactionStatus === "voided") {
-          return c.json(
-            { error: "Cannot proceed, latest payment is voided" },
-            400
-          );
-        }
-        // Check if the transaction status is already paid
-        if (transaction.transactionStatus === "paid") {
-          return c.json({ error: "Booking already paid" }, 400);
-        }
-
-        // Get the remainingBalance of the latest payment to amountPaid
-        const amountPaid = remainingBalance;
-
-        if (mode === "gcash") {
+        if (paymentMethod === "gcash") {
           if (!parsed.reference || !parsed.imageUrl) {
             return c.json(
               {
@@ -451,40 +246,44 @@ paymentRoutes.openapi(
               400
             );
           }
+          if (tenderedAmount > remainingBalance) {
+            return c.json(
+              { error: "Tendered amount is greater than the remaining balance" },
+              400
+            );
+          }
           const created = await db
             .insert(PaymentsTable)
             .values({
               ...parsed,
-              category: "payment",
-              amountPaid: amountPaid,
+              changeAmount: 0,
+              netPaidAmount: tenderedAmount,
+              paymentStatus: "pending",
             })
             .returning();
-          await db
-            .update(TransactionsTable)
-            .set({
-              remainingBalance: remainingBalance - amountPaid,
-              transactionStatus: "paid",
-            })
-            .where(eq(TransactionsTable.transactionId, transactionId))
-            .execute();
           return c.json(PaymentDTO.parse(created[0]), 201);
         } else {
+          // If paymentMethod is "cash"
+          const changeAmount = tenderedAmount - remainingBalance;
+
+          if (changeAmount < 0) {
+            return c.json(
+              { error: "Tendered amount is less than the remaining balance" },
+              400
+            );
+          }
+          const netPaidAmount = tenderedAmount - changeAmount;
+
           const created = await db
             .insert(PaymentsTable)
             .values({
               ...parsed,
-              category: "payment",
-              amountPaid: amountPaid,
+              tenderedAmount: tenderedAmount,
+              changeAmount: changeAmount,
+              netPaidAmount: netPaidAmount,
+              paymentStatus: "pending",
             })
             .returning();
-          await db
-            .update(TransactionsTable)
-            .set({
-              remainingBalance: remainingBalance - amountPaid,
-              transactionStatus: "paid",
-            })
-            .where(eq(TransactionsTable.transactionId, transactionId))
-            .execute();
 
           return c.json(PaymentDTO.parse(created[0]), 201);
         }
@@ -493,7 +292,7 @@ paymentRoutes.openapi(
         const paymentTerms = booking.paymentTerms;
         if (paymentTerms === "installment") {
           // if gcash, reference and imageUrl is required
-          if (mode === "gcash") {
+          if (paymentMethod === "gcash") {
             if (!parsed.reference || !parsed.imageUrl) {
               return c.json(
                 {
@@ -503,67 +302,65 @@ paymentRoutes.openapi(
                 400
               );
             }
+            if (tenderedAmount > remainingBalance) {
+              return c.json(
+                { error: "Tendered amount is greater than the remaining balance" },
+                400
+              );
+            }
+            if (tenderedAmount < 2000) {
+              return c.json(
+                { error: "Minimum down payment amount is 2000" },
+                400
+              );
+            }
 
             const created = await db
               .insert(PaymentsTable)
               .values({
                 ...parsed,
-                downPaymentAmount: 3000,
-                amountPaid: 3000,
-                category: "payment",
+                changeAmount: 0,
+                netPaidAmount: tenderedAmount,
+                paymentStatus: "pending",
               })
               .returning();
-            await db
-              .update(TransactionsTable)
-              .set({
-                remainingBalance: remainingBalance - 3000,
-                transactionStatus: "partially-paid",
-              })
-              .where(eq(TransactionsTable.transactionId, transactionId))
-              .execute();
             return c.json(PaymentDTO.parse(created[0]), 201);
           } else {
+            // If paymentMethod is "cash"
+            const changeAmount = Math.max(tenderedAmount - remainingBalance, 0);
+            if (tenderedAmount < 2000) {
+              return c.json(
+                { error: "Minimum down payment amount is 2000" },
+                400
+              );
+            }
+            const netPaidAmount = tenderedAmount - changeAmount;
+
             const created = await db
               .insert(PaymentsTable)
               .values({
                 ...parsed,
-                downPaymentAmount: 3000,
-                amountPaid: 3000,
-                category: "payment",
+                tenderedAmount: tenderedAmount,
+                changeAmount: changeAmount,
+                netPaidAmount: netPaidAmount,
+                paymentStatus: "pending",
               })
               .returning();
-
-            await db
-              .update(TransactionsTable)
-              .set({
-                remainingBalance: remainingBalance - 3000,
-                transactionStatus: "partially-paid",
-              })
-              .where(eq(TransactionsTable.transactionId, transactionId))
-              .execute();
             return c.json(PaymentDTO.parse(created[0]), 201);
           }
         } else {
           // If paymentTerms is "full-payment"
-          if (mode === "cash") {
-            const created = await db
-              .insert(PaymentsTable)
-              .values({
-                ...parsed,
-                amountPaid: transaction.remainingBalance,
-                category: "payment",
-              })
-              .returning();
-            await db
-              .update(TransactionsTable)
-              .set({
-                remainingBalance: 0,
-                transactionStatus: "paid",
-              })
-              .where(eq(TransactionsTable.transactionId, transactionId))
-              .execute();
-            return c.json(PaymentDTO.parse(created[0]), 201);
-          } else {
+          if (
+            paymentTerms === "full-payment" &&
+            tenderedAmount < booking.totalAmount
+          ) {
+            return c.json(
+              { error: "Full payment requires paying the full amount." },
+              400
+            );
+          }
+
+          if (paymentMethod === "gcash") {
             if (!parsed.reference || !parsed.imageUrl) {
               return c.json(
                 {
@@ -573,22 +370,38 @@ paymentRoutes.openapi(
                 400
               );
             }
+            if (tenderedAmount > remainingBalance) {
+              return c.json(
+                { error: "Tendered amount is greater than the remaining balance" },
+                400
+              );
+            }
+
             const created = await db
               .insert(PaymentsTable)
               .values({
                 ...parsed,
-                amountPaid: transaction.remainingBalance,
-                category: "payment",
+                tenderedAmount: booking.totalAmount,
+                changeAmount: 0,
+                netPaidAmount: booking.totalAmount,
+                paymentStatus: "pending",
               })
               .returning();
-            await db
-              .update(TransactionsTable)
-              .set({
-                remainingBalance: 0,
-                transactionStatus: "paid",
+            return c.json(PaymentDTO.parse(created[0]), 201);
+          } else {
+            // If paymentMethod is "cash"
+            const changeAmount = Math.max(tenderedAmount - remainingBalance, 0);
+            const netPaidAmount = tenderedAmount - changeAmount;
+            const created = await db
+              .insert(PaymentsTable)
+              .values({
+                ...parsed,
+                tenderedAmount: tenderedAmount,
+                changeAmount: changeAmount,
+                netPaidAmount: netPaidAmount,
+                paymentStatus: "pending",
               })
-              .where(eq(TransactionsTable.transactionId, transactionId))
-              .execute();
+              .returning();
             return c.json(PaymentDTO.parse(created[0]), 201);
           }
         }
@@ -649,18 +462,84 @@ paymentRoutes.openapi(
         throw new BadRequestError("Invalid payment ID.");
       }
 
-      const dbPayment = UpdatePaymentDTO.parse(await c.req.json());
+      const parsed = UpdatePaymentDTO.parse(await c.req.json());
 
-      const updatedPayment = await db
-        .update(PaymentsTable)
-        .set(dbPayment)
-        .where(eq(PaymentsTable.paymentId, paymentId))
-        .returning()
-        .execute();
+      const verifiedBy = userId;
+      const paymentStatus = parsed.paymentStatus;
 
-      if (updatedPayment.length === 0) {
+      const payment = await db.query.PaymentsTable.findFirst({
+        where: eq(PaymentsTable.paymentId, paymentId),
+      });
+
+      if (!payment) {
         throw new NotFoundError("Payment not found.");
       }
+
+      const updatedPayment = await db.transaction(async (tx) => {
+        if (paymentStatus === "valid" && payment.paymentStatus !== "valid") {
+          const booking = await tx.query.BookingsTable.findFirst({
+            where: eq(BookingsTable.bookingId, payment.bookingId),
+          });
+          if (!booking) {
+            throw new NotFoundError("Booking not found.");
+          }
+          const amountPaid = booking.amountPaid + payment.netPaidAmount;
+          const remainingBalance =
+            booking.remainingBalance - payment.netPaidAmount;
+          const bookingPaymentStatus =
+            remainingBalance === 0 ? "paid" : "partially-paid";
+
+          const updatedBooking = await tx
+            .update(BookingsTable)
+            .set({
+              amountPaid: amountPaid,
+              remainingBalance: remainingBalance,
+              bookingPaymentStatus: bookingPaymentStatus,
+              bookStatus: "reserved",
+            })
+            .where(eq(BookingsTable.bookingId, payment.bookingId))
+            .returning()
+            .execute();
+        }
+
+        if (paymentStatus === "invalid") {
+          // TODO: A way to notify the customer that the payment is invalid
+          if (!parsed.remarks) {
+            return c.json(
+              {
+                error: "Remarks are required when invalidating a payment",
+              },
+              400
+            );
+          }
+        }
+
+        if (paymentStatus === "voided") {
+          // TODO: subtract the netPaidAmount from the booking (to undo the previously applied amount)
+          // TODO: A way to notify the customer that the payment is voided
+          if (!parsed.remarks) {
+            return c.json(
+              {
+                error: "Remarks are required when voiding a payment",
+              },
+              400
+            );
+          }
+        }
+
+        const result = await tx
+          .update(PaymentsTable)
+          .set({ ...parsed, verifiedBy, paymentStatus })
+          .where(eq(PaymentsTable.paymentId, paymentId))
+          .returning()
+          .execute();
+
+        if (result.length === 0) {
+          throw new NotFoundError("Payment not found.");
+        }
+
+        return result[0];
+      });
 
       return c.json(updatedPayment);
     } catch (err) {

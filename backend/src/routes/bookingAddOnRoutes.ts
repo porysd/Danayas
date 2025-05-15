@@ -14,7 +14,6 @@ import {
 } from "../dto/BookingAddOnDTO";
 import { eq } from "drizzle-orm";
 import { BookingsTable } from "../schemas/Booking";
-import { TransactionsTable } from "../schemas/Transaction";
 import { CatalogAddOnsTable } from "../schemas/CatalogAddOns";
 import { errorHandler } from "../middlewares/errorHandler";
 import {
@@ -204,22 +203,9 @@ bookingAddOnRoutes.openapi(
 
       await db
         .update(BookingsTable)
-        .set({ totalAmount: updatedTotalAmount })
+        .set({ totalAmount: updatedTotalAmount, bookingPaymentStatus: "partially-paid", remainingBalance: selectedBooking.remainingBalance + price }) 
         .where(eq(BookingsTable.bookingId, bookingId))
         .execute();
-
-      const transaction = await db.query.TransactionsTable.findFirst({
-        where: eq(TransactionsTable.bookingId, bookingId),
-      });
-
-      if (transaction) {
-        await db
-          .update(TransactionsTable)
-          .set({ remainingBalance: transaction.remainingBalance + price,
-            transactionStatus: "partially-paid" })
-          .where(eq(TransactionsTable.transactionId, transaction.transactionId))
-          .execute();
-      }
 
       return c.json(BookingAddOnDTO.parse(created), 201);
     } catch (err) {

@@ -7,10 +7,10 @@ import {
   UpdateBookingDTO,
 } from "../dto/bookingDTO";
 import { DiscountsTable } from "../schemas/Discounts";
-import { eq } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import { processBookingData } from "../utils/dateHelpers";
 import { PackagesTable } from "../schemas/Packages";
-import { TransactionsTable } from "../schemas/Transaction";
+import { PaymentsTable } from "../schemas/Payment";
 import { UsersTable } from "../schemas/User";
 import { fi } from "@faker-js/faker";
 import {
@@ -22,6 +22,8 @@ import { errorHandler } from "../middlewares/errorHandler";
 import { authMiddleware } from "../middlewares/authMiddleware";
 import { verifyPermission } from "../utils/permissionUtils";
 import type { AuthContext } from "../types";
+import { RefundsTable } from "../schemas/Refund";
+import { RefundPaymentsTable } from "../schemas/RefundPayment";
 
 const bookingRoutes = new OpenAPIHono<AuthContext>();
 
@@ -361,26 +363,6 @@ bookingRoutes.openapi(
       }
 
       const requestData = UpdateBookingDTO.parse(await c.req.json());
-      // // Cancel Category and Reason Validation if booking status is cancelled
-      // if (requestData.bookStatus === "cancelled") {
-      //   if (!requestData.cancelCategory) {
-      //     throw new BadRequestError(
-      //       "Cancel category is required for cancellation"
-      //     );
-      //   }
-      //   if (!requestData.cancelReason) {
-      //     throw new BadRequestError(
-      //       "Cancel reason is required for cancellation"
-      //     );
-      //   }
-      //   if (requestData.cancelCategory === "natural-disaster") {
-      //     await db
-      //       .update(TransactionsTable)
-      //       .set({ refundStatus: "pending" })
-      //       .where(eq(TransactionsTable.bookingId, bookingId))
-      //       .execute();
-      //   }
-      // }
       const booking = await db.query.BookingsTable.findFirst({
         where: eq(BookingsTable.bookingId, bookingId),
       });
@@ -477,6 +459,16 @@ bookingRoutes.openapi(
       const bookingId = Number(c.req.param("id"));
       const { bookStatus, cancelCategory, cancelReason } = await c.req.json();
 
+      const existingBooking = await db
+        .select()
+        .from(BookingsTable)
+        .where(eq(BookingsTable.bookingId, bookingId))
+        .execute();
+
+      if (!existingBooking || existingBooking.length === 0) {
+        throw new NotFoundError("Booking not found");
+      }
+
       if (bookStatus === "cancelled") {
         if (!cancelCategory) {
           throw new BadRequestError(
@@ -492,24 +484,54 @@ bookingRoutes.openapi(
             "Cancel Reason is required for 'others' category"
           );
         }
-
+        // If natural disaster, process refund
         if (cancelCategory === "natural-disaster") {
-          await db
-            .update(TransactionsTable)
-            .set({ refundStatus: "pending" })
-            .where(eq(TransactionsTable.bookingId, bookingId))
-            .execute();
+          // Check all existing payments for the booking thats valid
+          const allValidPayments = await db.query.PaymentsTable.findMany({
+            where: and(
+              eq(PaymentsTable.bookingId, bookingId),
+              eq(PaymentsTable.paymentStatus, "valid")
+            ),
+          });
+
+          if (allValidPayments.length === 0) {
+            throw new BadRequestError(
+              "No valid payments found for the booking."
+            );
+          }
+
+          const totalPaid = allValidPayments.reduce((sum, payment) => {
+            return sum + payment.netPaidAmount;
+          }, 0);
+          await db.transaction(async (tx) => {
+            const refund = (
+              await tx
+                .insert(RefundsTable)
+                .values({
+                  bookingId: bookingId,
+                  refundAmount: totalPaid * 0.5, 
+                  refundStatus: "pending",
+                  refundReason: cancelReason,
+                })
+                .returning()
+                .execute()
+            )[0];
+  
+            await Promise.all(
+              allValidPayments.map((payment) =>
+                tx
+                  .insert(RefundPaymentsTable)
+                  .values({
+                    refundId: refund.refundId,
+                    paymentId: payment.paymentId,
+                    amountRefunded: payment.netPaidAmount * 0.5,
+                  })
+                  .returning()
+                  .execute()
+              )
+            );
+          })
         }
-      }
-
-      const existingBooking = await db
-        .select()
-        .from(BookingsTable)
-        .where(eq(BookingsTable.bookingId, bookingId))
-        .execute();
-
-      if (!existingBooking || existingBooking.length === 0) {
-        throw new NotFoundError("Booking not found");
       }
 
       const updatedBooking = await db
