@@ -7,7 +7,6 @@ import {
   PaymentsTable,
   CatalogAddOnsTable,
   BookingAddOnsTable,
-  TransactionsTable,
   FaqsTable,
   TermsAndConditionTable,
 } from "../schemas/schema.ts";
@@ -277,7 +276,7 @@ export default async function seed() {
     percentage: number;
     status: "active" | "inactive";
   }[] = [
-    { typeFor: "pwd", name: "PWD Discount", percentage: 0.2, status: "active" },
+    { typeFor: "pwd", name: "PWD Discount", percentage: 20, status: "active" },
     {
       typeFor: "student",
       name: "Student Discount",
@@ -293,7 +292,7 @@ export default async function seed() {
     {
       typeFor: "birthday",
       name: "Birthday Discount",
-      percentage: 1,
+      percentage: 10,
       status: "active",
     },
   ];
@@ -358,40 +357,15 @@ export default async function seed() {
       const selectedDiscountId = faker.helpers.arrayElement(discounts);
       const discountPercent = discountMap.get(selectedDiscountId) || 0;
 
-      const discountAmount = packagePrice * discountPercent;
+      const discountAmount = packagePrice * discountPercent / 100;
       const finalAmount = packagePrice - discountAmount;
 
       const row = await db
         .insert(BookingsTable)
         .values({
           userId: selectedUserId,
-          checkInDate: faker.date.past().toISOString(),
-          checkOutDate: faker.date.future().toISOString(),
-          mode: faker.helpers.arrayElement([
-            "day-time",
-            "night-time",
-            "whole-day",
-          ]),
           packageId: selectedPackageId,
-          firstName: selectedUser.firstName,
-          lastName: selectedUser.lastName,
-          contactNo: selectedUser.contactNo,
-          emailAddress: selectedUser.email,
-          address: selectedUser.address,
-          arrivalTime: faker.date.recent().toISOString(),
-          eventType: faker.helpers.arrayElement([
-            "wedding",
-            "birthday",
-            "conference",
-          ]),
-          numberOfGuest: faker.helpers.rangeToNumber({ min: 10, max: 500 }),
-          catering: faker.helpers.rangeToNumber({ min: 0, max: 1 }),
           discountId: selectedDiscountId,
-          paymentTerms: faker.helpers.arrayElement([
-            "installment",
-            "full-payment",
-          ]),
-          totalAmount: finalAmount,
           bookStatus: faker.helpers.arrayElement([
             "pending",
             // "reserved",
@@ -400,34 +374,33 @@ export default async function seed() {
             // "rescheduled",
             // "pending-cancellation",
           ]),
+          checkInDate: faker.date.past().toISOString(),
+          checkOutDate: faker.date.future().toISOString(),
+          mode: faker.helpers.arrayElement([
+            "day-time",
+            "night-time",
+            "whole-day",
+          ]),
           reservationType: faker.helpers.arrayElement(["online", "walk-in"]),
+          eventType: faker.helpers.arrayElement([
+            "wedding",
+            "birthday",
+            "conference",
+          ]),
+          numberOfGuest: faker.helpers.rangeToNumber({ min: 10, max: 500 }),
+          arrivalTime: faker.date.recent().toISOString(),
+          catering: faker.helpers.rangeToNumber({ min: 0, max: 1 }),
+          paymentTerms: faker.helpers.arrayElement(["installment", "full-payment"]),
+          bookingPaymentStatus: faker.helpers.arrayElement(["unpaid"]),
+          totalAmount: finalAmount,
+          amountPaid: 0,
+          remainingBalance: finalAmount,
+          firstName: selectedUser.firstName,
+          lastName: selectedUser.lastName,
+          contactNo: selectedUser.contactNo,
+          emailAddress: selectedUser.email,
+          address: selectedUser.address,
           createdAt: faker.date.recent().toISOString(),
-        })
-        .execute();
-    } catch (e) {
-      console.error(e);
-      continue;
-    }
-  }
-
-  // TRANSACTION
-  const bookingsCount = await db.select().from(BookingsTable);
-  for (const booking of bookingsCount) {
-    let status: "paid" | "partially-paid" | "voided";
-
-    if (booking.paymentTerms === "installment") {
-      status = "partially-paid";
-    } else {
-      status = "paid";
-    }
-
-    try {
-      const row = await db
-        .insert(TransactionsTable)
-        .values({
-          bookingId: booking.bookingId,
-          transactionStatus: status,
-          remainingBalance: booking.totalAmount,
         })
         .execute();
     } catch (e) {
@@ -603,12 +576,6 @@ export default async function seed() {
         .from(CatalogAddOnsTable)
         .where(eq(CatalogAddOnsTable.catalogAddOnId, catalogAddOnId))
         .then((rows) => rows[0]);
-      const selectedTransaction = await db.query.TransactionsTable.findFirst({
-        where: eq(TransactionsTable.transactionId, bookingId),
-      });
-      if (!selectedTransaction) {
-        continue;
-      }
 
       const price = selectedCatalogAddOn.price;
 
@@ -623,17 +590,13 @@ export default async function seed() {
 
       const updatedBooking = await db
         .update(BookingsTable)
-        .set({ totalAmount: updatedTotalAmount })
+        .set({
+          totalAmount: updatedTotalAmount, 
+          //bookingPaymentStatus: "partially-paid", 
+          remainingBalance: selectedBooking.totalAmount + price 
+        })
         .where(eq(BookingsTable.bookingId, bookingId))
         .returning()
-        .execute();
-
-      await db
-        .update(TransactionsTable)
-        .set({ remainingBalance: selectedTransaction.remainingBalance + price })
-        .where(
-          eq(TransactionsTable.transactionId, selectedTransaction.transactionId)
-        )
         .execute();
     } catch (e) {
       console.error(e);
