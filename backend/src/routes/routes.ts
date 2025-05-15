@@ -6,9 +6,11 @@ import paymentRoutes from "./paymentRoutes";
 import discountRoutes from "./discountRoutes";
 import catalogAddOnRoutes from "./catalogAddOnRoutes";
 import bookingAddOnRoutes from "./bookingAddOnRoutes";
-import transactionRoutes from "./transactionRoutes";
+import refundRoutes from "./refundRoutes";
 import faqsRoutes from "./faqsRoutes";
 import termsAndConditionRoutes from "./termsAndConditionRoutes";
+import refundPaymentRoutes from "./refundPaymentRoutes";
+import path from "path";
 
 // Define all routes with distinct paths
 export const routes = [
@@ -20,7 +22,8 @@ export const routes = [
   { path: "/discounts", handler: discountRoutes },
   { path: "/catalogaddon", handler: catalogAddOnRoutes },
   { path: "/bookingaddon", handler: bookingAddOnRoutes },
-  { path: "/transaction", handler: transactionRoutes },
+  { path: "/refund", handler: refundRoutes },
+  { path: "/refundPayment", handler: refundPaymentRoutes },
   { path: "/faqs", handler: faqsRoutes },
   { path: "/termAndCondition", handler: termsAndConditionRoutes },
 ] as const;
