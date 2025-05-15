@@ -5,65 +5,72 @@ export const PaymentDTO = z.object({
     description: "Unique identifier for the payment",
     example: 1,
   }),
-  transactionId: z.number().openapi({
-    description: "Identifier for the associated transaction",
-    example: 101,
+  bookingId: z.number().openapi({
+    description: "Unique identifier for the booking",
+    example: 1,
   }),
-  imageUrl: z.string().nullable().optional().openapi({
-    description: "URL of the proof of payment image",
-    example: "https://example.com/uploads/payment-proof.jpg",
+  verifiedBy: z.number().nullable().optional().openapi({
+    description: "User ID of the staff who verified the payment",
+    example: 1,
   }),
-  downPaymentAmount: z.number().nullable().optional().openapi({
-    description: "Downpayment amount for the booking",
-    example: 500.0,
-  }),
-  amountPaid: z.number().openapi({
-    description: "Amount paid by the user",
-    example: 1000.0,
-  }),
-  category: z.enum(["payment", "refund"]).openapi({
-    description: "Category of the payment",
-    example: "payment",
-    default: "payment",
-  }),
-  mode: z.enum(["gcash", "cash"]).openapi({
+  paymentMethod: z.enum(["gcash", "cash"]).openapi({
     description: "Mode of payment",
     example: "gcash",
   }),
-  reference: z.string().nullable().optional().openapi({
-    description: "Reference number for the payment",
-    example: "1654 156 156354",
+  tenderedAmount: z.number().openapi({
+    description: "Total amount tendered by the user",
+    example: 1000.0,
+  }),
+  changeAmount: z.number().openapi({
+    description: "Change amount to be returned to the user",
+    example: 200.0,
+    default: 0.0,
+  }),
+  netPaidAmount: z.number().openapi({
+    description: "Net amount paid by the user",
+    example: 1000.0,
   }),
   senderName: z.string().openapi({
     description: "Name of the sender for the payment",
     example: "John Doe",
   }),
-  paymentStatus: z.enum(["valid", "voided"]).openapi({
-    description: "Status of the payment",
-    example: "valid",
-    default: "valid",
+  reference: z.string().nullable().optional().openapi({
+    description: "Reference number for the payment",
+    example: "1654 156 156354",
   }),
-  paidAt: z.string().openapi({
+  imageUrl: z.string().nullable().optional().openapi({
+    description: "URL of the proof of payment image",
+    example: "https://example.com/uploads/payment-proof.jpg",
+  }),
+  paymentStatus: z.enum(["pending", "valid", "invalid", "voided"]).openapi({
+    description: "Status of the payment",
+    example: "pending",
+    default: "pending",
+  }),
+  remarks: z.string().nullable().optional().openapi({
+    description: "Remarks or notes about the payment",
+    example: "Payment received successfully",
+  }),
+  createdAt: z.string().openapi({
     description: "Timestamp when the payment was made",
     example: new Date().toISOString(),
   }),
 });
 export const CreatePaymentDTO = PaymentDTO.pick({
-  transactionId: true,
+  bookingId: true,
+  paymentMethod: true,
+  tenderedAmount: true,
+  //paymentStatus: true, // TODO: relocate to partial() once admin auto validation is implemented
   senderName: true,
-  imageUrl: true,
-  mode: true,
   reference: true,
-});
-export const RefundPaymentDTO = PaymentDTO.pick({
-  transactionId: true,
-  senderName: true,
   imageUrl: true,
-  mode: true,
-  reference: true,
 });
 
 export const UpdatePaymentDTO = PaymentDTO.pick({
+  verifiedBy: true,
+  senderName: true,
+  reference: true,
+  imageUrl: true,
   paymentStatus: true,
-  // refundStatus: true,
-});
+  remarks: true,
+}).partial();
