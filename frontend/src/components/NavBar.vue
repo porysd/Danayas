@@ -25,7 +25,7 @@ function handleLoginSuccess() {
 
 const logout = () => {
   authStore.logout();
-  router.replace("/admin/admin-login");
+  router.replace("/");
 };
 
 const closeMenu = (event) => {
@@ -106,10 +106,16 @@ const Initials = computed(() => {
             >PACKAGES</router-link
           >
         </li>
-        <li>
-          <router-link to="/booking" active-class="active-route"
-            >BOOKING</router-link
-          >
+        <li class="dropper">
+          <button class="dropBtn">BOOKING</button>
+          <div class="dropdown-content">
+            <router-link to="/booking" active-class="active-route"
+              >PRIVATE BOOKING</router-link
+            >
+            <router-link to="/public-entry" active-class="active-route"
+              >PUBLIC BOOKING</router-link
+            >
+          </div>
         </li>
         <li>
           <router-link to="/faqs" active-class="active-route">FAQs</router-link>
@@ -206,7 +212,8 @@ const Initials = computed(() => {
   margin-right: 20px;
 }
 
-.nav-links ul li a {
+.nav-links ul li a,
+.dropbtn {
   text-decoration: none;
   color: rgb(52, 48, 48);
   font-size: 16px;
@@ -214,7 +221,8 @@ const Initials = computed(() => {
   transition: color 0.3s;
 }
 
-.nav-links ul li a:hover {
+.nav-links ul li a:hover,
+.dropbtn:hover {
   color: #00ab5e;
   text-decoration: underline;
 }
@@ -231,7 +239,8 @@ const Initials = computed(() => {
   color: rgb(52, 48, 48);
 }
 
-.logs:hover {
+.logs:hover,
+.dropper:hover {
   color: #00ab5e;
   text-decoration: underline;
 }
@@ -324,5 +333,46 @@ const Initials = computed(() => {
   display: flex;
   align-items: center;
   gap: 5px;
+}
+
+.dropbtn {
+  background-color: #04aa6d;
+  color: white;
+  padding: 16px;
+  font-size: 16px;
+  border: none;
+}
+
+.dropper {
+  position: relative;
+  display: inline-block;
+}
+
+.dropdown-content {
+  display: none;
+  position: absolute;
+  background-color: #f1f1f1cd;
+  min-width: 200px;
+  box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
+  z-index: 1;
+}
+
+.dropdown-content a {
+  color: black;
+  padding: 12px 16px;
+  text-decoration: none;
+  display: block;
+}
+
+.dropper-content a:hover {
+  background-color: #ddd;
+}
+
+.dropper:hover .dropdown-content {
+  display: block;
+}
+
+.dropper:hover .dropbtn {
+  background-color: #3e8e41;
 }
 </style>

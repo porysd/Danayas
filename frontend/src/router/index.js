@@ -6,6 +6,7 @@ import Home from "../pages/Home.vue";
 import AboutUs from "../pages/aboutUs.vue";
 import PackageSection from "../pages/PackageSection.vue";
 import booking from "../pages/booking.vue";
+import publicEntry from "../pages/publicEntry.vue";
 import gallery from "../pages/gallery.vue";
 import faqs from "../pages/faqs.vue";
 import ContactUs from "../pages/contactUs.vue";
@@ -43,6 +44,7 @@ const routes = [
   { path: "/home", component: Home },
   { path: "/packages", component: PackageSection },
   { path: "/booking", component: booking },
+  { path: "/public-entry", component: publicEntry },
   { path: "/faqs", component: faqs },
   { path: "/gallery", component: gallery },
   { path: "/about-us", component: AboutUs },
