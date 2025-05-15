@@ -1,7 +1,7 @@
 export const processBookingData = (bookingData: any) => {
   const toISODate = (dateStr: string) => {
     const [month, day, year] = dateStr.split("-").map(Number);
-    return new Date(Date.UTC(year, month - 1, day, 0, 0, 0)).toISOString();
+    return new Date(Date.UTC(year, month - 1, day)).toISOString().split("T")[0]; //"2025-05-14"
   };
 
   const toISODateTime = (dateStr: string, timeStr: string) => {

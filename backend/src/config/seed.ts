@@ -374,8 +374,8 @@ export default async function seed() {
             // "rescheduled",
             // "pending-cancellation",
           ]),
-          checkInDate: faker.date.past().toISOString(),
-          checkOutDate: faker.date.future().toISOString(),
+          checkInDate: faker.date.future().toISOString().split("T")[0],
+          checkOutDate: faker.date.future().toISOString().split("T")[0],
           mode: faker.helpers.arrayElement([
             "day-time",
             "night-time",
