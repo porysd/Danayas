@@ -1,0 +1,385 @@
+import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
+import { RefundDTO, CreateRefundDTO, UpdateRefundDTO } from "../dto/refundDTO";
+import db from "../config/database";
+import {
+  BookingsTable,
+  PaymentsTable,
+  RefundPaymentsTable,
+  RefundsTable,
+} from "../schemas/schema";
+import { desc, and, ne, eq, like, or } from "drizzle-orm";
+import {
+  BadRequestError,
+  ForbiddenError,
+  NotFoundError,
+} from "../utils/errors";
+import { errorHandler } from "../middlewares/errorHandler";
+import { authMiddleware } from "../middlewares/authMiddleware";
+import { verifyPermission } from "../utils/permissionUtils";
+import type { AuthContext } from "../types";
+
+const refundRoutes = new OpenAPIHono<AuthContext>();
+
+refundRoutes.use("/*", authMiddleware);
+
+refundRoutes.openapi(
+  createRoute({
+    tags: ["Refunds"],
+    summary: "Retrieve all refunds",
+    method: "get",
+    path: "/",
+    request: {
+      query: z.object({
+        limit: z.coerce.number().nonnegative().openapi({
+          example: 10,
+          description: "Number of records per page",
+        }),
+        page: z.coerce.number().nonnegative().openapi({
+          example: 1,
+          description: "Page number to retrieve",
+        }),
+      }),
+    },
+    responses: {
+      200: {
+        description: "Retrieved all refunds",
+        content: {
+          "application/json": {
+            schema: z.object({
+              total: z.number(),
+              items: RefundDTO.array(),
+            }),
+          },
+        },
+      },
+      400: {
+        description: "Invalid request",
+      },
+      404: {
+        description: "No refunds found",
+      },
+      500: {
+        description: "Internal server error",
+      },
+    },
+  }),
+  async (c) => {
+    try {
+      const userId = c.get("userId");
+      const hasPermission = await verifyPermission(userId, "REFUND", "read");
+
+      if (!hasPermission) {
+        throw new ForbiddenError("No permission to get refunds.");
+      }
+
+      const { limit, page } = c.req.valid("query");
+
+      if (limit < 1 || page < 1) {
+        throw new BadRequestError("Limit and page must be greater than 0.");
+      }
+
+      const refunds = await db.query.RefundsTable.findMany({
+        limit,
+        offset: (page - 1) * limit,
+      });
+
+      return c.json({
+        total: refunds.length,
+        items: refunds,
+      });
+    } catch (err) {
+      return errorHandler(err, c);
+    }
+  }
+);
+
+refundRoutes.openapi(
+  createRoute({
+    tags: ["Refunds"],
+    summary: "Get Refund By ID",
+    method: "get",
+    path: "/:id",
+    request: {
+      params: z.object({
+        id: z.coerce.number().openapi({ description: "Id to find" }),
+      }),
+    },
+    responses: {
+      200: {
+        description: "Successful refund retrieval",
+        content: {
+          "application/json": {
+            schema: RefundDTO,
+          },
+        },
+      },
+      400: {
+        description: "Invalid refund ID",
+      },
+      404: {
+        description: "Refund not found",
+      },
+      500: {
+        description: "Internal server error",
+      },
+    },
+  }),
+  async (c) => {
+    try {
+      const userId = c.get("userId");
+      const hasPermission = await verifyPermission(userId, "REFUND", "read");
+
+      if (!hasPermission) {
+        throw new ForbiddenError("No permission to get refund.");
+      }
+
+      const { id } = c.req.valid("param");
+
+      const dbRefund = await db.query.RefundsTable.findFirst({
+        where: eq(RefundsTable.refundId, id),
+      });
+
+      if (!dbRefund) {
+        throw new NotFoundError("Refund not found");
+      }
+
+      return c.json(dbRefund);
+    } catch (err) {
+      return errorHandler(err, c);
+    }
+  }
+);
+
+refundRoutes.openapi(
+  createRoute({
+    tags: ["Refunds"],
+    summary: "Create Refund",
+    method: "post",
+    path: "/",
+    request: {
+      body: {
+        content: {
+          "application/json": {
+            schema: CreateRefundDTO,
+          },
+        },
+      },
+    },
+    responses: {
+      201: {
+        content: {
+          "application/json": {
+            schema: RefundDTO,
+          },
+        },
+        description: "Successful refund creation",
+      },
+      400: {
+        description: "Invalid refund data",
+      },
+      500: {
+        description: "Internal server error",
+      },
+    },
+  }),
+  async (c) => {
+    try {
+      const userId = c.get("userId");
+      const hasPermission = await verifyPermission(userId, "REFUND", "create");
+
+      if (!hasPermission) {
+        throw new ForbiddenError("No permission to create refunds.");
+      }
+      const parsed = CreateRefundDTO.parse(await c.req.json());
+
+      const allValidPayments = await db.query.PaymentsTable.findMany({
+        where: and(
+          eq(PaymentsTable.bookingId, parsed.bookingId),
+          eq(PaymentsTable.paymentStatus, "valid")
+        ),
+      });
+
+      if (allValidPayments.length === 0) {
+        throw new BadRequestError("No valid payments found for the booking.");
+      }
+
+      const totalPaid = allValidPayments.reduce((sum, payment) => {
+        return sum + payment.netPaidAmount;
+      }, 0);
+      const refunded = await db.transaction(async (tx) => {
+        const refund = (
+          await tx
+            .insert(RefundsTable)
+            .values({
+              bookingId: parsed.bookingId,
+              refundAmount: totalPaid * 0.5,
+              refundStatus: "pending",
+              refundReason: parsed.refundReason,
+            })
+            .returning()
+            .execute()
+        )[0];
+
+        await Promise.all(
+          allValidPayments.map((payment) =>
+            tx
+              .insert(RefundPaymentsTable)
+              .values({
+                refundId: refund.refundId,
+                paymentId: payment.paymentId,
+                amountRefunded: payment.netPaidAmount * 0.5,
+              })
+              .returning()
+              .execute()
+          )
+        );
+        return refund;
+      });
+
+      return c.json(RefundDTO.parse(refunded), 201);
+    } catch (err) {
+      return errorHandler(err, c);
+    }
+  }
+);
+
+refundRoutes.openapi(
+  createRoute({
+    tags: ["Refunds"],
+    summary: "Update Refund by ID",
+    method: "patch",
+    path: "/:id",
+    request: {
+      body: {
+        description: "Update Refund",
+        required: true,
+        content: {
+          "application/json": { schema: UpdateRefundDTO },
+        },
+      },
+    },
+    responses: {
+      200: {
+        content: {
+          "application/json": {
+            schema: RefundDTO,
+          },
+        },
+        description: "Refund Updated Successfully",
+      },
+      400: {
+        description: "Invalid refund ID or data",
+      },
+      404: {
+        description: "Refund not found",
+      },
+      500: {
+        description: "Internal server error",
+      },
+    },
+  }),
+  async (c) => {
+    try {
+      const userId = c.get("userId");
+      const hasPermission = await verifyPermission(userId, "REFUND", "update");
+
+      if (!hasPermission) {
+        throw new ForbiddenError("No permission to update refund.");
+      }
+
+      const refundId = Number(c.req.param("id"));
+
+      if (isNaN(refundId)) {
+        throw new BadRequestError("Invalid refund ID.");
+      }
+
+      const parsed = UpdateRefundDTO.parse(await c.req.json());
+
+      const verifiedBy = parsed.verifiedBy;
+      const refundStatus = parsed.refundStatus;
+
+      const refund = await db.query.RefundsTable.findFirst({
+        where: eq(RefundsTable.refundId, refundId),
+      });
+      if (!refund) {
+        throw new NotFoundError("Refund not found.");
+      }
+
+      const updatedRefund = await db.transaction(async (tx) => {
+        if (
+          refundStatus === "completed" &&
+          refund.refundStatus !== "completed"
+        ) {
+          const booking = await tx.query.BookingsTable.findFirst({
+            where: eq(BookingsTable.bookingId, refund.bookingId),
+          });
+          if (!booking) {
+            throw new NotFoundError("Booking not found.");
+          }
+          const refundAmount = booking.amountPaid * 0.5;
+          const remainingBalance = booking.remainingBalance + refundAmount;
+          const amountPaid = booking.amountPaid - refundAmount;
+          const bookingPaymentStatus = "partially-paid";
+
+          if (parsed.refundMethod === "gcash"){
+            if (!parsed.reference || !parsed.imageUrl) {
+              throw new BadRequestError("Reference and imageUrl are required for online payments.");
+            }
+          }
+
+          const updatedBooking = await tx
+            .update(BookingsTable)
+            .set({
+              remainingBalance: remainingBalance,
+              bookingPaymentStatus: bookingPaymentStatus,
+              bookStatus: "cancelled",
+              amountPaid: amountPaid,
+            })
+            .where(eq(BookingsTable.bookingId, refund.bookingId))
+            .returning()
+            .execute();
+        }
+
+        await tx
+          .update(PaymentsTable)
+          .set({ paymentStatus: "voided", verifiedBy: userId })
+          .where(
+            and(
+              eq(PaymentsTable.bookingId, refund.bookingId),
+              eq(PaymentsTable.paymentStatus, "valid")
+            )
+          )
+          .execute();
+
+        if (refundStatus === "failed") {
+          if (!parsed.remarks) {
+            return c.json(
+              {
+                error: "Remarks are required when a refund fails.",
+              },
+              400
+            );
+          }
+        }
+
+        const result = await tx
+          .update(RefundsTable)
+          .set({ ...parsed, verifiedBy, refundStatus })
+          .where(eq(RefundsTable.refundId, refundId))
+          .returning()
+          .execute();
+
+        if (result.length === 0) {
+          throw new NotFoundError("Payment not found.");
+        }
+
+        return result[0];
+      });
+      return c.json(updatedRefund);
+    } catch (err) {
+      return errorHandler(err, c);
+    }
+  }
+);
+
+export default refundRoutes;
