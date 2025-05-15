@@ -9,6 +9,14 @@ export const BookingDTO = z.object({
     description: "The ID of the user who made the booking",
     example: 3,
   }),
+  packageId: z.number().int().openapi({
+    description: "The ID of the package selected",
+    example: 3,
+  }),
+  discountId: z.number().int().nullable().optional().openapi({
+    description: "The ID of the discount",
+    example: 2,
+  }),
   checkInDate: z.string().openapi({
     description: "The check-in date of the booking (MM-DD-YYYY)",
     example: "03-19-2025",
@@ -21,21 +29,9 @@ export const BookingDTO = z.object({
     description: "The mode of the booking",
     example: "day-time",
   }),
-  packageId: z.number().int().openapi({
-    description: "The ID of the package selected",
-    example: 3,
-  }),
-  firstName: z.string().nullable().optional().openapi({
-    description: "The first name of the person who made the booking",
-    example: "John",
-  }),
-  lastName: z.string().nullable().optional().openapi({
-    description: "The last name of the person who made the booking",
-    example: "Doe",
-  }),
-  arrivalTime: z.string().nullable().optional().openapi({
-    description: "The arrival time of the booking (HH:MM AM/PM)",
-    example: "7:00 PM",
+  reservationType: z.enum(["online", "walk-in"]).nullable().optional().openapi({
+    description: "The type of reservation",
+    example: "online",
   }),
   eventType: z.string().nullable().optional().openapi({
     description: "The type of event for the booking",
@@ -45,9 +41,64 @@ export const BookingDTO = z.object({
     description: "The number of guests expected",
     example: 50,
   }),
+  arrivalTime: z.string().nullable().optional().openapi({
+    description: "The arrival time of the booking (HH:MM AM/PM)",
+    example: "7:00 PM",
+  }),
   catering: z.coerce.boolean().nullable().optional().openapi({
     description: "Indicates whether catering is included",
     example: true,
+  }),
+  paymentTerms: z.enum(["installment", "full-payment"]).openapi({
+    description: "The payment terms of the booking",
+    example: "installment",
+  }),
+  bookingPaymentStatus: z.enum(["paid", "partially-paid", "unpaid"]).openapi({
+    description: "Booking payment status",
+    example: "unpaid",
+  }),
+  totalAmount: z.number().openapi({
+    description: "Total amount for the booking",
+    example: 15000,
+  }),
+  amountPaid: z.number().openapi({
+    description: "Amount paid so far",
+    example: 3000,
+  }),
+  remainingBalance: z.number().openapi({
+    description: "Remaining balance",
+    example: 12000,
+  }),
+  bookStatus: z.enum([
+    "pending",
+    "reserved",
+    "cancelled",
+    "completed",
+    "rescheduled",
+    "pending-cancellation",
+  ]).openapi({
+    description: "Status of the booking",
+    example: "pending",
+  }),
+  hasRescheduled: z.coerce.boolean().nullable().optional().openapi({
+    description: "Indicates whether the booking has been rescheduled",
+    example: false,
+  }),
+  cancelCategory: z.enum(["natural-disaster", "others"]).nullable().optional().openapi({
+    description: "The category of cancellation",
+    example: "others",
+  }),
+  cancelReason: z.string().nullable().optional().openapi({
+    description: "The reason for cancellation",
+    example: "Change of plans",
+  }),
+  firstName: z.string().nullable().optional().openapi({
+    description: "The first name of the person who made the booking",
+    example: "John",
+  }),
+  lastName: z.string().nullable().optional().openapi({
+    description: "The last name of the person who made the booking",
+    example: "Doe",
   }),
   contactNo: z.string().nullable().optional().openapi({
     description: "The contact number of the person who made the booking",
@@ -61,42 +112,6 @@ export const BookingDTO = z.object({
     description: "The address of the person who made the booking",
     example: "123 Main St, City, Country",
   }),
-  discountId: z.number().int().nullable().optional().openapi({
-    description: "The ID of the discount",
-    example: 2,
-  }),
-  paymentTerms: z.enum(["installment", "full-payment"]).openapi({
-    description: "The payment terms of the booking",
-    example: "installment",
-  }),
-  totalAmount: z.number().openapi({
-    description: "The total amount due for the booking",
-    example: 12000,
-  }),
-  bookStatus: z
-    .enum(["pending", "reserved", "cancelled", "completed", "rescheduled", "pending-cancellation"])
-    .nullable()
-    .optional()
-    .openapi({
-      description: "The status of the booking",
-      example: "pending",
-    }),
-  reservationType: z.enum(["online", "walk-in"]).nullable().optional().openapi({
-    description: "The type of reservation",
-    example: "online",
-  }),
-  cancelReason: z.string().nullable().optional().openapi({
-    description: "The reason for cancellation",
-    example: "Change of plans",
-  }),
-  cancelCategory: z.enum(["natural-disaster", "others"]).nullable().optional().openapi({
-    description: "The category of cancellation",
-    example: "others",
-  }),
-  hasRescheduled: z.coerce.boolean().nullable().optional().openapi({
-    description: "Indicates whether the booking has been rescheduled",
-    example: false,
-  }),
   createdAt: z.string().openapi({
     description: "The date when the booking was created",
     example: new Date().toISOString(),
@@ -105,18 +120,17 @@ export const BookingDTO = z.object({
 
 export const UpdateBookingDTO = BookingDTO.omit({
   bookingId: true,
+  userId: true,
   packageId: true,
   discountId: true,
-  createdAt: true,
-  userId: true,
-  firstName: true,
-  lastName: true,
-  contactNo: true,
-  emailAddress: true,
-  address: true,
-  paymentTerms: true,
+  bookingPaymentStatus: true,
+  paymentTerms: true, // Could maybe be updatable if customer wants to switch from full-payment to installment
   totalAmount: true,
-  reservationType: true,
+  amountPaid: true,
+  remainingBalance: true,
+  cancelReason: true,
+  cancelCategory: true,
+  createdAt: true,
 })
   .partial()
   .extend({
@@ -124,6 +138,13 @@ export const UpdateBookingDTO = BookingDTO.omit({
       .union([z.boolean(), z.number().int().min(0).max(1)])
       .transform((val) => Number(val))
       .optional(),
+    hasRescheduled: z.preprocess(
+      (val) => (val === null ? 0 : val), // Convert null to 0
+      z
+        .union([z.boolean(), z.number().int().min(0).max(1)])
+        .transform((val) => Number(val))
+        .optional()
+    ),
   });
 
 export const CreateBookingDTO = BookingDTO.omit({
@@ -133,6 +154,10 @@ export const CreateBookingDTO = BookingDTO.omit({
   bookStatus: true,
   cancelReason: true,
   cancelCategory: true,
+  amountPaid: true,
+  remainingBalance: true,
+  bookingPaymentStatus: true,
+  hasRescheduled: true,
 }).extend({
   catering: z.preprocess(
     (val) => (val === null ? 0 : val), // Convert null to 0
