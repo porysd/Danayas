@@ -300,6 +300,8 @@ bookingRoutes.openapi(
         contactNo: body.contactNo || userDetails?.contactNo || null,
         emailAddress: body.emailAddress || userDetails?.email || null,
         address: body.address || userDetails?.address || null,
+        amountPaid: 0,
+        remainingBalance: totalAmount
       };
 
       // Check for date conflicts
