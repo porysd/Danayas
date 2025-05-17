@@ -5,7 +5,7 @@ import {
   UpdatePaymentDTO,
 } from "../dto/paymentDTO";
 import db from "../config/database";
-import { BookingsTable, PaymentsTable } from "../schemas/schema";
+import { BookingsTable, PaymentsTable, UsersTable } from "../schemas/schema";
 import { desc, and, ne, eq, like, or } from "drizzle-orm";
 import {
   BadRequestError,
@@ -187,7 +187,6 @@ paymentRoutes.openapi(
   }),
   async (c) => {
     try {
-      // TODO: Auto-validating payments created by admins or staff
       const userId = c.get("userId");
       const hasPermission = await verifyPermission(userId, "PAYMENT", "create");
 
@@ -207,205 +206,90 @@ paymentRoutes.openapi(
         throw new NotFoundError("Booking not found.");
       }
 
-      if (
-        booking.bookStatus === "cancelled" ||
-        booking.bookStatus === "completed"
-      ) {
-        return c.json(
-          { error: "Cannot create payment for this booking status" },
-          400
-        );
+      if (booking.bookStatus === "cancelled" || booking.bookStatus === "completed") {
+        return c.json({ error: "Cannot create payment for this booking status" }, 400);
       }
 
-      // Check if the booking payment status is already paid
       if (booking.bookingPaymentStatus === "paid") {
         return c.json({ error: "Booking already paid" }, 400);
       }
 
-      // Gets the remaining balance from the booking
-      const remainingBalance = booking.remainingBalance;
-
-      // Check if latest payment is existing through bookingId
       const latestPayment = await db.query.PaymentsTable.findFirst({
         where: eq(PaymentsTable.bookingId, bookingId),
         orderBy: [desc(PaymentsTable.createdAt)],
       });
+
       if (latestPayment?.paymentStatus === "pending") {
         return c.json({ error: "Previous payment is still pending" }, 400);
       }
 
-      // If latest payment is existing, its either installment or extra pax/add-ons
-      if (latestPayment) {
-        if (paymentMethod === "gcash") {
-          if (!parsed.reference || !parsed.imageUrl) {
-            return c.json(
-              {
-                error:
-                  "Reference and imageUrl are required for online payments",
-              },
-              400
-            );
-          }
-          if (tenderedAmount > remainingBalance) {
-            return c.json(
-              { error: "Tendered amount is greater than the remaining balance" },
-              400
-            );
-          }
-          const created = await db
-            .insert(PaymentsTable)
-            .values({
-              ...parsed,
-              changeAmount: 0,
-              netPaidAmount: tenderedAmount,
-              paymentStatus: "pending",
-            })
-            .returning();
-          return c.json(PaymentDTO.parse(created[0]), 201);
-        } else {
-          // If paymentMethod is "cash"
-          const changeAmount = tenderedAmount - remainingBalance;
+      const user = await db.query.UsersTable.findFirst({
+        where: eq(UsersTable.userId, userId),
+      });
 
-          if (changeAmount < 0) {
-            return c.json(
-              { error: "Tendered amount is less than the remaining balance" },
-              400
-            );
-          }
-          const netPaidAmount = tenderedAmount - changeAmount;
-
-          const created = await db
-            .insert(PaymentsTable)
-            .values({
-              ...parsed,
-              tenderedAmount: tenderedAmount,
-              changeAmount: changeAmount,
-              netPaidAmount: netPaidAmount,
-              paymentStatus: "pending",
-            })
-            .returning();
-
-          return c.json(PaymentDTO.parse(created[0]), 201);
-        }
-      } else {
-        // If no previous payment exists, create a new payment record
-        const paymentTerms = booking.paymentTerms;
-        if (paymentTerms === "installment") {
-          // if gcash, reference and imageUrl is required
-          if (paymentMethod === "gcash") {
-            if (!parsed.reference || !parsed.imageUrl) {
-              return c.json(
-                {
-                  error:
-                    "Reference and imageUrl are required for online payments",
-                },
-                400
-              );
-            }
-            if (tenderedAmount > remainingBalance) {
-              return c.json(
-                { error: "Tendered amount is greater than the remaining balance" },
-                400
-              );
-            }
-            if (tenderedAmount < 2000) {
-              return c.json(
-                { error: "Minimum down payment amount is 2000" },
-                400
-              );
-            }
-
-            const created = await db
-              .insert(PaymentsTable)
-              .values({
-                ...parsed,
-                changeAmount: 0,
-                netPaidAmount: tenderedAmount,
-                paymentStatus: "pending",
-              })
-              .returning();
-            return c.json(PaymentDTO.parse(created[0]), 201);
-          } else {
-            // If paymentMethod is "cash"
-            const changeAmount = Math.max(tenderedAmount - remainingBalance, 0);
-            if (tenderedAmount < 2000) {
-              return c.json(
-                { error: "Minimum down payment amount is 2000" },
-                400
-              );
-            }
-            const netPaidAmount = tenderedAmount - changeAmount;
-
-            const created = await db
-              .insert(PaymentsTable)
-              .values({
-                ...parsed,
-                tenderedAmount: tenderedAmount,
-                changeAmount: changeAmount,
-                netPaidAmount: netPaidAmount,
-                paymentStatus: "pending",
-              })
-              .returning();
-            return c.json(PaymentDTO.parse(created[0]), 201);
-          }
-        } else {
-          // If paymentTerms is "full-payment"
-          if (
-            paymentTerms === "full-payment" &&
-            tenderedAmount < booking.totalAmount
-          ) {
-            return c.json(
-              { error: "Full payment requires paying the full amount." },
-              400
-            );
-          }
-
-          if (paymentMethod === "gcash") {
-            if (!parsed.reference || !parsed.imageUrl) {
-              return c.json(
-                {
-                  error:
-                    "Reference and imageUrl are required for online payments",
-                },
-                400
-              );
-            }
-            if (tenderedAmount > remainingBalance) {
-              return c.json(
-                { error: "Tendered amount is greater than the remaining balance" },
-                400
-              );
-            }
-
-            const created = await db
-              .insert(PaymentsTable)
-              .values({
-                ...parsed,
-                tenderedAmount: booking.totalAmount,
-                changeAmount: 0,
-                netPaidAmount: booking.totalAmount,
-                paymentStatus: "pending",
-              })
-              .returning();
-            return c.json(PaymentDTO.parse(created[0]), 201);
-          } else {
-            // If paymentMethod is "cash"
-            const changeAmount = Math.max(tenderedAmount - remainingBalance, 0);
-            const netPaidAmount = tenderedAmount - changeAmount;
-            const created = await db
-              .insert(PaymentsTable)
-              .values({
-                ...parsed,
-                tenderedAmount: tenderedAmount,
-                changeAmount: changeAmount,
-                netPaidAmount: netPaidAmount,
-                paymentStatus: "pending",
-              })
-              .returning();
-            return c.json(PaymentDTO.parse(created[0]), 201);
-          }
-        }
+      if (!user) {
+        throw new NotFoundError("User not found.");
       }
+
+      const isCustomer = user.role === "customer";
+      const isEmployee = user.role === "admin" || user.role === "staff";
+
+      const remainingBalance = booking.remainingBalance;
+      const paymentTerms = booking.paymentTerms;
+      const isInstallment = paymentTerms === "installment"
+      const isFullPayment = paymentTerms === "full-payment"
+
+      if (isFullPayment && !(tenderedAmount - booking.totalAmount === 0) && !latestPayment) {
+        return c.json({ error: "Full payment must be equal to the total amount" }, 400);
+      }
+
+      if (paymentMethod === "gcash" && (!parsed.reference || !parsed.imageUrl)) {
+        return c.json({ error: "Reference and imageUrl are required for online payments" }, 400);
+      }
+      if (paymentMethod === "cash" && (parsed.reference || parsed.imageUrl)){
+        return c.json({ error: "Reference and imageUrl are not required for cash payments"}, 400);
+      }
+  
+      if (tenderedAmount > remainingBalance) {
+        return c.json({ error: "Tendered amount is greater than the remaining balance" }, 400);
+      }
+
+      // If full payment does every extra add ons or pax required to be paid in full or not
+      if (isInstallment && tenderedAmount < 2000 && !latestPayment) {
+        return c.json({ error: "Minimum down payment amount is 2000" }, 400);
+      }
+
+      const changeAmount = Math.max(tenderedAmount - remainingBalance, 0);
+      const netPaidAmount = tenderedAmount - changeAmount;
+
+      const created = await db.transaction(async (tx) => {
+        const paymentStatus = isEmployee ? "valid" : "pending";
+        const newPayment = await tx.insert(PaymentsTable).values({
+          ...parsed,
+          tenderedAmount,
+          changeAmount,
+          netPaidAmount,
+          paymentStatus: paymentStatus,
+        }).returning();
+
+        if(isEmployee){
+          const updatedAmountPaid = booking.amountPaid + netPaidAmount;
+          const updatedRemainingBalance = booking.remainingBalance - netPaidAmount;
+          const updatedBookingPaymentStatus = updatedRemainingBalance === 0 ? "paid" : "partially-paid";
+          
+          await tx.update(BookingsTable)
+            .set({
+              amountPaid: updatedAmountPaid,
+              remainingBalance: updatedRemainingBalance,
+              bookingPaymentStatus: updatedBookingPaymentStatus,
+              bookStatus: "reserved"
+            })
+            .where(eq(BookingsTable.bookingId, bookingId))
+            .execute();
+        }
+        return newPayment[0];
+      })
+      return c.json(PaymentDTO.parse(created), 201);
     } catch (err) {
       return errorHandler(err, c);
     }

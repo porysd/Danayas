@@ -438,6 +438,9 @@ export default async function seed() {
       if(selectedBookingId.bookingPaymentStatus === "paid") {
         continue;
       }
+      if(selectedBookingId.bookStatus === "cancelled") {
+        continue;
+      }
 
       // Check if latest payment is existing through bookingId
       const latestPayment = await db.query.PaymentsTable.findFirst({
@@ -598,8 +601,13 @@ export default async function seed() {
       const bookingId = faker.helpers.arrayElement(bookings);
       const catalogAddOnId = faker.helpers.arrayElement(catalogAddOn);
 
+      const latestPayment = await db.query.PaymentsTable.findFirst({
+        where: eq(PaymentsTable.bookingId, bookingId),
+        orderBy: [desc(PaymentsTable.createdAt)],
+      });
+
       const selectedBooking = await db
-        .select({ totalAmount: BookingsTable.totalAmount })
+        .select({ totalAmount: BookingsTable.totalAmount, remainingBalance: BookingsTable.remainingBalance })
         .from(BookingsTable)
         .where(eq(BookingsTable.bookingId, bookingId))
         .then((rows) => rows[0]);
@@ -620,12 +628,13 @@ export default async function seed() {
         createdAt: faker.date.recent().toISOString(),
       });
 
+      const updatedBookingPaymentStatus = latestPayment ? "partially-paid" : "unpaid"
       const updatedBooking = await db
         .update(BookingsTable)
         .set({
           totalAmount: updatedTotalAmount, 
-          //bookingPaymentStatus: "partially-paid", 
-          remainingBalance: selectedBooking.totalAmount + price 
+          bookingPaymentStatus: updatedBookingPaymentStatus, 
+          remainingBalance: selectedBooking.remainingBalance + price 
         })
         .where(eq(BookingsTable.bookingId, bookingId))
         .returning()
