@@ -1,18 +1,9 @@
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { RefundDTO, CreateRefundDTO, UpdateRefundDTO } from "../dto/refundDTO";
 import db from "../config/database";
-import {
-  BookingsTable,
-  PaymentsTable,
-  RefundPaymentsTable,
-  RefundsTable,
-} from "../schemas/schema";
+import { BookingsTable, PaymentsTable, RefundPaymentsTable, RefundsTable, UsersTable } from "../schemas/schema";
 import { desc, and, ne, eq, like, or } from "drizzle-orm";
-import {
-  BadRequestError,
-  ForbiddenError,
-  NotFoundError,
-} from "../utils/errors";
+import { BadRequestError, ForbiddenError, NotFoundError } from "../utils/errors";
 import { errorHandler } from "../middlewares/errorHandler";
 import { authMiddleware } from "../middlewares/authMiddleware";
 import { verifyPermission } from "../utils/permissionUtils";
@@ -192,11 +183,10 @@ refundRoutes.openapi(
       }
       const parsed = CreateRefundDTO.parse(await c.req.json());
 
+
+
       const allValidPayments = await db.query.PaymentsTable.findMany({
-        where: and(
-          eq(PaymentsTable.bookingId, parsed.bookingId),
-          eq(PaymentsTable.paymentStatus, "valid")
-        ),
+        where: and(eq(PaymentsTable.bookingId, parsed.bookingId), eq(PaymentsTable.paymentStatus, "valid")),
       });
 
       if (allValidPayments.length === 0) {
@@ -206,14 +196,56 @@ refundRoutes.openapi(
       const totalPaid = allValidPayments.reduce((sum, payment) => {
         return sum + payment.netPaidAmount;
       }, 0);
+
+      if (parsed.refundMethod === "gcash" && (!parsed.reference || !parsed.imageUrl)) {
+        return c.json({ error: "Reference and imageUrl are required for online payments" }, 400);
+      }
+      if (parsed.refundMethod === "cash" && (parsed.reference || parsed.imageUrl)) {
+        return c.json({ error: "Reference and imageUrl are not required for cash payments" }, 400);
+      }
+
       const refunded = await db.transaction(async (tx) => {
+        const booking = await tx.query.BookingsTable.findFirst({
+          where: eq(BookingsTable.bookingId, parsed.bookingId),
+        });
+        if (!booking) {
+          throw new NotFoundError("Booking not found.");
+        }
+        const previousRefund = await tx.query.RefundsTable.findFirst({
+          where: and(
+            eq(RefundsTable.bookingId, parsed.bookingId),
+            eq(RefundsTable.refundStatus, "completed")
+          ),
+        })
+        if (previousRefund) {
+          throw new BadRequestError("Booking already has a refund.");
+        }
+        const refundAmount = totalPaid * 0.5;
+        const remainingBalance = booking.remainingBalance + refundAmount;
+        const amountPaid = booking.amountPaid - refundAmount;
+        const bookingPaymentStatus = "partially-paid";
+
+        const updatedBooking = await tx
+          .update(BookingsTable)
+          .set({
+            remainingBalance: remainingBalance,
+            bookingPaymentStatus: bookingPaymentStatus,
+            bookStatus: "cancelled",
+            amountPaid: amountPaid,
+          })
+          .where(eq(BookingsTable.bookingId, parsed.bookingId))
+          .returning()
+          .execute();
+
         const refund = (
           await tx
             .insert(RefundsTable)
             .values({
+              ...parsed,
               bookingId: parsed.bookingId,
-              refundAmount: totalPaid * 0.5,
-              refundStatus: "pending",
+              verifiedBy: userId,
+              refundAmount: refundAmount,
+              refundStatus: "completed",
               refundReason: parsed.refundReason,
             })
             .returning()
@@ -295,6 +327,13 @@ refundRoutes.openapi(
 
       const parsed = UpdateRefundDTO.parse(await c.req.json());
 
+      if (parsed.refundMethod === "gcash" && (!parsed.reference || !parsed.imageUrl)) {
+        return c.json({ error: "Reference and imageUrl are required for online payments" }, 400);
+      }
+      if (parsed.refundMethod === "cash" && (parsed.reference || parsed.imageUrl)) {
+        return c.json({ error: "Reference and imageUrl are not required for cash payments" }, 400);
+      }
+
       const verifiedBy = parsed.verifiedBy;
       const refundStatus = parsed.refundStatus;
 
@@ -306,26 +345,17 @@ refundRoutes.openapi(
       }
 
       const updatedRefund = await db.transaction(async (tx) => {
-        if (
-          refundStatus === "completed" &&
-          refund.refundStatus !== "completed"
-        ) {
+        if (refund.refundStatus !== "completed" && parsed.refundStatus === "completed") {
           const booking = await tx.query.BookingsTable.findFirst({
             where: eq(BookingsTable.bookingId, refund.bookingId),
           });
           if (!booking) {
             throw new NotFoundError("Booking not found.");
           }
-          const refundAmount = booking.amountPaid * 0.5;
+          const refundAmount = refund.refundAmount;
           const remainingBalance = booking.remainingBalance + refundAmount;
           const amountPaid = booking.amountPaid - refundAmount;
           const bookingPaymentStatus = "partially-paid";
-
-          if (parsed.refundMethod === "gcash"){
-            if (!parsed.reference || !parsed.imageUrl) {
-              throw new BadRequestError("Reference and imageUrl are required for online payments.");
-            }
-          }
 
           const updatedBooking = await tx
             .update(BookingsTable)
@@ -339,17 +369,6 @@ refundRoutes.openapi(
             .returning()
             .execute();
         }
-
-        await tx
-          .update(PaymentsTable)
-          .set({ paymentStatus: "voided", verifiedBy: userId })
-          .where(
-            and(
-              eq(PaymentsTable.bookingId, refund.bookingId),
-              eq(PaymentsTable.paymentStatus, "valid")
-            )
-          )
-          .execute();
 
         if (refundStatus === "failed") {
           if (!parsed.remarks) {
