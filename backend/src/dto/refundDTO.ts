@@ -53,7 +53,13 @@ export const RefundDTO = z.object({
 });
 export const CreateRefundDTO = RefundDTO.pick({
     bookingId: true,
+    verifiedBy: true,
+    refundMethod: true,
     refundReason: true,
+    senderName: true,
+    reference: true,
+    imageUrl: true,
+    remarks: true,
 });
 
 // Sender name should not be nullable on update
