@@ -1,9 +1,22 @@
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
-import { PaymentDTO, CreatePaymentDTO, UpdatePaymentDTO } from "../dto/paymentDTO";
+import {
+  PaymentDTO,
+  CreatePaymentDTO,
+  UpdatePaymentDTO,
+} from "../dto/paymentDTO";
 import db from "../config/database";
-import { BookingsTable, PaymentsTable, UsersTable } from "../schemas/schema";
+import {
+  BookingsTable,
+  PaymentsTable,
+  UsersTable,
+  PublicEntryTable,
+} from "../schemas/schema";
 import { desc, and, ne, eq, like, or } from "drizzle-orm";
-import { BadRequestError, ForbiddenError, NotFoundError } from "../utils/errors";
+import {
+  BadRequestError,
+  ForbiddenError,
+  NotFoundError,
+} from "../utils/errors";
 import { errorHandler } from "../middlewares/errorHandler";
 import { authMiddleware } from "../middlewares/authMiddleware";
 import { verifyPermission } from "../utils/permissionUtils";
@@ -187,33 +200,13 @@ paymentRoutes.openapi(
       }
 
       const parsed = CreatePaymentDTO.parse(await c.req.json());
-      const { bookingId, paymentMethod, tenderedAmount } = parsed;
-
-      // Select the booking by bookingId
-      const booking = await db.query.BookingsTable.findFirst({
-        where: eq(BookingsTable.bookingId, bookingId),
-      });
-
-      if (!booking) {
-        throw new NotFoundError("Booking not found.");
-      }
-
-      if (booking.bookStatus === "cancelled" || booking.bookStatus === "completed") {
-        return c.json({ error: "Cannot create payment for this booking status" }, 400);
-      }
-
-      if (booking.bookingPaymentStatus === "paid") {
-        return c.json({ error: "Booking already paid" }, 400);
-      }
-
-      const latestPayment = await db.query.PaymentsTable.findFirst({
-        where: eq(PaymentsTable.bookingId, bookingId),
-        orderBy: [desc(PaymentsTable.createdAt)],
-      });
-
-      if (latestPayment?.paymentStatus === "pending") {
-        return c.json({ error: "Previous payment is still pending" }, 400);
-      }
+      const {
+        bookingId,
+        publicEntryId,
+        paymentMethod,
+        tenderedAmount,
+        senderName,
+      } = parsed;
 
       const user = await db.query.UsersTable.findFirst({
         where: eq(UsersTable.userId, userId),
@@ -226,66 +219,300 @@ paymentRoutes.openapi(
       const isCustomer = user.role === "customer";
       const isEmployee = user.role === "admin" || user.role === "staff";
 
-      const remainingBalance = booking.remainingBalance;
-      const paymentTerms = booking.paymentTerms;
-      const isInstallment = paymentTerms === "installment";
-      const isFullPayment = paymentTerms === "full-payment";
+      if (bookingId) {
+        //Handle Private Booking
+        // Select the booking by bookingId
+        const booking = await db.query.BookingsTable.findFirst({
+          where: eq(BookingsTable.bookingId, bookingId),
+        });
 
-      if (isFullPayment && !(tenderedAmount - booking.totalAmount === 0) && !latestPayment) {
-        return c.json({ error: "Full payment must be equal to the total amount" }, 400);
-      }
+        if (!booking) {
+          throw new NotFoundError("Booking not found.");
+        }
 
-      if (paymentMethod === "gcash" && (!parsed.reference || !parsed.imageUrl)) {
-        return c.json({ error: "Reference and imageUrl are required for online payments" }, 400);
-      }
-      if (paymentMethod === "cash" && (parsed.reference || parsed.imageUrl)) {
-        return c.json({ error: "Reference and imageUrl are not required for cash payments" }, 400);
-      }
+        if (
+          booking.bookStatus === "cancelled" ||
+          booking.bookStatus === "completed"
+        ) {
+          return c.json(
+            { error: "Cannot create payment for this booking status" },
+            400
+          );
+        }
 
-      if (tenderedAmount > remainingBalance && paymentMethod === "gcash") {
-        return c.json({ error: "Tendered amount is greater than the remaining balance" }, 400);
-      }
+        if (booking.bookingPaymentStatus === "paid") {
+          return c.json({ error: "Booking already paid" }, 400);
+        }
 
-      // If full payment does every extra add ons or pax required to be paid in full or not
-      if (isInstallment && tenderedAmount < 2000 && !latestPayment) {
-        return c.json({ error: "Minimum down payment amount is 2000" }, 400);
-      }
+        const latestPayment = await db.query.PaymentsTable.findFirst({
+          where: eq(PaymentsTable.bookingId, bookingId),
+          orderBy: [desc(PaymentsTable.createdAt)],
+        });
 
-      const changeAmount = Math.max(tenderedAmount - remainingBalance, 0);
-      const netPaidAmount = tenderedAmount - changeAmount;
+        if (latestPayment?.paymentStatus === "pending") {
+          return c.json({ error: "Previous payment is still pending" }, 400);
+        }
 
-      const created = await db.transaction(async (tx) => {
-        const paymentStatus = isEmployee ? "valid" : "pending";
-        const newPayment = await tx
-          .insert(PaymentsTable)
-          .values({
-            ...parsed,
+        const remainingBalance = booking.remainingBalance;
+        const paymentTerms = booking.paymentTerms;
+        const isInstallment = paymentTerms === "installment";
+        const isFullPayment = paymentTerms === "full-payment";
+
+        if (
+          isFullPayment &&
+          tenderedAmount !== undefined &&
+          !(tenderedAmount - booking.totalAmount === 0) &&
+          !latestPayment
+        ) {
+          return c.json(
+            { error: "Full payment must be equal to the total amount" },
+            400
+          );
+        }
+
+        if (
+          paymentMethod === "gcash" &&
+          (!parsed.reference || !parsed.imageUrl)
+        ) {
+          return c.json(
+            {
+              error: "Reference and imageUrl are required for online payments",
+            },
+            400
+          );
+        }
+        if (paymentMethod === "cash" && (parsed.reference || parsed.imageUrl)) {
+          return c.json(
+            {
+              error:
+                "Reference and imageUrl are not required for cash payments",
+            },
+            400
+          );
+        }
+
+        if (
+          tenderedAmount !== undefined &&
+          tenderedAmount > remainingBalance &&
+          paymentMethod === "gcash"
+        ) {
+          return c.json(
+            { error: "Tendered amount is greater than the remaining balance" },
+            400
+          );
+        }
+
+        // If full payment does every extra add ons or pax required to be paid in full or not
+        if (
+          isInstallment &&
+          tenderedAmount !== undefined &&
+          tenderedAmount < 2000 &&
+          !latestPayment
+        ) {
+          return c.json({ error: "Minimum down payment amount is 2000" }, 400);
+        }
+
+        if (tenderedAmount === undefined) {
+          return c.json({ error: "Tendered amount is required" }, 400);
+        }
+        const changeAmount = Math.max(tenderedAmount - remainingBalance, 0);
+        const netPaidAmount = tenderedAmount - changeAmount;
+
+        const created = await db.transaction(async (tx) => {
+          const paymentStatus = isEmployee ? "valid" : "pending";
+          // Ensure required fields are not undefined
+          if (
+            parsed.paymentMethod === undefined ||
+            tenderedAmount === undefined ||
+            netPaidAmount === undefined
+          ) {
+            throw new BadRequestError("Missing required payment fields.");
+          }
+          const paymentData: any = {
+            bookingId: parsed.bookingId,
+            paymentMethod: parsed.paymentMethod,
+            senderName: parsed.senderName,
             tenderedAmount,
             changeAmount,
             netPaidAmount,
             paymentStatus: paymentStatus,
-          })
-          .returning();
+          };
 
-        if (isEmployee) {
-          const updatedAmountPaid = booking.amountPaid + netPaidAmount;
-          const updatedRemainingBalance = booking.remainingBalance - netPaidAmount;
-          const updatedBookingPaymentStatus = updatedRemainingBalance === 0 ? "paid" : "partially-paid";
+          const newPayment = await tx
+            .insert(PaymentsTable)
+            .values(paymentData)
+            .returning();
 
-          await tx
-            .update(BookingsTable)
-            .set({
-              amountPaid: updatedAmountPaid,
-              remainingBalance: updatedRemainingBalance,
-              bookingPaymentStatus: updatedBookingPaymentStatus,
-              bookStatus: "reserved",
-            })
-            .where(eq(BookingsTable.bookingId, bookingId))
-            .execute();
+          // For Private
+          if (isEmployee) {
+            const updatedAmountPaid = booking.amountPaid + netPaidAmount;
+            const updatedRemainingBalance =
+              booking.remainingBalance - netPaidAmount;
+            const updatedBookingPaymentStatus =
+              updatedRemainingBalance === 0 ? "paid" : "partially-paid";
+
+            await tx
+              .update(BookingsTable)
+              .set({
+                amountPaid: updatedAmountPaid,
+                remainingBalance: updatedRemainingBalance,
+                bookingPaymentStatus: updatedBookingPaymentStatus,
+                bookStatus: "reserved",
+              })
+              .where(eq(BookingsTable.bookingId, bookingId))
+              .execute();
+          }
+          return newPayment[0];
+        });
+        return c.json(PaymentDTO.parse(created), 201);
+      } else if (publicEntryId) {
+        // Handle Public Booking
+        const publics = await db.query.PublicEntryTable.findFirst({
+          where: eq(PublicEntryTable.publicEntryId, publicEntryId),
+        });
+
+        if (!publics) {
+          throw new NotFoundError("Public Entry not found.");
         }
-        return newPayment[0];
-      });
-      return c.json(PaymentDTO.parse(created), 201);
+
+        if (publics.status === "cancelled" || publics.status === "completed") {
+          return c.json(
+            { error: "Cannot create payment for this booking status" },
+            400
+          );
+        }
+
+        if (publics.publicPaymentStatus === "paid") {
+          return c.json({ error: "Public Entry already paid" }, 400);
+        }
+
+        const latestPublicPayment = await db.query.PaymentsTable.findFirst({
+          where: eq(PaymentsTable.publicEntryId, publicEntryId),
+          orderBy: [desc(PaymentsTable.createdAt)],
+        });
+
+        if (latestPublicPayment?.paymentStatus === "pending") {
+          return c.json({ error: "Previous payment is still pending" }, 400);
+        }
+
+        const publicBalance = publics.remainingBalance;
+        const publicPayterms = publics.paymentTerms;
+        const publicInstallment = publicPayterms === "installment";
+        const publicFullPayment = publicPayterms === "full-payment";
+
+        if (
+          publicFullPayment &&
+          tenderedAmount !== undefined &&
+          !(tenderedAmount - publics.totalAmount === 0) &&
+          !latestPublicPayment
+        ) {
+          return c.json(
+            { error: "Fullpayment must be equal to the total amount" },
+            400
+          );
+        }
+
+        if (
+          paymentMethod === "gcash" &&
+          (!parsed.reference || !parsed.imageUrl)
+        ) {
+          return c.json(
+            { error: "Reference and imageUrl are required for online payment" },
+            400
+          );
+        }
+        if (paymentMethod === "cash" && (parsed.reference || parsed.imageUrl)) {
+          return c.json(
+            {
+              error:
+                "Reference and imageUrl are not required for cash payments",
+            },
+            400
+          );
+        }
+
+        if (
+          tenderedAmount !== undefined &&
+          tenderedAmount > publicBalance &&
+          paymentMethod === "gcash"
+        ) {
+          return c.json(
+            { error: "Tendered amount is greater than the remaining balance" },
+            400
+          );
+        }
+
+        // If full payment does every extra add ons or pax required to be paid in full or not
+        if (
+          publicInstallment &&
+          tenderedAmount !== undefined &&
+          tenderedAmount < 200 &&
+          !latestPublicPayment
+        ) {
+          return c.json({ error: "Minimum down payment amount is 200" }, 400);
+        }
+
+        if (tenderedAmount === undefined) {
+          return c.json({ error: "Tendered amount is required" }, 400);
+        }
+        const changeAmount = Math.max(tenderedAmount - publicBalance, 0);
+        const netPaidAmount = tenderedAmount - changeAmount;
+
+        const created = await db.transaction(async (tx) => {
+          const paymentStatus = isEmployee ? "valid" : "pending";
+          // Ensure required fields are not undefined
+          if (
+            parsed.paymentMethod === undefined ||
+            tenderedAmount === undefined ||
+            netPaidAmount === undefined
+          ) {
+            throw new BadRequestError("Missing required payment fields.");
+          }
+          const paymentData: any = {
+            publicEntryId: parsed.publicEntryId,
+            paymentMethod: parsed.paymentMethod,
+            senderName: parsed.senderName,
+            tenderedAmount,
+            changeAmount,
+            netPaidAmount,
+            paymentStatus: paymentStatus,
+          };
+
+          const newPayment = await tx
+            .insert(PaymentsTable)
+            .values(paymentData)
+            .returning();
+
+          // For Public
+          if (isEmployee) {
+            const updatedAmountPaid = publics.amountPaid + netPaidAmount;
+            const updatePublicBalance =
+              publics.remainingBalance - netPaidAmount;
+            const updatePublicStatus =
+              updatePublicBalance === 0 ? "paid" : "partially-paid";
+
+            await tx
+              .update(PublicEntryTable)
+              .set({
+                amountPaid: updatedAmountPaid,
+                remainingBalance: updatePublicBalance,
+                publicPaymentStatus: updatePublicStatus,
+                status: "reserved",
+              })
+              .where(eq(PublicEntryTable.publicEntryId, publicEntryId))
+              .execute();
+          }
+
+          return newPayment[0];
+        });
+        return c.json(PaymentDTO.parse(created), 201);
+      } else {
+        // Return 400
+        return c.json(
+          { error: "Either bookingId or publicEntryId must be provided" },
+          400
+        );
+      }
     } catch (err) {
       return errorHandler(err, c);
     }
@@ -357,32 +584,75 @@ paymentRoutes.openapi(
 
       const updatedPayment = await db.transaction(async (tx) => {
         if (paymentStatus === "valid" && payment.paymentStatus !== "valid") {
-          const booking = await tx.query.BookingsTable.findFirst({
-            where: eq(BookingsTable.bookingId, payment.bookingId),
-          });
+          // Process Status in Private Booking
+          if (payment.publicEntryId == null) {
+            if (payment.bookingId == null) {
+              throw new NotFoundError("Booking not found");
+            }
 
-          if (!booking) {
-            throw new NotFoundError("Booking not found.");
+            const booking = await tx.query.BookingsTable.findFirst({
+              where: eq(BookingsTable.bookingId, payment.bookingId),
+            });
+
+            if (!booking) {
+              throw new NotFoundError("Booking not found.");
+            }
+
+            const amountPaid = booking.amountPaid + payment.netPaidAmount;
+            const remainingBalance =
+              booking.remainingBalance - payment.netPaidAmount;
+            const bookingPaymentStatus =
+              remainingBalance === 0 ? "paid" : "partially-paid";
+
+            const updatedBooking = await tx
+              .update(BookingsTable)
+              .set({
+                amountPaid: amountPaid,
+                remainingBalance: remainingBalance,
+                bookingPaymentStatus: bookingPaymentStatus,
+                bookStatus: "reserved",
+              })
+              .where(eq(BookingsTable.bookingId, payment.bookingId))
+              .returning()
+              .execute();
           }
 
-          const amountPaid = booking.amountPaid + payment.netPaidAmount;
-          const remainingBalance = booking.remainingBalance - payment.netPaidAmount;
-          const bookingPaymentStatus = remainingBalance === 0 ? "paid" : "partially-paid";
+          // Process Status in Public Entry
+          if (payment.bookingId == null) {
+            if (payment.publicEntryId == null) {
+              throw new NotFoundError(" Public not found");
+            }
+            const publics = await tx.query.PublicEntryTable.findFirst({
+              where: eq(PublicEntryTable.publicEntryId, payment.publicEntryId),
+            });
 
-          const updatedBooking = await tx
-            .update(BookingsTable)
-            .set({
-              amountPaid: amountPaid,
-              remainingBalance: remainingBalance,
-              bookingPaymentStatus: bookingPaymentStatus,
-              bookStatus: "reserved",
-            })
-            .where(eq(BookingsTable.bookingId, payment.bookingId))
-            .returning()
-            .execute();
+            if (!publics) {
+              throw new NotFoundError("Public Entry not found");
+            }
+
+            const amountPaid = publics.amountPaid + payment.netPaidAmount;
+            const remainingBalance =
+              publics.remainingBalance - payment.netPaidAmount;
+
+            const publicPaymentStatus =
+              remainingBalance === 0 ? "paid" : "partially-paid";
+
+            const updatePublic = await tx
+              .update(PublicEntryTable)
+              .set({
+                amountPaid: amountPaid,
+                remainingBalance: remainingBalance,
+                publicPaymentStatus: publicPaymentStatus,
+                status: "reserved",
+              })
+              .where(eq(PublicEntryTable.publicEntryId, payment.publicEntryId))
+              .returning()
+              .execute();
+          }
         }
 
         if (paymentStatus === "invalid") {
+          //TODO: Request another payment for customer when invalid
           if (!parsed.remarks) {
             return c.json(
               {
@@ -394,52 +664,128 @@ paymentRoutes.openapi(
         }
 
         if (paymentStatus === "voided") {
+          // TODO: Bug => when there is payment and its voided the bookStatus and status(public) will be pending but paymentStatus => partially paid or paid
           if (!parsed.remarks) {
-            return c.json({ error: "Remarks are required when voiding a payment" }, 400);
+            return c.json(
+              { error: "Remarks are required when voiding a payment" },
+              400
+            );
           }
           if (payment.paymentStatus === "valid") {
-            const booking = await tx.query.BookingsTable.findFirst({
-              where: eq(BookingsTable.bookingId, payment.bookingId),
-            });
+            if (payment.publicEntryId == null) {
+              if (payment.bookingId == null) {
+                throw new NotFoundError("Booking not Found");
+              }
+              const booking = await tx.query.BookingsTable.findFirst({
+                where: eq(BookingsTable.bookingId, payment.bookingId),
+              });
 
-            if (!booking) {
-              throw new NotFoundError("Booking not found.");
+              if (!booking) {
+                throw new NotFoundError("Booking not found.");
+              }
+              const amountPaid = booking.amountPaid - payment.netPaidAmount;
+              const remainingBalance =
+                booking.remainingBalance + payment.netPaidAmount;
+
+              let bookingPaymentStatus: "paid" | "partially-paid" | "unpaid";
+
+              if (amountPaid === 0) {
+                bookingPaymentStatus = "unpaid";
+              } else if (remainingBalance > 0) {
+                bookingPaymentStatus = "partially-paid";
+              } else {
+                bookingPaymentStatus = "paid";
+              }
+
+              let bookStatus = booking.bookStatus;
+
+              // Check if there are any other valid payments for this booking
+              const otherValidPayments = await tx.query.PaymentsTable.findMany({
+                where: and(
+                  eq(PaymentsTable.bookingId, payment.bookingId),
+                  eq(PaymentsTable.paymentStatus, "valid"),
+                  ne(PaymentsTable.paymentId, paymentId)
+                ),
+              });
+
+              if (
+                otherValidPayments.length === 0 &&
+                booking.bookStatus === "reserved"
+              ) {
+                bookStatus = "pending";
+              }
+
+              await tx
+                .update(BookingsTable)
+                .set({
+                  amountPaid: amountPaid,
+                  remainingBalance: remainingBalance,
+                  bookingPaymentStatus: bookingPaymentStatus,
+                  bookStatus: bookStatus,
+                })
+                .where(eq(BookingsTable.bookingId, payment.bookingId))
+                .execute();
             }
 
-            const amountPaid = booking.amountPaid - payment.netPaidAmount;
-            const remainingBalance = booking.remainingBalance + payment.netPaidAmount;
-            let bookingPaymentStatus: "paid" | "partially-paid" | "unpaid";
-            if (amountPaid === 0) {
-              bookingPaymentStatus = "unpaid";
-            } else if (remainingBalance > 0) {
-              bookingPaymentStatus = "partially-paid";
-            } else {
-              bookingPaymentStatus = "paid";
+            if (payment.bookingId == null) {
+              if (payment.publicEntryId == null) {
+                throw new NotFoundError("Public entry not found");
+              }
+
+              const publics = await tx.query.PublicEntryTable.findFirst({
+                where: eq(
+                  PublicEntryTable.publicEntryId,
+                  payment.publicEntryId
+                ),
+              });
+
+              if (!publics) {
+                throw new NotFoundError("Public entry not found");
+              }
+
+              const amountPaid = publics.amountPaid - payment.netPaidAmount;
+              const remainingBalance =
+                publics.remainingBalance + payment.netPaidAmount;
+
+              let publicPaymentStatus: "paid" | "partially-paid" | "unpaid";
+              if (amountPaid === 0) {
+                publicPaymentStatus = "unpaid";
+              } else if (remainingBalance > 0) {
+                publicPaymentStatus = "partially-paid";
+              } else {
+                publicPaymentStatus = "paid";
+              }
+
+              let status = publics.status;
+
+              const otherValidPayment = await tx.query.PaymentsTable.findMany({
+                where: and(
+                  eq(PaymentsTable.publicEntryId, payment.publicEntryId),
+                  eq(PaymentsTable.paymentStatus, "valid"),
+                  ne(PaymentsTable.paymentId, paymentId)
+                ),
+              });
+
+              if (
+                otherValidPayment.length === 0 &&
+                publics.status === "reserved"
+              ) {
+                status = "pending";
+              }
+
+              await tx
+                .update(PublicEntryTable)
+                .set({
+                  amountPaid: amountPaid,
+                  remainingBalance: remainingBalance,
+                  publicPaymentStatus: publicPaymentStatus,
+                  status: status,
+                })
+                .where(
+                  eq(PublicEntryTable.publicEntryId, payment.publicEntryId)
+                )
+                .execute();
             }
-
-            // If this was the only valid payment and is now voided the booking should no longer be in reserved status
-            let bookStatus = booking.bookStatus;
-
-            // Check if there are any other valid payments for this booking
-            const otherValidPayments = await tx.query.PaymentsTable.findMany({
-              where: and(eq(PaymentsTable.bookingId, payment.bookingId), eq(PaymentsTable.paymentStatus, "valid"), ne(PaymentsTable.paymentId, paymentId)),
-            });
-
-            // If no other valid payments and status is currently "reserved" revert to "pending"
-            if (otherValidPayments.length === 0 && booking.bookStatus === "reserved") {
-              bookStatus = "pending";
-            }
-
-            await tx
-              .update(BookingsTable)
-              .set({
-                amountPaid: amountPaid,
-                remainingBalance: remainingBalance,
-                bookingPaymentStatus: bookingPaymentStatus,
-                bookStatus: bookStatus,
-              })
-              .where(eq(BookingsTable.bookingId, payment.bookingId))
-              .execute();
           }
         }
 

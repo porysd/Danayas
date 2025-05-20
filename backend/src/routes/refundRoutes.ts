@@ -1,9 +1,20 @@
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { RefundDTO, CreateRefundDTO, UpdateRefundDTO } from "../dto/refundDTO";
 import db from "../config/database";
-import { BookingsTable, PaymentsTable, RefundPaymentsTable, RefundsTable, UsersTable } from "../schemas/schema";
+import {
+  BookingsTable,
+  PaymentsTable,
+  RefundPaymentsTable,
+  RefundsTable,
+  UsersTable,
+  PublicEntryTable,
+} from "../schemas/schema";
 import { desc, and, ne, eq, like, or } from "drizzle-orm";
-import { BadRequestError, ForbiddenError, NotFoundError } from "../utils/errors";
+import {
+  BadRequestError,
+  ForbiddenError,
+  NotFoundError,
+} from "../utils/errors";
 import { errorHandler } from "../middlewares/errorHandler";
 import { authMiddleware } from "../middlewares/authMiddleware";
 import { verifyPermission } from "../utils/permissionUtils";
@@ -183,92 +194,231 @@ refundRoutes.openapi(
       }
       const parsed = CreateRefundDTO.parse(await c.req.json());
 
+      const { bookingId, publicEntryId } = parsed;
 
-
-      const allValidPayments = await db.query.PaymentsTable.findMany({
-        where: and(eq(PaymentsTable.bookingId, parsed.bookingId), eq(PaymentsTable.paymentStatus, "valid")),
-      });
-
-      if (allValidPayments.length === 0) {
-        throw new BadRequestError("No valid payments found for the booking.");
-      }
-
-      const totalPaid = allValidPayments.reduce((sum, payment) => {
-        return sum + payment.netPaidAmount;
-      }, 0);
-
-      if (parsed.refundMethod === "gcash" && (!parsed.reference || !parsed.imageUrl)) {
-        return c.json({ error: "Reference and imageUrl are required for online payments" }, 400);
-      }
-      if (parsed.refundMethod === "cash" && (parsed.reference || parsed.imageUrl)) {
-        return c.json({ error: "Reference and imageUrl are not required for cash payments" }, 400);
-      }
-
-      const refunded = await db.transaction(async (tx) => {
-        const booking = await tx.query.BookingsTable.findFirst({
-          where: eq(BookingsTable.bookingId, parsed.bookingId),
-        });
-        if (!booking) {
-          throw new NotFoundError("Booking not found.");
-        }
-        const previousRefund = await tx.query.RefundsTable.findFirst({
+      if (bookingId) {
+        const allValidPayments = await db.query.PaymentsTable.findMany({
           where: and(
-            eq(RefundsTable.bookingId, parsed.bookingId),
-            eq(RefundsTable.refundStatus, "completed")
+            eq(PaymentsTable.bookingId, parsed.bookingId!),
+            eq(PaymentsTable.paymentStatus, "valid")
           ),
-        })
-        if (previousRefund) {
-          throw new BadRequestError("Booking already has a refund.");
+        });
+
+        if (allValidPayments.length === 0) {
+          throw new BadRequestError("No valid payments found for the booking.");
         }
-        const refundAmount = totalPaid * 0.5;
-        const remainingBalance = booking.remainingBalance + refundAmount;
-        const amountPaid = booking.amountPaid - refundAmount;
-        const bookingPaymentStatus = "partially-paid";
 
-        const updatedBooking = await tx
-          .update(BookingsTable)
-          .set({
-            remainingBalance: remainingBalance,
-            bookingPaymentStatus: bookingPaymentStatus,
-            bookStatus: "cancelled",
-            amountPaid: amountPaid,
-          })
-          .where(eq(BookingsTable.bookingId, parsed.bookingId))
-          .returning()
-          .execute();
+        const totalPaid = allValidPayments.reduce((sum, payment) => {
+          return sum + payment.netPaidAmount;
+        }, 0);
 
-        const refund = (
-          await tx
-            .insert(RefundsTable)
-            .values({
-              ...parsed,
-              bookingId: parsed.bookingId,
-              verifiedBy: userId,
-              refundAmount: refundAmount,
-              refundStatus: "completed",
-              refundReason: parsed.refundReason,
+        if (
+          parsed.refundMethod === "gcash" &&
+          (!parsed.reference || !parsed.imageUrl)
+        ) {
+          return c.json(
+            {
+              error: "Reference and imageUrl are required for online payments",
+            },
+            400
+          );
+        }
+        if (
+          parsed.refundMethod === "cash" &&
+          (parsed.reference || parsed.imageUrl)
+        ) {
+          return c.json(
+            {
+              error:
+                "Reference and imageUrl are not required for cash payments",
+            },
+            400
+          );
+        }
+
+        const refunded = await db.transaction(async (tx) => {
+          const booking = await tx.query.BookingsTable.findFirst({
+            where: eq(BookingsTable.bookingId, parsed.bookingId!),
+          });
+          if (!booking) {
+            throw new NotFoundError("Booking not found.");
+          }
+          const previousRefund = await tx.query.RefundsTable.findFirst({
+            where: and(
+              eq(RefundsTable.bookingId, parsed.bookingId!),
+              eq(RefundsTable.refundStatus, "completed")
+            ),
+          });
+          if (previousRefund) {
+            throw new BadRequestError("Booking already has a refund.");
+          }
+          const refundAmount = totalPaid * 0.5;
+          const remainingBalance = booking.remainingBalance + refundAmount;
+          const amountPaid = booking.amountPaid - refundAmount;
+          const bookingPaymentStatus = "partially-paid";
+
+          const updatedBooking = await tx
+            .update(BookingsTable)
+            .set({
+              remainingBalance: remainingBalance,
+              bookingPaymentStatus: bookingPaymentStatus,
+              bookStatus: "cancelled",
+              amountPaid: amountPaid,
             })
+            .where(eq(BookingsTable.bookingId, parsed.bookingId!))
             .returning()
-            .execute()
-        )[0];
+            .execute();
 
-        await Promise.all(
-          allValidPayments.map((payment) =>
-            tx
-              .insert(RefundPaymentsTable)
+          const refund = (
+            await tx
+              .insert(RefundsTable)
               .values({
-                refundId: refund.refundId,
-                paymentId: payment.paymentId,
-                amountRefunded: payment.netPaidAmount * 0.5,
+                bookingId: parsed.bookingId,
+                verifiedBy: userId,
+                refundAmount: refundAmount,
+                refundStatus: "completed",
+                refundReason: parsed.refundReason ?? "",
+                refundMethod: parsed.refundMethod,
+                reference: parsed.reference ?? "",
+                imageUrl: parsed.imageUrl ?? "",
+                remarks: parsed.remarks ?? "",
               })
               .returning()
               .execute()
-          )
-        );
-        return refund;
-      });
+          )[0];
 
-      return c.json(RefundDTO.parse(refunded), 201);
+          await Promise.all(
+            allValidPayments.map((payment) =>
+              tx
+                .insert(RefundPaymentsTable)
+                .values({
+                  refundId: refund.refundId,
+                  paymentId: payment.paymentId,
+                  amountRefunded: payment.netPaidAmount * 0.5,
+                })
+                .returning()
+                .execute()
+            )
+          );
+          return refund;
+        });
+
+        return c.json(RefundDTO.parse(refunded), 201);
+      } else if (publicEntryId) {
+        const allValidPayments = await db.query.PaymentsTable.findMany({
+          where: and(
+            eq(PaymentsTable.publicEntryId, parsed.publicEntryId!),
+            eq(PaymentsTable.paymentStatus, "valid")
+          ),
+        });
+
+        if (allValidPayments.length === 0) {
+          throw new BadRequestError("No valid payments found for the booking.");
+        }
+
+        const totalPaid = allValidPayments.reduce((sum, payment) => {
+          return sum + payment.netPaidAmount;
+        }, 0);
+
+        if (
+          parsed.refundMethod === "gcash" &&
+          (!parsed.reference || !parsed.imageUrl)
+        ) {
+          return c.json(
+            {
+              error: "Reference and imageUrl are required for online payments",
+            },
+            400
+          );
+        }
+        if (
+          parsed.refundMethod === "cash" &&
+          (parsed.reference || parsed.imageUrl)
+        ) {
+          return c.json(
+            {
+              error:
+                "Reference and imageUrl are not required for cash payments",
+            },
+            400
+          );
+        }
+
+        const refunded = await db.transaction(async (tx) => {
+          const publics = await tx.query.PublicEntryTable.findFirst({
+            where: eq(PublicEntryTable.publicEntryId, parsed.publicEntryId!),
+          });
+          if (!publics) {
+            throw new NotFoundError("Booking not found.");
+          }
+          const previousRefund = await tx.query.RefundsTable.findFirst({
+            where: and(
+              eq(RefundsTable.publicEntryId, parsed.publicEntryId!),
+              eq(RefundsTable.refundStatus, "completed")
+            ),
+          });
+          if (previousRefund) {
+            throw new BadRequestError("Booking already has a refund.");
+          }
+          const refundAmount = totalPaid * 0.5;
+          const remainingBalance = publics.remainingBalance + refundAmount;
+          const amountPaid = publics.amountPaid - refundAmount;
+          const publicPaymentStatus = "partially-paid";
+
+          const updatedBooking = await tx
+            .update(PublicEntryTable)
+            .set({
+              remainingBalance: remainingBalance,
+              publicPaymentStatus: publicPaymentStatus,
+              status: "cancelled",
+              amountPaid: amountPaid,
+            })
+            .where(eq(PublicEntryTable.publicEntryId, parsed.publicEntryId!))
+            .returning()
+            .execute();
+
+          const refund = (
+            await tx
+              .insert(RefundsTable)
+              .values({
+                publicEntryId: parsed.publicEntryId,
+                verifiedBy: userId,
+                refundAmount: refundAmount,
+                refundStatus: "completed",
+                refundReason: parsed.refundReason ?? "",
+                refundMethod: parsed.refundMethod,
+                reference: parsed.reference ?? "",
+                imageUrl: parsed.imageUrl ?? "",
+                remarks: parsed.remarks ?? "",
+              })
+              .returning()
+              .execute()
+          )[0];
+
+          await Promise.all(
+            allValidPayments.map((payment) =>
+              tx
+                .insert(RefundPaymentsTable)
+                .values({
+                  refundId: refund.refundId,
+                  paymentId: payment.paymentId,
+                  amountRefunded: payment.netPaidAmount * 0.5,
+                })
+                .returning()
+                .execute()
+            )
+          );
+          return refund;
+        });
+
+        return c.json(RefundDTO.parse(refunded), 201);
+      } else {
+        // Return 400
+        return c.json(
+          { error: "Either bookingId or publicEntryId must be provided" },
+          400
+        );
+      }
     } catch (err) {
       return errorHandler(err, c);
     }
@@ -327,11 +477,25 @@ refundRoutes.openapi(
 
       const parsed = UpdateRefundDTO.parse(await c.req.json());
 
-      if (parsed.refundMethod === "gcash" && (!parsed.reference || !parsed.imageUrl)) {
-        return c.json({ error: "Reference and imageUrl are required for online payments" }, 400);
+      if (
+        parsed.refundMethod === "gcash" &&
+        (!parsed.reference || !parsed.imageUrl)
+      ) {
+        return c.json(
+          { error: "Reference and imageUrl are required for online payments" },
+          400
+        );
       }
-      if (parsed.refundMethod === "cash" && (parsed.reference || parsed.imageUrl)) {
-        return c.json({ error: "Reference and imageUrl are not required for cash payments" }, 400);
+      if (
+        parsed.refundMethod === "cash" &&
+        (parsed.reference || parsed.imageUrl)
+      ) {
+        return c.json(
+          {
+            error: "Reference and imageUrl are not required for cash payments",
+          },
+          400
+        );
       }
 
       const verifiedBy = parsed.verifiedBy;
@@ -345,29 +509,64 @@ refundRoutes.openapi(
       }
 
       const updatedRefund = await db.transaction(async (tx) => {
-        if (refund.refundStatus !== "completed" && parsed.refundStatus === "completed") {
-          const booking = await tx.query.BookingsTable.findFirst({
-            where: eq(BookingsTable.bookingId, refund.bookingId),
-          });
-          if (!booking) {
-            throw new NotFoundError("Booking not found.");
-          }
-          const refundAmount = refund.refundAmount;
-          const remainingBalance = booking.remainingBalance + refundAmount;
-          const amountPaid = booking.amountPaid - refundAmount;
-          const bookingPaymentStatus = "partially-paid";
+        if (
+          refund.refundStatus !== "completed" &&
+          parsed.refundStatus === "completed"
+        ) {
+          if (refund.publicEntryId == null) {
+            if (refund.bookingId == null) {
+              throw new NotFoundError("Booking ID is missing for this refund.");
+            }
+            const booking = await tx.query.BookingsTable.findFirst({
+              where: eq(BookingsTable.bookingId, refund.bookingId),
+            });
+            if (!booking) {
+              throw new NotFoundError("Booking not found.");
+            }
+            const refundAmount = refund.refundAmount;
+            const remainingBalance = booking.remainingBalance + refundAmount;
+            const amountPaid = booking.amountPaid - refundAmount;
+            const bookingPaymentStatus = "partially-paid";
 
-          const updatedBooking = await tx
-            .update(BookingsTable)
-            .set({
-              remainingBalance: remainingBalance,
-              bookingPaymentStatus: bookingPaymentStatus,
-              bookStatus: "cancelled",
-              amountPaid: amountPaid,
-            })
-            .where(eq(BookingsTable.bookingId, refund.bookingId))
-            .returning()
-            .execute();
+            const updatedBooking = await tx
+              .update(BookingsTable)
+              .set({
+                remainingBalance: remainingBalance,
+                bookingPaymentStatus: bookingPaymentStatus,
+                bookStatus: "cancelled",
+                amountPaid: amountPaid,
+              })
+              .where(eq(BookingsTable.bookingId, refund.bookingId))
+              .returning()
+              .execute();
+          }
+          if (refund.bookingId == null) {
+            if (refund.publicEntryId == null) {
+              throw new NotFoundError("Public Entry ID not found");
+            }
+            const booking = await tx.query.PublicEntryTable.findFirst({
+              where: eq(PublicEntryTable.publicEntryId, refund.publicEntryId),
+            });
+            if (!booking) {
+              throw new NotFoundError("Booking not found.");
+            }
+            const refundAmount = refund.refundAmount;
+            const remainingBalance = booking.remainingBalance + refundAmount;
+            const amountPaid = booking.amountPaid - refundAmount;
+            const publicPaymentStatus = "partially-paid";
+
+            const updatedBooking = await tx
+              .update(PublicEntryTable)
+              .set({
+                remainingBalance: remainingBalance,
+                publicPaymentStatus: publicPaymentStatus,
+                status: "cancelled",
+                amountPaid: amountPaid,
+              })
+              .where(eq(PublicEntryTable.publicEntryId, refund.publicEntryId))
+              .returning()
+              .execute();
+          }
         }
 
         if (refundStatus === "failed") {
