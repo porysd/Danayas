@@ -5,8 +5,12 @@ export const PaymentDTO = z.object({
     description: "Unique identifier for the payment",
     example: 1,
   }),
-  bookingId: z.number().openapi({
+  bookingId: z.number().nullable().optional().openapi({
     description: "Unique identifier for the booking",
+    example: 1,
+  }),
+  publicEntryId: z.number().nullable().optional().openapi({
+    description: "Public Entry ID ",
     example: 1,
   }),
   verifiedBy: z.number().nullable().optional().openapi({
@@ -58,15 +62,33 @@ export const PaymentDTO = z.object({
 });
 export const CreatePaymentDTO = PaymentDTO.pick({
   bookingId: true,
+  publicEntryId: true,
   paymentMethod: true,
   tenderedAmount: true,
   //paymentStatus: true, // TODO: relocate to partial() once admin auto validation is implemented
   senderName: true,
   reference: true,
   imageUrl: true,
-});
+})
+  .partial()
+  .refine(
+    (data) => {
+      const hasBookingId = typeof data.bookingId === "number";
+      const hasPublicEntryId = typeof data.publicEntryId === "number";
+      return (
+        (hasBookingId && !hasPublicEntryId) ||
+        (!hasBookingId && hasPublicEntryId)
+      );
+    },
+    {
+      message: "You must provide exactly one of bookingId or publicEntryId",
+      path: ["bookingId", "publicEntryId"],
+    }
+  );
 
 export const UpdatePaymentDTO = PaymentDTO.pick({
+  bookingId: true,
+  publicEntryId: true,
   verifiedBy: true,
   senderName: true,
   reference: true,

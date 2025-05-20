@@ -69,25 +69,31 @@ export const BookingDTO = z.object({
     description: "Remaining balance",
     example: 12000,
   }),
-  bookStatus: z.enum([
-    "pending",
-    "reserved",
-    "cancelled",
-    "completed",
-    "rescheduled",
-    "pending-cancellation",
-  ]).openapi({
-    description: "Status of the booking",
-    example: "pending",
-  }),
+  bookStatus: z
+    .enum([
+      "pending",
+      "reserved",
+      "cancelled",
+      "completed",
+      "rescheduled",
+      "pending-cancellation",
+    ])
+    .openapi({
+      description: "Status of the booking",
+      example: "pending",
+    }),
   hasRescheduled: z.coerce.boolean().nullable().optional().openapi({
     description: "Indicates whether the booking has been rescheduled",
     example: false,
   }),
-  cancelCategory: z.enum(["natural-disaster", "others"]).nullable().optional().openapi({
-    description: "The category of cancellation",
-    example: "others",
-  }),
+  cancelCategory: z
+    .enum(["natural-disaster", "others"])
+    .nullable()
+    .optional()
+    .openapi({
+      description: "The category of cancellation",
+      example: "others",
+    }),
   cancelReason: z.string().nullable().optional().openapi({
     description: "The reason for cancellation",
     example: "Change of plans",
