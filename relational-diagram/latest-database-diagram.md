@@ -5,6 +5,7 @@ erDiagram
         int roleId PK
         string name "enum: [Administrator, Staff, Customer]"
     }
+
     USER {
         int userId PK
         string userName
@@ -24,32 +25,37 @@ erDiagram
         date startDate
         date endDate
         string category "enum: [Maintenance, Holiday, others]"
-        int createdBy "Admin or staff"
+        int createdBy FK
         timestamp createdAt
     }
 
     PUBLIC_ENTRY {
         int publicEntryId PK
         int userId FK "Staff who encoded this entry"
+        string firstName
+        string lastName
+        string contactNo
+        string address
         date entryDate "Date of entry"
-        string timeIn
-        string timeOut
         string mode "enum: [day-time, night-time]"
+        string reservationType "Online, Walk-in"
         int numAdult
         int numKids
-        double totalRate "Total charge (auto-computed)"
-        string status "enum: [active, completed, voided]"
-        string remarks
+        int adultRateId FK
+        int kidRateId FK
+        double totalRate "Auto-computed"
+        string adultGuestNames "JSON"
+        string kidGuestNames "JSON"
+        string status "enum: [active, completed]"
         timestamp createdAt
     }
 
-    PUBLIC_ENTRY_PERSON {
-        int publicEntryPersonId PK
-        int publicEntryId FK
+    PUBLIC_ENTRY_RATE {
+        int rateId PK
+        double rate
         string category "enum: [adult, kid]"
-        int quantity
-        double ratePerHead
-        double totalAmount "ratePerHead * quantity"
+        string mode "enum: [day-time, night-time]"
+        timestamp createdAt
     }
 
     PUBLIC_ENTRY_ADD_ONS {
@@ -62,17 +68,17 @@ erDiagram
 
     BOOKING {
         int bookingId PK
-        int userId FK "Admin, Customer, and Staff"
-        int packageId FK "Package Chosen"
-        int discountId FK "Nullable if no discount applied"
-        datetime checkInDate "ISO Date"
-        datetime checkOutDate "ISO Date"
+        int userId FK "Admin, Customer, or Staff"
+        int packageId FK
+        int discountId FK
+        datetime checkInDate
+        datetime checkOutDate
         string mode "enum: [day-time, night-time, whole-day, not-available]"
-        string paymentTerms "enum: [Installment or Full Payment]"
+        string paymentTerms "enum: [Installment, Full Payment]"
         string bookingPaymentStatus "enum: [unpaid, partially-paid, fully-paid]"
-        double remainingBalance "TotalAmount - amountPaid"
-        double amountPaid "Sum of all valid payments"
-        double totalAmount "Total amount that must be paid (Package + Discount + Add-Ons)"
+        double remainingBalance
+        double amountPaid
+        double totalAmount
         string bookStatus "enum: [pending, reserved, rescheduled, pending-cancellation, cancelled, completed]"
         string reservationType "Online, Walk-in"
         string arrivalTime
@@ -81,19 +87,19 @@ erDiagram
         int catering "0 or 1"
         string cancelCategory "enum: [natural-disaster, others]"
         string cancelReason
-        int hasReschedule "to have only 1 max of reschedule each booking"
-        string firstName "Nullable for Online (Customer)"
-        string lastName "Nullable for Online (Customer)"
-        string contactNo "Nullable for Online (Customer)"
-        string emailAddress "Nullable for Online (Customer)"
-        string address "Nullable for Online (Customer)"
-        timestamp createdAt "Automatically records when the booking was made"
+        int hasReschedule
+        string firstName
+        string lastName
+        string contactNo
+        string emailAddress
+        string address
+        timestamp createdAt
     }
 
     PAYMENT {
         int paymentId PK
-        int bookingId FK "nullable"
-        int publicEntryId FK "nullable"
+        int bookingId FK
+        int publicEntryId FK
         string category "enum: [booking, public-entry]"
         string paymentMethod "enum: [gcash, cash]"
         double tenderedAmount
@@ -110,15 +116,24 @@ erDiagram
 
     REFUND {
         int refundId PK
-        int paymentId FK
+        int bookingId FK
+        int publicEntryId FK
         string refundMethod "enum: [gcash, cash]"
         double refundAmount
         string refundStatus "enum: [pending, completed, failed]"
-        string refundReason "Reason for the refund (e.g., cancellation, overpayment, etc.)"
+        string refundReason
         string sendername
         string reference
         string imageUrl
-        string remarks "Additional notes or details regarding the refund"
+        string remarks
+        timestamp createdAt
+    }
+
+    REFUND_PAYMENTS {
+        int refundPaymentId PK
+        int refundID FK
+        int paymentID FK
+        double amountRefunded
         timestamp createdAt
     }
 
@@ -130,20 +145,20 @@ erDiagram
         string inclusion
         int status "enum: [active, inactive]"
         string mode "enum: [day-time, night-time, whole-day]"
-        boolean isPromo "True if this is a promo package"
-        timestamp promoStart "Promo availability start"
-        timestamp promoEnd "Promo availability end"
-        timestamp createdAt "When added"
-        timestamp updatedAt "When changes"
+        boolean isPromo
+        timestamp promoStart
+        timestamp promoEnd
+        timestamp createdAt
+        timestamp updatedAt
     }
 
     DISCOUNT {
         int discountId PK
-        string name "Senior Discount, Holiday Promo, etc."
-        double percentage "Discount percentage (e.g., 10%)"
+        string name
+        double percentage
         string typeFor "enum: [pwd, senior, student]"
         int status "enum: [active, inactive]"
-        timestamp createdAt "Automatically records"
+        timestamp createdAt
     }
 
     BOOKING_ADD_ONS {
@@ -162,24 +177,28 @@ erDiagram
         timestamp createdAt
     }
 
+    %% Fixed relationships
 
     ROLE ||--o{ USER : has
     USER ||--o{ BOOKING : makes
-    USER ||--o{ BLOCKED_DATES : makes
-    USER ||--o{ PUBLIC_ENTRY : encoded_by
+    USER ||--o{ BLOCKED_DATES : creates
+    USER ||--o{ PUBLIC_ENTRY : encodes
 
-    PUBLIC_ENTRY ||--o{ PUBLIC_ENTRY_PERSON : includes
-    PUBLIC_ENTRY ||--|{ PUBLIC_ENTRY_ADD_ONS : includes
-    PUBLIC_ENTRY_ADD_ONS }|--|| CATALOG_ADD_ON : references
-    PUBLIC_ENTRY ||--|{ PAYMENT : receives_payment
+    PUBLIC_ENTRY ||--o{ PUBLIC_ENTRY_ADD_ONS : has
+    PUBLIC_ENTRY_ADD_ONS }o--|| CATALOG_ADD_ON : references
 
-    BOOKING ||--|{ PACKAGES : includes
-    BOOKING ||--|{ PAYMENT : contains
-    PAYMENT ||--|{ REFUND : includes
-    BOOKING ||--o{ DISCOUNT : applies
-    BOOKING ||--|{ BOOKING_ADD_ONS : includes
-    BOOKING_ADD_ONS }|--|| CATALOG_ADD_ON : references
+    PUBLIC_ENTRY }o--|| PUBLIC_ENTRY_RATE : uses_adult_rate
+    PUBLIC_ENTRY }o--|| PUBLIC_ENTRY_RATE : uses_kid_rate
+    PUBLIC_ENTRY ||--o{ PAYMENT : receives
+    BOOKING ||--o{ PAYMENT : receives
+    PAYMENT ||--o{ REFUND_PAYMENTS : allocates
+    REFUND ||--o{ REFUND_PAYMENTS : issues
+    BOOKING ||--o{ REFUND : requests
+    PUBLIC_ENTRY ||--o{ REFUND : requests
 
-
+    BOOKING }o--|| PACKAGES : includes
+    BOOKING }o--|| DISCOUNT : applies
+    BOOKING ||--o{ BOOKING_ADD_ONS : has
+    BOOKING_ADD_ONS }o--|| CATALOG_ADD_ON : references
 
 ```
