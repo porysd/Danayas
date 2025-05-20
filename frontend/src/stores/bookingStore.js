@@ -6,6 +6,8 @@ import { formatDate } from "../utility/dateFormat";
 export const useBookingStore = defineStore("booking", {
   state: () => ({
     bookings: [],
+    // onlineBooking: [],
+    // walkInBooking: [],
     bookingPending: [],
     bookingReserved: [],
     bookingRescheduled: [],
@@ -98,9 +100,10 @@ export const useBookingStore = defineStore("booking", {
         packageId: Number(booking.packageId),
         numberOfGuest: Number(booking.numberOfGuest),
         discountPromoId: Number(booking.discountPromoId),
-        totalAmountDue: booking.totalAmountDue
-          ? Number(booking.totalAmountDue)
+        remainingBalance: booking.remainingBalance
+          ? Number(booking.remainingBalance)
           : 0,
+        amountPaid: booking.amountPaid ? Number(booking.amountPaid) : 0,
         catering:
           booking.catering === "true"
             ? true
