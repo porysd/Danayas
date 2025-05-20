@@ -2,6 +2,7 @@
 import { ref, onMounted, onUnmounted, computed } from "vue";
 import SearchBar from "../components/SearchBar.vue";
 import T3ButtonBooking from "../components/T3ButtonBooking.vue";
+import T3ButtonPublic from "../components/T3ButtonPublic.vue";
 import AddButtonBooking from "../components/AddButtonBooking.vue";
 import FilterButton from "../components/FilterButton.vue";
 import SideBar from "../components/SideBar.vue";
@@ -18,21 +19,18 @@ import TabPanels from "primevue/tabpanels";
 import TabPanel from "primevue/tabpanel";
 import Checkbox from "primevue/checkbox";
 import { useBookingStore } from "../../stores/bookingStore.js";
-import { usePackageStore } from "../../stores/packageStore.js";
+import { usePublicEntryStore } from "../../stores/publicEntryStore.js";
 import { usePaymentStore } from "../../stores/paymentStore.js";
-import { useTransactionStore } from "../../stores/transactionStore.js";
 import { formatPeso } from "../../utility/pesoFormat";
 import { formatDates } from "../../utility/dateFormat";
 
 const bookingStore = useBookingStore();
-const transactionStore = useTransactionStore();
-const packageStore = usePackageStore();
+const publicStore = usePublicEntryStore();
 const paymentStore = usePaymentStore();
 
 onMounted(() => {
+  publicStore.fetchAllPublic();
   bookingStore.fetchUserBookings();
-  packageStore.fetchAllPackages();
-  packageStore.fetchAllPromos();
 });
 
 const addBookingHandler = async (booking, paymentDetails) => {
@@ -69,23 +67,13 @@ const addBookingHandler = async (booking, paymentDetails) => {
 };
 
 // Upadte Booking Status by ID
-const updateBookingHandler = async (booking) => {
-  console.log("Booking payload:", booking);
-
-  // const bookingId = (booking) => {
-  //   booking.bookingId === bookingId;
-  // };
-
-  // const transactionId = await transactionStore.getTransactionById(booking);
-
-  // if (booking.bookStatus === "cancelled") {
-  //   transactionId
-  // }
-  await bookingStore.updateBookingStatus(booking);
+const updateStatusHandler = async (publics) => {
+  console.log("Booking payload:", publics);
+  await publicStore.updatePublicStatus(publics);
 };
 
-const updateBookingDateHandler = async (booking) => {
-  await bookingStore.updateBookingDates(booking);
+const updateBookingHandler = async (publics) => {
+  await publicStore.updatePublic(publics);
 };
 
 const secondPaymentHandler = async (payment) => {
@@ -93,87 +81,38 @@ const secondPaymentHandler = async (payment) => {
     const paymentData = await paymentStore.addPayment(payment);
 
     console.log("Payment successfully processed", paymentData);
-    await paymentStore.fetchPayments();
+    await fetchPayments();
   } catch (error) {
     console.error("Payment failed:", error.message);
   }
 };
 
-const totalBookings = computed(() => filteredBooking.value.length);
+const totalPublic = computed(() => filteredPublic.value.length);
 const totalPendings = computed(() => filteredPendings.value.length);
 const totalReserved = computed(() => filteredReserved.value.length);
 const totalRescheduled = computed(() => filteredRescheduled.value.length);
 const totalCancelled = computed(() => filteredCancelled.value.length);
 const totalCompleted = computed(() => filteredCompleted.value.length);
 
-// Get Package Name using packageId
-const getPackageName = (packageId) => {
-  const pkg =
-    packageStore.packages.find((p) => p.packageId === packageId) ||
-    packageStore.promos.find((p) => p.packageId === packageId);
-  return pkg ? pkg.name : "Unknown Package";
-};
-
-// // Get Payment ID === Booking ID
-// const getPaymentId = async (id) => {
-//   const bookingId = await bookingStore.getBookingById(id);
-
-//   const paymentId = await paymentStore.getPaymentById(id);
-//   const getPaymentId = paymentStore.fetchPayments(
-//     (p) => p.bookingId === bookingId
-//   );
-// };
-
 // Booking Details Modal
-const selectedBooking = ref(null);
-const bookingDetails = ref(false);
+const selectedPublic = ref(null);
+const publicDetails = ref(false);
 
-const openBookingDetails = (booking) => {
-  selectedBooking.value = booking;
-  bookingDetails.value = true;
+const openPublicDetails = (booking) => {
+  selectedPublic.value = booking;
+  publicDetails.value = true;
 };
 
 const closeModal = () => {
-  bookingDetails.value = false;
-};
-
-// Checks Severity of Status of the Booking
-const getStatusSeverity = (status) => {
-  switch (status) {
-    case "pending":
-      return "warn";
-    case "reserved":
-      return "info";
-    case "rescheduled":
-      return "secondary";
-    case "completed":
-      return "success";
-    case "cancelled":
-      return "danger";
-    default:
-      return "secondary";
-  }
-};
-
-const getPaymentStatusSeverity = (status) => {
-  switch (status) {
-    case "unpaid":
-      return "danger";
-    case "paid":
-      return "success";
-    case "partially-paid":
-      return "info";
-    default:
-      return "secondary";
-  }
+  publicDetails.value = false;
 };
 
 // Paginator or pagination of the tables
 const first = ref(0);
 const rows = ref(10);
 
-const paginatedBookings = computed(() => {
-  return filteredBooking.value.slice(first.value, first.value + rows.value);
+const paginatedPublic = computed(() => {
+  return filteredPublic.value.slice(first.value, first.value + rows.value);
 });
 
 const paginatedPendings = computed(() => {
@@ -231,8 +170,8 @@ const filterReservationType = ref({
   online: false,
   "walk-in": false,
 });
-const filteredBooking = computed(() => {
-  let result = bookingStore.bookings;
+const filteredPublic = computed(() => {
+  let result = publicStore.public;
 
   if (searchQuery.value !== "") {
     result = result.filter((booking) =>
@@ -303,7 +242,7 @@ const filteredBooking = computed(() => {
 });
 
 const filteredPendings = computed(() => {
-  let result = bookingStore.bookingPending;
+  let result = publicStore.pending;
 
   if (searchQuery.value !== "") {
     result = result.filter((booking) =>
@@ -316,7 +255,7 @@ const filteredPendings = computed(() => {
 });
 
 const filteredReserved = computed(() => {
-  let result = bookingStore.bookingReserved;
+  let result = publicStore.reserved;
 
   if (searchQuery.value !== "") {
     result = result.filter((booking) =>
@@ -329,7 +268,7 @@ const filteredReserved = computed(() => {
 });
 
 const filteredPendingCancellation = computed(() => {
-  let result = bookingStore.bookingCancellation;
+  let result = publicStore.pendingCancellation;
 
   if (searchQuery.value !== "") {
     result = result.filter((booking) =>
@@ -342,7 +281,7 @@ const filteredPendingCancellation = computed(() => {
 });
 
 const filteredCancelled = computed(() => {
-  let result = bookingStore.bookingCancelled;
+  let result = publicStore.cancelled;
 
   if (searchQuery.value !== "") {
     result = result.filter((booking) =>
@@ -355,7 +294,7 @@ const filteredCancelled = computed(() => {
 });
 
 const filteredCompleted = computed(() => {
-  let result = bookingStore.bookingCompleted;
+  let result = publicStore.completed;
 
   if (searchQuery.value !== "") {
     result = result.filter((booking) =>
@@ -368,7 +307,7 @@ const filteredCompleted = computed(() => {
 });
 
 const filteredRescheduled = computed(() => {
-  let result = bookingStore.bookingRescheduled;
+  let result = publicStore.rescheduled;
 
   if (searchQuery.value !== "") {
     result = result.filter((booking) =>
@@ -379,6 +318,38 @@ const filteredRescheduled = computed(() => {
   }
   return result;
 });
+
+// Checks Severity of Status of the Booking
+const getStatusSeverity = (status) => {
+  switch (status) {
+    case "pending":
+      return "warn";
+    case "reserved":
+      return "info";
+    case "rescheduled":
+      return "secondary";
+    case "completed":
+      return "success";
+    case "cancelled":
+      return "danger";
+    default:
+      return "secondary";
+  }
+};
+
+const getPaymentStatusSeverity = (status) => {
+  switch (status) {
+    case "unpaid":
+      return "danger";
+    case "paid":
+      return "success";
+    case "partially-paid":
+      return "info";
+    default:
+      return "secondary";
+  }
+};
+
 const hideMenu = ref(false);
 
 const closeMenu = (event) => {
@@ -401,7 +372,7 @@ onUnmounted(() => {
     <SideBar />
     <div class="container">
       <div class="headers">
-        <h1 class="text-5xl font-black">Private Booking</h1>
+        <h1 class="text-5xl font-black">Public Booking</h1>
         <div class="flex items-center gap-5">
           <DarkModeButton />
           <Notification />
@@ -612,7 +583,7 @@ onUnmounted(() => {
           </div>
           <AddButtonBooking
             class="addBtn"
-            data="Booking"
+            data="Public"
             @addBooking="addBookingHandler"
           />
         </div>
@@ -639,9 +610,10 @@ onUnmounted(() => {
                     >
                       <th>ID</th>
                       <th>NAME</th>
-                      <th>PACKAGE</th>
+                      <th>ENTRY DATE</th>
+                      <th>NO. ADULTS</th>
+                      <th>NO. KIDS</th>
                       <th>STATUS</th>
-                      <th>CHECK IN & CHECK OUT</th>
                       <th>PAY TERMS</th>
                       <th>PAYMENT STATUS</th>
                       <th>TOTAL</th>
@@ -654,65 +626,64 @@ onUnmounted(() => {
                   <tbody>
                     <tr
                       class="bRow border-[#194D1D] dark:border-[#18181b]"
-                      v-for="booking in paginatedPendings"
-                      :key="booking.id"
-                      @click="openBookingDetails(booking)"
+                      v-for="publics in paginatedPendings"
+                      :key="publics.id"
+                      @click="openPublicDetails(publics)"
                     >
-                      <td class="w-[3%]">{{ booking.bookingId }}</td>
-                      <td class="w-[13%]">
+                      <td class="w-[3%]">{{ publics.publicEntryId }}</td>
+                      <td class="w-[15%]">
                         <strong
-                          >{{ booking.firstName }}
-                          {{ booking.lastName }}</strong
+                          >{{ publics.firstName }}
+                          {{ publics.lastName }}</strong
                         >
                         <br />
-                        {{ booking.contactNo }}
+                        {{ publics.contactNo }}
                       </td>
-                      <td class="w-[15%]">
-                        {{ getPackageName(booking.packageId) }} <br />
-                        {{ booking.mode }}
+                      <td class="w-[12%]">
+                        {{ formatDates(publics.entryDate) }}
+                      </td>
+                      <td class="w-[7%]">
+                        {{ publics.numAdults }}
+                      </td>
+                      <td class="w-[7%]">
+                        {{ publics.numKids }}
                       </td>
                       <td class="w-[8%]">
                         <Tag
-                          :severity="getStatusSeverity(booking.bookStatus)"
-                          :value="booking.bookStatus"
+                          :severity="getStatusSeverity(publics.status)"
+                          :value="publics.status"
                         />
                       </td>
-                      <td class="w-[16%]">
-                        {{ formatDates(booking.checkInDate) }} to
-                        {{ formatDates(booking.checkOutDate) }}
-                      </td>
-                      <td class="w-[7%]">{{ booking.paymentTerms }}</td>
+                      <td class="w-[7%]">{{ publics.paymentTerms }}</td>
                       <td class="w-[7%]">
                         <Tag
                           :severity="
                             getPaymentStatusSeverity(
-                              booking.bookingPaymentStatus
+                              publics.publicPaymentStatus
                             )
                           "
-                          :value="booking.bookingPaymentStatus"
+                          :value="publics.publicPaymentStatus"
                         />
                       </td>
                       <td class="w-[7%]">
-                        {{ formatPeso(booking.totalAmount) }}
+                        {{ formatPeso(publics.totalAmount) }}
                       </td>
                       <td class="w-[7%]">
-                        {{ formatPeso(booking.amountPaid) }}
+                        {{ formatPeso(publics.amountPaid) }}
                       </td>
                       <td class="w-[7%]">
-                        {{ formatPeso(booking.remainingBalance) }}
+                        {{ formatPeso(publics.remainingBalance) }}
                       </td>
-                      <td class="w-[7%]">
-                        {{ formatDates(booking.createdAt) }}
+                      <td class="w-[8%]">
+                        {{ formatDates(publics.createdAt) }}
                       </td>
                       <td class="w-[5%]" @click.stop>
-                        <T3ButtonBooking
-                          :booking="booking"
-                          :payment="booking"
-                          :packageName="getPackageName(booking.packageId)"
-                          @deleteBooking="deleteBookingHandler"
-                          @updateStatus="updateBookingHandler"
-                          @updateBooking="updateBookingDateHandler"
+                        <T3ButtonPublic
+                          :publics="publics"
+                          :payment="publics"
                           @payPayment="secondPaymentHandler"
+                          @updateStatus="updateStatusHandler"
+                          @updateBooking="updateBookingHandler"
                         />
                       </td>
                     </tr>
@@ -737,9 +708,10 @@ onUnmounted(() => {
                     >
                       <th>ID</th>
                       <th>NAME</th>
-                      <th>PACKAGE</th>
+                      <th>ENTRY DATE</th>
+                      <th>NO. ADULTS</th>
+                      <th>NO. KIDS</th>
                       <th>STATUS</th>
-                      <th>CHECK IN & CHECK OUT</th>
                       <th>PAY TERMS</th>
                       <th>PAYMENT STATUS</th>
                       <th>TOTAL</th>
@@ -752,65 +724,64 @@ onUnmounted(() => {
                   <tbody>
                     <tr
                       class="bRow border-[#194D1D] dark:border-[#18181b]"
-                      v-for="booking in paginatedReserved"
-                      :key="booking.id"
-                      @click="openBookingDetails(booking)"
+                      v-for="publics in paginatedReserved"
+                      :key="publics.id"
+                      @click="openPublicDetails(publics)"
                     >
-                      <td class="w-[3%]">{{ booking.bookingId }}</td>
-                      <td class="w-[13%]">
+                      <td class="w-[3%]">{{ publics.publicEntryId }}</td>
+                      <td class="w-[15%]">
                         <strong
-                          >{{ booking.firstName }}
-                          {{ booking.lastName }}</strong
+                          >{{ publics.firstName }}
+                          {{ publics.lastName }}</strong
                         >
                         <br />
-                        {{ booking.contactNo }}
+                        {{ publics.contactNo }}
                       </td>
-                      <td class="w-[15%]">
-                        {{ getPackageName(booking.packageId) }} <br />
-                        {{ booking.mode }}
+                      <td class="w-[12%]">
+                        {{ formatDates(publics.entryDate) }}
+                      </td>
+                      <td class="w-[7%]">
+                        {{ publics.numAdults }}
+                      </td>
+                      <td class="w-[7%]">
+                        {{ publics.numKids }}
                       </td>
                       <td class="w-[8%]">
                         <Tag
-                          :severity="getStatusSeverity(booking.bookStatus)"
-                          :value="booking.bookStatus"
+                          :severity="getStatusSeverity(publics.status)"
+                          :value="publics.status"
                         />
                       </td>
-                      <td class="w-[16%]">
-                        {{ formatDates(booking.checkInDate) }} to
-                        {{ formatDates(booking.checkOutDate) }}
-                      </td>
-                      <td class="w-[7%]">{{ booking.paymentTerms }}</td>
+                      <td class="w-[7%]">{{ publics.paymentTerms }}</td>
                       <td class="w-[7%]">
                         <Tag
                           :severity="
                             getPaymentStatusSeverity(
-                              booking.bookingPaymentStatus
+                              publics.publicPaymentStatus
                             )
                           "
-                          :value="booking.bookingPaymentStatus"
+                          :value="publics.publicPaymentStatus"
                         />
                       </td>
                       <td class="w-[7%]">
-                        {{ formatPeso(booking.totalAmount) }}
+                        {{ formatPeso(publics.totalAmount) }}
                       </td>
                       <td class="w-[7%]">
-                        {{ formatPeso(booking.amountPaid) }}
+                        {{ formatPeso(publics.amountPaid) }}
                       </td>
                       <td class="w-[7%]">
-                        {{ formatPeso(booking.remainingBalance) }}
+                        {{ formatPeso(publics.remainingBalance) }}
                       </td>
-                      <td class="w-[7%]">
-                        {{ formatDates(booking.createdAt) }}
+                      <td class="w-[8%]">
+                        {{ formatDates(publics.createdAt) }}
                       </td>
                       <td class="w-[5%]" @click.stop>
-                        <T3ButtonBooking
-                          :booking="booking"
-                          :payment="booking"
-                          :packageName="getPackageName(booking.packageId)"
-                          @deleteBooking="deleteBookingHandler"
-                          @updateStatus="updateBookingHandler"
-                          @updateBooking="updateBookingDateHandler"
-                          @payPayment="secondPaymentHandler"
+                        <T3ButtonPublic
+                          :publics="publics"
+                          :payment="publics"
+                          @payBooking="secondPaymentHandler"
+                          @updateStatus="updateStatusHandler"
+                          @updateBooking="updateBookingHandler"
                         />
                       </td>
                     </tr>
@@ -835,9 +806,10 @@ onUnmounted(() => {
                     >
                       <th>ID</th>
                       <th>NAME</th>
-                      <th>PACKAGE</th>
+                      <th>ENTRY DATE</th>
+                      <th>NO. ADULTS</th>
+                      <th>NO. KIDS</th>
                       <th>STATUS</th>
-                      <th>CHECK IN & CHECK OUT</th>
                       <th>PAY TERMS</th>
                       <th>PAYMENT STATUS</th>
                       <th>TOTAL</th>
@@ -850,65 +822,64 @@ onUnmounted(() => {
                   <tbody>
                     <tr
                       class="bRow border-[#194D1D] dark:border-[#18181b]"
-                      v-for="booking in paginatedRescheduled"
-                      :key="booking.id"
-                      @click="openBookingDetails(booking)"
+                      v-for="publics in paginatedRescheduled"
+                      :key="publics.id"
+                      @click="openPublicDetails(publics)"
                     >
-                      <td class="w-[3%]">{{ booking.bookingId }}</td>
-                      <td class="w-[13%]">
+                      <td class="w-[3%]">{{ publics.publicEntryId }}</td>
+                      <td class="w-[15%]">
                         <strong
-                          >{{ booking.firstName }}
-                          {{ booking.lastName }}</strong
+                          >{{ publics.firstName }}
+                          {{ publics.lastName }}</strong
                         >
                         <br />
-                        {{ booking.contactNo }}
+                        {{ publics.contactNo }}
                       </td>
-                      <td class="w-[15%]">
-                        {{ getPackageName(booking.packageId) }} <br />
-                        {{ booking.mode }}
+                      <td class="w-[12%]">
+                        {{ formatDates(publics.entryDate) }}
+                      </td>
+                      <td class="w-[7%]">
+                        {{ publics.numAdults }}
+                      </td>
+                      <td class="w-[7%]">
+                        {{ publics.numKids }}
                       </td>
                       <td class="w-[8%]">
                         <Tag
-                          :severity="getStatusSeverity(booking.bookStatus)"
-                          :value="booking.bookStatus"
+                          :severity="getStatusSeverity(publics.status)"
+                          :value="publics.status"
                         />
                       </td>
-                      <td class="w-[16%]">
-                        {{ formatDates(booking.checkInDate) }} to
-                        {{ formatDates(booking.checkOutDate) }}
-                      </td>
-                      <td class="w-[7%]">{{ booking.paymentTerms }}</td>
+                      <td class="w-[7%]">{{ publics.paymentTerms }}</td>
                       <td class="w-[7%]">
                         <Tag
                           :severity="
                             getPaymentStatusSeverity(
-                              booking.bookingPaymentStatus
+                              publics.publicPaymentStatus
                             )
                           "
-                          :value="booking.bookingPaymentStatus"
+                          :value="publics.publicPaymentStatus"
                         />
                       </td>
                       <td class="w-[7%]">
-                        {{ formatPeso(booking.totalAmount) }}
+                        {{ formatPeso(publics.totalAmount) }}
                       </td>
                       <td class="w-[7%]">
-                        {{ formatPeso(booking.amountPaid) }}
+                        {{ formatPeso(publics.amountPaid) }}
                       </td>
                       <td class="w-[7%]">
-                        {{ formatPeso(booking.remainingBalance) }}
+                        {{ formatPeso(publics.remainingBalance) }}
                       </td>
-                      <td class="w-[7%]">
-                        {{ formatDates(booking.createdAt) }}
+                      <td class="w-[8%]">
+                        {{ formatDates(publics.createdAt) }}
                       </td>
                       <td class="w-[5%]" @click.stop>
-                        <T3ButtonBooking
-                          :booking="booking"
-                          :payment="booking"
-                          :packageName="getPackageName(booking.packageId)"
-                          @deleteBooking="deleteBookingHandler"
-                          @updateStatus="updateBookingHandler"
-                          @updateBooking="updateBookingDateHandler"
-                          @payPayment="secondPaymentHandler"
+                        <T3ButtonPublic
+                          :publics="publics"
+                          :payment="publics"
+                          @payBooking="secondPaymentHandler"
+                          @updateStatus="updateStatusHandler"
+                          @updateBooking="updateBookingHandler"
                         />
                       </td>
                     </tr>
@@ -933,9 +904,10 @@ onUnmounted(() => {
                     >
                       <th>ID</th>
                       <th>NAME</th>
-                      <th>PACKAGE</th>
+                      <th>ENTRY DATE</th>
+                      <th>NO. ADULTS</th>
+                      <th>NO. KIDS</th>
                       <th>STATUS</th>
-                      <th>CHECK IN & CHECK OUT</th>
                       <th>PAY TERMS</th>
                       <th>PAYMENT STATUS</th>
                       <th>TOTAL</th>
@@ -948,65 +920,64 @@ onUnmounted(() => {
                   <tbody>
                     <tr
                       class="bRow border-[#194D1D] dark:border-[#18181b]"
-                      v-for="booking in paginatedCancellation"
-                      :key="booking.id"
-                      @click="openBookingDetails(booking)"
+                      v-for="publics in paginatedCancellation"
+                      :key="publics.id"
+                      @click="openPublicDetails(publics)"
                     >
-                      <td class="w-[3%]">{{ booking.bookingId }}</td>
-                      <td class="w-[13%]">
+                      <td class="w-[3%]">{{ publics.publicEntryId }}</td>
+                      <td class="w-[15%]">
                         <strong
-                          >{{ booking.firstName }}
-                          {{ booking.lastName }}</strong
+                          >{{ publics.firstName }}
+                          {{ publics.lastName }}</strong
                         >
                         <br />
-                        {{ booking.contactNo }}
+                        {{ publics.contactNo }}
                       </td>
-                      <td class="w-[15%]">
-                        {{ getPackageName(booking.packageId) }} <br />
-                        {{ booking.mode }}
+                      <td class="w-[12%]">
+                        {{ formatDates(publics.entryDate) }}
+                      </td>
+                      <td class="w-[7%]">
+                        {{ publics.numAdults }}
+                      </td>
+                      <td class="w-[7%]">
+                        {{ publics.numKids }}
                       </td>
                       <td class="w-[8%]">
                         <Tag
-                          :severity="getStatusSeverity(booking.bookStatus)"
-                          :value="booking.bookStatus"
+                          :severity="getStatusSeverity(publics.status)"
+                          :value="publics.status"
                         />
                       </td>
-                      <td class="w-[16%]">
-                        {{ formatDates(booking.checkInDate) }} to
-                        {{ formatDates(booking.checkOutDate) }}
-                      </td>
-                      <td class="w-[7%]">{{ booking.paymentTerms }}</td>
+                      <td class="w-[7%]">{{ publics.paymentTerms }}</td>
                       <td class="w-[7%]">
                         <Tag
                           :severity="
                             getPaymentStatusSeverity(
-                              booking.bookingPaymentStatus
+                              publics.publicPaymentStatus
                             )
                           "
-                          :value="booking.bookingPaymentStatus"
+                          :value="publics.publicPaymentStatus"
                         />
                       </td>
                       <td class="w-[7%]">
-                        {{ formatPeso(booking.totalAmount) }}
+                        {{ formatPeso(publics.totalAmount) }}
                       </td>
                       <td class="w-[7%]">
-                        {{ formatPeso(booking.amountPaid) }}
+                        {{ formatPeso(publics.amountPaid) }}
                       </td>
                       <td class="w-[7%]">
-                        {{ formatPeso(booking.remainingBalance) }}
+                        {{ formatPeso(publics.remainingBalance) }}
                       </td>
-                      <td class="w-[7%]">
-                        {{ formatDates(booking.createdAt) }}
+                      <td class="w-[8%]">
+                        {{ formatDates(publics.createdAt) }}
                       </td>
                       <td class="w-[5%]" @click.stop>
-                        <T3ButtonBooking
-                          :booking="booking"
-                          :payment="booking"
-                          :packageName="getPackageName(booking.packageId)"
-                          @deleteBooking="deleteBookingHandler"
-                          @updateStatus="updateBookingHandler"
-                          @updateBooking="updateBookingDateHandler"
-                          @payPayment="secondPaymentHandler"
+                        <T3ButtonPublic
+                          :publics="publics"
+                          :payment="publics"
+                          @payBooking="secondPaymentHandler"
+                          @updateStatus="updateStatusHandler"
+                          @updateBooking="updateBookingHandler"
                         />
                       </td>
                     </tr>
@@ -1031,9 +1002,10 @@ onUnmounted(() => {
                     >
                       <th>ID</th>
                       <th>NAME</th>
-                      <th>PACKAGE</th>
+                      <th>ENTRY DATE</th>
+                      <th>NO. ADULTS</th>
+                      <th>NO. KIDS</th>
                       <th>STATUS</th>
-                      <th>CHECK IN & CHECK OUT</th>
                       <th>PAY TERMS</th>
                       <th>PAYMENT STATUS</th>
                       <th>TOTAL</th>
@@ -1046,65 +1018,64 @@ onUnmounted(() => {
                   <tbody>
                     <tr
                       class="bRow border-[#194D1D] dark:border-[#18181b]"
-                      v-for="booking in paginatedCancelled"
-                      :key="booking.id"
-                      @click="openBookingDetails(booking)"
+                      v-for="publics in paginatedCancelled"
+                      :key="publics.id"
+                      @click="openPublicDetails(publics)"
                     >
-                      <td class="w-[3%]">{{ booking.bookingId }}</td>
-                      <td class="w-[13%]">
+                      <td class="w-[3%]">{{ publics.publicEntryId }}</td>
+                      <td class="w-[15%]">
                         <strong
-                          >{{ booking.firstName }}
-                          {{ booking.lastName }}</strong
+                          >{{ publics.firstName }}
+                          {{ publics.lastName }}</strong
                         >
                         <br />
-                        {{ booking.contactNo }}
+                        {{ publics.contactNo }}
                       </td>
-                      <td class="w-[15%]">
-                        {{ getPackageName(booking.packageId) }} <br />
-                        {{ booking.mode }}
+                      <td class="w-[12%]">
+                        {{ formatDates(publics.entryDate) }}
+                      </td>
+                      <td class="w-[7%]">
+                        {{ publics.numAdults }}
+                      </td>
+                      <td class="w-[7%]">
+                        {{ publics.numKids }}
                       </td>
                       <td class="w-[8%]">
                         <Tag
-                          :severity="getStatusSeverity(booking.bookStatus)"
-                          :value="booking.bookStatus"
+                          :severity="getStatusSeverity(publics.status)"
+                          :value="publics.status"
                         />
                       </td>
-                      <td class="w-[16%]">
-                        {{ formatDates(booking.checkInDate) }} to
-                        {{ formatDates(booking.checkOutDate) }}
-                      </td>
-                      <td class="w-[7%]">{{ booking.paymentTerms }}</td>
+                      <td class="w-[7%]">{{ publics.paymentTerms }}</td>
                       <td class="w-[7%]">
                         <Tag
                           :severity="
                             getPaymentStatusSeverity(
-                              booking.bookingPaymentStatus
+                              publics.publicPaymentStatus
                             )
                           "
-                          :value="booking.bookingPaymentStatus"
+                          :value="publics.publicPaymentStatus"
                         />
                       </td>
                       <td class="w-[7%]">
-                        {{ formatPeso(booking.totalAmount) }}
+                        {{ formatPeso(publics.totalAmount) }}
                       </td>
                       <td class="w-[7%]">
-                        {{ formatPeso(booking.amountPaid) }}
+                        {{ formatPeso(publics.amountPaid) }}
                       </td>
                       <td class="w-[7%]">
-                        {{ formatPeso(booking.remainingBalance) }}
+                        {{ formatPeso(publics.remainingBalance) }}
                       </td>
-                      <td class="w-[7%]">
-                        {{ formatDates(booking.createdAt) }}
+                      <td class="w-[8%]">
+                        {{ formatDates(publics.createdAt) }}
                       </td>
                       <td class="w-[5%]" @click.stop>
-                        <T3ButtonBooking
-                          :booking="booking"
-                          :payment="booking"
-                          :packageName="getPackageName(booking.packageId)"
-                          @deleteBooking="deleteBookingHandler"
-                          @updateStatus="updateBookingHandler"
-                          @updateBooking="updateBookingDateHandler"
-                          @payPayment="secondPaymentHandler"
+                        <T3ButtonPublic
+                          :publics="publics"
+                          :payment="publics"
+                          @payBooking="secondPaymentHandler"
+                          @updateStatus="updateStatusHandler"
+                          @updateBooking="updateBookingHandler"
                         />
                       </td>
                     </tr>
@@ -1129,9 +1100,10 @@ onUnmounted(() => {
                     >
                       <th>ID</th>
                       <th>NAME</th>
-                      <th>PACKAGE</th>
+                      <th>ENTRY DATE</th>
+                      <th>NO. ADULTS</th>
+                      <th>NO. KIDS</th>
                       <th>STATUS</th>
-                      <th>CHECK IN & CHECK OUT</th>
                       <th>PAY TERMS</th>
                       <th>PAYMENT STATUS</th>
                       <th>TOTAL</th>
@@ -1144,65 +1116,64 @@ onUnmounted(() => {
                   <tbody>
                     <tr
                       class="bRow border-[#194D1D] dark:border-[#18181b]"
-                      v-for="booking in paginatedCompleted"
-                      :key="booking.id"
-                      @click="openBookingDetails(booking)"
+                      v-for="publics in paginatedCompleted"
+                      :key="publics.id"
+                      @click="openPublicDetails(publics)"
                     >
-                      <td class="w-[3%]">{{ booking.bookingId }}</td>
-                      <td class="w-[13%]">
+                      <td class="w-[3%]">{{ publics.publicEntryId }}</td>
+                      <td class="w-[15%]">
                         <strong
-                          >{{ booking.firstName }}
-                          {{ booking.lastName }}</strong
+                          >{{ publics.firstName }}
+                          {{ publics.lastName }}</strong
                         >
                         <br />
-                        {{ booking.contactNo }}
+                        {{ publics.contactNo }}
                       </td>
-                      <td class="w-[15%]">
-                        {{ getPackageName(booking.packageId) }} <br />
-                        {{ booking.mode }}
+                      <td class="w-[12%]">
+                        {{ formatDates(publics.entryDate) }}
+                      </td>
+                      <td class="w-[7%]">
+                        {{ publics.numAdults }}
+                      </td>
+                      <td class="w-[7%]">
+                        {{ publics.numKids }}
                       </td>
                       <td class="w-[8%]">
                         <Tag
-                          :severity="getStatusSeverity(booking.bookStatus)"
-                          :value="booking.bookStatus"
+                          :severity="getStatusSeverity(publics.status)"
+                          :value="publics.status"
                         />
                       </td>
-                      <td class="w-[16%]">
-                        {{ formatDates(booking.checkInDate) }} to
-                        {{ formatDates(booking.checkOutDate) }}
-                      </td>
-                      <td class="w-[7%]">{{ booking.paymentTerms }}</td>
+                      <td class="w-[7%]">{{ publics.paymentTerms }}</td>
                       <td class="w-[7%]">
                         <Tag
                           :severity="
                             getPaymentStatusSeverity(
-                              booking.bookingPaymentStatus
+                              publics.publicPaymentStatus
                             )
                           "
-                          :value="booking.bookingPaymentStatus"
+                          :value="publics.publicPaymentStatus"
                         />
                       </td>
                       <td class="w-[7%]">
-                        {{ formatPeso(booking.totalAmount) }}
+                        {{ formatPeso(publics.totalAmount) }}
                       </td>
                       <td class="w-[7%]">
-                        {{ formatPeso(booking.amountPaid) }}
+                        {{ formatPeso(publics.amountPaid) }}
                       </td>
                       <td class="w-[7%]">
-                        {{ formatPeso(booking.remainingBalance) }}
+                        {{ formatPeso(publics.remainingBalance) }}
                       </td>
-                      <td class="w-[7%]">
-                        {{ formatDates(booking.createdAt) }}
+                      <td class="w-[8%]">
+                        {{ formatDates(publics.createdAt) }}
                       </td>
                       <td class="w-[5%]" @click.stop>
-                        <T3ButtonBooking
-                          :booking="booking"
-                          :payment="booking"
-                          :packageName="getPackageName(booking.packageId)"
-                          @deleteBooking="deleteBookingHandler"
-                          @updateStatus="updateBookingHandler"
-                          @updateBooking="updateBookingDateHandler"
-                          @payPayment="secondPaymentHandler"
+                        <T3ButtonPublic
+                          :publics="publics"
+                          :payment="publics"
+                          @payBooking="secondPaymentHandler"
+                          @updateStatus="updateStatusHandler"
+                          @updateBooking="updateBookingHandler"
                         />
                       </td>
                     </tr>
@@ -1227,9 +1198,10 @@ onUnmounted(() => {
                     >
                       <th>ID</th>
                       <th>NAME</th>
-                      <th>PACKAGE</th>
+                      <th>ENTRY DATE</th>
+                      <th>NO. ADULTS</th>
+                      <th>NO. KIDS</th>
                       <th>STATUS</th>
-                      <th>CHECK IN & CHECK OUT</th>
                       <th>PAY TERMS</th>
                       <th>PAYMENT STATUS</th>
                       <th>TOTAL</th>
@@ -1242,65 +1214,64 @@ onUnmounted(() => {
                   <tbody>
                     <tr
                       class="bRow border-[#194D1D] dark:border-[#18181b]"
-                      v-for="booking in paginatedBookings"
-                      :key="booking.id"
-                      @click="openBookingDetails(booking)"
+                      v-for="publics in paginatedPubilc"
+                      :key="publics.id"
+                      @click="openPublicDetails(publics)"
                     >
-                      <td class="w-[3%]">{{ booking.bookingId }}</td>
-                      <td class="w-[13%]">
+                      <td class="w-[3%]">{{ publics.publicEntryId }}</td>
+                      <td class="w-[15%]">
                         <strong
-                          >{{ booking.firstName }}
-                          {{ booking.lastName }}</strong
+                          >{{ publics.firstName }}
+                          {{ publics.lastName }}</strong
                         >
                         <br />
-                        {{ booking.contactNo }}
+                        {{ publics.contactNo }}
                       </td>
-                      <td class="w-[15%]">
-                        {{ getPackageName(booking.packageId) }} <br />
-                        {{ booking.mode }}
+                      <td class="w-[12%]">
+                        {{ formatDates(publics.entryDate) }}
+                      </td>
+                      <td class="w-[7%]">
+                        {{ publics.numAdults }}
+                      </td>
+                      <td class="w-[7%]">
+                        {{ publics.numKids }}
                       </td>
                       <td class="w-[8%]">
                         <Tag
-                          :severity="getStatusSeverity(booking.bookStatus)"
-                          :value="booking.bookStatus"
+                          :severity="getStatusSeverity(publics.status)"
+                          :value="publics.status"
                         />
                       </td>
-                      <td class="w-[16%]">
-                        {{ formatDates(booking.checkInDate) }} to
-                        {{ formatDates(booking.checkOutDate) }}
-                      </td>
-                      <td class="w-[7%]">{{ booking.paymentTerms }}</td>
+                      <td class="w-[7%]">{{ publics.paymentTerms }}</td>
                       <td class="w-[7%]">
                         <Tag
                           :severity="
                             getPaymentStatusSeverity(
-                              booking.bookingPaymentStatus
+                              publics.publicPaymentStatus
                             )
                           "
-                          :value="booking.bookingPaymentStatus"
+                          :value="publics.publicPaymentStatus"
                         />
                       </td>
                       <td class="w-[7%]">
-                        {{ formatPeso(booking.totalAmount) }}
+                        {{ formatPeso(publics.totalAmount) }}
                       </td>
                       <td class="w-[7%]">
-                        {{ formatPeso(booking.amountPaid) }}
+                        {{ formatPeso(publics.amountPaid) }}
                       </td>
                       <td class="w-[7%]">
-                        {{ formatPeso(booking.remainingBalance) }}
+                        {{ formatPeso(publics.remainingBalance) }}
                       </td>
-                      <td class="w-[7%]">
-                        {{ formatDates(booking.createdAt) }}
+                      <td class="w-[8%]">
+                        {{ formatDates(publics.createdAt) }}
                       </td>
                       <td class="w-[5%]" @click.stop>
-                        <T3ButtonBooking
-                          :booking="booking"
-                          :payment="booking"
-                          :packageName="getPackageName(booking.packageId)"
-                          @deleteBooking="deleteBookingHandler"
-                          @updateStatus="updateBookingHandler"
-                          @updateBooking="updateBookingDateHandler"
-                          @payPayment="secondPaymentHandler"
+                        <T3ButtonPublic
+                          :publics="publics"
+                          :payment="publics"
+                          @payBooking="secondPaymentHandler"
+                          @updateStatus="updateStatusHandler"
+                          @updateBooking="updateBookingHandler"
                         />
                       </td>
                     </tr>
@@ -1309,7 +1280,7 @@ onUnmounted(() => {
                 <Paginator
                   :first="first"
                   :rows="rows"
-                  :totalRecords="totalBookings"
+                  :totalRecords="totalPublic"
                   :rowsPerPageOptions="[5, 10, 20, 30]"
                   @page="onPageChange"
                   class="rowPagination"
@@ -1321,56 +1292,52 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <div v-if="bookingDetails" class="modal">
+    <div v-if="publicDetails" class="modal">
       <div class="modal-content font-[Poppins]">
         <h2 class="text-xl font-bold m-auto justify-center align-center flex">
-          Booking Details
+          Public Details
         </h2>
         <Divider />
         <div>
-          <p><strong>Booking ID:</strong> {{ selectedBooking?.bookingId }}</p>
-          <p><strong>User ID:</strong> {{ selectedBooking?.userId }}</p>
+          <p><strong>Booking ID:</strong> {{ selectedPublic?.bookingId }}</p>
+          <p><strong>User ID:</strong> {{ selectedPublic?.userId }}</p>
           <p>
-            <strong>Name:</strong> {{ selectedBooking?.firstName }}
-            {{ selectedBooking?.lastName }}
+            <strong>Name:</strong> {{ selectedPublic?.firstName }}
+            {{ selectedPublic?.lastName }}
           </p>
-          <p><strong>Contact No.:</strong> {{ selectedBooking?.contactNo }}</p>
+          <p><strong>Contact No.:</strong> {{ selectedPublic?.contactNo }}</p>
           <p>
-            <strong>Email Address:</strong> {{ selectedBooking?.emailAddress }}
+            <strong>Email Address:</strong> {{ selectedPublic?.emailAddress }}
           </p>
-          <p><strong>Address:</strong> {{ selectedBooking?.address }}</p>
+          <p><strong>Address:</strong> {{ selectedPublic?.address }}</p>
+          <p><strong>Check IN:</strong> {{ selectedPublic?.checkInDate }}</p>
+          <p><strong>Check OUT:</strong> {{ selectedPublic?.checkOutDate }}</p>
+          <p><strong>Mode:</strong> {{ selectedPublic?.mode }}</p>
           <p>
-            <strong>Package Name:</strong>
-            {{ getPackageName(selectedBooking?.packageId) }}
+            <strong>Arrival Time:</strong> {{ selectedPublic?.arrivalTime }}
           </p>
-          <p><strong>Check IN:</strong> {{ selectedBooking?.checkInDate }}</p>
-          <p><strong>Check OUT:</strong> {{ selectedBooking?.checkOutDate }}</p>
-          <p><strong>Mode:</strong> {{ selectedBooking?.mode }}</p>
-          <p>
-            <strong>Arrival Time:</strong> {{ selectedBooking?.arrivalTime }}
-          </p>
-          <p><strong>Event Type:</strong> {{ selectedBooking?.eventType }}</p>
+          <p><strong>Event Type:</strong> {{ selectedPublic?.eventType }}</p>
           <p>
             <strong>Number of Guest:</strong>
-            {{ selectedBooking?.numberOfGuest }}
+            {{ selectedPublic?.numberOfGuest }}
           </p>
-          <p><strong>Catering:</strong> {{ selectedBooking?.catering }}</p>
-          <p><strong>Discount:</strong> {{ selectedBooking?.discountId }}</p>
+          <p><strong>Catering:</strong> {{ selectedPublic?.catering }}</p>
+          <p><strong>Discount:</strong> {{ selectedPublic?.discountId }}</p>
           <p>
-            <strong>Payment Terms:</strong> {{ selectedBooking?.paymentTerms }}
+            <strong>Payment Terms:</strong> {{ selectedPublic?.paymentTerms }}
           </p>
           <p>
             <strong>Total Amount Due:</strong>
-            {{ selectedBooking?.totalAmount }}
+            {{ selectedPublic?.totalAmount }}
           </p>
           <p>
-            <strong>Booking Status:</strong> {{ selectedBooking?.bookStatus }}
+            <strong>Booking Status:</strong> {{ selectedPublic?.bookStatus }}
           </p>
           <p>
             <strong>Reservation Type:</strong>
-            {{ selectedBooking?.reservationType }}
+            {{ selectedPublic?.reservationType }}
           </p>
-          <p><strong>Created At:</strong> {{ selectedBooking?.createdAt }}</p>
+          <p><strong>Created At:</strong> {{ selectedPublic?.createdAt }}</p>
         </div>
         <Divider />
         <button class="closeDetails mt-5 w-[100%]" @click="closeModal">
@@ -1385,6 +1352,7 @@ onUnmounted(() => {
 table,
 th,
 td {
+  border: 1px solid black;
 }
 .headers {
   display: flex;

@@ -3,6 +3,7 @@ import { ref, onMounted, computed, onUnmounted } from "vue";
 import SearchBar from "../components/SearchBar.vue";
 import FilterButton from "../components/FilterButton.vue";
 import T3ButtonTransaction from "../components/T3ButtonTransaction.vue";
+import T3ButtonRefund from "../components/T3ButtonRefund.vue";
 import SideBar from "../components/SideBar.vue";
 import Tag from "primevue/tag";
 import Paginator from "primevue/paginator";
@@ -19,18 +20,16 @@ import Checkbox from "primevue/checkbox";
 import { formatPeso } from "../../utility/pesoFormat.js";
 import { formatDates } from "../../utility/dateFormat.js";
 import { usePaymentStore } from "../../stores/paymentStore.js";
+import { useRefundStore } from "../../stores/refundStore.js";
 import { useTransactionStore } from "../../stores/transactionStore.js";
 import { useBookingStore } from "../../stores/bookingStore.js";
-import { usePublicEntryStore } from "../../stores/publicEntryStore.js";
 
-const paymentStore = usePaymentStore();
+const refundStore = useRefundStore();
 const bookingStore = useBookingStore();
-const publicStore = usePublicEntryStore();
 
 onMounted(() => {
-  paymentStore.fetchPayments();
+  refundStore.fetchRefunds();
   bookingStore.fetchUserBookings();
-  publicStore.fetchAllPublic();
 });
 
 const getBookingName = (bookingId) => {
@@ -38,89 +37,45 @@ const getBookingName = (bookingId) => {
   return booking ? booking.firstName + " " + booking.lastName : "Unknown";
 };
 
-const getPublicName = (publicEntryId) => {
-  const publics = publicStore.public.find(
-    (p) => p.publicEntryId === publicEntryId
-  );
-  return publics ? publics.firstName + " " + publics.lastName : "Unknown";
-};
-
 const getBalance = (bookingId) => {
   const booking = bookingStore.bookings.find((b) => b.bookingId === bookingId);
   return booking ? booking.remainingBalance : "Unknown";
 };
 
-const getPublicBalance = (publicEntryId) => {
-  const publics = publicStore.public.find(
-    (p) => p.publicEntryId === publicEntryId
-  );
-  return publics ? publics.remainingBalance : "Unknown";
+// Update Refund by ID
+const updateRefundHandler = async (refund) => {
+  await refundStore.updateRefund(refund);
 };
 
-// Update Payment by ID
-const updatePaymentHandler = async (payment) => {
-  await paymentStore.updatePayment(payment);
-};
+// Refund Details
+const selectedRefund = ref(null);
+const refundDetails = ref(false);
 
-// Payment Details
-const selectedPayment = ref(null);
-const selectedTransaction = ref(null);
-const paymentDetails = ref(false);
-const transactionDetails = ref(false);
-
-const openPaymentDetails = (payment) => {
-  selectedPayment.value = payment;
-  paymentDetails.value = true;
-};
-
-const openTransactionDetails = (transaction) => {
-  selectedTransaction.value = transaction;
-  transactionDetails.value = true;
+const openRefundDetails = (refund) => {
+  selectedRefund.value = refund;
+  refundDetails.value = true;
 };
 
 const closeModal = () => {
-  paymentDetails.value = false;
-  transactionDetails.value = false;
+  refundDetails.value = false;
 };
-
-// const getPaymentDetails = async (paymentId) => {
-//   try {
-//     const payment = await paymentStore.getPaymentById(paymentId);
-//     const transactionId = payment.transactionId;
-
-//     const transaction = await transactionStore.getTransactionById(
-//       transactionId
-//     );
-//     const booking = await bookingStore.getBookingById(transaction);
-//     const firstName = booking.firstName;
-//     const lastName = booking.lastName;
-
-//     console.log("Payment:", payment);
-//     console.log("Customer Name:", firstName, lastName);
-//   } catch (err) {
-//     console.error(err);
-//   }
-// };
 
 // Checks Severity of Status of the Payment
 const getStatusSeverity = (status) => {
   switch (status) {
     case "pending":
       return "warn";
-    case "valid":
+    case "completed":
       return "success";
-    case "invalid":
-      return "danger";
-    case "voided":
-      return "danger";
+    case "failed":
     default:
       return "secondary";
   }
 };
+
 const totalPending = computed(() => filteredPending.value.length);
-const totalPayments = computed(() => filteredPayment.value.length); // VALID
-const totalInvalid = computed(() => filteredInvalid.value.length);
-const totalVoided = computed(() => filteredVoid.value.length);
+const totalCompleted = computed(() => filteredCompleted.value.length); // VALID
+const totalFailed = computed(() => filteredFailed.value.length);
 
 const first = ref(0);
 const rows = ref(10);
@@ -129,16 +84,12 @@ const paginatedPending = computed(() => {
   return filteredPending.value.slice(first.value, first.value + rows.value);
 });
 
-const paginatedPayments = computed(() => {
-  return filteredPayment.value.slice(first.value, first.value + rows.value);
+const paginatedCompleted = computed(() => {
+  return filteredCompleted.value.slice(first.value, first.value + rows.value);
 });
 
-const paginatedInvalid = computed(() => {
-  return filteredInvalid.value.slice(first.value, first.value + rows.value);
-});
-
-const paginatedVoid = computed(() => {
-  return filteredVoid.value.slice(first.value, first.value + rows.value);
+const paginatedFailed = computed(() => {
+  return filteredFailed.value.slice(first.value, first.value + rows.value);
 });
 
 const onPageChange = (event) => {
@@ -157,7 +108,7 @@ const filterMode = ref({
 
 // PENDING
 const filteredPending = computed(() => {
-  let result = paymentStore.pending;
+  let result = refundStore.pending;
 
   if (searchQuery.value !== "") {
     result = result.filter((payment) =>
@@ -179,9 +130,9 @@ const filteredPending = computed(() => {
   return result;
 });
 
-// VALID
-const filteredPayment = computed(() => {
-  let result = paymentStore.valid;
+// COMPLETED
+const filteredCompleted = computed(() => {
+  let result = refundStore.completed;
 
   if (searchQuery.value !== "") {
     result = result.filter((payment) =>
@@ -203,33 +154,9 @@ const filteredPayment = computed(() => {
   return result;
 });
 
-// INVALID
-const filteredInvalid = computed(() => {
-  let result = paymentStore.invalid;
-
-  if (searchQuery.value !== "") {
-    result = result.filter((payment) =>
-      Object.values(payment).some((val) =>
-        String(val).toLowerCase().includes(searchQuery.value.toLowerCase())
-      )
-    );
-  }
-
-  const selectedMode = Object.keys(filterMode.value).filter(
-    (mode) => filterMode.value[mode]
-  );
-  if (selectedMode.length > 0) {
-    result = result.filter((mode) =>
-      selectedMode.includes(mode.mode.toLowerCase())
-    );
-  }
-
-  return result;
-});
-
-// VOID
-const filteredVoid = computed(() => {
-  let result = paymentStore.voided;
+// FAILED
+const filteredFailed = computed(() => {
+  let result = refundStore.failed;
 
   if (searchQuery.value !== "") {
     result = result.filter((payment) =>
@@ -273,7 +200,7 @@ onUnmounted(() => {
     <SideBar />
     <div class="container">
       <div class="headers">
-        <h1 class="text-5xl font-black">Payment Management</h1>
+        <h1 class="text-5xl font-black">Refund Management</h1>
         <div class="flex items-center gap-5">
           <DarkModeButton />
           <Notification />
@@ -323,9 +250,8 @@ onUnmounted(() => {
         <Tabs value="0">
           <TabList>
             <Tab value="0">PENDING</Tab>
-            <Tab value="1">VALID</Tab>
-            <Tab value="2">INVALID</Tab>
-            <Tab value="3">VOID</Tab>
+            <Tab value="1">COMPLETED</Tab>
+            <Tab value="2">FAILED</Tab>
           </TabList>
           <TabPanels>
             <TabPanel value="0">
@@ -336,11 +262,10 @@ onUnmounted(() => {
                       <th>ID</th>
                       <th>BOOKING ID</th>
                       <td>NAME</td>
-                      <th>PAYMENT METHOD</th>
-                      <th>AMOUNT PAID</th>
-                      <th>BALANCE</th>
-                      <th>CHANGE</th>
-                      <th>PAYMENT STATUS</th>
+                      <th>REFUND METHOD</th>
+                      <th>AMOUNT</th>
+                      <th>STATUS</th>
+                      <th>REASON</th>
                       <th>IMAGE</th>
                       <th>PAID AT</th>
                       <th></th>
@@ -349,55 +274,45 @@ onUnmounted(() => {
                   <tbody>
                     <tr
                       class="cRow"
-                      v-for="payment in paginatedPending"
-                      :key="payment.paymentId"
-                      @click="openPaymentDetails(payment)"
+                      v-for="refund in paginatedPending"
+                      :key="refund.id"
+                      @click="openRefundDetails(refund)"
                     >
-                      <td class="w-[3%]">{{ payment.paymentId }}</td>
-                      <td class="w-[5%]">{{ payment.bookingId }}</td>
+                      <td class="w-[3%]">{{ refund.refundId }}</td>
+                      <td class="w-[5%]">{{ refund.bookingId }}</td>
                       <td class="w-[15%]">
-                        {{
-                          getBookingName(payment.bookingId) ||
-                          getPublicName(payment.publicEntryId)
-                        }}
+                        {{ getBookingName(refund.bookingId) }}
                       </td>
                       <td class="w-[10%]">
-                        {{ payment.paymentMethod }}
+                        {{ refund.refundMethod }}
                       </td>
                       <td class="w-[9%]">
-                        {{ formatPeso(payment.tenderedAmount) }}
-                      </td>
-                      <td class="w-[7%]">
-                        {{
-                          formatPeso(
-                            getBalance(payment.bookingId) -
-                              payment.tenderedAmount
-                          ) &&
-                          formatPeso(
-                            getPublicBalance(payment.publicEntryId) -
-                              payment.tenderedAmount
-                          )
-                        }}
-                      </td>
-                      <td class="w-[9%]">
-                        {{ formatPeso(payment.changeAmount) }}
+                        {{ formatPeso(refund.refundAmount) }}
                       </td>
                       <td class="w-[5%]">
                         <Tag
-                          :severity="getStatusSeverity(payment.paymentStatus)"
-                          :value="payment.paymentStatus"
+                          :severity="getStatusSeverity(refund.refundStatus)"
+                          :value="refund.refundStatus"
                         />
                       </td>
-                      <td class="w-[10%]">{{ payment.imageUrl }}</td>
+                      <td class="w-[9%]">
+                        {{ refund.refundReason }}
+                      </td>
                       <td class="w-[10%]">
-                        {{ formatDates(payment.createdAt) }}
+                        <!-- {{
+                          // refund.bookingId.imageUrl ||
+                          // refund.publicEntryId.imageUrl
+                        }} -->
+                      </td>
+                      <td class="w-[10%]">
+                        {{ formatDates(refund.createdAt) }}
                       </td>
                       <td class="w-[3%]" @click.stop>
-                        <T3ButtonTransaction
-                          :payment="payment"
-                          @validPayment="updatePaymentHandler"
-                          @invalidPayment="updatePaymentHandler"
-                          @voidPayment="updatePaymentHandler"
+                        <T3ButtonRefund
+                          :refund="refund"
+                          @completedRefund="updateRefundHandler"
+                          @failedRefund="updateRefundHandler"
+                          :bookingName="getBookingName"
                         />
                       </td>
                     </tr>
@@ -422,11 +337,10 @@ onUnmounted(() => {
                       <th>ID</th>
                       <th>BOOKING ID</th>
                       <td>NAME</td>
-                      <th>PAYMENT METHOD</th>
-                      <th>AMOUNT PAID</th>
-                      <th>BALANCE</th>
-                      <th>CHANGE</th>
-                      <th>PAYMENT STATUS</th>
+                      <th>REFUND METHOD</th>
+                      <th>AMOUNT</th>
+                      <th>STATUS</th>
+                      <th>REASON</th>
                       <th>IMAGE</th>
                       <th>PAID AT</th>
                       <th></th>
@@ -435,49 +349,40 @@ onUnmounted(() => {
                   <tbody>
                     <tr
                       class="cRow"
-                      v-for="payment in paginatedPayments"
-                      :key="payment.paymentId"
-                      @click="openPaymentDetails(payment)"
+                      v-for="refund in paginatedCompleted"
+                      :key="refund.id"
+                      @click="openRefundDetails(refund)"
                     >
-                      <td class="w-[3%]">{{ payment.paymentId }}</td>
-                      <td class="w-[5%]">{{ payment.bookingId }}</td>
+                      <td class="w-[3%]">{{ refund.refundId }}</td>
+                      <td class="w-[5%]">{{ refund.bookingId }}</td>
                       <td class="w-[15%]">
-                        {{
-                          getBookingName(payment.bookingId) ||
-                          getPublicName(payment.publicEntryId)
-                        }}
+                        {{ getBookingName(refund.bookingId) }}
                       </td>
                       <td class="w-[10%]">
-                        {{ payment.paymentMethod }}
+                        {{ refund.refundMethod }}
                       </td>
                       <td class="w-[9%]">
-                        {{ formatPeso(payment.tenderedAmount) }}
-                      </td>
-                      <td class="w-[7%]">
-                        {{
-                          formatPeso(getBalance(payment.bookingId)) &&
-                          formatPeso(getPublicBalance(payment.publicEntryId))
-                        }}
-                      </td>
-                      <td class="w-[9%]">
-                        {{ formatPeso(payment.changeAmount) }}
+                        {{ formatPeso(refund.refundAmount) }}
                       </td>
                       <td class="w-[5%]">
                         <Tag
-                          :severity="getStatusSeverity(payment.paymentStatus)"
-                          :value="payment.paymentStatus"
+                          :severity="getStatusSeverity(refund.refundStatus)"
+                          :value="refund.refundStatus"
                         />
                       </td>
-                      <td class="w-[10%]">{{ payment.imageUrl }}</td>
+                      <td class="w-[9%]">
+                        {{ refund.refundReason }}
+                      </td>
+                      <td class="w-[10%]">{{ refund.bookingId.imageUrl }}</td>
                       <td class="w-[10%]">
-                        {{ formatDates(payment.createdAt) }}
+                        {{ formatDates(refund.createdAt) }}
                       </td>
                       <td class="w-[3%]" @click.stop>
-                        <T3ButtonTransaction
-                          :payment="payment"
-                          @validPayment="updatePaymentHandler"
-                          @invalidPayment="updatePaymentHandler"
-                          @voidPayment="updatePaymentHandler"
+                        <T3ButtonRefund
+                          :refund="refund"
+                          @completedRefund="updateRefundHandler"
+                          @failedRefund="updateRefundHandler"
+                          :bookingName="getBookingName"
                         />
                       </td>
                     </tr>
@@ -486,7 +391,7 @@ onUnmounted(() => {
                 <Paginator
                   :first="first"
                   :rows="rows"
-                  :totalRecords="totalPayments"
+                  :totalRecords="totalCompleted"
                   :rowsPerPageOptions="[5, 10, 20, 30]"
                   @page="onPageChange"
                   class="rowPagination"
@@ -502,11 +407,10 @@ onUnmounted(() => {
                       <th>ID</th>
                       <th>BOOKING ID</th>
                       <td>NAME</td>
-                      <th>PAYMENT METHOD</th>
-                      <th>AMOUNT PAID</th>
-                      <th>BALANCE</th>
-                      <th>CHANGE</th>
-                      <th>PAYMENT STATUS</th>
+                      <th>REFUND METHOD</th>
+                      <th>AMOUNT</th>
+                      <th>STATUS</th>
+                      <th>REASON</th>
                       <th>IMAGE</th>
                       <th>PAID AT</th>
                       <th></th>
@@ -515,49 +419,40 @@ onUnmounted(() => {
                   <tbody>
                     <tr
                       class="cRow"
-                      v-for="payment in paginatedInvalid"
-                      :key="payment.paymentId"
-                      @click="openPaymentDetails(payment)"
+                      v-for="refund in paginatedFailed"
+                      :key="refund.id"
+                      @click="openRefundDetails(refund)"
                     >
-                      <td class="w-[3%]">{{ payment.paymentId }}</td>
-                      <td class="w-[5%]">{{ payment.bookingId }}</td>
+                      <td class="w-[3%]">{{ refund.refundId }}</td>
+                      <td class="w-[5%]">{{ refund.bookingId }}</td>
                       <td class="w-[15%]">
-                        {{
-                          getBookingName(payment.bookingId) ||
-                          getPublicName(payment.publicEntryId)
-                        }}
+                        {{ getBookingName(refund.bookingId) }}
                       </td>
                       <td class="w-[10%]">
-                        {{ payment.paymentMethod }}
+                        {{ refund.refundMethod }}
                       </td>
                       <td class="w-[9%]">
-                        {{ formatPeso(payment.tenderedAmount) }}
-                      </td>
-                      <td class="w-[7%]">
-                        {{
-                          formatPeso(getBalance(payment.bookingId)) ||
-                          formatPeso(getPublicBalance(payment.publicEntryId))
-                        }}
-                      </td>
-                      <td class="w-[9%]">
-                        {{ formatPeso(payment.changeAmount) }}
+                        {{ formatPeso(refund.refundAmount) }}
                       </td>
                       <td class="w-[5%]">
                         <Tag
-                          :severity="getStatusSeverity(payment.paymentStatus)"
-                          :value="payment.paymentStatus"
+                          :severity="getStatusSeverity(refund.refundStatus)"
+                          :value="refund.refundStatus"
                         />
                       </td>
-                      <td class="w-[10%]">{{ payment.imageUrl }}</td>
+                      <td class="w-[9%]">
+                        {{ refund.refundReason }}
+                      </td>
+                      <td class="w-[10%]">{{ refund.bookingId.imageUrl }}</td>
                       <td class="w-[10%]">
-                        {{ formatDates(payment.createdAt) }}
+                        {{ formatDates(refund.createdAt) }}
                       </td>
                       <td class="w-[3%]" @click.stop>
-                        <T3ButtonTransaction
-                          :payment="payment"
-                          @validPayment="updatePaymentHandler"
-                          @invalidPayment="updatePaymentHandler"
-                          @voidPayment="updatePaymentHandler"
+                        <T3ButtonRefund
+                          :refund="refund"
+                          @completedRefund="updateRefundHandler"
+                          @failedRefund="updateRefundHandler"
+                          :bookingName="getBookingName"
                         />
                       </td>
                     </tr>
@@ -566,87 +461,7 @@ onUnmounted(() => {
                 <Paginator
                   :first="first"
                   :rows="rows"
-                  :totalRecords="totalInvalid"
-                  :rowsPerPageOptions="[5, 10, 20, 30]"
-                  @page="onPageChange"
-                  class="rowPagination"
-                />
-              </div>
-            </TabPanel>
-
-            <TabPanel value="3">
-              <div class="tableContainer">
-                <table class="dTable">
-                  <thead>
-                    <tr class="header-style">
-                      <th>ID</th>
-                      <th>BOOKING ID</th>
-                      <td>NAME</td>
-                      <th>PAYMENT METHOD</th>
-                      <th>AMOUNT PAID</th>
-                      <th>BALANCE</th>
-                      <th>CHANGE</th>
-                      <th>PAYMENT STATUS</th>
-                      <th>IMAGE</th>
-                      <th>PAID AT</th>
-                      <th></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr
-                      class="cRow"
-                      v-for="payment in paginatedVoid"
-                      :key="payment.paymentId"
-                      @click="openPaymentDetails(payment)"
-                    >
-                      <td class="w-[3%]">{{ payment.paymentId }}</td>
-                      <td class="w-[5%]">{{ payment.bookingId }}</td>
-                      <td class="w-[15%]">
-                        {{
-                          getBookingName(payment.bookingId) ||
-                          getPublicName(payment.publicEntryId)
-                        }}
-                      </td>
-                      <td class="w-[10%]">
-                        {{ payment.paymentMethod }}
-                      </td>
-                      <td class="w-[9%]">
-                        {{ formatPeso(payment.tenderedAmount) }}
-                      </td>
-                      <td class="w-[7%]">
-                        {{
-                          formatPeso(getBalance(payment.bookingId)) ||
-                          formatPeso(getPublicBalance(payment.publicEntryId))
-                        }}
-                      </td>
-                      <td class="w-[9%]">
-                        {{ formatPeso(payment.changeAmount) }}
-                      </td>
-                      <td class="w-[5%]">
-                        <Tag
-                          :severity="getStatusSeverity(payment.paymentStatus)"
-                          :value="payment.paymentStatus"
-                        />
-                      </td>
-                      <td class="w-[10%]">{{ payment.imageUrl }}</td>
-                      <td class="w-[10%]">
-                        {{ formatDates(payment.createdAt) }}
-                      </td>
-                      <td class="w-[3%]" @click.stop>
-                        <T3ButtonTransaction
-                          :payment="payment"
-                          @validPayment="updatePaymentHandler"
-                          @invalidPayment="updatePaymentHandler"
-                          @voidPayment="updatePaymentHandler"
-                        />
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-                <Paginator
-                  :first="first"
-                  :rows="rows"
-                  :totalRecords="totalVoided"
+                  :totalRecords="totalFailed"
                   :rowsPerPageOptions="[5, 10, 20, 30]"
                   @page="onPageChange"
                   class="rowPagination"
@@ -658,38 +473,42 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <div v-if="paymentDetails" class="modal">
+    <div v-if="refundDetails" class="modal">
       <div class="modal-content font-[Poppins]">
         <h2 class="text-xl font-bold m-auto justify-center align-center flex">
-          Payment Details
+          Refund Details
         </h2>
         <Divider />
         <div class="flex flex-col gap-2">
-          <p><strong>Payment ID:</strong> {{ selectedPayment?.paymentId }}</p>
+          <p><strong>Refund ID:</strong> {{ selectedRefund?.refundId }}</p>
           <p>
-            <strong>Transaction ID:</strong>
-            {{ selectedPayment?.transactionId }}
+            <strong>Booking ID:</strong>
+            {{ selectedRefund?.bookingId }}
           </p>
           <p>
             <strong>Name:</strong>
-            {{ getBookingName(selectedPayment?.transactionId) }}
+            {{ getBookingName(selectedRefund?.bookingId) }}
           </p>
           <p>
-            <strong>Downpayment Amount: </strong
-            >{{ formatPeso(selectedPayment?.downPaymentAmount) }}
+            <strong>Refund Method: </strong>{{ selectedRefund?.refundMethod }}
           </p>
           <p>
-            <strong>Amount Paid:</strong>
-            {{ formatPeso(selectedPayment?.amountPaid) }}
-          </p>
-          <p><strong>Mode:</strong> {{ selectedPayment?.mode }}</p>
-          <p><strong>Reference: </strong>{{ selectedPayment?.reference }}</p>
-          <p>
-            <strong>Payment Status: </strong
-            >{{ selectedPayment?.paymentStatus }}
+            <strong>Refund Amount:</strong>
+            {{ formatPeso(selectedRefund?.refundAmount) }}
           </p>
           <p>
-            <strong>Paid At: </strong>{{ formatDates(selectedPayment?.paidAt) }}
+            <strong>Refund Status:</strong> {{ selectedRefund?.refundStatus }}
+          </p>
+          <p><strong>Reason: </strong>{{ selectedRefund?.refundReason }}</p>
+          <p><strong>Sender Name: </strong>{{ selectedRefund?.senderName }}</p>
+          <p><strong>Reference: </strong>{{ selectedRefund?.reference }}</p>
+          <p>
+            <strong>Proof of Refund: </strong>{{ selectedRefund?.imageUrl }}
+          </p>
+          <p><strong>Remarks: </strong>{{ selectedRefund?.remarks }}</p>
+          <p>
+            <strong>Paid At: </strong
+            >{{ formatDates(selectedRefund?.createdAt) }}
           </p>
           <Divider />
           <button class="closeDetails mt-5 w-[100%]" @click="closeModal">

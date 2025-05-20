@@ -40,7 +40,7 @@ const login = async () => {
     console.log("Login response data:", data);
     if (response.ok) {
       const { accessToken, refreshToken, user } = data;
-
+      // TODO: add roles
       authStore.setUser(user);
       console.log("User data:", authStore.user);
       authStore.setAccessToken(accessToken);
