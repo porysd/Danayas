@@ -17,6 +17,7 @@ import {
   NotFoundError,
 } from "../utils/errors";
 import { dateConflicts } from "../utils/dateConflict";
+import { getActiveRateId } from "../utils/activeRate";
 import { errorHandler } from "../middlewares/errorHandler";
 import { authMiddleware } from "../middlewares/authMiddleware";
 import { verifyPermission } from "../utils/permissionUtils";
@@ -281,7 +282,7 @@ publicEntryRoutes.openapi(
         }
       }
 
-      const { adultRateId, kidRateId, numAdults, numKids, discountId } = body;
+      const { numAdults, numKids, discountId, mode } = body;
 
       let discountPercent = 0;
 
@@ -296,17 +297,14 @@ publicEntryRoutes.openapi(
         discountPercent = discount.percentage ?? 0;
       }
 
+      const adultRateId = await getActiveRateId("adult", mode);
+      const kidRateId = await getActiveRateId("kid", mode);
+
       const adultRate = await db.query.PublicEntryRateTable.findFirst({
-        where: and(
-          eq(PublicEntryRateTable.rateId, adultRateId),
-          eq(PublicEntryRateTable.category, "adult")
-        ),
+        where: eq(PublicEntryRateTable.rateId, adultRateId),
       });
       const kidRate = await db.query.PublicEntryRateTable.findFirst({
-        where: and(
-          eq(PublicEntryRateTable.rateId, kidRateId),
-          eq(PublicEntryRateTable.category, "kid")
-        ),
+        where: and(eq(PublicEntryRateTable.rateId, kidRateId)),
       });
 
       const totalRate =
@@ -318,6 +316,8 @@ publicEntryRoutes.openapi(
         ...processBookingData(body),
         totalAmount,
         userId: body.userId,
+        adultRateId,
+        kidRateId,
         firstName: body.firstName || userDetails?.firstName || null,
         lastName: body.lastName || userDetails?.lastName || null,
         contactNo: body.contactNo || userDetails?.contactNo || null,

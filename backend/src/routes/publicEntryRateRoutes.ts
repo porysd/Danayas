@@ -6,7 +6,7 @@ import {
   CreatePublicEntryRateDTO,
   UpdatePublicEntryRateDTO,
 } from "../dto/publicEntryRateDTO";
-import { eq } from "drizzle-orm";
+import { eq, and, ne, desc } from "drizzle-orm";
 import {
   BadRequestError,
   ForbiddenError,
@@ -208,6 +208,22 @@ publicEntryRateRoutes.openapi(
         throw new ForbiddenError("No permission to create rate.");
       }
 
+      const body = await c.req.json();
+
+      if (body.isActive) {
+        await db
+          .update(PublicEntryRateTable)
+          .set({ isActive: false })
+          .where(
+            and(
+              eq(PublicEntryRateTable.category, body.category),
+              eq(PublicEntryRateTable.mode, body.mode),
+              eq(PublicEntryRateTable.isActive, true)
+            )
+          )
+          .execute();
+      }
+
       const parsed = CreatePublicEntryRateDTO.parse(await c.req.json());
 
       const created = (
@@ -274,6 +290,7 @@ publicEntryRateRoutes.openapi(
       }
 
       const { id } = c.req.valid("param");
+      const body = await c.req.json();
 
       const existingRate = await db.query.PublicEntryRateTable.findFirst({
         where: eq(PublicEntryRateTable.rateId, id),
@@ -281,6 +298,52 @@ publicEntryRateRoutes.openapi(
 
       if (!existingRate) {
         throw new NotFoundError("Rate not found.");
+      }
+
+      // If setting a rate to active, deactivate other active rates for same category and mode
+      if (body.isActive === true) {
+        await db
+          .update(PublicEntryRateTable)
+          .set({ isActive: false })
+          .where(
+            and(
+              eq(PublicEntryRateTable.category, existingRate.category),
+              eq(PublicEntryRateTable.mode, existingRate.mode),
+              eq(PublicEntryRateTable.isActive, true),
+              ne(PublicEntryRateTable.rateId, id)
+            )
+          )
+          .execute();
+      }
+
+      // Handle deactivation + fallback
+      if (body.isActive === false && existingRate.isActive) {
+        // Deactivate current rate explicitly (optional if update below does it)
+        await db
+          .update(PublicEntryRateTable)
+          .set({ isActive: false })
+          .where(eq(PublicEntryRateTable.rateId, id))
+          .execute();
+
+        // Find fallback rate (inactive ones except this)
+        const fallback = await db.query.PublicEntryRateTable.findFirst({
+          where: and(
+            eq(PublicEntryRateTable.category, existingRate.category),
+            eq(PublicEntryRateTable.mode, existingRate.mode),
+            eq(PublicEntryRateTable.isActive, false),
+            ne(PublicEntryRateTable.rateId, id)
+          ),
+          orderBy: desc(PublicEntryRateTable.createdAt), // or any order you prefer
+        });
+
+        // Activate fallback if found
+        if (fallback) {
+          await db
+            .update(PublicEntryRateTable)
+            .set({ isActive: true })
+            .where(eq(PublicEntryRateTable.rateId, fallback.rateId))
+            .execute();
+        }
       }
 
       const updates = UpdatePublicEntryRateDTO.parse(await c.req.json());
@@ -350,6 +413,26 @@ publicEntryRateRoutes.openapi(
 
       if (!deletedRate) {
         throw new NotFoundError("Rate not found.");
+      }
+
+      // If the rate is active, find fallback rate and activate it
+      if (deletedRate.isActive) {
+        const fallbackRate = await db.query.PublicEntryRateTable.findFirst({
+          where: and(
+            eq(PublicEntryRateTable.mode, deletedRate.mode),
+            eq(PublicEntryRateTable.category, deletedRate.category),
+            ne(PublicEntryRateTable.rateId, id)
+          ),
+          orderBy: desc(PublicEntryRateTable.createdAt),
+        });
+
+        if (fallbackRate) {
+          await db
+            .update(PublicEntryRateTable)
+            .set({ isActive: true })
+            .where(eq(PublicEntryRateTable.rateId, fallbackRate.rateId))
+            .execute();
+        }
       }
 
       await db
