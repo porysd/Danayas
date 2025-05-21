@@ -24,7 +24,7 @@ const showPayModal = ref(false);
 const showPaymentModal = ref(false);
 const formData = ref({});
 
-const props = defineProps(["booking", "packageName", "payment"]);
+const props = defineProps(["publics", "payment"]);
 const emit = defineEmits([
   "updateBooking",
   "deleteBooking",
@@ -33,17 +33,17 @@ const emit = defineEmits([
 ]);
 
 const openEditModal = () => {
-  formData.value = { ...props.booking, packageName: props.packageName };
+  formData.value = { ...props.publics };
   showEditModal.value = true;
   showMenu.value = false;
 };
 
 const openStatusModal = () => {
   formData.value = {
-    bookStatus: props.booking.bookStatus || "pending",
-    cancelCategory: props.booking.cancelCategory || "",
-    cancelReason: props.booking.cancelReason || "",
-    ...props.booking,
+    status: props.publics.status || "pending",
+    cancelCategory: props.publics.cancelCategory || "",
+    cancelReason: props.publics.cancelReason || "",
+    ...props.publics,
   };
   showStatusModal.value = true;
   showMenu.value = false;
@@ -57,7 +57,7 @@ const closeModals = () => {
 };
 
 const confirmStatusUpdate = () => {
-  if (formData.value.bookStatus === "cancelled") {
+  if (formData.value.status === "cancelled") {
     if (!formData.value.cancelCategory) {
       toast.add({
         severity: "error",
@@ -93,7 +93,7 @@ const confirmStatusUpdate = () => {
 };
 
 const saveChanges = () => {
-  formData.value.bookStatus = "rescheduled";
+  formData.value.status = "rescheduled";
   emit("updateBooking", formData.value);
   toast.add({
     severity: "success",
@@ -129,7 +129,7 @@ const isExact = ref(false);
 
 watch(isExact, (e) => {
   if (e) {
-    formData.value.tenderedAmount = props.booking.remainingBalance;
+    formData.value.tenderedAmount = props.publics.remainingBalance;
   } else {
     formData.value.tenderedAmount = null;
   }
@@ -199,15 +199,15 @@ onUnmounted(() => {
       <div class="text-left text-base space-y-2">
         <p>
           <strong>Name:</strong>
-          {{ booking.firstName }} {{ booking.lastName }}
+          {{ publics.firstName }} {{ publics.lastName }}
         </p>
-        <p><strong>Payment Terms: </strong> {{ booking.paymentTerms }}</p>
+        <p><strong>Payment Terms: </strong> {{ publics.paymentTerms }}</p>
         <p>
-          <strong>Amount Paid: </strong>{{ formatPeso(booking.amountPaid) }}
+          <strong>Amount Paid: </strong>{{ formatPeso(publics.amountPaid) }}
         </p>
         <p>
           <strong>Remaining Balance: </strong
-          >{{ formatPeso(booking.remainingBalance) }}
+          >{{ formatPeso(publics.remainingBalance) }}
         </p>
         <label class="block text-lg mb-2">Payment Method:</label>
         <select
@@ -246,14 +246,14 @@ onUnmounted(() => {
         <!--<div class="mb-4">
           <label class="block text-lg mb-2">Excess Charge</label>
           <select
-            v-model="formData.bookStatus"
+            v-model="formData.status"
             class="border p-2 rounded w-full"
           >
             <option value="cancelled">Yes</option>
             <option value="completed">No</option>
           </select>
           <div class="flex flex-col">
-            <template v-if="formData.bookStatus === 'cancelled'">
+            <template v-if="formData.status === 'cancelled'">
               <label>Extra Guest:</label>
               <input v-model="formData.cancelReason" />
               <label>Add ons:</label>
@@ -298,15 +298,15 @@ onUnmounted(() => {
       <div class="text-left text-base space-y-2">
         <p>
           <strong>Name:</strong>
-          {{ booking.firstName }} {{ booking.lastName }}
+          {{ publics.firstName }} {{ publics.lastName }}
         </p>
-        <p><strong>Payment Terms: </strong> {{ booking.paymentTerms }}</p>
+        <p><strong>Payment Terms: </strong> {{ publics.paymentTerms }}</p>
         <p>
-          <strong>Amount Paid: </strong>{{ formatPeso(booking.amountPaid) }}
+          <strong>Amount Paid: </strong>{{ formatPeso(publics.amountPaid) }}
         </p>
         <p>
           <strong>Remaining Balance: </strong
-          >{{ formatPeso(booking.remainingBalance) }}
+          >{{ formatPeso(publics.remainingBalance) }}
         </p>
 
         <p><strong>Payment Method: </strong> {{ formData.paymentMethod }}</p>
@@ -348,12 +348,12 @@ onUnmounted(() => {
 
     <div class="mb-4">
       <label class="block text-lg font-semibold mb-2">Booking Status</label>
-      <select v-model="formData.bookStatus" class="border p-2 rounded w-full">
+      <select v-model="formData.status" class="border p-2 rounded w-full">
         <option value="completed">Completed</option>
         <option value="cancelled">Cancelled</option>
       </select>
       <div>
-        <template v-if="formData.bookStatus === 'cancelled'">
+        <template v-if="formData.status === 'cancelled'">
           <label>Cancel Category:</label>
           <select
             v-model="formData.cancelCategory"
@@ -397,50 +397,40 @@ onUnmounted(() => {
     <template #header>
       <div class="flex flex-col items-center justify-center w-full">
         <h2 class="text-xl font-bold font-[Poppins]">
-          UPDATE BOOKING NO. {{ booking.bookingId }} by {{ booking.firstName }}
-          {{ booking.lastName }}
+          UPDATE PUBLIC ENTRY NO. {{ publics.publicEntryId }} by
+          {{ publics.firstName }}
+          {{ publics.lastName }}
         </h2>
       </div>
     </template>
 
     <div class="packEvent">
       <div>
-        <label>Package Name:</label>
+        <label>No. of Adults:</label>
         <input
           class="packEvents"
-          v-model="formData.packageName"
+          v-model="formData.numAdults"
           placeholder="Package Name"
           disabled
         />
       </div>
       <div>
-        <label>Event Type:</label>
+        <label>No. of Kids:</label>
         <input
           class="packEvents"
-          v-model="formData.eventType"
+          v-model="formData.numKids"
           placeholder="Event Type"
           disabled
         />
       </div>
     </div>
 
-    <div class="cDate">
+    <div class="packEvent">
       <div>
-        <label>Check-In Date:</label>
+        <label>Entry Date:</label>
         <DatePicker
-          v-model="formData.checkInDate"
+          v-model="formData.entryDate"
           placeholder="Check-In"
-          showIcon
-          fluid
-          iconDisplay="input"
-          dateFormat="mm-dd-yy"
-        />
-      </div>
-      <div>
-        <label>Check-Out Date:</label>
-        <DatePicker
-          v-model="formData.checkOutDate"
-          placeholder="Check-Out"
           showIcon
           fluid
           iconDisplay="input"
@@ -453,40 +443,6 @@ onUnmounted(() => {
           class="cDates"
           v-model="formData.mode"
           placeholder="Mode"
-          disabled
-        />
-      </div>
-    </div>
-
-    <div class="atcng">
-      <div>
-        <label>Arrival Time:</label>
-        <input
-          class="atcngs"
-          v-model="formData.arrivalTime"
-          placeholder="Arival Time"
-          disabled
-        />
-      </div>
-      <div>
-        <label>Catering:</label>
-        <select
-          v-model="formData.catering"
-          placeholder="Catering"
-          class="border p-2 rounded w-full"
-          disabled
-        >
-          <option value="true">Yes</option>
-          <option value="false">No</option>
-        </select>
-      </div>
-      <div>
-        <label>Number of Guest:</label>
-        <input
-          class="atcngs"
-          type="number"
-          v-model="formData.numberOfGuest"
-          placeholder="Number of Guest"
           disabled
         />
       </div>

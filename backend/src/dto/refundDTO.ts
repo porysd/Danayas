@@ -5,10 +5,15 @@ export const RefundDTO = z.object({
     description: "Unique identifier for the refund",
     example: 1,
   }),
-  bookingId: z.number().openapi({
+  bookingId: z.number().nullable().optional().openapi({
     description: "Unique identifier for the booking",
     example: 1,
   }),
+  publicEntryId: z.number().nullable().optional().openapi({
+    description: "Unique identifier for the public",
+    example: 1,
+  }),
+
   verifiedBy: z.number().nullable().optional().openapi({
     description: "User ID of the staff who verified the refund",
     example: 1,
@@ -52,24 +57,40 @@ export const RefundDTO = z.object({
   }),
 });
 export const CreateRefundDTO = RefundDTO.pick({
-    bookingId: true,
-    verifiedBy: true,
-    refundMethod: true,
-    refundReason: true,
-    senderName: true,
-    reference: true,
-    imageUrl: true,
-    remarks: true,
-});
+  bookingId: true,
+  publicEntryId: true,
+  verifiedBy: true,
+  refundMethod: true,
+  refundReason: true,
+  senderName: true,
+  reference: true,
+  imageUrl: true,
+  remarks: true,
+})
+  .partial()
+  .refine(
+    (data) => {
+      const hasBookingId = typeof data.bookingId === "number";
+      const hasPublicEntryId = typeof data.publicEntryId === "number";
+      return (
+        (hasBookingId && !hasPublicEntryId) ||
+        (!hasBookingId && hasPublicEntryId)
+      );
+    },
+    {
+      message: "You must provide exactly one of bookingId or publicEntryId",
+      path: ["bookingId", "publicEntryId"],
+    }
+  );
 
 // Sender name should not be nullable on update
 export const UpdateRefundDTO = RefundDTO.pick({
-    verifiedBy: true,
-    refundMethod: true,
-    refundStatus: true,
-    refundReason: true,
-    senderName: true,
-    reference: true,
-    imageUrl: true,
-    remarks: true,
+  verifiedBy: true,
+  refundMethod: true,
+  refundStatus: true,
+  refundReason: true,
+  senderName: true,
+  reference: true,
+  imageUrl: true,
+  remarks: true,
 }).partial();

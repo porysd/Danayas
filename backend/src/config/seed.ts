@@ -9,6 +9,9 @@ import {
   BookingAddOnsTable,
   FaqsTable,
   TermsAndConditionTable,
+  PublicEntryTable,
+  PublicEntryRateTable,
+  PublicEntryAddOnsTable,
 } from "../schemas/schema.ts";
 import { faker } from "@faker-js/faker";
 import { grantPermission } from "../utils/permissionUtils.ts";
@@ -357,7 +360,7 @@ export default async function seed() {
       const selectedDiscountId = faker.helpers.arrayElement(discounts);
       const discountPercent = discountMap.get(selectedDiscountId) || 0;
 
-      const discountAmount = packagePrice * discountPercent / 100;
+      const discountAmount = (packagePrice * discountPercent) / 100;
       const finalAmount = packagePrice - discountAmount;
 
       const row = await db
@@ -390,7 +393,10 @@ export default async function seed() {
           numberOfGuest: faker.helpers.rangeToNumber({ min: 10, max: 500 }),
           arrivalTime: faker.date.recent().toISOString(),
           catering: faker.helpers.rangeToNumber({ min: 0, max: 1 }),
-          paymentTerms: faker.helpers.arrayElement(["installment", "full-payment"]),
+          paymentTerms: faker.helpers.arrayElement([
+            "installment",
+            "full-payment",
+          ]),
           bookingPaymentStatus: faker.helpers.arrayElement(["unpaid"]),
           totalAmount: finalAmount,
           amountPaid: 0,
@@ -416,7 +422,6 @@ export default async function seed() {
   const bookingId = (await db.query.BookingsTable.findMany()).map(
     (val) => val.bookingId
   );
-  
 
   for (let i = 0; i < 10; i++) {
     try {
@@ -430,15 +435,15 @@ export default async function seed() {
       const reference = faker.string.uuid();
       const imageUrl = faker.image.urlLoremFlickr();
       const senderName = faker.person.fullName();
-      const paymentStatus = "valid"
+      const paymentStatus = "valid";
 
       if (!selectedBookingId) {
         continue;
       }
-      if(selectedBookingId.bookingPaymentStatus === "paid") {
+      if (selectedBookingId.bookingPaymentStatus === "paid") {
         continue;
       }
-      if(selectedBookingId.bookStatus === "cancelled") {
+      if (selectedBookingId.bookStatus === "cancelled") {
         continue;
       }
 
@@ -448,81 +453,10 @@ export default async function seed() {
         orderBy: [desc(PaymentsTable.createdAt)],
       });
       const paymentMethod = faker.helpers.arrayElement(["gcash"]);
-      if (latestPayment){
-        if (paymentMethod === "gcash"){
-          const payment = (await db
-            .insert(PaymentsTable)
-            .values({
-              bookingId: booking,
-              verifiedBy: 1,
-              paymentMethod: paymentMethod,
-              tenderedAmount: selectedBookingId.remainingBalance,
-              changeAmount: 0,
-              netPaidAmount: selectedBookingId.remainingBalance,
-              senderName: senderName,
-              reference: reference,
-              imageUrl: imageUrl,
-              paymentStatus: paymentStatus,
-            })
-            .returning()
-            .execute())[0];
-            const amountPaid = selectedBookingId.amountPaid + payment.netPaidAmount;
-            const remainingBalance = selectedBookingId.remainingBalance - payment.netPaidAmount;
-            const bookingPaymentStatus = remainingBalance === 0 ? "paid" : "partially-paid";
-
-            const updatedBooking = await db
-            .update(BookingsTable)
-            .set({
-              amountPaid: amountPaid,
-              remainingBalance: remainingBalance,
-              bookingPaymentStatus: bookingPaymentStatus,
-              bookStatus: "reserved",
-            })
-            .where(eq(BookingsTable.bookingId, payment.bookingId))
-            .returning()
-            .execute();
-
-        }
-      }
-      else{
-        if(selectedBookingId.paymentTerms === "installment"){
-          if (paymentMethod === "gcash"){
-            const payment = (await db
-              .insert(PaymentsTable)
-              .values({
-                bookingId: booking,
-                verifiedBy: 1,
-                paymentMethod: paymentMethod,
-                tenderedAmount: 2000,
-                changeAmount: 0,
-                netPaidAmount: 2000,
-                senderName: senderName,
-                reference: reference,
-                imageUrl: imageUrl,
-                paymentStatus: paymentStatus,
-              })
-              .returning()
-              .execute())[0];
-              const amountPaid = selectedBookingId.amountPaid + payment.netPaidAmount;
-              const remainingBalance = selectedBookingId.remainingBalance - payment.netPaidAmount;
-              const bookingPaymentStatus = remainingBalance === 0 ? "paid" : "partially-paid";
-  
-              const updatedBooking = await db
-              .update(BookingsTable)
-              .set({
-                amountPaid: amountPaid,
-                remainingBalance: remainingBalance,
-                bookingPaymentStatus: bookingPaymentStatus,
-                bookStatus: "reserved",
-              })
-              .where(eq(BookingsTable.bookingId, payment.bookingId))
-              .returning()
-              .execute();
-          }
-        }
-        else{
-          if (paymentMethod === "gcash"){
-            const payment = (await db
+      if (latestPayment) {
+        if (paymentMethod === "gcash") {
+          const payment = (
+            await db
               .insert(PaymentsTable)
               .values({
                 bookingId: booking,
@@ -537,12 +471,60 @@ export default async function seed() {
                 paymentStatus: paymentStatus,
               })
               .returning()
-              .execute())[0];
-              const amountPaid = selectedBookingId.amountPaid + payment.netPaidAmount;
-              const remainingBalance = selectedBookingId.remainingBalance - payment.netPaidAmount;
-              const bookingPaymentStatus = remainingBalance === 0 ? "paid" : "partially-paid";
-  
-              const updatedBooking = await db
+              .execute()
+          )[0];
+          const amountPaid =
+            selectedBookingId.amountPaid + payment.netPaidAmount;
+          const remainingBalance =
+            selectedBookingId.remainingBalance - payment.netPaidAmount;
+          const bookingPaymentStatus =
+            remainingBalance === 0 ? "paid" : "partially-paid";
+
+          const updatedBooking = await db
+            .update(BookingsTable)
+            .set({
+              amountPaid: amountPaid,
+              remainingBalance: remainingBalance,
+              bookingPaymentStatus: bookingPaymentStatus,
+              bookStatus: "reserved",
+            })
+            .where(
+              payment.bookingId !== null
+                ? eq(BookingsTable.bookingId, payment.bookingId as number)
+                : undefined
+            )
+            .returning()
+            .execute();
+        }
+      } else {
+        if (selectedBookingId.paymentTerms === "installment") {
+          if (paymentMethod === "gcash") {
+            const payment = (
+              await db
+                .insert(PaymentsTable)
+                .values({
+                  bookingId: booking,
+                  verifiedBy: 1,
+                  paymentMethod: paymentMethod,
+                  tenderedAmount: 2000,
+                  changeAmount: 0,
+                  netPaidAmount: 2000,
+                  senderName: senderName,
+                  reference: reference,
+                  imageUrl: imageUrl,
+                  paymentStatus: paymentStatus,
+                })
+                .returning()
+                .execute()
+            )[0];
+            const amountPaid =
+              selectedBookingId.amountPaid + payment.netPaidAmount;
+            const remainingBalance =
+              selectedBookingId.remainingBalance - payment.netPaidAmount;
+            const bookingPaymentStatus =
+              remainingBalance === 0 ? "paid" : "partially-paid";
+
+            const updatedBooking = await db
               .update(BookingsTable)
               .set({
                 amountPaid: amountPaid,
@@ -550,19 +532,51 @@ export default async function seed() {
                 bookingPaymentStatus: bookingPaymentStatus,
                 bookStatus: "reserved",
               })
-              .where(eq(BookingsTable.bookingId, payment.bookingId))
+              .where(eq(BookingsTable.bookingId, payment.bookingId!))
+              .returning()
+              .execute();
+          }
+        } else {
+          if (paymentMethod === "gcash") {
+            const payment = (
+              await db
+                .insert(PaymentsTable)
+                .values({
+                  bookingId: booking,
+                  verifiedBy: 1,
+                  paymentMethod: paymentMethod,
+                  tenderedAmount: selectedBookingId.remainingBalance,
+                  changeAmount: 0,
+                  netPaidAmount: selectedBookingId.remainingBalance,
+                  senderName: senderName,
+                  reference: reference,
+                  imageUrl: imageUrl,
+                  paymentStatus: paymentStatus,
+                })
+                .returning()
+                .execute()
+            )[0];
+            const amountPaid =
+              selectedBookingId.amountPaid + payment.netPaidAmount;
+            const remainingBalance =
+              selectedBookingId.remainingBalance - payment.netPaidAmount;
+            const bookingPaymentStatus =
+              remainingBalance === 0 ? "paid" : "partially-paid";
+
+            const updatedBooking = await db
+              .update(BookingsTable)
+              .set({
+                amountPaid: amountPaid,
+                remainingBalance: remainingBalance,
+                bookingPaymentStatus: bookingPaymentStatus,
+                bookStatus: "reserved",
+              })
+              .where(eq(BookingsTable.bookingId, payment.bookingId!))
               .returning()
               .execute();
           }
         }
       }
-
-      
-      
-
-
-
-
     } catch (e) {
       console.error(e);
       continue;
@@ -585,7 +599,6 @@ export default async function seed() {
       continue;
     }
   }
-  
 
   const catalogAddOn = (await db.query.CatalogAddOnsTable.findMany()).map(
     (val) => val.catalogAddOnId
@@ -607,7 +620,10 @@ export default async function seed() {
       });
 
       const selectedBooking = await db
-        .select({ totalAmount: BookingsTable.totalAmount, remainingBalance: BookingsTable.remainingBalance })
+        .select({
+          totalAmount: BookingsTable.totalAmount,
+          remainingBalance: BookingsTable.remainingBalance,
+        })
         .from(BookingsTable)
         .where(eq(BookingsTable.bookingId, bookingId))
         .then((rows) => rows[0]);
@@ -628,13 +644,15 @@ export default async function seed() {
         createdAt: faker.date.recent().toISOString(),
       });
 
-      const updatedBookingPaymentStatus = latestPayment ? "partially-paid" : "unpaid"
+      const updatedBookingPaymentStatus = latestPayment
+        ? "partially-paid"
+        : "unpaid";
       const updatedBooking = await db
         .update(BookingsTable)
         .set({
-          totalAmount: updatedTotalAmount, 
-          bookingPaymentStatus: updatedBookingPaymentStatus, 
-          remainingBalance: selectedBooking.remainingBalance + price 
+          totalAmount: updatedTotalAmount,
+          bookingPaymentStatus: updatedBookingPaymentStatus,
+          remainingBalance: selectedBooking.remainingBalance + price,
         })
         .where(eq(BookingsTable.bookingId, bookingId))
         .returning()
@@ -745,9 +763,198 @@ export default async function seed() {
           updatedAt: faker.date.recent().toISOString(),
         })
         .execute();
-      console.log(`Inserted Terms and Condition #${x + 1}`);
+      // console.log(`Inserted Terms and Condition #${x + 1}`);
     } catch (e) {
       console.error(`Error inserting Terms and Condition #${x + 1}:`, e);
+    }
+  }
+
+  // For PublicEntryRate
+  // for (let x = 0; x < 20; x++) {
+  //   try {
+  //     await db
+  //       .insert(PublicEntryRateTable)
+  //       .values({
+  //         category: faker.helpers.arrayElement(["adult", "kid"]),
+  //         mode: faker.helpers.arrayElement(["day-time", "night-time"]),
+  //         rate: faker.number.int({ min: 100, max: 200 }),
+  //         createdAt: faker.date.past().toISOString(),
+  //         isActive: true,
+  //       })
+  //       .execute();
+
+  //     console.log(`Inserted PublicEntryRate #${x + 1}`);
+  //   } catch (e) {
+  //     console.error(`Error inserting PublicEntryRate #${x + 1}:`, e);
+  //   }
+  // }
+
+  const publicEntryRates: {
+    category: "adult" | "kid";
+    mode: "day-time" | "night-time";
+    rate: number;
+  }[] = [
+    { category: "kid", mode: "day-time", rate: 100 },
+    { category: "adult", mode: "day-time", rate: 100 },
+    { category: "kid", mode: "night-time", rate: 150 },
+    { category: "adult", mode: "night-time", rate: 150 },
+  ];
+
+  for (const entry of publicEntryRates) {
+    try {
+      await db
+        .insert(PublicEntryRateTable)
+        .values({
+          category: entry.category,
+          mode: entry.mode,
+          rate: entry.rate,
+          createdAt: faker.date.recent().toISOString(),
+          isActive: true,
+        })
+        .execute();
+
+      console.log(`Inserted: ${entry.category} - ${entry.mode}`);
+    } catch (e) {
+      console.error(`Error inserting: ${entry.category} - ${entry.mode}`, e);
+    }
+  }
+
+  // For Public Entries
+  for (let x = 0; x < 20; x++) {
+    try {
+      const selectedUserId = faker.helpers.arrayElement(customers);
+      const selectedUser = await db
+        .select({
+          firstName: UsersTable.firstName,
+          lastName: UsersTable.lastName,
+          contactNo: UsersTable.contactNo,
+          address: UsersTable.address,
+        })
+        .from(UsersTable)
+        .where(eq(UsersTable.userId, selectedUserId))
+        .then((rows) => rows[0]);
+      // Select one adult rate row
+      const adultRateRow = await db
+        .select({
+          id: PublicEntryRateTable.rateId,
+          rate: PublicEntryRateTable.rate,
+        })
+        .from(PublicEntryRateTable)
+        .where(eq(PublicEntryRateTable.category, "adult"))
+        .limit(1)
+        .then((rows) => rows[0]);
+
+      // Select one kid rate row
+      const kidRateRow = await db
+        .select({
+          id: PublicEntryRateTable.rateId,
+          rate: PublicEntryRateTable.rate,
+        })
+        .from(PublicEntryRateTable)
+        .where(eq(PublicEntryRateTable.category, "kid"))
+        .limit(1)
+        .then((rows) => rows[0]);
+
+      if (!adultRateRow || !kidRateRow) {
+        console.error("Adult or Kid rate not found.");
+        continue;
+      }
+
+      const numAdults = faker.number.int({ min: 1, max: 10 });
+      const numKids = faker.number.int({ min: 1, max: 10 });
+
+      const adultGuestNames = Array.from({ length: numAdults }, () =>
+        faker.person.fullName()
+      );
+      const kidGuestNames = Array.from({ length: numKids }, () =>
+        faker.person.fullName()
+      );
+
+      const selectedDiscountId = faker.helpers.arrayElement(discounts);
+      const discountPercent = discountMap.get(selectedDiscountId) || 0;
+      const totalRate =
+        numAdults * adultRateRow.rate + numKids * kidRateRow.rate;
+
+      const discountAmount = (totalRate * discountPercent) / 100;
+      const finalAmount = totalRate - discountPercent;
+
+      const row = await db
+        .insert(PublicEntryTable)
+        .values({
+          userId: selectedUserId,
+          discountId: selectedDiscountId,
+          firstName: selectedUser.firstName,
+          lastName: selectedUser.lastName,
+          contactNo: selectedUser.contactNo,
+          address: selectedUser.address,
+          entryDate: faker.date.recent().toISOString(),
+          mode: faker.helpers.arrayElement(["day-time", "night-time"]),
+          reservationType: faker.helpers.arrayElement(["online", "walk-in"]),
+          numAdults,
+          numKids,
+          adultGuestNames: JSON.stringify(adultGuestNames),
+          kidGuestNames: JSON.stringify(kidGuestNames),
+          status: faker.helpers.arrayElement(["pending"]),
+          adultRateId: adultRateRow.id,
+          kidRateId: kidRateRow.id,
+          totalAmount: finalAmount,
+          amountPaid: 0,
+          remainingBalance: finalAmount,
+          publicPaymentStatus: faker.helpers.arrayElement(["unpaid"]),
+          paymentTerms: faker.helpers.arrayElement([
+            "installment",
+            "full-payment",
+          ]),
+          createdAt: faker.date.recent().toISOString(),
+        })
+        .execute();
+    } catch (e) {
+      console.error(e);
+      continue;
+    }
+  }
+  const publics = (await db.query.PublicEntryTable.findMany()).map(
+    (val) => val.publicEntryId
+  );
+
+  // PUBLIC ADD ONS
+  for (let i = 0; i < 10; i++) {
+    try {
+      const publicEntryId = faker.helpers.arrayElement(publics);
+      const catalogAddOnId = faker.helpers.arrayElement(catalogAddOn);
+
+      const selectedBooking = await db
+        .select({ totalRate: PublicEntryTable.totalAmount })
+        .from(PublicEntryTable)
+        .where(eq(PublicEntryTable.publicEntryId, publicEntryId))
+        .then((rows) => rows[0]);
+
+      const selectedCatalogAddOn = await db
+        .select({ price: CatalogAddOnsTable.price })
+        .from(CatalogAddOnsTable)
+        .where(eq(CatalogAddOnsTable.catalogAddOnId, catalogAddOnId))
+        .then((rows) => rows[0]);
+
+      const price = selectedCatalogAddOn.price;
+
+      const updatedTotalAmount = selectedBooking.totalRate + price;
+
+      const row = await db.insert(PublicEntryAddOnsTable).values({
+        publicEntryId: publicEntryId,
+        catalogAddOnId: catalogAddOnId,
+        price: price,
+        createdAt: faker.date.recent().toISOString(),
+      });
+
+      const updatedBooking = await db
+        .update(PublicEntryTable)
+        .set({ totalAmount: updatedTotalAmount })
+        .where(eq(PublicEntryTable.publicEntryId, publicEntryId))
+        .returning()
+        .execute();
+    } catch (e) {
+      console.error(e);
+      continue;
     }
   }
 }

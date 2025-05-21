@@ -3,12 +3,15 @@ import { ref, defineProps, defineEmits, onMounted, onUnmounted } from "vue";
 import Button from "primevue/button";
 import Dialog from "primevue/dialog";
 import Toast from "primevue/toast";
+import Checkbox from "primevue/checkbox";
 import { useToast } from "primevue/usetoast";
 import { formatPeso } from "../../utility/pesoFormat";
 
 const toast = useToast();
 const showMenu = ref(false);
 const showVoidModal = ref(false);
+const showValidModal = ref(false);
+const showInvalidModal = ref(false);
 const showPayModal = ref(false);
 const formData = ref({});
 
@@ -18,18 +21,26 @@ const prop = defineProps({
     type: String,
     default: "Unknown",
   },
-  showPay: {
-    type: Boolean,
-    default: true,
-  },
 });
-const emit = defineEmits(["voidPayment", "payPayment"]);
+const emit = defineEmits(["voidPayment", "validPayment", "invalidPayment"]);
 let previousStatus = null;
 
 const openVoidModal = () => {
   formData.value = { ...prop.payment };
   showVoidModal.value = true;
   previousStatus = formData.value.paymentStatus;
+  showMenu.value = false;
+};
+
+const openValidModal = () => {
+  formData.value = { ...prop.payment };
+  showValidModal.value = true;
+  showMenu.value = false;
+};
+
+const openInvalidModal = () => {
+  formData.value = { ...prop.payment };
+  showInvalidModal.value = true;
   showMenu.value = false;
 };
 
@@ -40,10 +51,10 @@ const openPayModal = () => {
 };
 
 const closeModals = () => {
-  //   showArchiveModal.value = false;
   showVoidModal.value = false;
   showPayModal.value = false;
-  // showUpdateModal.value = false;
+  showValidModal.value = false;
+  showInvalidModal.value = false;
 };
 
 const confirmPay = () => {
@@ -51,11 +62,46 @@ const confirmPay = () => {
   closeModals();
 };
 
-const confirmVoid = () => {
-  formData.value.paymentStatus = "voided";
-  emit("voidPayment", formData.value);
+const confirmValid = () => {
+  const status = {
+    ...formData.value,
+    paymentStatus: "valid",
+  };
+  emit("validPayment", status);
+  toast.add({
+    severity: "success",
+    summary: "Payment Valid",
+    detail: "The payment has been valid successfully.",
+    life: 3000,
+  });
+  closeModals();
+};
+
+const confirmInvalid = () => {
+  const status = {
+    ...formData.value,
+    paymentStatus: "invalid",
+    remarks: formData.value.remarks || "Marked as invalid",
+  };
+  emit("invalidPayment", status);
   toast.add({
     severity: "warn",
+    summary: "Payment Invalid",
+    detail: "The payment has been invalid successfully.",
+    life: 3000,
+  });
+  closeModals();
+};
+
+const confirmVoid = () => {
+  const status = {
+    ...formData.value,
+    paymentStatus: "voided",
+    remarks: formData.value.remarks || "Marked are void",
+  };
+  emit("voidPayment", status);
+  toast.add({
+    severity: "danger",
     summary: "Payment Voided",
     detail: "The payment has been voided successfully.",
     life: 3000,
@@ -90,42 +136,6 @@ onMounted(() => {
 onUnmounted(() => {
   document.addEventListener("click", closeMenu);
 });
-
-// const showArchiveModal = ref(false);
-// const showUpdateModal = ref(false);
-
-// const openArchiveModal = () => {
-//   formData.value = { ...prop.customer };
-//   showArchiveModal.value = true;
-//   showMenu.value = false;
-// };
-
-// const openUpdateModal = () => {
-//   formData.value = { ...prop.payment };
-//   showUpdateModal.value = true;
-//   showMenu.value = false;
-// }
-
-// const archiveCustomer = () => {
-//   emit('archiveCustomer', formData.value);
-//   closeModals();
-// };
-
-// const confirmUpdate = () => {
-//   emit("updatePayment", formData.value);
-//   console.log(formData.value);
-//   closeModals();
-// };
-
-// const confirmUpdate = () => {
-//   const index = payment.value.findIndex(p => p.paymentId === formData.value.paymentId);
-//   if (index !== -1) {
-//     payment.value[index] = { ...formData.value };
-//   }
-//   console.log('After Update:', payment.value);
-//   emit('updatePayment', formData.value);
-//   closeModals();
-// };
 </script>
 
 <template>
@@ -139,10 +149,15 @@ onUnmounted(() => {
       <ul>
         <li
           class="hover:bg-gray-100 dark:hover:bg-gray-700"
-          v-if="showPay"
-          @click="openPayModal"
+          @click="openValidModal"
         >
-          Pay
+          Valid
+        </li>
+        <li
+          class="hover:bg-gray-100 dark:hover:bg-gray-700"
+          @click="openInvalidModal"
+        >
+          Invalid
         </li>
         <li
           v-if="payment.paymentStatus !== 'voided'"
@@ -161,6 +176,72 @@ onUnmounted(() => {
       </ul>
     </div>
   </div>
+
+  <Dialog v-model:visible="showValidModal" modal :style="{ width: '30rem' }">
+    <template #header>
+      <div class="flex flex-col items-center justify-center w-full">
+        <h2 class="text-xl font-bold font-[Poppins]">Valid Payment</h2>
+      </div>
+    </template>
+    <span
+      class="text-lg text-surface-700 dark:text-surface-400 block mb-8 text-center font-[Poppins]"
+    >
+      Are you sure you want to
+      <strong class="text-green-500">VALID</strong> this payment:
+      <span class="font-black font-[Poppins]">{{ payment.paymentId }}</span
+      >?
+    </span>
+
+    <div class="flex justify-center gap-2 font-[Poppins]">
+      <Button
+        type="button"
+        label="Cancel"
+        severity="secondary"
+        @click="closeModals"
+        class="font-bold w-full"
+      />
+      <Button
+        type="button"
+        label="Valid"
+        severity="success"
+        @click="confirmValid"
+        class="font-bold w-full"
+      />
+    </div>
+  </Dialog>
+
+  <Dialog v-model:visible="showInvalidModal" modal :style="{ width: '30rem' }">
+    <template #header>
+      <div class="flex flex-col items-center justify-center w-full">
+        <h2 class="text-xl font-bold font-[Poppins]">Invalid Payment</h2>
+      </div>
+    </template>
+    <span
+      class="text-lg text-surface-700 dark:text-surface-400 block mb-8 text-center font-[Poppins]"
+    >
+      Are you sure you want to
+      <strong class="text-orange-500">INVALID</strong> this payment:
+      <span class="font-black font-[Poppins]">{{ payment.paymentId }}</span
+      >?
+    </span>
+
+    <div class="flex justify-center gap-2 font-[Poppins]">
+      <Button
+        type="button"
+        label="Cancel"
+        severity="secondary"
+        @click="closeModals"
+        class="font-bold w-full"
+      />
+      <Button
+        type="button"
+        label="Invalid"
+        severity="warn"
+        @click="confirmInvalid"
+        class="font-bold w-full"
+      />
+    </div>
+  </Dialog>
 
   <Dialog v-model:visible="showVoidModal" modal :style="{ width: '30rem' }">
     <template #header>
@@ -190,86 +271,6 @@ onUnmounted(() => {
         label="Void"
         severity="danger"
         @click="confirmVoid"
-        class="font-bold w-full"
-      />
-    </div>
-  </Dialog>
-
-  <Dialog v-model:visible="showPayModal" modal :style="{ width: '30rem' }">
-    <template #header>
-      <div class="flex flex-col items-center justify-center w-full">
-        <h2 class="text-xl font-bold font-[Poppins]">Confirm Payment</h2>
-      </div>
-    </template>
-
-    <div class="space-y-4 font-[Poppins] px-4">
-      <p class="text-center text-lg">
-        Are you sure you want to
-        <strong class="text-green-600">complete</strong> this partial payment?
-      </p>
-
-      <div class="text-left text-base space-y-2">
-        <p>
-          <strong>Name:</strong>
-          {{ bookingName }}
-        </p>
-        <p><strong>Payment Mode: </strong> {{ payment.mode }}</p>
-        <p>
-          <strong>Amount Paid: </strong>{{ formatPeso(payment.amountPaid) }}
-        </p>
-        <p>
-          <strong>Remaining Balance: </strong
-          >{{ formatPeso(payment.remainingBalance) }}
-        </p>
-        <label>Sender Name:</label>
-        <input class="w-full" v-model="formData.senderName" />
-        <label class="block text-lg mb-2">Mode:</label>
-        <select v-model="formData.mode" class="border p-2 rounded w-full">
-          <option value="gcash">GCash</option>
-          <option value="cash">Cash</option>
-        </select>
-
-        <template v-if="formData.mode === 'gcash'">
-          <label>GCash Reference No:</label>
-          <input class="w-full" v-model="formData.reference" />
-          <label>Proof of Payment:</label>
-          <input class="w-full" v-model="formData.imageUrl" />
-        </template>
-
-        <!--<div class="mb-4">
-          <label class="block text-lg mb-2">Excess Charge</label>
-          <select
-            v-model="formData.bookStatus"
-            class="border p-2 rounded w-full"
-          >
-            <option value="cancelled">Yes</option>
-            <option value="completed">No</option>
-          </select>
-          <div class="flex flex-col">
-            <template v-if="formData.bookStatus === 'cancelled'">
-              <label>Extra Guest:</label>
-              <input v-model="formData.cancelReason" />
-              <label>Add ons:</label>
-              <input v-model="formData.cancelReason" />
-            </template>
-          </div>
-        </div>-->
-      </div>
-    </div>
-
-    <div class="flex justify-center gap-2 mt-6 font-[Poppins] px-4">
-      <Button
-        type="button"
-        label="Cancel"
-        severity="secondary"
-        @click="closeModals"
-        class="font-bold w-full"
-      />
-      <Button
-        type="button"
-        label="Pay"
-        severity="success"
-        @click="confirmPay"
         class="font-bold w-full"
       />
     </div>

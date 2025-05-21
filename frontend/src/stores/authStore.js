@@ -1,5 +1,6 @@
 import { defineStore } from "pinia";
 
+// TODO: Customer and Admin log ins (re-route)
 export const useAuthStore = defineStore("auth", {
   state: () => ({
     user: null,

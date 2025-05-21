@@ -1,10 +1,12 @@
 <script setup>
-import { ref, onMounted, onUnmounted } from "vue";
+import { ref, onMounted, onUnmounted, computed } from "vue";
 import Avatar from "primevue/avatar";
 import { useAuthStore } from "../../stores/authStore";
+import { useUserStore } from "../../stores/userStore";
 import { useRouter } from "vue-router";
 
 const authStore = useAuthStore();
+const userStore = useUserStore();
 const router = useRouter();
 
 const logout = () => {
@@ -29,11 +31,35 @@ onMounted(() => {
 onUnmounted(() => {
   document.addEventListener("click", closeMenu);
 });
-</script>
 
+const userData = ref({
+  firstName: "",
+  lastName: "",
+});
+onMounted(async () => {
+  const userId = authStore.user?.userId;
+
+  if (!userId) {
+    console.error("No userId found in authStore.user");
+    return;
+  }
+
+  const fetchedUser = await userStore.getUserById(userId);
+
+  userData.value = {
+    firstName: fetchedUser.firstName,
+    lastName: fetchedUser.lastName,
+  };
+});
+const userInitials = computed(() => {
+  const firstName = userData.value.firstName || "";
+  const lastName = userData.value.lastName || "";
+  return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
+});
+</script>
 <template>
   <Avatar
-    icon="pi pi-user"
+    :label="userInitials"
     class="mr-2 mb-2 cursor-pointer"
     size="large"
     shape="circle"

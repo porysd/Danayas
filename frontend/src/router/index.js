@@ -6,6 +6,7 @@ import Home from "../pages/Home.vue";
 import AboutUs from "../pages/aboutUs.vue";
 import PackageSection from "../pages/PackageSection.vue";
 import booking from "../pages/booking.vue";
+import publicEntry from "../pages/publicEntry.vue";
 import gallery from "../pages/gallery.vue";
 import faqs from "../pages/faqs.vue";
 import ContactUs from "../pages/contactUs.vue";
@@ -17,7 +18,10 @@ import AdminDashboard from "../Admin/pages/AdminDashboard.vue";
 import AdminLogin from "../Admin/pages/AdminLogin.vue";
 import EmployeeManagement from "../Admin/pages/EmployeeManagement.vue";
 import Booking from "../Admin/pages/Booking.vue";
+import PublicEntry from "../Admin/pages/PublicEntry.vue";
+import PublicRates from "../Admin/pages/PublicRate.vue";
 import Payment from "../Admin/pages/Payment.vue";
+import Refund from "../Admin/pages/RefundManagement.vue";
 import Transaction from "../Admin/pages/Transaction.vue";
 import Reports from "../Admin/pages/Reports.vue";
 import PackagesAndPromos from "../Admin/pages/PackagesAndPromos.vue";
@@ -43,6 +47,7 @@ const routes = [
   { path: "/home", component: Home },
   { path: "/packages", component: PackageSection },
   { path: "/booking", component: booking },
+  { path: "/public-entry", component: publicEntry },
   { path: "/faqs", component: faqs },
   { path: "/gallery", component: gallery },
   { path: "/about-us", component: AboutUs },
@@ -63,13 +68,23 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
-    path: "/admin/booking",
+    path: "/admin/private-booking",
     component: Booking,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/admin/public-booking",
+    component: PublicEntry,
     meta: { requiresAuth: true },
   },
   {
     path: "/admin/payment",
     component: Payment,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/admin/refund",
+    component: Refund,
     meta: { requiresAuth: true },
   },
   {
@@ -85,6 +100,11 @@ const routes = [
   {
     path: "/admin/packages-and-promos",
     component: PackagesAndPromos,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/admin/public-rates",
+    component: PublicRates,
     meta: { requiresAuth: true },
   },
   {

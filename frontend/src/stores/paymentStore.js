@@ -5,7 +5,9 @@ import { useAuthStore } from "./authStore";
 export const usePaymentStore = defineStore("payment", {
   state: () => ({
     payments: [],
+    pending: [],
     valid: [],
+    invalid: [],
     voided: [],
   }),
 
@@ -17,7 +19,9 @@ export const usePaymentStore = defineStore("payment", {
         if (!auth.isLoggedIn) return;
 
         this.payments = [];
+        this.pending = [];
         this.valid = [];
+        this.invalid = [];
         this.voided = [];
         const limit = 50;
         let page = 1;
@@ -38,8 +42,16 @@ export const usePaymentStore = defineStore("payment", {
           if (paymentData.items && paymentData.items.length > 0) {
             this.payments = paymentData.items;
 
+            this.pending = paymentData.items.filter(
+              (p) => p.paymentStatus === "pending"
+            );
+
             this.valid = paymentData.items.filter(
               (p) => p.paymentStatus === "valid"
+            );
+
+            this.invalid = paymentData.items.filter(
+              (p) => p.paymentStatus === "invalid"
             );
 
             this.voided = paymentData.items.filter(
@@ -83,15 +95,6 @@ export const usePaymentStore = defineStore("payment", {
       const newPayment = await res.json();
       this.payments.push(newPayment);
 
-      const transaction = transactionStore.transactions.find(
-        (t) => t.transactionId === newPayment.transactionId
-      );
-
-      if (transaction) {
-        transaction.paymentStatus = newPayment.paymentStatus;
-        transaction.remainingBalance = newPayment.remainingBalance;
-        transaction.amountPaid = newPayment.amountPaid;
-      }
       return newPayment;
     },
 

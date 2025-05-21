@@ -37,6 +37,7 @@ const newBooking = ref({
   checkOutDate: "",
   mode: "",
   arrivalTime: "" || null,
+  amountPaid: "" || null,
   catering: "" || null,
   numberOfGuest: "" || null,
   discountId: "" || null,
@@ -45,10 +46,11 @@ const newBooking = ref({
 });
 
 const paymentDetails = ref({
-  mode: "",
+  paymentMethod: "",
   reference: "" || null,
   imageUrl: "" || null,
   senderName: "" || null,
+  tenderedAmount: "" || null,
 });
 
 const emit = defineEmits(["addBooking"]);
@@ -360,7 +362,7 @@ console.log("Booking Data:", newBooking.value, paymentDetails.value);
             <label>Mode of Payment:</label>
 
             <select
-              v-model="paymentDetails.mode"
+              v-model="paymentDetails.paymentMethod"
               placeholder="Book Status"
               class="border p-2 rounded w-full"
             >
@@ -369,7 +371,7 @@ console.log("Booking Data:", newBooking.value, paymentDetails.value);
             </select>
           </div>
           <div>
-            <template v-if="paymentDetails.mode === 'gcash'">
+            <template v-if="paymentDetails.paymentMethod === 'gcash'">
               <label>Reference No:</label>
               <input
                 v-model="paymentDetails.reference"
@@ -390,8 +392,8 @@ console.log("Booking Data:", newBooking.value, paymentDetails.value);
             </template>
             <template v-else>
               <label>Total Amount:</label>
-              <input v-model="paymentDetails.totalAmount" placeholder="Total
-              Amount"
+              <input v-model.number="paymentDetails.tenderedAmount"
+              placeholder="Total Amount"
             </template>
           </div>
         </div>

@@ -13,11 +13,14 @@ import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import { useBookingStore } from "../../stores/bookingStore.js";
+import { usePublicEntryStore } from "../../stores/publicEntryStore.js";
 
 const bookingStore = useBookingStore();
+const publicStore = usePublicEntryStore();
 
 onMounted(async () => {
   await bookingStore.fetchUserBookings();
+  await publicStore.fetchAllPublic();
 
   processBookings();
 });
@@ -32,6 +35,13 @@ const processBookings = () => {
   bookingStore.bookings.forEach((booking) => {
     if (booking.checkInDate) {
       const monthIndex = new Date(booking.checkInDate).getMonth();
+      months.value[monthIndex]++;
+    }
+  });
+
+  publicStore.public.forEach((p) => {
+    if (p.entryDate) {
+      const monthIndex = new Date(p.entryDate).getMonth();
       months.value[monthIndex]++;
     }
   });
@@ -96,98 +106,153 @@ const chartOptions = ref({
 
 // Get PENDING Bookings
 const countPendingBookings = computed(() => {
-  return bookingStore.bookingPending.filter(
+  const bPending = bookingStore.bookingPending.filter(
     (b) => b.bookStatus && b.bookStatus.trim().toLowerCase() === "pending"
   ).length;
+
+  const pPending = publicStore.pending.filter(
+    (p) => p.status && p.status.trim().toLowerCase() === "pending"
+  ).length;
+
+  const pendingDates = bPending + pPending;
+
+  return pendingDates;
 });
 
 // Get CONFIRMED Booking Status
 const countConfirmedBookings = computed(() => {
-  return bookingStore.bookingReserved.filter(
+  const bReserved = bookingStore.bookingReserved.filter(
     (b) => b.bookStatus && b.bookStatus.trim().toLowerCase() === "reserved"
   ).length;
+
+  const pReserved = publicStore.reserved.filter(
+    (p) => p.status && p.status.trim().toLowerCase() === "reserved"
+  ).length;
+
+  const reservedDates = bReserved + pReserved;
+
+  return reservedDates;
 });
 
 // Get RESCHEDULED Booking Status
 const countRescheduledBooking = computed(() => {
-  return bookingStore.bookingRescheduled.filter(
+  const bReschedule = bookingStore.bookingRescheduled.filter(
     (b) => b.bookStatus && b.bookStatus.trim().toLowerCase() === "rescheduled"
   ).length;
+
+  const pReschedule = publicStore.rescheduled.filter(
+    (p) => p.status && p.status.trim().toLowerCase() === "rescheduled"
+  ).length;
+
+  const rescheduleDates = bReschedule + pReschedule;
+
+  return rescheduleDates;
 });
 
 // Get PENDING CANCELLATION Booking Status
 const countPendingCancellationBookings = computed(() => {
-  return bookingStore.bookingCancelled.filter(
+  const bPendingCancel = bookingStore.bookingCancelled.filter(
     (b) =>
       b.bookStatus &&
-      b.bookStatus.trim().toLowerCase() === "pending_cancellation"
+      b.bookStatus.trim().toLowerCase() === "pending-cancellation"
   ).length;
+
+  const pPendingCancel = publicStore.pendingCancellation.filter(
+    (p) => p.status && p.status.trim().toLowerCase() === "pending-cancellation"
+  ).legnth;
+
+  const pendingCancelDates = bPendingCancel + pPendingCancel;
+
+  return pendingCancelDates;
 });
 
 // Get CANCELLED Booking Status
 const countCancelledBookings = computed(() => {
-  return bookingStore.bookingCancelled.filter(
+  const bCancelled = bookingStore.bookingCancelled.filter(
     (b) => b.bookStatus && b.bookStatus.trim().toLowerCase() === "cancelled"
   ).length;
+
+  const pCancelled = publicStore.cancelled.filter(
+    (p) => p.status && p.status.trim().toLowerCase() === "cancelled"
+  ).length;
+
+  const cancelledDates = bCancelled + pCancelled;
+
+  return cancelledDates;
 });
 
 // Get COMPLETED Booking Status
 const countCompletedBookings = computed(() => {
-  return bookingStore.bookingCompleted.filter(
+  const bCompleted = bookingStore.bookingCompleted.filter(
     (b) => b.bookStatus && b.bookStatus.trim().toLowerCase() === "completed"
   ).length;
-});
 
-// Reserved dates for the calendar
-// const reservedDates = computed(() => {
-//   return bookingStore.bookings
-//     .filter((booking) => booking.bookStatus === "reserved")
-//     .map((booking) => ({
-//       start: new Date(booking.checkInDate),
-//       end: new Date(booking.checkOutDate),
-//     }));
-// });
+  const pCompleted = publicStore.completed.filter(
+    (p) => p.status && p.status.trim().toLowerCase() === "completed"
+  ).length;
+
+  const completedDates = bCompleted + pCompleted;
+
+  return completedDates;
+});
 
 // Process booking days
 // FOR CALENDAR
 const mapBookingsToEvents = (bookings) => {
-  return bookings
-    .filter((b) => b.bookStatus === "reserved")
-    .map((b) => {
-      let backgroundColor;
-      let textColor = "white";
-      let title;
+  // Step 1: Filter to only relevant statuses
+  const filtered = bookings.filter(
+    (b) =>
+      (b.bookStatus &&
+        ["reserved", "rescheduled", "pending"].includes(
+          b.bookStatus.trim().toLowerCase()
+        )) ||
+      (b.status &&
+        ["reserved", "rescheduled", "pending"].includes(
+          b.status.trim().toLowerCase()
+        ))
+  );
 
-      switch (b.mode) {
-        case "day-time": // if someone booked day status it will give Night Available
-          backgroundColor = "#6A5ACD";
-          textColor = "white";
-          title = "Night Available";
-          break;
-        case "night-time": // if someone booked night status it will give Day Available
-          backgroundColor = "#FFD580";
-          textColor = "black";
-          title = "Day Available";
-          break;
-        case "whole-day": // if someone booked day and night status and whole day status it will give Fully Booked
-          backgroundColor = "#FF6B6B";
-          title = "Fully Booked";
-          break;
-        default:
-          backgroundColor = "#90EE94";
-          textColor = "#15803D";
-      }
+  // Step 2: Group by date
+  const bookingsByDate = {};
+  filtered.forEach((b) => {
+    const date = b.checkInDate || b.entryDate;
+    if (!bookingsByDate[date]) bookingsByDate[date] = [];
+    bookingsByDate[date].push(b.mode);
+  });
 
-      return {
-        id: b.bookingId,
-        title: title,
-        start: b.checkInDate,
-        // end: b.checkOutDate,
-        backgroundColor: backgroundColor,
-        textColor: textColor,
-        allDay: true,
-      };
-    });
+  // Step 3: Create events per date
+  return Object.entries(bookingsByDate).map(([date, modes]) => {
+    const uniqueModes = Array.from(new Set(modes));
+    let backgroundColor = "#90EE94";
+    let textColor = "#15803D";
+    let title = "Available";
+
+    if (
+      uniqueModes.includes("whole-day") ||
+      (uniqueModes.includes("day-time") && uniqueModes.includes("night-time"))
+    ) {
+      backgroundColor = "#FF6B6B";
+      textColor = "white";
+      title = "Fully Booked";
+    } else if (uniqueModes.includes("day-time")) {
+      backgroundColor = "#6A5ACD";
+      textColor = "white";
+      title = "Night Available";
+    } else if (uniqueModes.includes("night-time")) {
+      backgroundColor = "#FFD580";
+      textColor = "black";
+      title = "Day Available";
+    }
+
+    return {
+      id: `summary-${date}`,
+      title,
+      start: date,
+      backgroundColor,
+      textColor,
+      allDay: true,
+    };
+  });
 };
 
 const calendarOptions = ref({
@@ -203,7 +268,11 @@ const calendarOptions = ref({
   selectMirror: false,
   dayMaxEvents: false,
   weekends: true,
-  events: computed(() => mapBookingsToEvents(bookingStore.bookings)),
+  events: computed(
+    () =>
+      mapBookingsToEvents(bookingStore.bookings) &&
+      mapBookingsToEvents(publicStore.public)
+  ),
 });
 </script>
 
@@ -564,6 +633,26 @@ const calendarOptions = ref({
 
   border-radius: 10px;
   max-width: 100%;
+}
+
+.pendingBook:hover,
+.completedBook:hover,
+.noCustomer:hover,
+.cancelledBook:hover {
+  height: 105px;
+  width: 320px;
+  cursor: pointer;
+}
+
+.pendingBook:active,
+.completedBook:active,
+.noCustomer:active,
+.cancelledBook:active {
+  height: 105px;
+  width: 320px;
+
+  opacity: 0.8;
+  cursor: pointer;
 }
 
 .charts {

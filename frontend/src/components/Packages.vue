@@ -35,7 +35,10 @@ const avail = (pkg) => {
       <div class="titlePackage">{{ pkg.name }}</div>
       <div class="inclu">{{ pkg.inclusion }}</div>
       <ul class="inclu">
-        <h3>Mode: {{ pkg.mode }}</h3>
+        <ul>
+          <h3 class="font-bold">Mode: {{ pkg.mode }}</h3>
+        </ul>
+        <h1 class="font-bold mt-[10px]">Price: {{ formatPeso(pkg.price) }}</h1>
       </ul>
 
       <div class="detailsBtn">

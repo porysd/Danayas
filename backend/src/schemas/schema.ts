@@ -11,5 +11,9 @@ export * from "./BookingAddOns.ts";
 export * from "./CatalogAddOns.ts";
 export * from "./FaqsTable.ts";
 export * from "./TermsAndCondition.ts";
-export * from "./RefundPayment.ts"
+export * from "./RefundPayment.ts";
 // export * from './ContentManagement.ts';
+
+export * from "./PublicEntry.ts";
+export * from "./PublicEntryRate.ts";
+export * from "./PublicAddOns.ts";

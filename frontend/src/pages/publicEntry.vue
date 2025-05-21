@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, ref, computed } from "vue";
+import { onMounted, ref, computed, watch } from "vue";
 import { useRouter } from "vue-router";
 import Stepper from "primevue/stepper";
 import StepList from "primevue/steplist";
@@ -33,6 +33,8 @@ import interactionPlugin from "@fullcalendar/interaction";
 import { useAuthStore } from "../stores/authStore";
 import { useUserStore } from "../stores/userStore";
 import TermsCondition from "../components/TermsCondition.vue";
+import InputText from "primevue/inputtext";
+import InputNumber from "primevue/inputnumber";
 
 const toast = useToast();
 const router = useRouter();
@@ -49,9 +51,9 @@ onMounted(() => {
 });
 
 const header = ref([
-  "Check-in & Check-out Date",
-  "Select Package & Rate",
-  "Guest Information",
+  "Entry Date",
+  "Contact & Guest Information",
+  "Payment Information",
   "Booking Confirmation",
 ]);
 
@@ -134,13 +136,13 @@ const addBookingHandler = async (newBooking, paymentDetails) => {
 
 //STEP: 1
 const stepOneBtn = (activateCallback) => {
-  const { checkInDate, checkOutDate, mode } = newBooking.value;
-  if (!checkInDate || !checkOutDate || !mode) {
-    alert("Please fill up all fields");
-  } else {
-    activateCallback("2");
-  }
-  // activateCallback("2");
+  // const { checkInDate, checkOutDate, mode } = newBooking.value;
+  // if (!checkInDate || !checkOutDate || !mode) {
+  //   alert("Please fill up all fields");
+  // } else {
+  //   activateCallback("2");
+  // }
+  activateCallback("2");
 };
 
 //STEP 2
@@ -157,22 +159,44 @@ const availPackageHandler = (pkg) => {
 };
 
 const stepTwoBtn = (activateCallback) => {
-  if (!newBooking.value.packageId) {
-    alert("Please select a package");
-  } else {
-    activateCallback("3");
-  }
-  // activateCallback("3");
+  // if (!newBooking.value.packageId) {
+  //   alert("Please select a package");
+  // } else {
+  //   activateCallback("3");
+  // }
+  activateCallback("3");
 };
+
+const guestCount = ref(0);
+const guests = ref([]);
+
+const kidCount = ref(0);
+const kids = ref([]);
+
+watch(guestCount, (newVal, oldVal) => {
+  if (newVal > oldVal) {
+    for (let i = oldVal; i < newVal; i++) guests.value.push("");
+  } else {
+    guests.value.splice(newVal);
+  }
+});
+
+watch(kidCount, (newVal, oldVal) => {
+  if (newVal > oldVal) {
+    for (let i = oldVal; i < newVal; i++) kids.value.push("");
+  } else {
+    kids.value.splice(newVal);
+  }
+});
 
 //STEP 3
 const stepThreeBtn = (activateCallback) => {
-  if (!newBooking.value.paymentTerms || !paymentDetails.value.reference) {
-    alert("Please fill up al the fields");
-  } else {
-    activateCallback("4");
-  }
-  // activateCallback("4");
+  // if (!newBooking.value.paymentTerms || !paymentDetails.value.reference) {
+  //   alert("Please fill up al the fields");
+  // } else {
+  //   activateCallback("4");
+  // }
+  activateCallback("4");
 };
 
 const authStore = useAuthStore();
@@ -331,27 +355,27 @@ const calendarOptions = ref({
               class="pi pi-calendar z-10 absolute top-5 right-67"
               style="font-size: 3rem"
             ></i>
-            <div class="absolute bottom-0 left-[-1] right-53 top-25">
-              Check-In & <br />Check-Out Date
+            <div class="absolute bottom-0 left-[-1] right-60 top-25">
+              Entry Date
             </div>
           </Step>
           <Step value="2">
             <i
-              class="pi pi-credit-card z-10 absolute top-5 right-67"
+              class="pi pi-users z-10 absolute top-5 right-67"
               style="font-size: 3rem"
             ></i>
-            <div class="absolute bottom-0 left-[-1] right-54 top-25">
-              Select <br />
-              Package & Rate
+            <div class="absolute bottom-0 left-[-1] right-50 top-25">
+              Contact & <br />
+              Guest Information
             </div>
           </Step>
           <Step value="3">
             <i
-              class="pi pi-user z-10 absolute top-5 right-67"
+              class="pi pi-credit-card z-10 absolute top-5 right-67"
               style="font-size: 3rem"
             ></i>
             <div class="absolute bottom-0 left-[-1] right-58 top-25">
-              Contact <br />Information
+              Payment <br />Information
             </div>
           </Step>
           <Step value="4">
@@ -375,26 +399,17 @@ const calendarOptions = ref({
                   <div class="flex gap-40">
                     <div>
                       <h1 class="mb-10 text-center font-[600] text-lg">
-                        Check-in & Check-out
+                        Select Entry Date
                       </h1>
                       <div class="flex gap-10">
                         <FloatLabel variant="on">
                           <DatePicker
-                            v-model="newBooking.checkInDate"
+                            v-model="newBooking.entryDate"
                             inputId="on_label"
                             showIcon
                             iconDisplay="input"
                           />
-                          <label for="on_label">Check-In</label>
-                        </FloatLabel>
-                        <FloatLabel variant="on">
-                          <DatePicker
-                            v-model="newBooking.checkOutDate"
-                            inputId="on_label"
-                            showIcon
-                            iconDisplay="input"
-                          />
-                          <label for="on_label">Check-Out</label>
+                          <label for="on_label">Entry Date</label>
                         </FloatLabel>
                       </div>
                     </div>
@@ -423,16 +438,6 @@ const calendarOptions = ref({
                           <label for="nightMode" class="text-xl font-[Poppins]"
                             >NIGHT TIME</label
                           >
-                          <RadioButton
-                            v-model="newBooking.mode"
-                            inputId="wholeDay"
-                            name="bookingMode"
-                            value="whole-day"
-                            size="large"
-                          />
-                          <label for="wholeDay" class="text-xl font-[Poppins]"
-                            >WHOLE DAY</label
-                          >
                         </div>
                       </div>
                     </div>
@@ -456,24 +461,7 @@ const calendarOptions = ref({
                     margin-top: 5rem;
                     gap: 5rem;
                   "
-                >
-                  <!--<DatePicker
-                    v-model="date"
-                    inline
-                    class="dateChart w-full sm:w-[60rem]"
-                  >
-                    <template #date="slotProps">
-                      <span>
-                        <strong
-                          :style="getBookingStyle(slotProps.date)"
-                          class="date-box"
-                        >
-                          {{ slotProps.date.day }}
-                        </strong>
-                      </span>
-                    </template>
-                  </DatePicker>-->
-                </div>
+                ></div>
 
                 <div
                   class="flex m-auto justify-center content-center text-3xl font-[Poppins] font-black mb-5 mt-8"
@@ -484,7 +472,7 @@ const calendarOptions = ref({
                 <div
                   class="Status-br mb-20"
                   style="
-                    background-color: #c7e3b6;
+                    background-color: #9edf9c;
                     height: 10rem;
                     display: flex;
                     width: 100%;
@@ -507,7 +495,7 @@ const calendarOptions = ref({
                     <span
                       class="dot"
                       id="Available"
-                      style="background-color: #90ee94"
+                      style="background-color: #fff"
                     >
                       <label for="dot" style="margin-left: 50px"
                         >AVAILABLE</label
@@ -561,15 +549,15 @@ const calendarOptions = ref({
             </div>
 
             <div class="flex items-center gap-5 ml-20">
-              <button
+              <Button
                 @click="
                   nextBtn();
                   stepOneBtn(activateCallback);
                 "
-                class="bg-[#194d1d] text-white w-50 h-15 font-black font-[Poppins] text-xl rounded-xl cursor-pointer ml-[45rem]"
+                class="bg-[#194d1d] text-white w-50 h-15 font-black font-[Poppins] text-xl rounded-xl cursor-pointer ml-[45rem] rounded-xl"
               >
                 CONTINUE
-              </button>
+              </Button>
             </div>
           </StepPanel>
           <StepPanel v-slot="{ activateCallback }" value="2">
@@ -577,18 +565,137 @@ const calendarOptions = ref({
               <div
                 class="flex-col flex justify-center items-center font-medium h-auto w-[50rem] mt-5"
               >
-                <div class="flex flex-col h-[65rem]">
+                >
+                <div class="flex flex-col overflow-auto h-[65rem]">
                   <h1
-                    class="text-left w-[100%] flex font-black text-4xl font-[Poppins] mt-10 mb-10"
+                    class="text-left w-[100%] flex font-black text-4xl font-[Poppins] mt-10"
                   >
-                    Select Package
+                    Contact Information:
                   </h1>
-                  <div class="overflow-auto">
-                    <BookPackage
-                      :mode="newBooking.mode"
-                      @availPackage="availPackageHandler"
-                    />
-                    <!--availPackage comes from the BookPackage and holds the selected-->
+                  <div class="mt-10">
+                    <div class="personalInfo">
+                      <div>
+                        <label>First Name:</label>
+                        <input
+                          class="packEvents"
+                          placeholder="First Name"
+                          v-model="userData.firstName"
+                        />
+                      </div>
+                      <div>
+                        <label>Last Name:</label>
+                        <input
+                          class="packEvents"
+                          placeholder="Last Name"
+                          v-model="userData.lastName"
+                        />
+                      </div>
+                      <div>
+                        <label>Contact No.:</label>
+                        <input
+                          class="packEvents"
+                          placeholder="Contact No"
+                          v-model="userData.contactNo"
+                        />
+                      </div>
+                      <div>
+                        <label>Address</label>
+                        <input
+                          class="packEvents"
+                          placeholder="Email Address"
+                          v-model="userData.address"
+                        />
+                      </div>
+                    </div>
+
+                    <div class="guestInfo">
+                      <div>
+                        <label>Discount Code:</label>
+                        <input class="packEvents" placeholder="" />
+                      </div>
+                      <div>
+                        <label for="addOns">Add Ons:</label>
+                        <select name="addOns" id="addOns">
+                          <option value="videoke">Videoke</option>
+                          <option value="rooms">Rooms</option>
+                          <option value="nipaHut">Nipa Hut</option>
+                          <option value="chairs">Chairs</option>
+                          <option value="table">Table</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="mt-10">
+                    <h1
+                      class="text-left w-full flex font-black text-4xl font-[Poppins] mt-10 mb-10"
+                    >
+                      Guest Information:
+                    </h1>
+
+                    <div class="flex flex-row gap-80 items-start">
+                      <!-- Adults -->
+                      <div class="flex flex-col mb-20">
+                        <label>No. of Adults</label>
+                        <InputNumber
+                          v-model="guestCount"
+                          showButtons
+                          buttonLayout="horizontal"
+                          style="width: 3rem"
+                          :min="0"
+                          :max="99"
+                        >
+                          <template #incrementbuttonicon>
+                            <span class="pi pi-plus" />
+                          </template>
+                          <template #decrementbuttonicon>
+                            <span class="pi pi-minus" />
+                          </template>
+                        </InputNumber>
+
+                        <div
+                          v-for="(guest, index) in guests"
+                          :key="'adult-' + index"
+                          class="mt-2 w-full"
+                        >
+                          <InputText
+                            v-model="guests[index]"
+                            placeholder="Enter guest name"
+                          />
+                        </div>
+                      </div>
+
+                      <!-- Kids -->
+                      <div class="flex flex-col mb-20">
+                        <label>No. of Kids</label>
+                        <InputNumber
+                          v-model="kidCount"
+                          showButtons
+                          buttonLayout="horizontal"
+                          style="width: 3rem"
+                          :min="0"
+                          :max="99"
+                        >
+                          <template #incrementbuttonicon>
+                            <span class="pi pi-plus" />
+                          </template>
+                          <template #decrementbuttonicon>
+                            <span class="pi pi-minus" />
+                          </template>
+                        </InputNumber>
+
+                        <div
+                          v-for="(kid, index) in kids"
+                          :key="'kid-' + index"
+                          class="mt-2 w-full"
+                        >
+                          <InputText
+                            v-model="kids[index]"
+                            placeholder="Enter kid's name"
+                          />
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -596,7 +703,7 @@ const calendarOptions = ref({
                 class="flex-col flex justify-center items-center font-medium h-auto w-[40rem] mt-5"
               >
                 <div
-                  class="bg-[#c7e3b6] p-5 rounded-lg w-[30rem] h-[55rem] mt-10"
+                  class="bg-[#9EDF9C] p-5 rounded-lg w-[30rem] h-[55rem] mt-10"
                 >
                   <h1
                     class="font-black font-[Poppins] text-2xl p-5 flex align-center justify-center m-auto"
@@ -677,105 +784,15 @@ const calendarOptions = ref({
                   <h1
                     class="text-left w-[100%] flex font-black text-4xl font-[Poppins] mt-10"
                   >
-                    Contact Information:
+                    Payment Details:
                   </h1>
-                  <div class="mt-10">
-                    <div class="personalInfo">
-                      <div>
-                        <label>First Name:</label>
-                        <input
-                          class="packEvents"
-                          placeholder="First Name"
-                          v-model="userData.firstName"
-                        />
-                      </div>
-                      <div>
-                        <label>Last Name:</label>
-                        <input
-                          class="packEvents"
-                          placeholder="Last Name"
-                          v-model="userData.lastName"
-                        />
-                      </div>
-                      <div>
-                        <label>Contact No.:</label>
-                        <input
-                          class="packEvents"
-                          placeholder="Contact No"
-                          v-model="userData.contactNo"
-                        />
-                      </div>
-                      <div>
-                        <label>Email Address</label>
-                        <input
-                          class="packEvents"
-                          placeholder="Email Address"
-                          v-model="userData.email"
-                        />
-                      </div>
-                    </div>
-
-                    <div class="bookAddress">
-                      <div>
-                        <label>Address:</label>
-                        <input
-                          class="packEvents"
-                          placeholder="Address"
-                          v-model="userData.address"
-                        />
-                      </div>
-                    </div>
-
-                    <div class="guestInfo">
-                      <div>
-                        <label>Arrival Time:</label>
-                        <input class="packEvents" placeholder="Arrival Time" />
-                      </div>
-                      <div>
-                        <label>Event Type:</label>
-                        <input
-                          class="packEvents"
-                          placeholder="ex. Birthday, Wedding, any celebration"
-                        />
-                      </div>
-                      <div>
-                        <label>Number of Guest:</label>
-                        <input
-                          type="number"
-                          class="packEvents"
-                          placeholder="Number of Guest"
-                        />
-                      </div>
-                      <div>
-                        <label for="catering">Catering</label>
-                        <select name="catering" id="catering">
-                          <option value="yes">Yes</option>
-                          <option value="no">No</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label>Discount Code:</label>
-                        <input class="packEvents" placeholder="" />
-                      </div>
-                      <div>
-                        <label for="addOns">Add Ons:</label>
-                        <select name="addOns" id="addOns">
-                          <option value="videoke">Videoke</option>
-                          <option value="rooms">Rooms</option>
-                          <option value="nipaHut">Nipa Hut</option>
-                          <option value="chairs">Chairs</option>
-                          <option value="table">Table</option>
-                        </select>
-                      </div>
-                    </div>
-                  </div>
 
                   <div class="mt-10">
-                    <h1 class="ml-20 text-xl font-bold font-[Poppins]">
+                    <h1 class="text-xl font-bold font-[Poppins]">
                       Payment Terms:
                     </h1>
 
-                    <div class="flex items-center gap-5 ml-20 mt-5 mb-5">
+                    <div class="flex items-center gap-5 mt-5 mb-5">
                       <div class="flex items-center gap-2">
                         <RadioButton
                           v-model="newBooking.paymentTerms"
@@ -801,6 +818,63 @@ const calendarOptions = ref({
                         <label for="nightMode" class="text-xl font-[Poppins]"
                           >Full Payment</label
                         >
+                      </div>
+                    </div>
+                    <div class="">
+                      <div>
+                        <h1 class="text-lg font-bold font-[Poppins]">
+                          Payment:
+                        </h1>
+                        <h1 class="text-lg font-sm font-[Poppins] text-center">
+                          DANAYAS RESORTS EVENTS VENUE: <br />
+                          09xx xxx xxxx
+                        </h1>
+
+                        <div class="mt-10 mb-10">
+                          <h1 class="text-lg font-bold font-[Poppins] mb-3">
+                            Payment Terms:
+                          </h1>
+                          <h1 class="text-m font-[Poppins] mb-1">
+                            GCASH Reference Code:
+                          </h1>
+                          <div>
+                            <InputText
+                              class="p-2 bg-[#fcfcfc] mb-2 rounded w-100"
+                              placeholder="FEJIJKA4381FK9"
+                              v-model="paymentDetails.reference"
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <h1
+                            class="text-xl font-bold font-[Poppins] mb-5 mt-3"
+                          >
+                            Proof of Payment:
+                          </h1>
+                          <h1 class="text-m font-[Poppins]">
+                            Name of the Sender:
+                          </h1>
+                          <div class="bg-[#fcfcfc] mb-2 p-1 rounded-sm">
+                            <InputText
+                              class="p-2 bg-[#fcfcfc] mb-2 rounded w-100"
+                              placeholder="Pocholo Diolola"
+                              v-model="paymentDetails.reference"
+                            />
+                          </div>
+                        </div>
+                        <div class="gcashUpload">
+                          <FileUpload
+                            class="mb-5"
+                            ref="fileupload"
+                            v-model="paymentDetails.imageUrl"
+                            mode="basic"
+                            name="imageUrl"
+                            url="/api/upload"
+                            accept="image/*"
+                            :maxFileSize="1000000"
+                            @select="onFileSelect"
+                          />
+                        </div>
                       </div>
                     </div>
                     <Message v-if="visible" severity="error"
@@ -833,7 +907,7 @@ const calendarOptions = ref({
               <div
                 class="flex-col flex justify-center items-center font-medium h-auto w-[40rem] mt-5"
               >
-                <div class="bg-[#c7e3b6] p-5 rounded-lg w-[30rem] h-auto mt-10">
+                <div class="bg-[#9EDF9C] p-5 rounded-lg w-[30rem] h-auto mt-10">
                   <h1
                     class="font-black font-[Poppins] text-2xl p-5 flex align-center justify-center m-auto"
                   >
@@ -919,13 +993,6 @@ const calendarOptions = ref({
                           :maxFileSize="1000000"
                           @select="onFileSelect"
                         />
-                        <!--<div class="bg-[#fcfcfc] mb-2 p-1 rounded-sm">
-                          <input
-                            class="p-2"
-                            placeholder="image url"
-                            v-model="paymentDetails.imageUrl"
-                          />
-                        </div>-->
                       </div>
                       <div>
                         <h1 class="text-m font-[Poppins]">
@@ -966,7 +1033,7 @@ const calendarOptions = ref({
               class="flex-col flex justify-center items-center font-medium h-auto w-[100%] mt-5"
             >
               <div
-                class="bg-[#c7e3b6] p-5 rounded-lg w-[70rem] h-auto mt-10 mb-10"
+                class="bg-[#9EDF9C] p-5 rounded-lg w-[70rem] h-auto mt-10 mb-10"
               >
                 <h1
                   class="font-black font-[Poppins] text-3xl p-5 flex align-center justify-center m-auto"
@@ -1141,13 +1208,13 @@ const calendarOptions = ref({
         <input type="checkbox" id="signupCheck" v-model="isChecked" />
         <label for="bookingCheck">I accept all terms & conditions</label>
       </div>
-      <button
+      <Button
         class="Bookingbtn"
         :disabled="!isChecked"
         @click="OpenContinueModal"
       >
         Continue
-      </button>
+      </Button>
     </Dialog>
 
     <div v-if="showContinueModal" class="modal">
@@ -1278,7 +1345,7 @@ const calendarOptions = ref({
     padding-left: 13rem;
     padding-right: 13rem;
     padding-bottom: 4rem;
-    background-color: #c7e3b6;
+    background-color: #9edf9c;
   }
   .p-step {
     font-size: 20px;

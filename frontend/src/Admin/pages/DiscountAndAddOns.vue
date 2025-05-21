@@ -266,7 +266,7 @@ const getStatusSeverity = (status) => {
                     >
                       <td>{{ discount.discountId }}</td>
                       <td>{{ discount.name }}</td>
-                      <td>{{ discount.percentage * 100 }}%</td>
+                      <td>{{ discount.percentage }}%</td>
                       <td>{{ discount.typeFor }}</td>
                       <td>
                         <Tag
