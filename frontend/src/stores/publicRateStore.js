@@ -57,65 +57,83 @@ export const usePublicRateStore = defineStore("pubilcRateEntry", {
     },
     // Add Rates
     async addRates(p) {
-      const auth = useAuthStore();
-      if (!auth.isLoggedIn) return;
+      try {
+        const auth = useAuthStore();
+        if (!auth.isLoggedIn) return;
 
-      const format = {
-        ...p,
-        rate: p.rate ? Number(p.price) : null,
-      };
+        const format = {
+          ...p,
+          rate: p.rate ? Number(p.rate) : null,
+          isActive: p.isActive ? Boolean(p.isActive) : null,
+        };
 
-      const res = await fetch("http://localhost:3000/publicentryrates", {
-        method: "POST",
-        headers: {
-          "Content-type": "application/json",
-          Authorization: `Bearer ${auth.accessToken}`,
-        },
-        body: JSON.stringfy(format),
-      });
+        const res = await fetch("http://localhost:3000/publicentryrates", {
+          method: "POST",
+          headers: {
+            "Content-type": "application/json",
+            Authorization: `Bearer ${auth.accessToken}`,
+          },
+          body: JSON.stringify(format),
+        });
 
-      const result = await res.json();
+        const result = await res.json();
 
-      if (!res.ok) {
-        throw new Error(result?.error || "Failed to create rate");
+        if (!res.ok) {
+          throw new Error(
+            JSON.stringify(result?.error || "Failed to create rate")
+          );
+        }
+
+        const newRate = result;
+        this.rates.push(newRate);
+
+        return newRate;
+      } catch (error) {
+        console.error("Add rate error:", error);
+        toast.error(error.message || "Something went wrong");
       }
-
-      const newRate = result;
-      this.rates.push(newRate);
-
-      return newRate;
     },
 
     // Update Rates
-    async updateRates(p) {
-      const auth = useAuthStore();
-      if (!auth.isLoggedIn) return;
+    async updateRates(rateDetails) {
+      try {
+        const auth = useAuthStore();
+        if (!auth.isLoggedIn) return;
 
-      const res = await fetch(
-        `http://localhost:3000/publicentryrates/${p.rateId}`,
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${auth.accesToken}`,
-          },
-          body: JSON.stringify(p),
+        const format = {
+          ...rateDetails,
+          rate: rateDetails.rate ? Number(rateDetails.rate) : null,
+          isActive: rateDetails.isActive ? Boolean(rateDetails.isActive) : null,
+        };
+
+        const res = await fetch(
+          `http://localhost:3000/publicentryrates/${rateDetails.rateId}`,
+          {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${auth.accessToken}`,
+            },
+            body: JSON.stringify(format),
+          }
+        );
+
+        if (!res.ok) {
+          throw new Error(JSON.stringify(errorData.error ?? errorData));
         }
-      );
 
-      if (!res.ok) {
-        throw new Error("Failed to update rates");
+        const updateRates = await res.json();
+        const index = this.rates.findIndex(
+          (p) => p.rateId === updateRates.rateId
+        );
+
+        if (index != -1) {
+          this.rates[index] = updateRates;
+        }
+        await this.fetchAllRates();
+      } catch (error) {
+        console.error("Update rate error:", error);
       }
-
-      const updateRates = await res.json();
-      const index = this.rates.findIndex(
-        (p) => p.rateId === updateRates.rateId
-      );
-
-      if (index != -1) {
-        this.rates[index] = updateRates;
-      }
-      await this.fetchAllRates();
     },
 
     //Delete Rates

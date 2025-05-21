@@ -1,26 +1,21 @@
 <script setup>
 import { ref, onMounted, computed } from "vue";
 import SearchBar from "../components/SearchBar.vue";
-import T3ButtonAddOns from "../components/T3ButtonAddOns.vue";
-import T3ButtonDiscount from "../components/T3ButtonDiscount.vue";
-import AddButtonAddOns from "../components/AddButtonAddOns.vue";
-import AddButtonDiscount from "../components/AddButtonDiscount.vue";
+import T3ButtonPublicRate from "../components/T3ButtonPublicRate.vue";
+import AddButtonPublicRate from "../components/AddButtonPublicRate.vue";
 import T3ButtonCatalog from "../components/T3ButtonCatalog.vue";
 import SideBar from "../components/SideBar.vue";
 import ProfileAvatar from "../components/ProfileAvatar.vue";
 import Notification from "../components/Notification.vue";
 import DarkModeButton from "../components/DarkModeButton.vue";
-import Tabs from "primevue/tabs";
-import TabList from "primevue/tablist";
-import Tab from "primevue/tab";
-import TabPanels from "primevue/tabpanels";
-import TabPanel from "primevue/tabpanel";
 import Paginator from "primevue/paginator";
 import Divider from "primevue/divider";
 import Tag from "primevue/tag";
 import Toast from "primevue/toast";
 import { useToast } from "primevue/usetoast";
 import { usePublicRateStore } from "../../stores/publicRateStore.js";
+import { formatDates } from "../../utility/dateFormat.js";
+import { formatPeso } from "../../utility/pesoFormat.js";
 
 const toast = useToast();
 const rateStore = usePublicRateStore();
@@ -29,21 +24,19 @@ onMounted(() => {
   rateStore.fetchAllRates();
 });
 
-// CATALOG
-
 const totalRates = computed(() => filteredRates.value.length);
 
-// const addCatalogHandler = async (catalogDetails) => {
-//   await catalogStore.addCatalog(catalogDetails);
-// };
+const addRateHandler = async (rateDetails) => {
+  await rateStore.addRates(rateDetails);
+};
 
-// const updateCatalogHandler = async (catalogDetails) => {
-//   await catalogStore.updateCatalog(catalogDetails);
-// };
+const updateRateHandler = async (rateDetails) => {
+  await rateStore.updateRates(rateDetails);
+};
 
-// const deleteCatalogHandler = async (catalogDetails) => {
-//   await catalogStore.deleteCatalog(catalogDetails);
-// };
+const deleteRateHandler = async (rateDetails) => {
+  await rateStore.deleteRates(rateDetails);
+};
 
 const first = ref(0);
 const rows = ref(5);
@@ -53,16 +46,20 @@ const paginatedRates = computed(() => {
 });
 
 const onPageChangeCat = (event) => {
-  firsfirsttCat.value = event.first;
+  first.value = event.first;
   rows.value = event.rows;
 };
 
 const selecteRates = ref(null);
-const rateDetails = ref(false);
+const ratesDetails = ref(false);
 
 const openRateDetails = (rates) => {
   selecteRates.value = rates;
-  rateDetails.value = true;
+  ratesDetails.value = true;
+};
+
+const closeModal = () => {
+  ratesDetails.value = false;
 };
 
 // Search logic
@@ -81,24 +78,9 @@ const filteredRates = computed(() => {
   return result;
 });
 
-//Fix Date Format
-function formatDate(dateString) {
-  const date = new Date(dateString);
-  const options = { year: "numeric", month: "short", day: "numeric" };
-  return date.toLocaleDateString("en-US", options);
-}
-
-// Peso Currency Format
-function formatPeso(value) {
-  return new Intl.NumberFormat("en-PH", {
-    style: "currency",
-    currency: "PHP",
-  }).format(value);
-}
-
 //Checks Severity of Status
 const getStatusSeverity = (status) => {
-  return status === "active" ? "success" : "danger";
+  return status === true ? "success" : "danger";
 };
 
 //Change logic
@@ -119,15 +101,10 @@ const getStatusSeverity = (status) => {
       <div class="searchB">
         <SearchBar class="sBar" v-model="searchQuery" />
         <div class="paBtns">
-          <AddButtonAddOns
+          <AddButtonPublicRate
             class="addBtn"
-            data="Add Ons"
-            @addAddOns="addCatalogHandler"
-          />
-          <AddButtonDiscount
-            class="addBtn"
-            data="Discount"
-            @addDiscount="addDiscountHandler"
+            data="Rate"
+            @addRate="addRateHandler"
           />
         </div>
       </div>
@@ -150,7 +127,7 @@ const getStatusSeverity = (status) => {
                 class="paRow"
                 v-for="rates in paginatedRates"
                 :key="rates.id"
-                @click="openRatesDetails(rates)"
+                @click="openRateDetails(rates)"
               >
                 <td>{{ rates.rateId }}</td>
                 <td>{{ rates.category }}</td>
@@ -159,11 +136,19 @@ const getStatusSeverity = (status) => {
                   {{ rates.mode }}
                 </td>
                 <td>
-                  {{ rates.isActive }}
+                  <Tag
+                    style="font-size: 12px"
+                    :severity="getStatusSeverity(rates.isActive)"
+                    :value="rates.isActive === true ? 'Active' : 'Inactive'"
+                  />
                 </td>
-                <td>{{ formatDate(rates.createdAt) }}</td>
+                <td>{{ formatDates(rates.createdAt) }}</td>
                 <td @click.stop>
-                  <T3ButtonCatalog />
+                  <T3ButtonPublicRate
+                    :rates="rates"
+                    @updatedRate="updateRateHandler"
+                    @deleteRate="deleteRateHandler"
+                  />
                 </td>
               </tr>
             </tbody>
@@ -186,12 +171,14 @@ const getStatusSeverity = (status) => {
           </h2>
           <Divider />
           <div class="flex flex-col gap-2">
+            <p><strong>Category:</strong> {{ selecteRates?.category }}</p>
+            <p><strong>Price Rate:</strong> {{ selecteRates?.rate }}</p>
+            <p><strong>Mode:</strong> {{ selecteRates?.mode }}</p>
+            <p><strong>Active:</strong> {{ selecteRates?.active }}</p>
             <p>
-              <strong>Catalog Name:</strong> {{ selectedCatalog?.itemName }}
+              <strong>Created At:</strong>
+              {{ formatDates(selecteRates?.createdAt) }}
             </p>
-            <p><strong>Price:</strong> {{ selectedCatalog?.price }}</p>
-            <p><strong>Status:</strong> {{ selectedCatalog?.status }}</p>
-            <p><strong>Created At:</strong> {{ selectedCatalog?.createdAt }}</p>
             <Divider />
             <button class="closeDetails mt-5 w-[100%]" @click="closeModal">
               Close
