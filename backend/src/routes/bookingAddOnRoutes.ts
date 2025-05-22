@@ -7,24 +7,17 @@
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { db } from "../config/database";
 import { BookingAddOnsTable } from "../schemas/BookingAddOns";
-import {
-  BookingAddOnDTO,
-  CreateBookingAddOnDTO,
-  UpdateBookingAddOnDTO,
-} from "../dto/BookingAddOnDTO";
+import { BookingAddOnDTO, CreateBookingAddOnDTO, UpdateBookingAddOnDTO } from "../dto/BookingAddOnDTO";
 import { eq } from "drizzle-orm";
 import { BookingsTable } from "../schemas/Booking";
 import { CatalogAddOnsTable } from "../schemas/CatalogAddOns";
 import { errorHandler } from "../middlewares/errorHandler";
-import {
-  BadRequestError,
-  ForbiddenError,
-  NotFoundError,
-} from "../utils/errors";
+import { BadRequestError, ForbiddenError, NotFoundError } from "../utils/errors";
 import { CatalogAddOnDTO } from "../dto/catalogAddOnDTO";
 import { authMiddleware } from "../middlewares/authMiddleware";
 import { verifyPermission } from "../utils/permissionUtils";
 import type { AuthContext } from "../types";
+import { AuditLogsTable } from "../schemas/AuditLog";
 
 const bookingAddOnRoutes = new OpenAPIHono<AuthContext>();
 
@@ -71,11 +64,7 @@ bookingAddOnRoutes.openapi(
   async (c) => {
     try {
       const userId = c.get("userId");
-      const hasPermission = await verifyPermission(
-        userId,
-        "BOOKING_ADD_ONS",
-        "read"
-      );
+      const hasPermission = await verifyPermission(userId, "BOOKING_ADD_ONS", "read");
 
       if (!hasPermission) {
         throw new ForbiddenError("No permission to get bookings.");
@@ -150,11 +139,7 @@ bookingAddOnRoutes.openapi(
   async (c) => {
     try {
       const userId = c.get("userId");
-      const hasPermission = await verifyPermission(
-        userId,
-        "BOOKING_ADD_ONS",
-        "create"
-      );
+      const hasPermission = await verifyPermission(userId, "BOOKING_ADD_ONS", "create");
 
       if (!hasPermission) {
         throw new ForbiddenError("No permission to create booking add-on.");
@@ -163,24 +148,21 @@ bookingAddOnRoutes.openapi(
       const parsed = CreateBookingAddOnDTO.parse(await c.req.json());
       const { bookingId, catalogAddOnId } = parsed;
 
-        const selectedBooking = await db.query.BookingsTable.findFirst({
-          where: eq(BookingsTable.bookingId, bookingId),
-        })
+      const selectedBooking = await db.query.BookingsTable.findFirst({
+        where: eq(BookingsTable.bookingId, bookingId),
+      });
 
       if (!selectedBooking) {
         throw new NotFoundError("Booking not found.");
       }
-      
+
       if (selectedBooking.bookStatus === "cancelled") {
-        return c.json(
-          { error: "Booking is already cancelled" },
-          400
-        );
+        return c.json({ error: "Booking is already cancelled" }, 400);
       }
 
       const selectedCatalogAddOn = await db.query.CatalogAddOnsTable.findFirst({
         where: eq(CatalogAddOnsTable.catalogAddOnId, catalogAddOnId),
-      })
+      });
 
       if (!selectedCatalogAddOn) {
         throw new NotFoundError("Catalog add-on not found.");
@@ -188,24 +170,38 @@ bookingAddOnRoutes.openapi(
 
       const price = selectedCatalogAddOn.price;
 
-      const created = (
-        await db
-          .insert(BookingAddOnsTable)
+      const created = await db.transaction(async (tx) => {
+        const createBookingAddon = (
+          await tx
+            .insert(BookingAddOnsTable)
+            .values({
+              ...parsed,
+              price: price,
+            })
+            .returning()
+            .execute()
+        )[0];
+
+        const updatedTotalAmount = selectedBooking.totalAmount + price;
+
+        await tx
+          .update(BookingsTable)
+          .set({ totalAmount: updatedTotalAmount, bookingPaymentStatus: "partially-paid", remainingBalance: selectedBooking.remainingBalance + price })
+          .where(eq(BookingsTable.bookingId, bookingId))
+          .execute();
+
+        await tx
+          .insert(AuditLogsTable)
           .values({
-            ...parsed,
-            price: price,
-          })
-          .returning()
-          .execute()
-      )[0];
+            userId: userId,
+            action: "create",
+            tableName: "BOOKING_ADD_ONS",
+            recordId: createBookingAddon.bookingAddOnId,
+            createdAt: new Date().toISOString(),
+          }).execute();
 
-      const updatedTotalAmount = selectedBooking.totalAmount + price;
-
-      await db
-        .update(BookingsTable)
-        .set({ totalAmount: updatedTotalAmount, bookingPaymentStatus: "partially-paid", remainingBalance: selectedBooking.remainingBalance + price }) 
-        .where(eq(BookingsTable.bookingId, bookingId))
-        .execute();
+        return createBookingAddon;
+      });
 
       return c.json(BookingAddOnDTO.parse(created), 201);
     } catch (err) {
@@ -214,4 +210,5 @@ bookingAddOnRoutes.openapi(
   }
 );
 
+//TODO: Maybe implement the getBookingAddOnById, updateBookingAddOn, and deleteBookingAddON functions
 export default bookingAddOnRoutes;

@@ -13,6 +13,7 @@ import refundPaymentRoutes from "./refundPaymentRoutes";
 import publicEntryRoutes from "./publicEntryRoutes";
 import publicEntryRateRoutes from "./publicEntryRateRoutes";
 import publicAddOnRoutes from "./publicAddOnRoutes";
+import auditLogRoutes from "./auditLogRoutes";
 import path from "path";
 
 // Define all routes with distinct paths
@@ -32,6 +33,7 @@ export const routes = [
   { path: "/publicentry", handler: publicEntryRoutes },
   { path: "/publicentryrates", handler: publicEntryRateRoutes },
   { path: "/publicentryaddons", handler: publicAddOnRoutes },
+  { path: "/auditLog", handler: auditLogRoutes },
 ] as const;
 
 export type AppRoutes = (typeof routes)[number];

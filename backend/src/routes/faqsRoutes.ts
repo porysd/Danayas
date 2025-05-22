@@ -12,6 +12,7 @@ import {
   ForbiddenError,
   NotFoundError,
 } from "../utils/errors";
+import { AuditLogsTable } from "../schemas/schema";
 
 const faqsRoutes = new OpenAPIHono<AuthContext>();
 
@@ -193,11 +194,26 @@ faqsRoutes.openapi(
 
       const parsed = CreateFaqsDTO.parse(await c.req.json());
 
-      const dbFaq = (
-        await db.insert(FaqsTable).values(parsed).returning().execute()
-      )[0];
+      const created = await db.transaction(async (tx) => {
+        const dbFaq = (
+          await tx.insert(FaqsTable).values(parsed).returning().execute()
+        )[0];
 
-      return c.json(FaqsDTO.parse(dbFaq), 201);
+        await tx
+          .insert(AuditLogsTable)
+          .values({
+            userId: userId,
+            action: "create",
+            tableName: "FAQS",
+            recordId: dbFaq.faqsId,
+            createdAt: new Date().toISOString(),
+          })
+          .execute();
+
+        return dbFaq;
+      });
+
+      return c.json(FaqsDTO.parse(created), 201);
     } catch (error) {
       return errorHandler(error, c);
     }
@@ -262,22 +278,35 @@ faqsRoutes.openapi(
 
       const updates = UpdateFaqsDTO.parse(await c.req.json());
 
-      await db
-        .update(FaqsTable)
-        .set(updates)
-        .where(eq(FaqsTable.faqsId, id))
-        .returning()
-        .execute();
+      const updated = await db.transaction(async (tx) => {
+        const updatedFaq = (
+          await tx
+            .update(FaqsTable)
+            .set(updates)
+            .where(eq(FaqsTable.faqsId, id))
+            .returning()
+            .execute()
+        )[0];
 
-      const updatedFaq = await db.query.FaqsTable.findFirst({
-        where: eq(FaqsTable.faqsId, id),
+        if (!updatedFaq) {
+          throw new NotFoundError("FAQ not found.");
+        }
+
+        await tx
+          .insert(AuditLogsTable)
+          .values({
+            userId: userId,
+            action: "update",
+            tableName: "FAQS",
+            recordId: updatedFaq.faqsId,
+            createdAt: new Date().toISOString(),
+          })
+          .execute();
+
+        return;
       });
 
-      if (!updatedFaq) {
-        throw new NotFoundError("FAQ not found.");
-      }
-
-      return c.json(FaqsDTO.parse(updatedFaq), 201);
+      return c.json(FaqsDTO.parse(updated), 201);
     } catch (error) {
       return errorHandler(error, c);
     }
@@ -332,7 +361,28 @@ faqsRoutes.openapi(
         throw new NotFoundError("FAQ not found.");
       }
 
-      await db.delete(FaqsTable).where(eq(FaqsTable.faqsId, id)).execute();
+      const deleted = await db.transaction(async (tx) => {
+        const deleteFaqs = (
+          await tx
+            .delete(FaqsTable)
+            .where(eq(FaqsTable.faqsId, id))
+            .returning()
+            .execute()
+        )[0];
+
+        await tx
+          .insert(AuditLogsTable)
+          .values({
+            userId: userId,
+            action: "delete",
+            tableName: "FAQS",
+            recordId: deleteFaqs.faqsId,
+            createdAt: new Date().toISOString(),
+          })
+          .execute();
+
+        return deleteFaqs;
+      });
 
       return c.json({
         status: "success",

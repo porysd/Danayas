@@ -12,6 +12,7 @@ import { errorHandler } from "../middlewares/errorHandler";
 import { authMiddleware } from "../middlewares/authMiddleware";
 import { verifyPermission } from "../utils/permissionUtils";
 import type { AuthContext } from "../types";
+import { AuditLogsTable } from "../schemas/schema";
 
 const discountRoutes = new OpenAPIHono<AuthContext>();
 
@@ -194,13 +195,31 @@ discountRoutes.openapi(
 
         const parsed = CreateDiscountDTO.parse(await c.req.json());
 
-        const created = (
-          await db.insert(DiscountsTable).values(parsed).returning().execute()
-        )[0];
+        const created = await db.transaction(async (tx) => {
 
-        if (!created) {
-          throw new BadRequestError("Failed to create discount.");
-        }
+          const createDiscount = (
+            await tx.insert(DiscountsTable).values(parsed).returning().execute()
+          )[0];
+  
+          if (!createDiscount) {
+            throw new BadRequestError("Failed to create discount.");
+          }
+          
+          await tx
+            .insert(AuditLogsTable)
+            .values({
+              userId: userId,
+              action: "create",
+              tableName: "DISCOUNTS",
+              recordId: createDiscount.discountId,
+              createdAt: new Date().toISOString(),
+            })
+            .execute();
+
+          return createDiscount;
+        });
+
+        
 
         return c.json(DiscountDTO.parse(created));
       } catch (err) {
@@ -261,18 +280,35 @@ discountRoutes.openapi(
         const { id } = c.req.valid("param");
         const updates = UpdateDiscountDTO.parse(await c.req.json());
 
-        await db
-          .update(DiscountsTable)
-          .set(updates)
-          .where(eq(DiscountsTable.discountId, id))
-          .execute();
-        const updated = await db.query.DiscountsTable.findFirst({
-          where: eq(DiscountsTable.discountId, id),
+        const updated = await db.transaction(async (tx) => {
+
+          const updateDiscount = (await tx
+            .update(DiscountsTable)
+            .set(updates)
+            .where(eq(DiscountsTable.discountId, id))
+            .returning()
+            .execute())[0];
+  
+  
+          if (!updateDiscount) {
+            throw new NotFoundError("Discount not found.");
+          }
+
+          await tx
+            .insert(AuditLogsTable)
+            .values({
+              userId: userId,
+              action: "update",
+              tableName: "DISCOUNTS",
+              recordId: updateDiscount.discountId,
+              createdAt: new Date().toISOString(),
+            })
+            .execute();
+
+          return updateDiscount;
         });
 
-        if (!updated) {
-          throw new NotFoundError("Discount not found.");
-        }
+        
 
         return c.json(DiscountDTO.parse(updated));
       } catch (err) {
@@ -320,10 +356,28 @@ discountRoutes.openapi(
           throw new NotFoundError("Booking not found.");
         }
 
-        await db
+        const deleted = await db.transaction(async (tx) => {
+          const deleteDiscount = (await tx
           .delete(DiscountsTable)
           .where(eq(DiscountsTable.discountId, id))
-          .execute();
+          .returning()
+          .execute())[0];
+
+          await tx
+            .insert(AuditLogsTable)
+            .values({
+              userId: userId,
+              action: "delete",
+              tableName: "DISCOUNTS",
+              recordId: deleteDiscount.discountId,
+              createdAt: new Date().toISOString(),
+            })
+            .execute();
+
+          return deleteDiscount;
+        });
+
+        
 
         return c.json({
           status: "success",

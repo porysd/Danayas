@@ -9,6 +9,7 @@ import { ErrorSchema } from "../utils/ErrorSchema";
 import { UnauthorizedError, ConflictError } from "../utils/errors";
 import { errorHandler } from "../middlewares/errorHandler";
 import type { AuthContext } from "../types";
+import { AuditLogsTable } from "../schemas/AuditLog";
 
 export default new OpenAPIHono<AuthContext>()
   .openapi(
@@ -107,6 +108,14 @@ export default new OpenAPIHono<AuthContext>()
         if (!(await Bun.password.verify(body.password, dbUser.password))) {
           throw new UnauthorizedError("Invalid email or password");
         }
+
+        await db.insert(AuditLogsTable).values({
+          userId: dbUser.userId,
+          action: "login",
+          tableName: "USER",
+          recordId: dbUser.userId,
+          createdAt: new Date().toISOString(),
+        }).execute();
 
         const payload = {
           sub: dbUser.userId,

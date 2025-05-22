@@ -25,6 +25,7 @@ import { verifyPermission } from "../utils/permissionUtils";
 import type { AuthContext } from "../types";
 import { RefundsTable } from "../schemas/Refund";
 import { RefundPaymentsTable } from "../schemas/RefundPayment";
+import { AuditLogsTable } from "../schemas/AuditLog";
 
 const bookingRoutes = new OpenAPIHono<AuthContext>();
 
@@ -349,17 +350,33 @@ bookingRoutes.openapi(
       //   mode: mappedMode,
       // });
 
-      const insertedBooking = (
-        await db
-          .insert(BookingsTable)
-          .values(processedBody)
-          .returning()
-          .execute()
-      )[0];
+      const created = await db.transaction(async (tx) => {
+        const insertedBooking = (
+          await tx
+            .insert(BookingsTable)
+            .values(processedBody)
+            .returning()
+            .execute()
+        )[0];
+
+        await tx
+          .insert(AuditLogsTable)
+          .values({
+            userId: userId,
+            action: "create",
+            tableName: "BOOKING",
+            recordId: insertedBooking.bookingId,
+            createdAt: new Date().toISOString(),
+          })
+          .execute();
+
+        return insertedBooking;
+      });
+
       return c.json(
         {
-          ...insertedBooking,
-          catering: insertedBooking.catering === 1,
+          ...created,
+          catering: created.catering === 1,
         },
         201
       );
@@ -485,21 +502,35 @@ bookingRoutes.openapi(
         processedData.checkInDate !== booking.checkInDate.split("T")[0] ||
         processedData.checkOutDate !== booking.checkOutDate.split("T")[0];
 
-      const updatedBooking = await db
-        .update(BookingsTable)
-        .set({
-          ...processedData,
-          hasRescheduled: hasRescheduled ? 1 : 0,
-          bookStatus: "rescheduled",
-        })
-        .where(eq(BookingsTable.bookingId, bookingId))
-        .returning()
-        .execute();
+      const updated = await db.transaction(async (tx) => {
+        const updatedBooking = (
+          await tx
+            .update(BookingsTable)
+            .set({
+              ...processedData,
+              hasRescheduled: hasRescheduled ? 1 : 0,
+              bookStatus: "rescheduled",
+            })
+            .where(eq(BookingsTable.bookingId, bookingId))
+            .returning()
+            .execute()
+        )[0];
+
+        await tx.insert(AuditLogsTable).values({
+          userId: userId,
+          action: "update",
+          tableName: "BOOKING",
+          recordId: bookingId,
+          createdAt: new Date().toISOString(),
+        });
+
+        return updatedBooking;
+      });
 
       return c.json({
         status: "success",
         message: "Booking updated successfully.",
-        updatedBooking: updatedBooking[0],
+        updatedBooking: updated,
       });
     } catch (err) {
       return errorHandler(err, c);
@@ -577,88 +608,117 @@ bookingRoutes.openapi(
         throw new NotFoundError("Booking not found");
       }
 
-      if (bookStatus === "cancelled") {
-        if (!cancelCategory) {
-          throw new BadRequestError(
-            "Cancel category is required for cancellation"
-          );
-        }
-
-        if (
-          cancelCategory === "others" &&
-          (!cancelReason || cancelReason.trim() === "")
-        ) {
-          throw new BadRequestError(
-            "Cancel Reason is required for 'others' category"
-          );
-        }
-        // If natural disaster, process refund
-        if (cancelCategory === "natural-disaster") {
-          // Check all existing payments for the booking thats valid
-          const allValidPayments = await db.query.PaymentsTable.findMany({
-            where: and(
-              eq(PaymentsTable.bookingId, bookingId),
-              eq(PaymentsTable.paymentStatus, "valid")
-            ),
-          });
-
-          if (allValidPayments.length === 0) {
+      const updated = await db.transaction(async (tx) => {
+        if (bookStatus === "cancelled") {
+          if (!cancelCategory) {
             throw new BadRequestError(
-              "No valid payments found for the booking."
+              "Cancel category is required for cancellation"
             );
           }
 
-          const totalPaid = allValidPayments.reduce((sum, payment) => {
-            return sum + payment.netPaidAmount;
-          }, 0);
-          await db.transaction(async (tx) => {
-            const refund = (
-              await tx
-                .insert(RefundsTable)
-                .values({
-                  bookingId: bookingId,
-                  publicEntryId: null,
-                  refundAmount: totalPaid * 0.5,
-                  refundStatus: "pending",
-                  refundReason: "Booking Cancelled due to " + cancelCategory,
-                })
-                .returning()
-                .execute()
-            )[0];
+          if (
+            cancelCategory === "others" &&
+            (!cancelReason || cancelReason.trim() === "")
+          ) {
+            throw new BadRequestError(
+              "Cancel Reason is required for 'others' category"
+            );
+          }
+          // If natural disaster, process refund
+          if (cancelCategory === "natural-disaster") {
+            // Check all existing payments for the booking thats valid
+            const allValidPayments = await db.query.PaymentsTable.findMany({
+              where: and(
+                eq(PaymentsTable.bookingId, bookingId),
+                eq(PaymentsTable.paymentStatus, "valid")
+              ),
+            });
 
-            await Promise.all(
-              allValidPayments.map((payment) =>
-                tx
-                  .insert(RefundPaymentsTable)
+            if (allValidPayments.length === 0) {
+              throw new BadRequestError(
+                "No valid payments found for the booking."
+              );
+            }
+
+            const totalPaid = allValidPayments.reduce((sum, payment) => {
+              return sum + payment.netPaidAmount;
+            }, 0);
+            await db.transaction(async (tx) => {
+              const refund = (
+                await tx
+                  .insert(RefundsTable)
                   .values({
-                    refundId: refund.refundId,
-                    paymentId: payment.paymentId,
-                    amountRefunded: payment.netPaidAmount * 0.5,
+                    bookingId: bookingId,
+                    publicEntryId: null,
+                    refundAmount: totalPaid * 0.5,
+                    refundStatus: "pending",
+                    refundReason: "Booking Cancelled due to " + cancelCategory,
                   })
                   .returning()
                   .execute()
-              )
-            );
-          });
-        }
-      }
+              )[0];
 
-      const updatedBooking = await db
-        .update(BookingsTable)
-        .set({
-          bookStatus,
-          cancelCategory: bookStatus === "cancelled" ? cancelCategory : null,
-          cancelReason:
-            bookStatus === "cancelled" ? cancelReason ?? null : null,
-        })
-        .where(eq(BookingsTable.bookingId, bookingId))
-        .returning()
-        .execute();
+              await tx
+                .insert(AuditLogsTable)
+                .values({
+                  userId: userId,
+                  action: "create",
+                  tableName: "REFUND",
+                  recordId: refund.refundId,
+                  createdAt: new Date().toISOString(),
+                })
+                .execute();
+
+              await Promise.all(
+                allValidPayments.map((payment) =>
+                  tx
+                    .insert(RefundPaymentsTable)
+                    .values({
+                      refundId: refund.refundId,
+                      paymentId: payment.paymentId,
+                      amountRefunded: payment.netPaidAmount * 0.5,
+                    })
+                    .returning()
+                    .execute()
+                )
+              );
+            });
+          }
+        }
+
+        await tx
+          .insert(AuditLogsTable)
+          .values({
+            userId: userId,
+            action: "status-change",
+            tableName: "BOOKING",
+            recordId: bookingId,
+            createdAt: new Date().toISOString(),
+          })
+          .execute();
+
+        const updatedBooking = (
+          await tx
+            .update(BookingsTable)
+            .set({
+              bookStatus,
+              cancelCategory:
+                bookStatus === "cancelled" ? cancelCategory : null,
+              cancelReason:
+                bookStatus === "cancelled" ? cancelReason ?? null : null,
+            })
+            .where(eq(BookingsTable.bookingId, bookingId))
+            .returning()
+            .execute()
+        )[0];
+
+        return updatedBooking;
+      });
 
       return c.json(
         {
           message: "Booking status updated",
-          bookStatus: updatedBooking[0].bookStatus,
+          bookStatus: updated.bookStatus,
         },
         200
       );
@@ -712,10 +772,22 @@ bookingRoutes.openapi(
         throw new NotFoundError("Booking not found.");
       }
 
-      await db
-        .delete(BookingsTable)
-        .where(eq(BookingsTable.bookingId, bookingId))
-        .execute();
+      const deleted = await db.transaction(async (tx) => {
+        await tx
+          .delete(BookingsTable)
+          .where(eq(BookingsTable.bookingId, bookingId))
+          .execute();
+        await tx
+          .insert(AuditLogsTable)
+          .values({
+            userId: userId,
+            action: "delete",
+            tableName: "BOOKING",
+            recordId: bookingId,
+            createdAt: new Date().toISOString(),
+          })
+          .execute();
+      });
 
       return c.json({
         status: "success",
