@@ -86,45 +86,52 @@ export const usePublicEntryStore = defineStore("publicEntry", {
     },
     // Add Public
     async addPublic(p) {
-      const auth = useAuthStore();
-      if (!auth.isLoggedIn) return;
+      try {
+        const auth = useAuthStore();
+        if (!auth.isLoggedIn) return;
 
-      const role = auth.user.role;
+        const role = auth.user.role;
 
-      const formatPublic = {
-        ...p,
-        userId: auth.user.userId,
-        discountPromoId: Number(booking.discountPromoId),
-        numAdult: Number(p.numAdult),
-        numKids: Number(p.numKids),
-        remainingBalance: booking.remainingBalance
-          ? Number(booking.remainingBalance)
-          : 0,
-        amountPaid: booking.amountPaid ? Number(booking.amountPaid) : 0,
-        reservationType: ["admin", "staff"].includes(role)
-          ? "walk-in"
-          : "online",
-      };
+        const formatPublic = {
+          ...p,
+          userId: auth.user.userId,
+          discountId: Number(p.discountId),
+          numAdults: Number(p.numAdults),
+          numKids: Number(p.numKids),
+          remainingBalance: p.remainingBalance ? Number(p.remainingBalance) : 0,
+          amountPaid: p.amountPaid ? Number(p.amountPaid) : 0,
+          reservationType: ["admin", "staff"].includes(role)
+            ? "walk-in"
+            : "online",
+          adultGuestNames: p.adultGuestNames,
+          kidGuestNames: p.kidGuestNames,
+        };
 
-      const res = await fetch("http://localhost:3000/publicentry", {
-        method: "POST",
-        headers: {
-          "Content-type": "application/json",
-          Authorization: `Bearer ${auth.accessToken}`,
-        },
-        body: JSON.stringfy(formatPublic),
-      });
+        const res = await fetch("http://localhost:3000/publicentry", {
+          method: "POST",
+          headers: {
+            "Content-type": "application/json",
+            Authorization: `Bearer ${auth.accessToken}`,
+          },
+          body: JSON.stringify(formatPublic),
+        });
 
-      const result = await res.json();
+        const result = await res.json();
 
-      if (!res.ok) {
-        throw new Error(result?.error || "Failed to create pubic entry");
+        if (!res.ok) {
+          throw new Error(result?.error || "Failed to create pubic entry");
+        }
+
+        const newPublic = result;
+        this.public.push(newPublic);
+
+        return newPublic;
+      } catch (e) {
+        console.error(
+          "Error adding public entries",
+          error?.response?.data || error
+        );
       }
-
-      const newPublic = result;
-      this.public.push(newPublic);
-
-      return newPublic;
     },
 
     // Update Public
@@ -198,7 +205,7 @@ export const usePublicEntryStore = defineStore("publicEntry", {
         (b) => b.publicEntryId === publics.publicEntryId
       );
       if (index !== -1) {
-        this.public[index].bookStatus = publics.status;
+        this.public[index].status = publics.status;
       }
 
       await this.fetchAllPublic();

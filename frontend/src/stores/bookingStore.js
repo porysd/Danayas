@@ -99,7 +99,7 @@ export const useBookingStore = defineStore("booking", {
         userId: auth.user.userId,
         packageId: Number(booking.packageId),
         numberOfGuest: Number(booking.numberOfGuest),
-        discountPromoId: Number(booking.discountPromoId),
+        discountId: Number(booking.discountId),
         remainingBalance: booking.remainingBalance
           ? Number(booking.remainingBalance)
           : 0,
