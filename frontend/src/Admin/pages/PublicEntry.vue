@@ -1,9 +1,8 @@
 <script setup>
 import { ref, onMounted, onUnmounted, computed } from "vue";
 import SearchBar from "../components/SearchBar.vue";
-import T3ButtonBooking from "../components/T3ButtonBooking.vue";
 import T3ButtonPublic from "../components/T3ButtonPublic.vue";
-import AddButtonBooking from "../components/AddButtonBooking.vue";
+import AddButtonPublic from "../components/AddButtonPublic.vue";
 import FilterButton from "../components/FilterButton.vue";
 import SideBar from "../components/SideBar.vue";
 import Tag from "primevue/tag";
@@ -18,36 +17,32 @@ import Tab from "primevue/tab";
 import TabPanels from "primevue/tabpanels";
 import TabPanel from "primevue/tabpanel";
 import Checkbox from "primevue/checkbox";
-import { useBookingStore } from "../../stores/bookingStore.js";
 import { usePublicEntryStore } from "../../stores/publicEntryStore.js";
 import { usePaymentStore } from "../../stores/paymentStore.js";
 import { formatPeso } from "../../utility/pesoFormat";
 import { formatDates } from "../../utility/dateFormat";
 
-const bookingStore = useBookingStore();
 const publicStore = usePublicEntryStore();
 const paymentStore = usePaymentStore();
 
 onMounted(() => {
   publicStore.fetchAllPublic();
-  bookingStore.fetchUserBookings();
 });
 
 const addBookingHandler = async (booking, paymentDetails) => {
   try {
     // 1: Create Booking
-    const newBooking = await bookingStore.addBooking(booking);
-    const bookingId = newBooking.bookingId;
+    const newPublic = await publicStore.addPublic(booking);
+    if (!newPublic || !newPublic.publicEntryId) {
+      throw new Error("Failed to create booking: No publicEntryId returned.");
+    }
 
-    // 2: Create Transaction
-    // const newTransaction = await transactionStore.addTransaction({ bookingId });
-    // console.log("Created transaction:", newTransaction);
-    // const transactionId = newTransaction.transactionId;
+    const publicEntryId = newPublic.publicEntryId;
 
-    // 3: Create Payment with transaction
+    // 2: Create Payment with id
     const fullPaymentDetails = {
       ...paymentDetails,
-      bookingId,
+      publicEntryId,
     };
 
     console.log("Full payment details being sent:", fullPaymentDetails);
@@ -60,7 +55,7 @@ const addBookingHandler = async (booking, paymentDetails) => {
       life: 3000,
     });
 
-    await bookingStore.fetchUserBookings();
+    await publicStore.fetchAllPublic();
   } catch (error) {
     console.error("Error adding booking:", error);
   }
@@ -581,7 +576,7 @@ onUnmounted(() => {
               </div>
             </div>
           </div>
-          <AddButtonBooking
+          <AddButtonPublic
             class="addBtn"
             data="Public"
             @addBooking="addBookingHandler"
