@@ -12,6 +12,7 @@ export * from "./CatalogAddOns.ts";
 export * from "./FaqsTable.ts";
 export * from "./TermsAndCondition.ts";
 export * from "./RefundPayment.ts";
+export * from "./AuditLog.ts";
 // export * from './ContentManagement.ts';
 
 export * from "./PublicEntry.ts";

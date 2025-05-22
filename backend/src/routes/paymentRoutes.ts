@@ -10,6 +10,7 @@ import {
   PaymentsTable,
   UsersTable,
   PublicEntryTable,
+  AuditLogsTable,
 } from "../schemas/schema";
 import { desc, and, ne, eq, like, or } from "drizzle-orm";
 import {
@@ -338,10 +339,24 @@ paymentRoutes.openapi(
             paymentStatus: paymentStatus,
           };
 
-          const newPayment = await tx
-            .insert(PaymentsTable)
-            .values(paymentData)
-            .returning();
+          const newPayment = (
+            await tx
+              .insert(PaymentsTable)
+              .values(paymentData)
+              .returning()
+              .execute()
+          )[0];
+
+          await tx
+            .insert(AuditLogsTable)
+            .values({
+              userId: userId,
+              action: "create",
+              tableName: "PAYMENTS",
+              recordId: newPayment.paymentId,
+              createdAt: new Date().toISOString(),
+            })
+            .execute();
 
           // For Private
           if (isEmployee) {
@@ -361,8 +376,19 @@ paymentRoutes.openapi(
               })
               .where(eq(BookingsTable.bookingId, bookingId))
               .execute();
+
+            await tx
+              .insert(AuditLogsTable)
+              .values({
+                userId: userId,
+                action: "update",
+                tableName: "BOOKINGS",
+                recordId: bookingId,
+                createdAt: new Date().toISOString(),
+              })
+              .execute();
           }
-          return newPayment[0];
+          return newPayment;
         });
         return c.json(PaymentDTO.parse(created), 201);
       } else if (publicEntryId) {
@@ -478,10 +504,20 @@ paymentRoutes.openapi(
             paymentStatus: paymentStatus,
           };
 
-          const newPayment = await tx
-            .insert(PaymentsTable)
-            .values(paymentData)
-            .returning();
+          const newPayment = (
+            await tx.insert(PaymentsTable).values(paymentData).returning()
+          )[0];
+
+          await tx
+            .insert(AuditLogsTable)
+            .values({
+              userId: userId,
+              action: "create",
+              tableName: "PAYMENTS",
+              recordId: newPayment.paymentId,
+              createdAt: new Date().toISOString(),
+            })
+            .execute();
 
           // For Public
           if (isEmployee) {
@@ -501,9 +537,20 @@ paymentRoutes.openapi(
               })
               .where(eq(PublicEntryTable.publicEntryId, publicEntryId))
               .execute();
+
+            await tx
+              .insert(AuditLogsTable)
+              .values({
+                userId: userId,
+                action: "update",
+                tableName: "PUBLIC_ENTRY",
+                recordId: publicEntryId,
+                createdAt: new Date().toISOString(),
+              })
+              .execute();
           }
 
-          return newPayment[0];
+          return newPayment;
         });
         return c.json(PaymentDTO.parse(created), 201);
       } else {
@@ -615,6 +662,17 @@ paymentRoutes.openapi(
               .where(eq(BookingsTable.bookingId, payment.bookingId))
               .returning()
               .execute();
+
+            await tx
+              .insert(AuditLogsTable)
+              .values({
+                userId: userId,
+                action: "update",
+                tableName: "BOOKINGS",
+                recordId: payment.bookingId,
+                createdAt: new Date().toISOString(),
+              })
+              .execute();
           }
 
           // Process Status in Public Entry
@@ -647,6 +705,17 @@ paymentRoutes.openapi(
               })
               .where(eq(PublicEntryTable.publicEntryId, payment.publicEntryId))
               .returning()
+              .execute();
+
+            await tx
+              .insert(AuditLogsTable)
+              .values({
+                userId: userId,
+                action: "update",
+                tableName: "PUBLIC_ENTRY",
+                recordId: payment.publicEntryId,
+                createdAt: new Date().toISOString(),
+              })
               .execute();
           }
         }
@@ -725,6 +794,17 @@ paymentRoutes.openapi(
                 })
                 .where(eq(BookingsTable.bookingId, payment.bookingId))
                 .execute();
+
+              await tx
+                .insert(AuditLogsTable)
+                .values({
+                  userId: userId,
+                  action: "update",
+                  tableName: "BOOKINGS",
+                  recordId: payment.bookingId,
+                  createdAt: new Date().toISOString(),
+                })
+                .execute();
             }
 
             if (payment.bookingId == null) {
@@ -785,22 +865,46 @@ paymentRoutes.openapi(
                   eq(PublicEntryTable.publicEntryId, payment.publicEntryId)
                 )
                 .execute();
+
+              await tx
+                .insert(AuditLogsTable)
+                .values({
+                  userId: userId,
+                  action: "update",
+                  tableName: "PUBLIC_ENTRY",
+                  recordId: payment.publicEntryId,
+                  createdAt: new Date().toISOString(),
+                })
+                .execute();
             }
           }
         }
 
-        const result = await tx
-          .update(PaymentsTable)
-          .set({ ...parsed, verifiedBy, paymentStatus })
-          .where(eq(PaymentsTable.paymentId, paymentId))
-          .returning()
+        const result = (
+          await tx
+            .update(PaymentsTable)
+            .set({ ...parsed, verifiedBy, paymentStatus })
+            .where(eq(PaymentsTable.paymentId, paymentId))
+            .returning()
+            .execute()
+        )[0];
+
+        await tx
+          .insert(AuditLogsTable)
+          .values({
+            userId: userId,
+            action: "update",
+            tableName: "PAYMENTS",
+            recordId: result.paymentId,
+            createdAt: new Date().toISOString(),
+          })
           .execute();
 
-        if (result.length === 0) {
+        if (!result) {
           throw new NotFoundError("Payment not found.");
         }
 
-        return result[0];
+        return result;
       });
 
       return c.json(updatedPayment);
