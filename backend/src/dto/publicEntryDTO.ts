@@ -120,6 +120,8 @@ export const CreatePublicEntryDTO = PublicEntryDTO.omit({
   publicEntryId: true,
   totalAmount: true,
   status: true,
+  adultRateId: true,
+  kidRateId: true,
   publicPaymentStatus: true,
   amountPaid: true,
   remainingBalance: true,

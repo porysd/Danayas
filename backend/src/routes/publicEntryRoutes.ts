@@ -314,10 +314,10 @@ publicEntryRoutes.openapi(
 
       const updatedBody = {
         ...processBookingData(body),
-        totalAmount,
         userId: body.userId,
         adultRateId,
         kidRateId,
+        totalAmount,
         firstName: body.firstName || userDetails?.firstName || null,
         lastName: body.lastName || userDetails?.lastName || null,
         contactNo: body.contactNo || userDetails?.contactNo || null,
@@ -349,6 +349,7 @@ publicEntryRoutes.openapi(
           .execute()
       )[0];
 
+      console.log("dbPublic:", dbPublic);
       return c.json({ ...dbPublic }, 201);
     } catch (err) {
       return errorHandler(err, c);
