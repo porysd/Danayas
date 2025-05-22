@@ -36,6 +36,7 @@ import Footer from "../Admin/pages/Footer.vue";
 import TermsAndCondition from "../Admin/pages/TermsAndCondition.vue";
 import Archived from "../Admin/pages/Archived.vue";
 import Profile from "../Admin/pages/Profile.vue";
+import AuditLogs from "../Admin/pages/AuditLogs.vue";
 
 // Not Found
 import NotFound from "../pages/NotFound.vue";
@@ -142,6 +143,7 @@ const routes = [
   //   meta: { requiresAuth: true },
   // },
   { path: "/admin/profile", component: Profile, meta: { requiresAuth: true } },
+  { path: "/admin/audit-logs", component: AuditLogs },
 
   // Not Found Page
   { path: "/:pathMatch(.*)*", component: NotFound },

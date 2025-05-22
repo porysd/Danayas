@@ -135,14 +135,14 @@ const toggleContentMenu = () => {
         <i class="pi pi-receipt mr-2"></i>
         Refund Management</router-link
       >
-      <router-link
+      <!-- <router-link
         to="/admin/transaction"
         class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
         active-class="active-route"
       >
         <i class="pi pi-receipt mr-2"></i>
         Transaction Records</router-link
-      >
+      > -->
       <router-link
         to="/admin/employee-management"
         class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
@@ -263,6 +263,15 @@ const toggleContentMenu = () => {
           Terms and Conditions</router-link
         >
       </div>
+
+      <router-link
+        to="/admin/audit-logs"
+        class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
+        active-class="active-route"
+      >
+        <i class="pi pi-clipboard mr-2"></i>
+        Audit Logs</router-link
+      >
 
       <!--<router-link
         to="/admin/archived"
