@@ -8,7 +8,6 @@ import {
 } from "../dto/publicAddOnDTO";
 import { eq } from "drizzle-orm";
 import { PublicEntryTable } from "../schemas/PublicEntry";
-import { TransactionsTable } from "../schemas/Transaction";
 import { CatalogAddOnsTable } from "../schemas/CatalogAddOns";
 import { errorHandler } from "../middlewares/errorHandler";
 import {
@@ -20,6 +19,7 @@ import { CatalogAddOnDTO } from "../dto/catalogAddOnDTO";
 import { authMiddleware } from "../middlewares/authMiddleware";
 import { verifyPermission } from "../utils/permissionUtils";
 import type { AuthContext } from "../types";
+import { AuditLogsTable } from "../schemas/schema";
 
 const publicAddOnRoutes = new OpenAPIHono<AuthContext>();
 
@@ -176,16 +176,34 @@ publicAddOnRoutes.openapi(
 
       const price = selectedCatalogAddOn.price;
 
-      const created = (
-        await db
-          .insert(PublicEntryAddOnsTable)
+      const created = await db.transaction(async (tx) => {
+
+        const createPublicEntryAddOn = (
+          await tx
+            .insert(PublicEntryAddOnsTable)
+            .values({
+              ...parsed,
+              price: price,
+            })
+            .returning()
+            .execute()
+        )[0];
+
+        await tx
+          .insert(AuditLogsTable)
           .values({
-            ...parsed,
-            price: price,
+            userId: userId,
+            action: "create",
+            tableName: "PUBLIC_ENTRY_ADD_ONS",
+            recordId: createPublicEntryAddOn.publicAddOnId,
+            createdAt: new Date().toISOString(),
           })
-          .returning()
-          .execute()
-      )[0];
+          .execute();
+		  
+		  return createPublicEntryAddOn;
+      });
+
+      
 
       return c.json(PublicEntryAddOnDTO.parse(created), 201);
     } catch (err) {

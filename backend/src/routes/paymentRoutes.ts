@@ -220,6 +220,26 @@ paymentRoutes.openapi(
       const isCustomer = user.role === "customer";
       const isEmployee = user.role === "admin" || user.role === "staff";
 
+      if (
+        paymentMethod === "gcash" &&
+        (!parsed.reference || !parsed.imageUrl)
+      ) {
+        return c.json(
+          {
+            error: "Reference and imageUrl are required for online payments",
+          },
+          400
+        );
+      }
+      if (paymentMethod === "cash" && (parsed.reference || parsed.imageUrl)) {
+        return c.json(
+          {
+            error: "Reference and imageUrl are not required for cash payments",
+          },
+          400
+        );
+      }
+
       if (bookingId) {
         //Handle Private Booking
         // Select the booking by bookingId
@@ -267,27 +287,6 @@ paymentRoutes.openapi(
         ) {
           return c.json(
             { error: "Full payment must be equal to the total amount" },
-            400
-          );
-        }
-
-        if (
-          paymentMethod === "gcash" &&
-          (!parsed.reference || !parsed.imageUrl)
-        ) {
-          return c.json(
-            {
-              error: "Reference and imageUrl are required for online payments",
-            },
-            400
-          );
-        }
-        if (paymentMethod === "cash" && (parsed.reference || parsed.imageUrl)) {
-          return c.json(
-            {
-              error:
-                "Reference and imageUrl are not required for cash payments",
-            },
             400
           );
         }
@@ -434,25 +433,6 @@ paymentRoutes.openapi(
         ) {
           return c.json(
             { error: "Fullpayment must be equal to the total amount" },
-            400
-          );
-        }
-
-        if (
-          paymentMethod === "gcash" &&
-          (!parsed.reference || !parsed.imageUrl)
-        ) {
-          return c.json(
-            { error: "Reference and imageUrl are required for online payment" },
-            400
-          );
-        }
-        if (paymentMethod === "cash" && (parsed.reference || parsed.imageUrl)) {
-          return c.json(
-            {
-              error:
-                "Reference and imageUrl are not required for cash payments",
-            },
             400
           );
         }

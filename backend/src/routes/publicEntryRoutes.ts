@@ -25,6 +25,7 @@ import type { AuthContext } from "../types";
 import { PublicEntryRateTable } from "../schemas/PublicEntryRate.ts";
 import { RefundsTable } from "../schemas/Refund";
 import { RefundPaymentsTable } from "../schemas/RefundPayment";
+import { AuditLogsTable } from "../schemas/schema.ts";
 
 const publicEntryRoutes = new OpenAPIHono<AuthContext>();
 
@@ -341,15 +342,30 @@ publicEntryRoutes.openapi(
       //   mode: mappedMode,
       // });
 
-      const dbPublic = (
-        await db
-          .insert(PublicEntryTable)
-          .values(updatedBody)
-          .returning()
-          .execute()
-      )[0];
+      const created = await db.transaction(async (tx) => {
+        const dbPublic = (
+          await tx
+            .insert(PublicEntryTable)
+            .values(updatedBody)
+            .returning()
+            .execute()
+        )[0];
 
-      return c.json({ ...dbPublic }, 201);
+        await tx
+          .insert(AuditLogsTable)
+          .values({
+            userId: userId,
+            action: "create",
+            tableName: "PUBLIC_ENTRY",
+            recordId: dbPublic.publicEntryId,
+            createdAt: new Date().toISOString(),
+          })
+          .execute();
+
+        return dbPublic;
+      });
+
+      return c.json({ ...created }, 201);
     } catch (err) {
       return errorHandler(err, c);
     }
@@ -456,17 +472,34 @@ publicEntryRoutes.openapi(
       //   bookingId: undefined, // this is a Booking, so no booking ID
       // });
 
-      const updatedPublic = await db
-        .update(PublicEntryTable)
-        .set({ ...processedData, status: "rescheduled" })
-        .where(eq(PublicEntryTable.publicEntryId, publicEntryId))
-        .returning()
-        .execute();
+      const updated = await db.transaction(async (tx) => {
+        const updatedPublic = (
+          await db
+            .update(PublicEntryTable)
+            .set({ ...processedData, status: "rescheduled" })
+            .where(eq(PublicEntryTable.publicEntryId, publicEntryId))
+            .returning()
+            .execute()
+        )[0];
+
+        await tx
+          .insert(AuditLogsTable)
+          .values({
+            userId: userId,
+            action: "update",
+            tableName: "PUBLIC_ENTRY",
+            recordId: updatedPublic.publicEntryId,
+            createdAt: new Date().toISOString(),
+          })
+          .execute();
+
+        return updatedPublic;
+      });
 
       return c.json({
         status: "success",
         message: "Public updated successfully.",
-        updatedPublic: updatedPublic[0],
+        updatedPublic: updated,
       });
     } catch (err) {
       return errorHandler(err, c);
@@ -546,42 +579,42 @@ publicEntryRoutes.openapi(
       if (!existingBooking || existingBooking.length === 0) {
         throw new NotFoundError("Booking not found");
       }
-
-      if (status === "cancelled") {
-        if (!cancelCategory) {
-          throw new BadRequestError(
-            "Cancel category is required for cancellation"
-          );
-        }
-
-        if (
-          cancelCategory === "others" &&
-          (!cancelReason || cancelReason.trim() === "")
-        ) {
-          throw new BadRequestError(
-            "Cancel Reason is required for 'others' category"
-          );
-        }
-        // If natural disaster, process refund
-        if (cancelCategory === "natural-disaster") {
-          // Check all existing payments for the public thats valid
-          const allValidPayments = await db.query.PaymentsTable.findMany({
-            where: and(
-              eq(PaymentsTable.publicEntryId, publicEntryId),
-              eq(PaymentsTable.paymentStatus, "valid")
-            ),
-          });
-
-          if (allValidPayments.length === 0) {
+      const updated = await db.transaction(async (tx) => {
+        if (status === "cancelled") {
+          if (!cancelCategory) {
             throw new BadRequestError(
-              "No valid payments found for the public."
+              "Cancel category is required for cancellation"
             );
           }
 
-          const totalPaid = allValidPayments.reduce((sum, payment) => {
-            return sum + payment.netPaidAmount;
-          }, 0);
-          await db.transaction(async (tx) => {
+          if (
+            cancelCategory === "others" &&
+            (!cancelReason || cancelReason.trim() === "")
+          ) {
+            throw new BadRequestError(
+              "Cancel Reason is required for 'others' category"
+            );
+          }
+          // If natural disaster, process refund
+          if (cancelCategory === "natural-disaster") {
+            // Check all existing payments for the public thats valid
+            const allValidPayments = await tx.query.PaymentsTable.findMany({
+              where: and(
+                eq(PaymentsTable.publicEntryId, publicEntryId),
+                eq(PaymentsTable.paymentStatus, "valid")
+              ),
+            });
+
+            if (allValidPayments.length === 0) {
+              throw new BadRequestError(
+                "No valid payments found for the public."
+              );
+            }
+
+            const totalPaid = allValidPayments.reduce((sum, payment) => {
+              return sum + payment.netPaidAmount;
+            }, 0);
+
             const refund = (
               await tx
                 .insert(RefundsTable)
@@ -596,6 +629,17 @@ publicEntryRoutes.openapi(
                 .execute()
             )[0];
 
+            await tx
+              .insert(AuditLogsTable)
+              .values({
+                userId,
+                action: "refund-issued",
+                tableName: "REFUND",
+                recordId: refund.refundId,
+                createdAt: new Date().toISOString(),
+              })
+              .execute();
+
             await Promise.all(
               allValidPayments.map((payment) =>
                 tx
@@ -605,29 +649,43 @@ publicEntryRoutes.openapi(
                     paymentId: payment.paymentId,
                     amountRefunded: payment.netPaidAmount * 0.5,
                   })
-                  .returning()
                   .execute()
               )
             );
-          });
+          }
         }
-      }
 
-      const updatedBooking = await db
-        .update(PublicEntryTable)
-        .set({
-          status,
-          cancelCategory: status === "cancelled" ? cancelCategory : null,
-          cancelReason: status === "cancelled" ? cancelReason ?? null : null,
-        })
-        .where(eq(PublicEntryTable.publicEntryId, publicEntryId))
-        .returning()
-        .execute();
+        const updatedBooking = (
+          await tx
+            .update(PublicEntryTable)
+            .set({
+              status,
+              cancelCategory: status === "cancelled" ? cancelCategory : null,
+              cancelReason:
+                status === "cancelled" ? cancelReason ?? null : null,
+            })
+            .where(eq(PublicEntryTable.publicEntryId, publicEntryId))
+            .returning()
+            .execute()
+        )[0];
 
+        await tx
+          .insert(AuditLogsTable)
+          .values({
+            userId: userId,
+            action: "status-change",
+            tableName: "PUBLIC_ENTRY",
+            recordId: updatedBooking.publicEntryId,
+            createdAt: new Date().toISOString(),
+          })
+          .execute();
+
+        return updatedBooking;
+      });
       return c.json(
         {
           message: "Public status updated",
-          status: updatedBooking[0].status,
+          status: updated.status,
         },
         200
       );
@@ -683,10 +741,23 @@ publicEntryRoutes.openapi(
         throw new NotFoundError("Public entry not found.");
       }
 
-      // Delete the public entry record
-      await db
-        .delete(PublicEntryTable)
-        .where(eq(PublicEntryTable.publicEntryId, id));
+      await db.transaction(async (tx) => {
+        // Delete the public entry record
+        await tx
+          .delete(PublicEntryTable)
+          .where(eq(PublicEntryTable.publicEntryId, id));
+
+        await tx
+          .insert(AuditLogsTable)
+          .values({
+            userId: userId,
+            action: "delete",
+            tableName: "PUBLIC_ENTRY",
+            recordId: id,
+            createdAt: new Date().toISOString(),
+          })
+          .execute();
+      });
 
       return c.json({ message: "Public Entry deleted successfully" });
     } catch (err) {

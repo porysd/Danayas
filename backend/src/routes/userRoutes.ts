@@ -13,6 +13,7 @@ import { errorHandler } from "../middlewares/errorHandler";
 import { authMiddleware } from "../middlewares/authMiddleware";
 import type { AuthContext } from "../types";
 import { verifyPermission } from "../utils/permissionUtils";
+import { AuditLogsTable } from "../schemas/schema";
 
 const userRoutes = new OpenAPIHono<AuthContext>();
 
@@ -210,11 +211,29 @@ userRoutes.openapi(
 
       const updatedUser = UpdateUserDTO.parse(await c.req.json());
 
-      await db
-        .update(UsersTable)
-        .set(updatedUser)
-        .where(eq(UsersTable.userId, paramId))
-        .execute();
+      const updated = await db.transaction(async (tx) => {
+        const updateUser = (
+          await tx
+            .update(UsersTable)
+            .set(updatedUser)
+            .where(eq(UsersTable.userId, paramId))
+            .returning()
+            .execute()
+        )[0];
+
+        await tx
+          .insert(AuditLogsTable)
+          .values({
+            userId: userId,
+            action: "update",
+            tableName: "USER",
+            recordId: updateUser.userId,
+            createdAt: new Date().toISOString(),
+          })
+          .execute();
+
+        return updateUser;
+      });
 
       return c.json(updatedUser);
     } catch (err) {
@@ -264,10 +283,28 @@ userRoutes.openapi(
         throw new NotFoundError("User not found");
       }
 
-      await db
-        .delete(UsersTable)
-        .where(eq(UsersTable.userId, paramId))
-        .execute();
+      await db.transaction(async (tx) => {
+        const deleteUser = (
+          await tx
+            .delete(UsersTable)
+            .where(eq(UsersTable.userId, paramId))
+            .returning()
+            .execute()
+        )[0];
+
+        await tx
+          .insert(AuditLogsTable)
+          .values({
+            userId: userId,
+            action: "delete",
+            tableName: "USER",
+            recordId: deleteUser.userId,
+            createdAt: new Date().toISOString(),
+          })
+          .execute();
+
+        return;
+      });
 
       return c.json({
         message: "User deleted successfully",
@@ -402,18 +439,33 @@ userRoutes.openapi(
         throw new ConflictError("User already exists");
       }
 
-      const dbUser = (
-        await db
-          .insert(UsersTable)
-          .values({
-            ...body,
-            password: await Bun.password.hash(body.password),
-          })
-          .returning()
-          .execute()
-      )[0];
+      const created = await db.transaction(async (tx) => {
+        const dbUser = (
+          await tx
+            .insert(UsersTable)
+            .values({
+              ...body,
+              password: await Bun.password.hash(body.password),
+            })
+            .returning()
+            .execute()
+        )[0];
 
-      const { password, ...userWithoutPassword } = dbUser;
+        await tx
+          .insert(AuditLogsTable)
+          .values({
+            userId: userId,
+            action: "create",
+            tableName: "USER",
+            recordId: dbUser.userId,
+            createdAt: new Date().toISOString(),
+          })
+          .execute();
+
+        return dbUser;
+      });
+
+      const { password, ...userWithoutPassword } = created;
 
       return c.json(userWithoutPassword);
     } catch (err) {
@@ -463,11 +515,30 @@ userRoutes.openapi(
       if (!user) {
         throw new NotFoundError("User not found");
       }
-      await db
-        .update(UsersTable)
-        .set({ status: "disable" })
-        .where(eq(UsersTable.userId, paramId))
-        .execute();
+
+      const updated = await db.transaction(async (tx) => {
+        const disableUser = (
+          await db
+            .update(UsersTable)
+            .set({ status: "disable" })
+            .where(eq(UsersTable.userId, paramId))
+            .returning()
+            .execute()
+        )[0];
+
+        await tx
+          .insert(AuditLogsTable)
+          .values({
+            userId: userId,
+            action: "status-change",
+            tableName: "USER",
+            recordId: disableUser.userId,
+            createdAt: new Date().toISOString(),
+          })
+          .execute();
+
+        return disableUser;
+      });
 
       return c.json({ message: "User disabled successfully", paramId });
     } catch (err) {
@@ -518,11 +589,29 @@ userRoutes.openapi(
         throw new NotFoundError("User not found");
       }
 
-      await db
-        .update(UsersTable)
-        .set({ status: "active" })
-        .where(eq(UsersTable.userId, paramId))
-        .execute();
+      const updated = await db.transaction(async (tx) => {
+        const activateUser = (
+          await db
+            .update(UsersTable)
+            .set({ status: "active" })
+            .where(eq(UsersTable.userId, paramId))
+            .returning()
+            .execute()
+        )[0];
+
+        await tx
+          .insert(AuditLogsTable)
+          .values({
+            userId: userId,
+            action: "status-change",
+            tableName: "USER",
+            recordId: activateUser.userId,
+            createdAt: new Date().toISOString(),
+          })
+          .execute();
+
+        return activateUser;
+      });
 
       return c.json({ message: "User enabled successfully", paramId });
     } catch (err) {
