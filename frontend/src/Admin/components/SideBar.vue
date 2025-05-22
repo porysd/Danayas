@@ -98,7 +98,7 @@ const toggleContentMenu = () => {
           class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
           active-class="active-route"
         >
-          <i class="pi pi-book mr-2"></i>
+          <i class="pi pi-calendar-plus mr-2"></i>
           Private Entries Booking</router-link
         >
         <!--<router-link
@@ -114,8 +114,16 @@ const toggleContentMenu = () => {
           class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
           active-class="active-route"
         >
-          <i class="pi pi-book mr-2"></i>
+          <i class="pi pi-calendar-plus mr-2"></i>
           Public Entries Booking</router-link
+        >
+        <router-link
+          to="/admin/blocked-dates"
+          class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
+          active-class="active-route"
+        >
+          <i class="pi pi-calendar-times mr-2"></i>
+          Blocked Dates</router-link
         >
       </div>
 
@@ -135,6 +143,14 @@ const toggleContentMenu = () => {
         <i class="pi pi-receipt mr-2"></i>
         Refund Management</router-link
       >
+      <router-link
+        to="/admin/reports"
+        class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
+        active-class="active-route"
+      >
+        <i class="pi pi-file-excel mr-2"></i>
+        Reports</router-link
+      >
       <!-- <router-link
         to="/admin/transaction"
         class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
@@ -143,14 +159,7 @@ const toggleContentMenu = () => {
         <i class="pi pi-receipt mr-2"></i>
         Transaction Records</router-link
       > -->
-      <router-link
-        to="/admin/employee-management"
-        class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
-        active-class="active-route"
-      >
-        <i class="pi pi-user mr-2"></i>
-        Employee Management</router-link
-      >
+
       <router-link
         to="/admin/customer-management"
         class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
@@ -160,12 +169,12 @@ const toggleContentMenu = () => {
         Customer Management</router-link
       >
       <router-link
-        to="/admin/reports"
+        to="/admin/employee-management"
         class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
         active-class="active-route"
       >
-        <i class="pi pi-file-excel mr-2"></i>
-        Reports</router-link
+        <i class="pi pi-user mr-2"></i>
+        Employee Management</router-link
       >
       <router-link
         to="/admin/packages-and-promos"

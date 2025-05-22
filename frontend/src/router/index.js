@@ -20,6 +20,7 @@ import EmployeeManagement from "../Admin/pages/EmployeeManagement.vue";
 import Booking from "../Admin/pages/Booking.vue";
 import PublicEntry from "../Admin/pages/PublicEntry.vue";
 import PublicRates from "../Admin/pages/PublicRate.vue";
+import BlockedDate from "../Admin/pages/BlockedDates.vue";
 import Payment from "../Admin/pages/Payment.vue";
 import Refund from "../Admin/pages/RefundManagement.vue";
 import Transaction from "../Admin/pages/Transaction.vue";
@@ -76,6 +77,11 @@ const routes = [
   {
     path: "/admin/public-booking",
     component: PublicEntry,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/admin/blocked-dates",
+    component: BlockedDate,
     meta: { requiresAuth: true },
   },
   {
