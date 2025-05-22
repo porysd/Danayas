@@ -18,3 +18,5 @@ export * from "./AuditLog.ts";
 export * from "./PublicEntry.ts";
 export * from "./PublicEntryRate.ts";
 export * from "./PublicAddOns.ts";
+
+export * from "./BlockedDates.ts";
