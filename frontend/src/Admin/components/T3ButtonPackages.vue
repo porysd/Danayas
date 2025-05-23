@@ -79,6 +79,24 @@ onMounted(() => {
 onUnmounted(() => {
   document.addEventListener("click", closeMenu);
 });
+const packageDetails = ref({
+  name: "",
+  price: "",
+  inclusion: "",
+  status: "",
+  mode: "",
+  imageUrl: "null",
+  isPromo: true,
+  promoStart: "",
+  promoEnd: "",
+});
+
+const onFileSelect = (event) => {
+  const file = event.file[0];
+  if (file) {
+    packageDetails.value.imageUrl = file;
+  }
+};
 </script>
 
 <template>
@@ -150,11 +168,13 @@ onUnmounted(() => {
             <label>Image URL:</label>
             <FileUpload
               ref="fileupload"
+              v-model="packageDetails.imageUrl"
               mode="basic"
-              name="demo[]"
+              name="imageUrl"
               url="/api/upload"
               accept="image/*"
               :maxFileSize="1000000"
+              @select="onFileSelect"
             />
           </div>
         </div>

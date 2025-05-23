@@ -8,14 +8,15 @@ import Textarea from "primevue/textarea";
 import FileUpload from "primevue/fileupload";
 
 const toast = useToast();
+
 const showAddPackageModal = ref(false);
 const newPackage = ref({
   name: "",
-  price: "",
+  price: null,
   inclusion: "",
   status: "",
   mode: "",
-  imageUrl: "",
+  imageUrl: null,
   isPromo: true,
   promoStart: "",
   promoEnd: "",
@@ -36,6 +37,12 @@ const addPackage = () => {
   emit("addPromos", { ...newPackage.value });
 
   closeAddPackageModal();
+};
+const onFileSelect = (event) => {
+  const file = event.files[0];
+  if (file) {
+    newPackage.value.imageUrl = file;
+  }
 };
 
 //name, price, description, status
@@ -68,7 +75,7 @@ const addPackage = () => {
         </div>
         <div class="addPackInput">
           <label>Price:</label>
-          <input v-model="newPackage.price" placeholder="Price" />
+          <input v-model.number="newPackage.price" placeholder="Price" />
         </div>
         <div class="addPackInput">
           <label>Inclusion:</label>
@@ -103,10 +110,11 @@ const addPackage = () => {
             ref="fileupload"
             v-model="newPackage.imageUrl"
             mode="basic"
-            name="demo[]"
+            name="imageUrl"
             url="/api/upload"
             accept="image/*"
             :maxFileSize="1000000"
+            @select="onFileSelect"
           />
         </div>
         <div class="addPackInput">

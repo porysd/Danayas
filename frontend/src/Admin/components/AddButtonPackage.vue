@@ -11,11 +11,11 @@ const toast = useToast();
 const showAddPackageModal = ref(false);
 const newPackage = ref({
   name: "",
-  price: "",
+  price: null,
   inclusion: "",
   status: "",
   mode: "",
-  imageUrl: "",
+  imageUrl: null,
   isPromo: false,
   promoStart: null,
   promoEnd: null,
@@ -37,6 +37,14 @@ const addPackage = () => {
 
   closeAddPackageModal();
 };
+const onFileSelect = (event) => {
+  const file = event.files[0];
+  if (file) {
+    newPackage.value.imageUrl = file;
+  }
+};
+
+console.log("Sending new package:", newPackage.value);
 
 //name, price, description, status
 </script>
@@ -68,7 +76,7 @@ const addPackage = () => {
         </div>
         <div class="addPackInput">
           <label>Price:</label>
-          <input v-model="newPackage.price" placeholder="Price" />
+          <input v-model.number="newPackage.price" placeholder="Price" />
         </div>
         <div class="addPackInput">
           <label>Inclusion:</label>
@@ -103,10 +111,11 @@ const addPackage = () => {
             ref="fileupload"
             v-model="newPackage.imageUrl"
             mode="basic"
-            name="demo[]"
+            name="imageUrl"
             url="/api/upload"
             accept="image/*"
             :maxFileSize="1000000"
+            @select="onFileSelect"
           />
         </div>
       </div>

@@ -22,6 +22,7 @@ import { usePaymentStore } from "../../stores/paymentStore.js";
 import { useTransactionStore } from "../../stores/transactionStore.js";
 import { useBookingStore } from "../../stores/bookingStore.js";
 import { usePublicEntryStore } from "../../stores/publicEntryStore.js";
+import Image from "primevue/image";
 
 const paymentStore = usePaymentStore();
 const bookingStore = useBookingStore();
@@ -388,7 +389,14 @@ onUnmounted(() => {
                           :value="payment.paymentStatus"
                         />
                       </td>
-                      <td class="w-[10%]">{{ payment.imageUrl }}</td>
+                      <td class="w-[10%]" @click.stop>
+                        <Image
+                          :src="`http://localhost:3000${payment.imageUrl}`"
+                          alt="Image"
+                          width="250"
+                          preview
+                        />
+                      </td>
                       <td class="w-[10%]">
                         {{ formatDates(payment.createdAt) }}
                       </td>
@@ -468,7 +476,14 @@ onUnmounted(() => {
                           :value="payment.paymentStatus"
                         />
                       </td>
-                      <td class="w-[10%]">{{ payment.imageUrl }}</td>
+                      <td class="w-[10%]" @click.stop>
+                        <Image
+                          :src="`http://localhost:3000${payment.imageUrl}`"
+                          alt="Image"
+                          width="250"
+                          preview
+                        />
+                      </td>
                       <td class="w-[10%]">
                         {{ formatDates(payment.createdAt) }}
                       </td>
@@ -548,7 +563,14 @@ onUnmounted(() => {
                           :value="payment.paymentStatus"
                         />
                       </td>
-                      <td class="w-[10%]">{{ payment.imageUrl }}</td>
+                      <td class="w-[10%]" @click.stop>
+                        <Image
+                          :src="`http://localhost:3000${payment.imageUrl}`"
+                          alt="Image"
+                          width="250"
+                          preview
+                        />
+                      </td>
                       <td class="w-[10%]">
                         {{ formatDates(payment.createdAt) }}
                       </td>
@@ -628,7 +650,14 @@ onUnmounted(() => {
                           :value="payment.paymentStatus"
                         />
                       </td>
-                      <td class="w-[10%]">{{ payment.imageUrl }}</td>
+                      <td class="w-[10%]" @click.stop>
+                        <Image
+                          :src="`http://localhost:3000${payment.imageUrl}`"
+                          alt="Image"
+                          width="250"
+                          preview
+                        />
+                      </td>
                       <td class="w-[10%]">
                         {{ formatDates(payment.createdAt) }}
                       </td>

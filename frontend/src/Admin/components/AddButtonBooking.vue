@@ -9,6 +9,13 @@ import MultiSelect from "primevue/multiselect";
 import FileUpload from "primevue/fileupload";
 import { useCatalogStore } from "../../stores/catalogStore.js";
 import { useDiscountStore } from "../../stores/discountStore.js";
+import { useBookingStore } from "../../stores/bookingStore.js";
+import { usePublicEntryStore } from "../../stores/publicEntryStore.js";
+import { useBlockedStore } from "../../stores/blockedDateStore.js";
+
+const bookingStore = useBookingStore();
+const publicStore = usePublicEntryStore();
+const blockStore = useBlockedStore();
 
 const catalogStore = useCatalogStore();
 const discountStore = useDiscountStore();
@@ -18,6 +25,9 @@ const catalogs = ref([]);
 onMounted(() => {
   catalogStore.fetchAllCatalogs();
   discountStore.fetchAllDiscounts();
+  bookingStore.fetchUserBookings();
+  publicStore.fetchAllPublic();
+  blockStore.fetchAllBlocked();
 });
 const toast = useToast();
 defineProps(["data"]);
@@ -83,6 +93,74 @@ const formatDate = (date) => {
   return `${month}-${day}-${year}`;
 };
 
+const minDate = new Date();
+
+const getBookingStyle = (slotDate) => {
+  const formattedDate = `${slotDate.year}-${String(slotDate.month + 1).padStart(
+    2,
+    "0"
+  )}-${String(slotDate.day).padStart(2, "0")}`;
+
+  // Collect all booking/public modes for the date
+  const mode = new Set();
+  let isBlocked = false;
+
+  bookingStore.bookings.forEach((b) => {
+    if (b.checkInDate === formattedDate) {
+      mode.add(b.mode);
+    }
+  });
+
+  publicStore.public.forEach((p) => {
+    if (p.entryDate === formattedDate) {
+      mode.add(p.mode);
+    }
+  });
+
+  if (blockStore.blocked.some((bd) => bd.blockedDates === formattedDate)) {
+    isBlocked = true;
+  }
+
+  let backgroundColor, color;
+
+  if (isBlocked) {
+    backgroundColor = "grey";
+    color = "white";
+  } else if (
+    mode.has("whole-day") ||
+    (mode.has("day-time") && mode.has("night-time"))
+  ) {
+    backgroundColor = "#FF6B6B"; // Fully Booked
+    color = "white";
+  } else if (mode.has("day-time")) {
+    backgroundColor = "#6A5ACD"; // Night Available
+    color = "white";
+  } else if (mode.has("night-time")) {
+    backgroundColor = "#FFD580"; // Day Available
+    color = "black";
+  } else {
+  }
+
+  return {
+    backgroundColor,
+    color,
+    width: "40px",
+    height: "40px",
+    display: "inline-flex",
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: "10rem",
+    fontSize: "17px",
+  };
+};
+
+const onFileSelect = (event) => {
+  const file = event.files[0]; // Get the first selected file
+  if (file) {
+    paymentDetails.value.imageUrl = file; // Update the imageUrl in paymentDetails
+  }
+};
+
 const confirmBooking = async () => {
   if (
     !newBooking.value.packageId ||
@@ -100,15 +178,6 @@ const confirmBooking = async () => {
       d.id === newBooking.value.discountId ||
       d.name.toLowerCase() === newBooking.value.discountId?.toLowerCase()
   );
-
-  if (!discount) {
-    toast.add({
-      severity: "error",
-      summary: "Discount not found",
-      detail: "Please check the Discount ID or Name.",
-    });
-    return;
-  }
 
   const bookingData = {
     ...newBooking.value,
@@ -221,7 +290,19 @@ console.log("Booking Data:", newBooking.value, paymentDetails.value);
               fluid
               iconDisplay="input"
               dateFormat="mm-dd-yy"
-            />
+              :minDate="minDate"
+            >
+              <template #date="slotProps">
+                <span>
+                  <strong
+                    :style="getBookingStyle(slotProps.date)"
+                    class="date-box"
+                  >
+                    {{ slotProps.date.day }}
+                  </strong>
+                </span>
+              </template></DatePicker
+            >
           </div>
           <div>
             <label>Check-Out Date:</label>
@@ -233,7 +314,19 @@ console.log("Booking Data:", newBooking.value, paymentDetails.value);
               fluid
               iconDisplay="input"
               dateFormat="mm-dd-yy"
-            />
+              :minDate="minDate"
+            >
+              <template #date="slotProps">
+                <span>
+                  <strong
+                    :style="getBookingStyle(slotProps.date)"
+                    class="date-box"
+                  >
+                    {{ slotProps.date.day }}
+                  </strong>
+                </span>
+              </template></DatePicker
+            >
           </div>
           <div>
             <label>Mode:</label>
@@ -372,6 +465,11 @@ console.log("Booking Data:", newBooking.value, paymentDetails.value);
           </div>
           <div>
             <template v-if="paymentDetails.paymentMethod === 'gcash'">
+              <label>Total Amount:</label>
+              <input
+                v-model.number="paymentDetails.tenderedAmount"
+                placeholder="Total Amount"
+              />
               <label>Reference No:</label>
               <input
                 v-model="paymentDetails.reference"
@@ -382,18 +480,21 @@ console.log("Booking Data:", newBooking.value, paymentDetails.value);
               </h1>
               <FileUpload
                 ref="fileupload"
+                v-model="paymentDetails.imageUrl"
                 mode="basic"
-                name="demo[]"
+                name="imageUrl"
                 url="/api/upload"
                 accept="image/*"
                 :maxFileSize="1000000"
-                @upload="onUpload"
+                @select="onFileSelect"
               />
             </template>
             <template v-else>
               <label>Total Amount:</label>
-              <input v-model.number="paymentDetails.tenderedAmount"
-              placeholder="Total Amount"
+              <input
+                v-model.number="paymentDetails.tenderedAmount"
+                placeholder="Total Amount"
+              />
             </template>
           </div>
         </div>
