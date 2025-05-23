@@ -13,7 +13,8 @@ import Tag from "primevue/tag";
 import Toast from "primevue/toast";
 import { useToast } from "primevue/usetoast";
 import { useBlockedStore } from "../../stores/blockedDateStore.js";
-import { formatDates } from "../../utility/dateFormat.js";
+import { formatDates, formatDate } from "../../utility/dateFormat.js";
+
 import { formatPeso } from "../../utility/pesoFormat.js";
 
 const toast = useToast();
@@ -33,9 +34,9 @@ const updateHandler = async (blockedDetails) => {
   await blockedStore.updateBlocked(blockedDetails);
 };
 
-// const deleteHandler = async (blockedDetails) => {
-//   await blockedStore.deleteBlockedDates(blockedDetails);
-// };
+const deleteHandler = async (blockedDetails) => {
+  await blockedStore.deleteBlockedDates(blockedDetails);
+};
 
 const first = ref(0);
 const rows = ref(5);
@@ -79,7 +80,7 @@ const filtered = computed(() => {
 
 //Checks Severity of Status
 const getStatusSeverity = (status) => {
-  return status === true ? "success" : "danger";
+  return status === "active" ? "success" : "danger";
 };
 
 //Change logic
@@ -115,6 +116,7 @@ const getStatusSeverity = (status) => {
                 <th>ID</th>
                 <th>BLOCKED DATE</th>
                 <th>CATEGORY</th>
+                <th>STATUS</th>
                 <th>CREATED BY</th>
                 <th>CREATED AT</th>
                 <th></th>
@@ -128,8 +130,14 @@ const getStatusSeverity = (status) => {
                 @click="openRateDetails(blocks)"
               >
                 <td>{{ blocks.blockedDatesId }}</td>
-                <td>{{ blocks.blockedDates }}</td>
+                <td>{{ formatDate(blocks.blockedDates) }}</td>
                 <td>{{ blocks.category }}</td>
+                <td>
+                  <Tag
+                    :severity="getStatusSeverity(blocks.status)"
+                    :value="blocks.status === 'active' ? 'Active' : 'Cancelled'"
+                  />
+                </td>
                 <td>
                   {{ blocks.createdBy }}
                 </td>
@@ -138,7 +146,7 @@ const getStatusSeverity = (status) => {
                   <T3ButtonBlocked
                     :blocks="blocks"
                     @updateBlocked="updateHandler"
-                    @deleteBlocked=""
+                    @deleteBlocked="deleteHandler"
                   />
                 </td>
               </tr>

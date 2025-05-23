@@ -19,7 +19,6 @@ import Checkbox from "primevue/checkbox";
 import { formatPeso } from "../../utility/pesoFormat.js";
 import { formatDates } from "../../utility/dateFormat.js";
 import { usePaymentStore } from "../../stores/paymentStore.js";
-import { useTransactionStore } from "../../stores/transactionStore.js";
 import { useBookingStore } from "../../stores/bookingStore.js";
 import { usePublicEntryStore } from "../../stores/publicEntryStore.js";
 import Image from "primevue/image";
@@ -34,28 +33,36 @@ onMounted(() => {
   publicStore.fetchAllPublic();
 });
 
-const getBookingName = (bookingId) => {
-  const booking = bookingStore.bookings.find((b) => b.bookingId === bookingId);
-  return booking ? booking.firstName + " " + booking.lastName : "Unknown";
+const getPaymentName = (payment) => {
+  if (payment.bookingId) {
+    const booking = bookingStore.bookings.find(
+      (b) => b.bookingId === payment.bookingId
+    );
+    if (booking) return booking.firstName + " " + booking.lastName;
+  }
+  if (payment.publicEntryId) {
+    const publics = publicStore.public.find(
+      (p) => p.publicEntryId === payment.publicEntryId
+    );
+    if (publics) return publics.firstName + " " + publics.lastName;
+  }
+  return "Unknown";
 };
 
-const getPublicName = (publicEntryId) => {
-  const publics = publicStore.public.find(
-    (p) => p.publicEntryId === publicEntryId
-  );
-  return publics ? publics.firstName + " " + publics.lastName : "Unknown";
-};
-
-const getBalance = (bookingId) => {
-  const booking = bookingStore.bookings.find((b) => b.bookingId === bookingId);
-  return booking ? booking.remainingBalance : "Unknown";
-};
-
-const getPublicBalance = (publicEntryId) => {
-  const publics = publicStore.public.find(
-    (p) => p.publicEntryId === publicEntryId
-  );
-  return publics ? publics.remainingBalance : "Unknown";
+const getPaymentBalance = (payment) => {
+  if (payment.bookingId) {
+    const booking = bookingStore.bookings.find(
+      (b) => b.bookingId === payment.bookingId
+    );
+    return booking ? booking.remainingBalance : "Unknown";
+  }
+  if (payment.publicEntryId) {
+    const publics = publicStore.public.find(
+      (p) => p.publicEntryId === payment.publicEntryId
+    );
+    return publics ? publics.remainingBalance : "Unknown";
+  }
+  return "Unknown";
 };
 
 // Update Payment by ID
@@ -335,7 +342,7 @@ onUnmounted(() => {
                   <thead>
                     <tr class="header-style">
                       <th>ID</th>
-                      <th>BOOKING ID</th>
+
                       <td>NAME</td>
                       <th>PAYMENT METHOD</th>
                       <th>AMOUNT PAID</th>
@@ -355,12 +362,8 @@ onUnmounted(() => {
                       @click="openPaymentDetails(payment)"
                     >
                       <td class="w-[3%]">{{ payment.paymentId }}</td>
-                      <td class="w-[5%]">{{ payment.bookingId }}</td>
                       <td class="w-[15%]">
-                        {{
-                          getBookingName(payment.bookingId) ||
-                          getPublicName(payment.publicEntryId)
-                        }}
+                        {{ getPaymentName(payment) }}
                       </td>
                       <td class="w-[10%]">
                         {{ payment.paymentMethod }}
@@ -369,16 +372,7 @@ onUnmounted(() => {
                         {{ formatPeso(payment.tenderedAmount) }}
                       </td>
                       <td class="w-[7%]">
-                        {{
-                          formatPeso(
-                            getBalance(payment.bookingId) -
-                              payment.tenderedAmount
-                          ) &&
-                          formatPeso(
-                            getPublicBalance(payment.publicEntryId) -
-                              payment.tenderedAmount
-                          )
-                        }}
+                        {{ formatPeso(getPaymentBalance(payment)) }}
                       </td>
                       <td class="w-[9%]">
                         {{ formatPeso(payment.changeAmount) }}
@@ -390,12 +384,17 @@ onUnmounted(() => {
                         />
                       </td>
                       <td class="w-[10%]" @click.stop>
-                        <Image
-                          :src="`http://localhost:3000${payment.imageUrl}`"
-                          alt="Image"
-                          width="250"
-                          preview
-                        />
+                        <div v-if="payment.imageUrl">
+                          <Image
+                            :src="`http://localhost:3000${payment.imageUrl}`"
+                            alt="Image"
+                            width="250"
+                            preview
+                          />
+                        </div>
+                        <div v-else>
+                          <p>No image</p>
+                        </div>
                       </td>
                       <td class="w-[10%]">
                         {{ formatDates(payment.createdAt) }}
@@ -428,7 +427,6 @@ onUnmounted(() => {
                   <thead>
                     <tr class="header-style">
                       <th>ID</th>
-                      <th>BOOKING ID</th>
                       <td>NAME</td>
                       <th>PAYMENT METHOD</th>
                       <th>AMOUNT PAID</th>
@@ -448,12 +446,8 @@ onUnmounted(() => {
                       @click="openPaymentDetails(payment)"
                     >
                       <td class="w-[3%]">{{ payment.paymentId }}</td>
-                      <td class="w-[5%]">{{ payment.bookingId }}</td>
                       <td class="w-[15%]">
-                        {{
-                          getBookingName(payment.bookingId) ||
-                          getPublicName(payment.publicEntryId)
-                        }}
+                        {{ getPaymentName(payment) }}
                       </td>
                       <td class="w-[10%]">
                         {{ payment.paymentMethod }}
@@ -462,10 +456,7 @@ onUnmounted(() => {
                         {{ formatPeso(payment.tenderedAmount) }}
                       </td>
                       <td class="w-[7%]">
-                        {{
-                          formatPeso(getBalance(payment.bookingId)) &&
-                          formatPeso(getPublicBalance(payment.publicEntryId))
-                        }}
+                        {{ formatPeso(getPaymentBalance(payment)) }}
                       </td>
                       <td class="w-[9%]">
                         {{ formatPeso(payment.changeAmount) }}
@@ -477,12 +468,17 @@ onUnmounted(() => {
                         />
                       </td>
                       <td class="w-[10%]" @click.stop>
-                        <Image
-                          :src="`http://localhost:3000${payment.imageUrl}`"
-                          alt="Image"
-                          width="250"
-                          preview
-                        />
+                        <div v-if="payment.imageUrl">
+                          <Image
+                            :src="`http://localhost:3000${payment.imageUrl}`"
+                            alt="Image"
+                            width="250"
+                            preview
+                          />
+                        </div>
+                        <div v-else>
+                          <p>No image</p>
+                        </div>
                       </td>
                       <td class="w-[10%]">
                         {{ formatDates(payment.createdAt) }}
@@ -515,7 +511,6 @@ onUnmounted(() => {
                   <thead>
                     <tr class="header-style">
                       <th>ID</th>
-                      <th>BOOKING ID</th>
                       <td>NAME</td>
                       <th>PAYMENT METHOD</th>
                       <th>AMOUNT PAID</th>
@@ -535,12 +530,8 @@ onUnmounted(() => {
                       @click="openPaymentDetails(payment)"
                     >
                       <td class="w-[3%]">{{ payment.paymentId }}</td>
-                      <td class="w-[5%]">{{ payment.bookingId }}</td>
                       <td class="w-[15%]">
-                        {{
-                          getBookingName(payment.bookingId) ||
-                          getPublicName(payment.publicEntryId)
-                        }}
+                        {{ getPaymentName(payment) }}
                       </td>
                       <td class="w-[10%]">
                         {{ payment.paymentMethod }}
@@ -549,10 +540,7 @@ onUnmounted(() => {
                         {{ formatPeso(payment.tenderedAmount) }}
                       </td>
                       <td class="w-[7%]">
-                        {{
-                          formatPeso(getBalance(payment.bookingId)) ||
-                          formatPeso(getPublicBalance(payment.publicEntryId))
-                        }}
+                        {{ formatPeso(getPaymentBalance(payment)) }}
                       </td>
                       <td class="w-[9%]">
                         {{ formatPeso(payment.changeAmount) }}
@@ -564,12 +552,17 @@ onUnmounted(() => {
                         />
                       </td>
                       <td class="w-[10%]" @click.stop>
-                        <Image
-                          :src="`http://localhost:3000${payment.imageUrl}`"
-                          alt="Image"
-                          width="250"
-                          preview
-                        />
+                        <div v-if="payment.imageUrl">
+                          <Image
+                            :src="`http://localhost:3000${payment.imageUrl}`"
+                            alt="Image"
+                            width="250"
+                            preview
+                          />
+                        </div>
+                        <div v-else>
+                          <p>No image</p>
+                        </div>
                       </td>
                       <td class="w-[10%]">
                         {{ formatDates(payment.createdAt) }}
@@ -602,7 +595,6 @@ onUnmounted(() => {
                   <thead>
                     <tr class="header-style">
                       <th>ID</th>
-                      <th>BOOKING ID</th>
                       <td>NAME</td>
                       <th>PAYMENT METHOD</th>
                       <th>AMOUNT PAID</th>
@@ -622,12 +614,8 @@ onUnmounted(() => {
                       @click="openPaymentDetails(payment)"
                     >
                       <td class="w-[3%]">{{ payment.paymentId }}</td>
-                      <td class="w-[5%]">{{ payment.bookingId }}</td>
                       <td class="w-[15%]">
-                        {{
-                          getBookingName(payment.bookingId) ||
-                          getPublicName(payment.publicEntryId)
-                        }}
+                        {{ getPaymentName(payment) }}
                       </td>
                       <td class="w-[10%]">
                         {{ payment.paymentMethod }}
@@ -636,10 +624,7 @@ onUnmounted(() => {
                         {{ formatPeso(payment.tenderedAmount) }}
                       </td>
                       <td class="w-[7%]">
-                        {{
-                          formatPeso(getBalance(payment.bookingId)) ||
-                          formatPeso(getPublicBalance(payment.publicEntryId))
-                        }}
+                        {{ formatPeso(getPaymentBalance(payment)) }}
                       </td>
                       <td class="w-[9%]">
                         {{ formatPeso(payment.changeAmount) }}
@@ -651,12 +636,17 @@ onUnmounted(() => {
                         />
                       </td>
                       <td class="w-[10%]" @click.stop>
-                        <Image
-                          :src="`http://localhost:3000${payment.imageUrl}`"
-                          alt="Image"
-                          width="250"
-                          preview
-                        />
+                        <div v-if="payment.imageUrl">
+                          <Image
+                            :src="`http://localhost:3000${payment.imageUrl}`"
+                            alt="Image"
+                            width="250"
+                            preview
+                          />
+                        </div>
+                        <div v-else>
+                          <p>No image</p>
+                        </div>
                       </td>
                       <td class="w-[10%]">
                         {{ formatDates(payment.createdAt) }}
@@ -734,7 +724,6 @@ onUnmounted(() => {
 table,
 th,
 td {
-  border: 1px solid black;
 }
 .customerM {
   background-color: #eef9eb;

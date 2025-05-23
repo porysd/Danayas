@@ -1294,7 +1294,10 @@ onUnmounted(() => {
         </h2>
         <Divider />
         <div>
-          <p><strong>Booking ID:</strong> {{ selectedPublic?.bookingId }}</p>
+          <p>
+            <strong>Public Entry ID:</strong>
+            {{ selectedPublic?.publicEntryId }}
+          </p>
           <p><strong>User ID:</strong> {{ selectedPublic?.userId }}</p>
           <p>
             <strong>Name:</strong> {{ selectedPublic?.firstName }}
@@ -1305,34 +1308,37 @@ onUnmounted(() => {
             <strong>Email Address:</strong> {{ selectedPublic?.emailAddress }}
           </p>
           <p><strong>Address:</strong> {{ selectedPublic?.address }}</p>
-          <p><strong>Check IN:</strong> {{ selectedPublic?.checkInDate }}</p>
-          <p><strong>Check OUT:</strong> {{ selectedPublic?.checkOutDate }}</p>
+          <p>
+            <strong>Entry Date:</strong>
+            {{ formatDates(selectedPublic?.entryDate) }}
+          </p>
           <p><strong>Mode:</strong> {{ selectedPublic?.mode }}</p>
+          <p><strong>No. of Adults:</strong> {{ selectedPublic?.numAdults }}</p>
+          <p><strong>No. of Kids:</strong> {{ selectedPublic?.numKids }}</p>
           <p>
-            <strong>Arrival Time:</strong> {{ selectedPublic?.arrivalTime }}
+            <strong>Adult Guest Name:</strong>
+            {{ selectedPublic?.adultGuestNames }}
           </p>
-          <p><strong>Event Type:</strong> {{ selectedPublic?.eventType }}</p>
           <p>
-            <strong>Number of Guest:</strong>
-            {{ selectedPublic?.numberOfGuest }}
+            <strong>Kid Guest Name:</strong>
+            {{ selectedPublic?.kidGuestNames }}
           </p>
-          <p><strong>Catering:</strong> {{ selectedPublic?.catering }}</p>
-          <p><strong>Discount:</strong> {{ selectedPublic?.discountId }}</p>
           <p>
             <strong>Payment Terms:</strong> {{ selectedPublic?.paymentTerms }}
           </p>
           <p>
             <strong>Total Amount Due:</strong>
-            {{ selectedPublic?.totalAmount }}
+            {{ formatPeso(selectedPublic?.totalAmount) }}
           </p>
-          <p>
-            <strong>Booking Status:</strong> {{ selectedPublic?.bookStatus }}
-          </p>
+          <p><strong>Status:</strong> {{ selectedPublic?.status }}</p>
           <p>
             <strong>Reservation Type:</strong>
             {{ selectedPublic?.reservationType }}
           </p>
-          <p><strong>Created At:</strong> {{ selectedPublic?.createdAt }}</p>
+          <p>
+            <strong>Created At:</strong>
+            {{ formatDates(selectedPublic?.createdAt) }}
+          </p>
         </div>
         <Divider />
         <button class="closeDetails mt-5 w-[100%]" @click="closeModal">
@@ -1347,7 +1353,6 @@ onUnmounted(() => {
 table,
 th,
 td {
-  border: 1px solid black;
 }
 .headers {
   display: flex;

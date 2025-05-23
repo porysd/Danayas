@@ -21,25 +21,33 @@ import { formatPeso } from "../../utility/pesoFormat.js";
 import { formatDates } from "../../utility/dateFormat.js";
 import { usePaymentStore } from "../../stores/paymentStore.js";
 import { useRefundStore } from "../../stores/refundStore.js";
-import { useTransactionStore } from "../../stores/transactionStore.js";
 import { useBookingStore } from "../../stores/bookingStore.js";
+import { usePublicEntryStore } from "../../stores/publicEntryStore.js";
 
 const refundStore = useRefundStore();
 const bookingStore = useBookingStore();
+const publicStore = usePublicEntryStore();
 
 onMounted(() => {
   refundStore.fetchRefunds();
   bookingStore.fetchUserBookings();
+  publicStore.fetchAllPublic();
 });
 
-const getBookingName = (bookingId) => {
-  const booking = bookingStore.bookings.find((b) => b.bookingId === bookingId);
-  return booking ? booking.firstName + " " + booking.lastName : "Unknown";
-};
-
-const getBalance = (bookingId) => {
-  const booking = bookingStore.bookings.find((b) => b.bookingId === bookingId);
-  return booking ? booking.remainingBalance : "Unknown";
+const getPaymentName = (refund) => {
+  if (refund.bookingId) {
+    const booking = bookingStore.bookings.find(
+      (b) => b.bookingId === refund.bookingId
+    );
+    if (booking) return booking.firstName + " " + booking.lastName;
+  }
+  if (refund.publicEntryId) {
+    const publics = publicStore.public.find(
+      (p) => p.publicEntryId === refund.publicEntryId
+    );
+    if (publics) return publics.firstName + " " + publics.lastName;
+  }
+  return "Unknown";
 };
 
 // Update Refund by ID
@@ -260,7 +268,6 @@ onUnmounted(() => {
                   <thead>
                     <tr class="header-style">
                       <th>ID</th>
-                      <th>BOOKING ID</th>
                       <td>NAME</td>
                       <th>REFUND METHOD</th>
                       <th>AMOUNT</th>
@@ -279,9 +286,8 @@ onUnmounted(() => {
                       @click="openRefundDetails(refund)"
                     >
                       <td class="w-[3%]">{{ refund.refundId }}</td>
-                      <td class="w-[5%]">{{ refund.bookingId }}</td>
                       <td class="w-[15%]">
-                        {{ getBookingName(refund.bookingId) }}
+                        {{ getPaymentName(refund) }}
                       </td>
                       <td class="w-[10%]">
                         {{ refund.refundMethod }}
@@ -300,8 +306,8 @@ onUnmounted(() => {
                       </td>
                       <td class="w-[10%]">
                         <!-- {{
-                          // refund.bookingId.imageUrl ||
-                          // refund.publicEntryId.imageUrl
+                          // refund.imageUrl ||
+                          // refund.imageUrl
                         }} -->
                       </td>
                       <td class="w-[10%]">
@@ -335,7 +341,6 @@ onUnmounted(() => {
                   <thead>
                     <tr class="header-style">
                       <th>ID</th>
-                      <th>BOOKING ID</th>
                       <td>NAME</td>
                       <th>REFUND METHOD</th>
                       <th>AMOUNT</th>
@@ -354,9 +359,9 @@ onUnmounted(() => {
                       @click="openRefundDetails(refund)"
                     >
                       <td class="w-[3%]">{{ refund.refundId }}</td>
-                      <td class="w-[5%]">{{ refund.bookingId }}</td>
+
                       <td class="w-[15%]">
-                        {{ getBookingName(refund.bookingId) }}
+                        {{ getPaymentName(refund) }}
                       </td>
                       <td class="w-[10%]">
                         {{ refund.refundMethod }}
@@ -373,7 +378,7 @@ onUnmounted(() => {
                       <td class="w-[9%]">
                         {{ refund.refundReason }}
                       </td>
-                      <td class="w-[10%]">{{ refund.bookingId.imageUrl }}</td>
+                      <td class="w-[10%]">{{ refund.imageUrl }}</td>
                       <td class="w-[10%]">
                         {{ formatDates(refund.createdAt) }}
                       </td>
@@ -405,7 +410,6 @@ onUnmounted(() => {
                   <thead>
                     <tr class="header-style">
                       <th>ID</th>
-                      <th>BOOKING ID</th>
                       <td>NAME</td>
                       <th>REFUND METHOD</th>
                       <th>AMOUNT</th>
@@ -424,9 +428,8 @@ onUnmounted(() => {
                       @click="openRefundDetails(refund)"
                     >
                       <td class="w-[3%]">{{ refund.refundId }}</td>
-                      <td class="w-[5%]">{{ refund.bookingId }}</td>
                       <td class="w-[15%]">
-                        {{ getBookingName(refund.bookingId) }}
+                        {{ getPaymentName(refund) }}
                       </td>
                       <td class="w-[10%]">
                         {{ refund.refundMethod }}
@@ -443,7 +446,7 @@ onUnmounted(() => {
                       <td class="w-[9%]">
                         {{ refund.refundReason }}
                       </td>
-                      <td class="w-[10%]">{{ refund.bookingId.imageUrl }}</td>
+                      <td class="w-[10%]">{{ refund.imageUrl }}</td>
                       <td class="w-[10%]">
                         {{ formatDates(refund.createdAt) }}
                       </td>
