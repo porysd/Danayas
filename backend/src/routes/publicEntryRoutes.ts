@@ -332,9 +332,9 @@ publicEntryRoutes.openapi(
       // Map mode values to match accepted types in dateConflicts
       const mappedMode =
         body.mode === "day-time"
-          ? "day"
+          ? "day-time"
           : body.mode === "night-time"
-          ? "night"
+          ? "night-time"
           : "whole-day";
 
       await dateConflicts({
@@ -450,9 +450,9 @@ publicEntryRoutes.openapi(
       if (dateChanged || modeChanged) {
         const mappedMode =
           res.mode === "day-time"
-            ? "day"
+            ? "day-time"
             : res.mode === "night-time"
-            ? "night"
+            ? "night-time"
             : "whole-day";
 
         await dateConflicts({

@@ -308,9 +308,9 @@ bookingRoutes.openapi(
 
       const mappedMode =
         body.mode === "day-time"
-          ? "day"
+          ? "day-time"
           : body.mode === "night-time"
-          ? "night"
+          ? "night-time"
           : "whole-day";
 
       await dateConflicts({
@@ -422,9 +422,9 @@ bookingRoutes.openapi(
       if (dateChanged || modeChanged) {
         const mappedMode =
           requestData.mode === "day-time"
-            ? "day"
+            ? "day-time"
             : requestData.mode === "night-time"
-            ? "night"
+            ? "night-time"
             : "whole-day";
 
         await dateConflicts({

@@ -13,6 +13,7 @@ import {
   PublicEntryRateTable,
   PublicEntryAddOnsTable,
 } from "../schemas/schema.ts";
+import { dateConflicts } from "../utils/dateConflict.ts";
 import { faker } from "@faker-js/faker";
 import { grantPermission } from "../utils/permissionUtils.ts";
 import { desc, and, ne, eq, like, or } from "drizzle-orm";
@@ -363,6 +364,35 @@ export default async function seed() {
       const discountAmount = (packagePrice * discountPercent) / 100;
       const finalAmount = packagePrice - discountAmount;
 
+      let checkInDate = "";
+      let mode: "day-time" | "night-time" | "whole-day" | undefined = undefined;
+      let entryAttempts = 0;
+      const maxAttempts = 100;
+
+      while (entryAttempts < maxAttempts) {
+        checkInDate = faker.date
+          .soon({ days: 180 })
+          .toISOString()
+          .split("T")[0];
+        mode = faker.helpers.arrayElement([
+          "day-time",
+          "night-time",
+          "whole-day",
+        ]);
+
+        try {
+          await dateConflicts({ date: checkInDate, mode });
+          break;
+        } catch {
+          entryAttempts++;
+        }
+      }
+
+      if (!mode) {
+        console.warn("Skipping booking because mode is undefined.");
+        continue;
+      }
+
       const row = await db
         .insert(BookingsTable)
         .values({
@@ -377,13 +407,9 @@ export default async function seed() {
             // "rescheduled",
             // "pending-cancellation",
           ]),
-          checkInDate: faker.date.future().toISOString().split("T")[0],
-          checkOutDate: faker.date.future().toISOString().split("T")[0],
-          mode: faker.helpers.arrayElement([
-            "day-time",
-            "night-time",
-            "whole-day",
-          ]),
+          checkInDate,
+          checkOutDate: checkInDate,
+          mode,
           reservationType: faker.helpers.arrayElement(["online", "walk-in"]),
           eventType: faker.helpers.arrayElement([
             "wedding",
@@ -769,26 +795,7 @@ export default async function seed() {
     }
   }
 
-  // For PublicEntryRate
-  // for (let x = 0; x < 20; x++) {
-  //   try {
-  //     await db
-  //       .insert(PublicEntryRateTable)
-  //       .values({
-  //         category: faker.helpers.arrayElement(["adult", "kid"]),
-  //         mode: faker.helpers.arrayElement(["day-time", "night-time"]),
-  //         rate: faker.number.int({ min: 100, max: 200 }),
-  //         createdAt: faker.date.past().toISOString(),
-  //         isActive: true,
-  //       })
-  //       .execute();
-
-  //     console.log(`Inserted PublicEntryRate #${x + 1}`);
-  //   } catch (e) {
-  //     console.error(`Error inserting PublicEntryRate #${x + 1}:`, e);
-  //   }
-  // }
-
+  // Public Entry Rates
   const publicEntryRates: {
     category: "adult" | "kid";
     mode: "day-time" | "night-time";
@@ -876,7 +883,29 @@ export default async function seed() {
         numAdults * adultRateRow.rate + numKids * kidRateRow.rate;
 
       const discountAmount = (totalRate * discountPercent) / 100;
-      const finalAmount = totalRate - discountPercent;
+      const finalAmount = totalRate - discountAmount;
+
+      let entryDate = "";
+      let mode: "day-time" | "night-time" | undefined = undefined;
+      let entryAttempts = 0;
+      const maxAttempts = 100;
+
+      while (entryAttempts < maxAttempts) {
+        entryDate = faker.date.soon({ days: 180 }).toISOString().split("T")[0];
+        mode = faker.helpers.arrayElement(["day-time", "night-time"]);
+
+        try {
+          await dateConflicts({ date: entryDate, mode });
+          break;
+        } catch {
+          entryAttempts++;
+        }
+      }
+
+      if (!mode) {
+        console.warn("Skipping public entry because mode is undefined.");
+        continue;
+      }
 
       const row = await db
         .insert(PublicEntryTable)
@@ -887,8 +916,8 @@ export default async function seed() {
           lastName: selectedUser.lastName,
           contactNo: selectedUser.contactNo,
           address: selectedUser.address,
-          entryDate: faker.date.recent().toISOString(),
-          mode: faker.helpers.arrayElement(["day-time", "night-time"]),
+          entryDate,
+          mode,
           reservationType: faker.helpers.arrayElement(["online", "walk-in"]),
           numAdults,
           numKids,

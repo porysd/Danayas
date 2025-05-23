@@ -14,7 +14,7 @@ export async function dateConflicts({
   publicEntryId,
 }: {
   date: string;
-  mode: "day" | "night" | "whole-day";
+  mode: "day-time" | "night-time" | "whole-day";
   bookingId?: string | number;
   publicEntryId?: string | number;
 }) {
