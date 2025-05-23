@@ -22,6 +22,7 @@
     "drizzle-kit": "^0.30.4",
     "drizzle-orm": "^0.39.2",
     "drizzle-seed": "^0.3.1",
+    "form-data": "^4.0.2",
     "hono": "^4.7.0",
     "http-status-codes": "^2.3.0",
     "sqlite": "^5.1.1",

@@ -31,7 +31,11 @@ const avail = (pkg) => {
       v-for="pkg in packageStore.packages"
       :key="pkg.packageId"
     >
-      <img src="../assets/danayas_day.jpg" alt="card2" class="card1" />
+      <img
+        :src="`http://localhost:3000${pkg.imageUrl}`"
+        alt="card2"
+        class="card1"
+      />
       <div class="titlePackage">{{ pkg.name }}</div>
       <div class="inclu">{{ pkg.inclusion }}</div>
       <ul class="inclu">
@@ -59,7 +63,11 @@ const avail = (pkg) => {
       v-for="pkg in packageStore.promos"
       :key="pkg.packageId"
     >
-      <img src="../assets/danayas_day.jpg" alt="card2" class="card1" />
+      <img
+        :src="`http://localhost:3000${pkg.imageUrl}`"
+        alt="card2"
+        class="card1"
+      />
       <div class="titlePackage">{{ pkg.name }}</div>
       <div class="inclu">
         <div class="P1">{{ pkg.inclusion }}</div>

@@ -22,6 +22,8 @@ import { errorHandler } from "../middlewares/errorHandler";
 import { authMiddleware } from "../middlewares/authMiddleware";
 import { verifyPermission } from "../utils/permissionUtils";
 import type { AuthContext } from "../types";
+import fs from "fs/promises";
+import path from "path";
 
 const paymentRoutes = new OpenAPIHono<AuthContext>();
 
@@ -200,7 +202,50 @@ paymentRoutes.openapi(
         throw new ForbiddenError("No permission to create payments.");
       }
 
-      const parsed = CreatePaymentDTO.parse(await c.req.json());
+      const formData = new FormData();
+
+      const body = await c.req.parseBody();
+      const file = body["imageUrl"] as File;
+
+      for (const key in body) {
+        if (key === "imageUrl") {
+          formData.append("imageUrl", body[key]);
+        } else {
+          formData.append(key, body[key]);
+        }
+      }
+
+      if (!file) {
+        throw new BadRequestError("No file uploaded");
+      }
+
+      const allowedMimeTypes = [
+        "image/jpeg",
+        "image/png",
+        "image/jpg",
+        "image/jfif",
+      ];
+
+      if (!allowedMimeTypes.includes(file.type)) {
+        throw new BadRequestError(
+          "Invalid file type, Only Jpeg, Png, and Jpg are allowed"
+        );
+      }
+
+      const uploadDir = path.join(process.cwd(), "public", "PaymentImages");
+      await fs.mkdir(uploadDir, { recursive: true });
+
+      const uniqueFileName = `${Date.now()}-${file.name}`;
+      const filePath = path.join(uploadDir, uniqueFileName);
+
+      const fileBuffer = await file.arrayBuffer();
+      await fs.writeFile(filePath, Buffer.from(fileBuffer));
+
+      const imageUrl = `/PaymentImages/${uniqueFileName}`;
+
+      body.imageUrl = file;
+
+      const parsed = CreatePaymentDTO.parse(body);
       const {
         bookingId,
         publicEntryId,
@@ -336,6 +381,7 @@ paymentRoutes.openapi(
             changeAmount,
             netPaidAmount,
             paymentStatus: paymentStatus,
+            imageUrl,
           };
 
           const newPayment = (
@@ -482,6 +528,7 @@ paymentRoutes.openapi(
             changeAmount,
             netPaidAmount,
             paymentStatus: paymentStatus,
+            imageUrl,
           };
 
           const newPayment = (

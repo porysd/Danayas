@@ -5,6 +5,7 @@ import Footer from "../components/Footer.vue";
 
 <template>
   <NavBar />
+
   <div class="contactContainer">
     <img
       src="../assets/danayas_day.jpg"
@@ -13,11 +14,12 @@ import Footer from "../components/Footer.vue";
     />
     <h1 class="ContactText">Contact Us</h1>
   </div>
-  <div class="contactus-container">
-    <h2 class="font-[Poppins] font-black text-center mt-10 relative text-5xl">
+
+  <div class="contactus-container px-4">
+    <h2 class="font-[Poppins] font-black text-center mt-10 text-5xl">
       Connect With Us!
     </h2>
-    <p class="text1 m-auto mb-15 text-center w-200 mt-5">
+    <p class="text-center max-w-3xl mx-auto mt-5 text-gray-700">
       At Danayas Resorts, we are here to help you create the perfect event.
       Whether you’re planning a wedding, a corporate retreat, or a family
       gathering, our team is ready to assist with every detail. Feel free to
@@ -27,66 +29,66 @@ import Footer from "../components/Footer.vue";
       let’s start planning!
     </p>
 
-    <div class="contactSec m-auto justify-center content-center mt-20">
-      <div class="bookAddress">
-        <div>
-          <input class="packEvents" placeholder="Name" />
+    <div
+      class="contactSec flex flex-col lg:flex-row gap-10 max-w-7xl mx-auto mt-20 w-[85rem]"
+    >
+      <div class="flex-1">
+        <div class="space-y-4">
+          <input class="packInput" type="text" placeholder="Name" />
+          <input class="packInput" type="email" placeholder="Email Address" />
+          <input class="packInput" type="tel" placeholder="Contact No." />
+          <textarea
+            class="packInput h-32 resize-none"
+            placeholder="Message..."
+          ></textarea>
         </div>
-        <div>
-          <input class="packEvents" placeholder="Email Address" />
+
+        <!-- Social Links -->
+        <div class="flex gap-5 mt-6">
+          <a
+            href="https://www.facebook.com/profile.php?id=61552657702549"
+            target="_blank"
+          >
+            <img
+              src="../assets/facebookneon.jpg"
+              alt="Facebook"
+              class="w-10 h-10 rounded-full object-cover"
+            />
+          </a>
+          <a
+            href="https://www.facebook.com/profile.php?id=61552657702549"
+            target="_blank"
+          >
+            <img
+              src="../assets/facebookneon.jpg"
+              alt="Facebook"
+              class="w-10 h-10 rounded-full object-cover"
+            />
+          </a>
+          <a
+            href="https://www.facebook.com/profile.php?id=61552657702549"
+            target="_blank"
+          >
+            <img
+              src="../assets/facebookneon.jpg"
+              alt="Facebook"
+              class="w-10 h-10 rounded-full object-cover"
+            />
+          </a>
         </div>
-        <div>
-          <input class="packEvents1" placeholder="Contact No." />
+        <div
+          class="SubmitButton bg-[#194d1d] text-white rounded-br-[30px] hover:bg-green-800 font-medium rounded-tl-[5px] w-[200px] h-[50px] mt-[-3rem] ml-[28rem] text-[20px] p-[10px] text-center break-words cursor-pointer flex justify-center items-center"
+        >
+          <button>SUBMIT</button>
         </div>
       </div>
 
-      <div class="bookAddress1">
-        <div>
-          <input class="packEvents" placeholder="Message.." />
-        </div>
-      </div>
-
-      <div
-        class="SubmitButton"
-        style="
-          background-color: #194d1d;
-          color: #ffffff;
-          border-bottom-right-radius: 30px;
-          border-top-left-radius: 5px;
-          width: 200px;
-          height: 50px;
-          text-align: center;
-          justify-content: center;
-          margin-top: 2rem;
-          margin-left: 28rem;
-          font-size: 20px;
-          font-weight: 400;
-          padding: 10px;
-          text-align: center;
-          word-wrap: break-word;
-          cursor: pointer;
-        "
-      >
-        <button>SUBMIT</button>
-      </div>
-
-      <div
-        class="container-map"
-        style="
-          width: 40%;
-          margin-left: 45rem;
-          position: relative;
-          display: flex;
-          top: -32rem;
-        "
-      >
+      <div class="flex-1">
         <iframe
-          src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d1929.608118783353!2d121
-            .12431473799222!3d14.7003600939651!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3397bb19868e1b37%3A0x429ae5ae7c94d0f2!2s7%20Jones%20Dulong%20Bayan
-            %202%2C%20San%20Mateo%2C%20Rizal%20Philippines!5e0!3m2!1sen!2sph!4v1741699299438!5m2!1sen!2sph"
-          width="1108"
-          height="500vh"
-          style="border: 0; border-radius: 10px; margin-top: 40px"
+          src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d1929.608118783353!2d121.12431473799222!3d14.7003600939651!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3397bb19868e1b37%3A0x429ae5ae7c94d0f2!2s7%20Jones%20Dulong%20Bayan%202%2C%20San%20Mateo%2C%20Rizal%20Philippines!5e0!3m2!1sen!2sph!4v1741699299438!5m2!1sen!2sph"
+          width="100%"
+          height="400"
+          class="rounded-xl border-0 w-full"
           allowfullscreen=""
           loading="lazy"
           referrerpolicy="no-referrer-when-downgrade"
@@ -94,20 +96,18 @@ import Footer from "../components/Footer.vue";
       </div>
     </div>
   </div>
+
   <Footer />
 </template>
 
 <style scoped>
-.contactus-container {
-  margin-top: 5rem;
-}
 .contactContainer {
   position: relative;
   display: flex;
   justify-content: center;
   align-items: center;
-  width: 85rem;
   height: 540px;
+  width: 85rem;
   margin: auto;
   border-radius: 25px;
   overflow: hidden;
@@ -131,49 +131,11 @@ import Footer from "../components/Footer.vue";
   text-align: center;
 }
 
-.contactSec {
-  position: static;
-  width: 85rem;
-  height: 500px;
-}
-
-.bookAddress,
-.bookAddress1 {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 30px;
-  margin-right: 30rem;
-
-  justify-content: center;
-}
-
-.bookAddress div {
-  display: flex;
-  flex-direction: column;
-  width: 50%;
-}
-
-.bookAddress1 div {
-  display: flex;
-  flex-direction: column;
-  height: 10rem;
-  width: 50%;
-  margin-top: 30px;
-}
-
-.bookAddress input {
-  padding: 8px;
+.packInput {
+  width: 100%;
+  padding: 10px;
   border: 1px solid #41ab5d;
   background-color: #fcfcfc;
   border-radius: 10px;
-  height: 40px;
-}
-
-.bookAddress1 input {
-  border: 1px solid #41ab5d;
-  background-color: #fcfcfc;
-  border-radius: 10px;
-  height: 100%;
-  padding: 8px;
 }
 </style>

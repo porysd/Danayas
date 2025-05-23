@@ -5,14 +5,20 @@ export const PaymentDTO = z.object({
     description: "Unique identifier for the payment",
     example: 1,
   }),
-  bookingId: z.number().nullable().optional().openapi({
-    description: "Unique identifier for the booking",
-    example: 1,
-  }),
-  publicEntryId: z.number().nullable().optional().openapi({
-    description: "Public Entry ID ",
-    example: 1,
-  }),
+  bookingId: z.preprocess((val) => {
+    if (typeof val === "string" || typeof val === "number") {
+      const num = Number(val);
+      return isNaN(num) ? undefined : num;
+    }
+    return undefined;
+  }, z.number().nullable().optional().openapi({ description: "Unique id for booking", example: 1 })),
+  publicEntryId: z.preprocess((val) => {
+    if (typeof val === "string" || typeof val === "number") {
+      const num = Number(val);
+      return isNaN(num) ? undefined : num;
+    }
+    return undefined;
+  }, z.number().nullable().optional().openapi({ description: "Unique id for public", example: 1 })),
   verifiedBy: z.number().nullable().optional().openapi({
     description: "User ID of the staff who verified the payment",
     example: 1,
@@ -21,10 +27,13 @@ export const PaymentDTO = z.object({
     description: "Mode of payment",
     example: "gcash",
   }),
-  tenderedAmount: z.number().openapi({
-    description: "Total amount tendered by the user",
-    example: 1000.0,
-  }),
+  tenderedAmount: z.preprocess((val) => {
+    if (typeof val === "string" || typeof val === "number") {
+      const num = Number(val);
+      return isNaN(num) ? undefined : num;
+    }
+    return undefined;
+  }, z.number().openapi({ description: "Total amount tendered by the user", example: 1000.0 })),
   changeAmount: z.number().openapi({
     description: "Change amount to be returned to the user",
     example: 200.0,
@@ -42,7 +51,7 @@ export const PaymentDTO = z.object({
     description: "Reference number for the payment",
     example: "1654 156 156354",
   }),
-  imageUrl: z.string().nullable().optional().openapi({
+  imageUrl: z.any().nullable().optional().openapi({
     description: "URL of the proof of payment image",
     example: "https://example.com/uploads/payment-proof.jpg",
   }),

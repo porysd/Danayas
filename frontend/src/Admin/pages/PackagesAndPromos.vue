@@ -24,6 +24,7 @@ import { usePackageStore } from "../../stores/packageStore.js";
 import { formatPeso } from "../../utility/pesoFormat";
 import { formatDates } from "../../utility/dateFormat";
 import Inplace from "primevue/inplace";
+import Image from "primevue/image";
 
 const toast = useToast();
 const packageStore = usePackageStore();
@@ -348,10 +349,10 @@ const getStatusSeverity = (status) => {
             </template>
             <template #content>
               <div v-if="selectedPackage?.imageUrl">
-                <img
+                <Image
+                  :src="`http://localhost:3000${selectedPackage?.imageUrl}`"
                   class="w-full sm:w-80 shadow-md"
-                  alt="Package Image"
-                  :src="selectedPackage?.imageUrl"
+                  alt="Image"
                 />
               </div>
               <div v-else>
@@ -405,10 +406,10 @@ const getStatusSeverity = (status) => {
             </template>
             <template #content>
               <div v-if="selectedPromo?.imageUrl">
-                <img
+                <Image
+                  :src="`http://localhost:3000${selectedPromo?.imageUrl}`"
                   class="w-full sm:w-80 shadow-md"
-                  alt="Promo Image"
-                  :src="selectedPromo?.imageUrl"
+                  alt=" Promo Image"
                 />
               </div>
               <div v-else>

@@ -41,7 +41,7 @@ export const usePackageStore = defineStore("package", {
 
         if (packagesData.items && packagesData.items.length > 0) {
           const regularPackages = packagesData.items.filter(
-            (pk) => pk.isPromo === 0
+            (pk) => pk.isPromo === 0 || pk.isPromo === false
           );
 
           this.packages.push(...regularPackages);
@@ -85,7 +85,7 @@ export const usePackageStore = defineStore("package", {
 
         if (packagesData.items && packagesData.items.length > 0) {
           const promoPackages = packagesData.items.filter(
-            (pk) => pk.isPromo === 1
+            (pk) => pk.isPromo === 1 || pk.isPromo === true
           );
 
           this.promos.push(...promoPackages);
@@ -105,19 +105,19 @@ export const usePackageStore = defineStore("package", {
     async addPackage(packageT) {
       const auth = useAuthStore();
       if (!auth.isLoggedIn) return;
-      const formatPackage = {
-        ...packageT,
-        price: packageT.price ? Number(packageT.price) : null,
-      };
+
+      const formData = new FormData();
+      for (const key in packageT) {
+        formData.append(key, packageT[key]);
+      }
 
       try {
         const response = await fetch("http://localhost:3000/packages", {
           method: "POST",
           headers: {
-            "Content-Type": "application/json",
             Authorization: `Bearer ${auth.accessToken}`,
           },
-          body: JSON.stringify(formatPackage),
+          body: formData,
         });
 
         if (!response.ok) {
@@ -131,44 +131,6 @@ export const usePackageStore = defineStore("package", {
         console.error("Error adding package:", error);
       }
     },
-
-    // Update a PACKAGE
-    async updatePackage(updatedPackage) {
-      const auth = useAuthStore();
-      if (!auth.isLoggedIn) return;
-
-      const updatePackage = {
-        ...updatedPackage,
-        isPromo: false,
-        promoStart: null,
-        promoEnd: null,
-        price: updatedPackage.price ? Number(updatedPackage.price) : null,
-      };
-
-      try {
-        const response = await fetch(
-          `http://localhost:3000/packages/${updatedPackage.packageId}`,
-          {
-            method: "PATCH",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${auth.accessToken}`,
-            },
-            body: JSON.stringify(updatePackage),
-          }
-        );
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(`Failed to edit package: ${errorText}`);
-        }
-
-        await this.fetchAllPackages();
-      } catch (error) {
-        console.error("Error editing package:", error);
-      }
-    },
-
     // Update a PROMO
     async updatePromo(updatedPromo) {
       const auth = useAuthStore();
