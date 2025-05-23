@@ -643,59 +643,47 @@ bookingRoutes.openapi(
             const totalPaid = allValidPayments.reduce((sum, payment) => {
               return sum + payment.netPaidAmount;
             }, 0);
-            await db.transaction(async (tx) => {
-              const refund = (
-                await tx
-                  .insert(RefundsTable)
+
+            const refund = (
+              await tx
+                .insert(RefundsTable)
+                .values({
+                  bookingId: bookingId,
+                  publicEntryId: null,
+                  refundAmount: totalPaid * 0.5,
+                  refundStatus: "pending",
+                  refundReason: "Booking Cancelled due to " + cancelCategory,
+                })
+                .returning()
+                .execute()
+            )[0];
+
+            await tx
+              .insert(AuditLogsTable)
+              .values({
+                userId: userId,
+                action: "create",
+                tableName: "REFUND",
+                recordId: refund.refundId,
+                createdAt: new Date().toISOString(),
+              })
+              .execute();
+
+            await Promise.all(
+              allValidPayments.map((payment) =>
+                tx
+                  .insert(RefundPaymentsTable)
                   .values({
-                    bookingId: bookingId,
-                    publicEntryId: null,
-                    refundAmount: totalPaid * 0.5,
-                    refundStatus: "pending",
-                    refundReason: "Booking Cancelled due to " + cancelCategory,
+                    refundId: refund.refundId,
+                    paymentId: payment.paymentId,
+                    amountRefunded: payment.netPaidAmount * 0.5,
                   })
                   .returning()
                   .execute()
-              )[0];
-
-              await tx
-                .insert(AuditLogsTable)
-                .values({
-                  userId: userId,
-                  action: "create",
-                  tableName: "REFUND",
-                  recordId: refund.refundId,
-                  createdAt: new Date().toISOString(),
-                })
-                .execute();
-
-              await Promise.all(
-                allValidPayments.map((payment) =>
-                  tx
-                    .insert(RefundPaymentsTable)
-                    .values({
-                      refundId: refund.refundId,
-                      paymentId: payment.paymentId,
-                      amountRefunded: payment.netPaidAmount * 0.5,
-                    })
-                    .returning()
-                    .execute()
-                )
-              );
-            });
+              )
+            );
           }
         }
-
-        await tx
-          .insert(AuditLogsTable)
-          .values({
-            userId: userId,
-            action: "status-change",
-            tableName: "BOOKING",
-            recordId: bookingId,
-            createdAt: new Date().toISOString(),
-          })
-          .execute();
 
         const updatedBooking = (
           await tx
@@ -711,6 +699,17 @@ bookingRoutes.openapi(
             .returning()
             .execute()
         )[0];
+
+        await tx
+          .insert(AuditLogsTable)
+          .values({
+            userId: userId,
+            action: "status-change",
+            tableName: "BOOKING",
+            recordId: bookingId,
+            createdAt: new Date().toISOString(),
+          })
+          .execute();
 
         return updatedBooking;
       });

@@ -16,6 +16,7 @@ import { errorHandler } from "../middlewares/errorHandler";
 import { authMiddleware } from "../middlewares/authMiddleware";
 import { verifyPermission } from "../utils/permissionUtils";
 import type { AuthContext } from "../types";
+import { AuditLogsTable } from "../schemas/schema";
 
 const publicEntryRateRoutes = new OpenAPIHono<AuthContext>();
 
@@ -211,28 +212,59 @@ publicEntryRateRoutes.openapi(
       const body = await c.req.json();
 
       if (body.isActive) {
-        await db
-          .update(PublicEntryRateTable)
-          .set({ isActive: false })
-          .where(
-            and(
-              eq(PublicEntryRateTable.category, body.category),
-              eq(PublicEntryRateTable.mode, body.mode),
-              eq(PublicEntryRateTable.isActive, true)
-            )
-          )
-          .execute();
+        await db.transaction(async (tx) => {
+          const updatePublicEntryRate = (
+            await tx
+              .update(PublicEntryRateTable)
+              .set({ isActive: false })
+              .where(
+                and(
+                  eq(PublicEntryRateTable.category, body.category),
+                  eq(PublicEntryRateTable.mode, body.mode),
+                  eq(PublicEntryRateTable.isActive, true)
+                )
+              )
+              .returning()
+              .execute()
+          )[0];
+
+          await tx
+            .insert(AuditLogsTable)
+            .values({
+              userId: userId,
+              action: "update",
+              tableName: "PUBLIC_ENTRY_RATE",
+              recordId: updatePublicEntryRate.rateId,
+              createdAt: new Date().toISOString(),
+            })
+            .execute();
+        });
       }
 
       const parsed = CreatePublicEntryRateDTO.parse(await c.req.json());
 
-      const created = (
-        await db
-          .insert(PublicEntryRateTable)
-          .values(parsed)
-          .returning()
-          .execute()
-      )[0];
+      const created = await db.transaction(async (tx) => {
+        const createPublicEntryRate = (
+          await tx
+            .insert(PublicEntryRateTable)
+            .values(parsed)
+            .returning()
+            .execute()
+        )[0];
+
+        await tx
+          .insert(AuditLogsTable)
+          .values({
+            userId: userId,
+            action: "create",
+            tableName: "PUBLIC_ENTRY_RATE",
+            recordId: createPublicEntryRate.rateId,
+            createdAt: new Date().toISOString(),
+          })
+          .execute();
+
+        return createPublicEntryRate;
+      });
 
       return c.json(PublicEntryRateDTO.parse(created), 201);
     } catch (err) {
@@ -290,7 +322,7 @@ publicEntryRateRoutes.openapi(
       }
 
       const { id } = c.req.valid("param");
-      const body = await c.req.json();
+      const updates = UpdatePublicEntryRateDTO.parse(await c.req.json());
 
       const existingRate = await db.query.PublicEntryRateTable.findFirst({
         where: eq(PublicEntryRateTable.rateId, id),
@@ -301,64 +333,100 @@ publicEntryRateRoutes.openapi(
       }
 
       // If setting a rate to active, deactivate other active rates for same category and mode
-      if (body.isActive === true) {
-        await db
-          .update(PublicEntryRateTable)
-          .set({ isActive: false })
-          .where(
-            and(
+
+      const updated = await db.transaction(async (tx) => {
+        if (updates.isActive === true) {
+          const deactivatePublicEntryRates = await tx
+            .update(PublicEntryRateTable)
+            .set({ isActive: false })
+            .where(
+              and(
+                eq(PublicEntryRateTable.category, existingRate.category),
+                eq(PublicEntryRateTable.mode, existingRate.mode),
+                eq(PublicEntryRateTable.isActive, true),
+                ne(PublicEntryRateTable.rateId, id)
+              )
+            )
+            .returning()
+            .execute();
+
+          for (const rate of deactivatePublicEntryRates) {
+            await tx
+              .insert(AuditLogsTable)
+              .values({
+                userId,
+                action: "update",
+                tableName: "PUBLIC_ENTRY_RATE",
+                recordId: rate.rateId,
+                createdAt: new Date().toISOString(),
+              })
+              .execute();
+          }
+        }
+
+        // Handle deactivation + fallback
+        if (updates.isActive === false && existingRate.isActive) {
+          // Find fallback rate (inactive ones except this)
+          const fallback = await tx.query.PublicEntryRateTable.findFirst({
+            where: and(
               eq(PublicEntryRateTable.category, existingRate.category),
               eq(PublicEntryRateTable.mode, existingRate.mode),
-              eq(PublicEntryRateTable.isActive, true),
+              eq(PublicEntryRateTable.isActive, false),
               ne(PublicEntryRateTable.rateId, id)
-            )
-          )
-          .execute();
-      }
+            ),
+            orderBy: desc(PublicEntryRateTable.createdAt), // or any order you prefer
+          });
 
-      // Handle deactivation + fallback
-      if (body.isActive === false && existingRate.isActive) {
-        // Deactivate current rate explicitly (optional if update below does it)
-        await db
-          .update(PublicEntryRateTable)
-          .set({ isActive: false })
-          .where(eq(PublicEntryRateTable.rateId, id))
-          .execute();
+          // Activate fallback if found
+          if (fallback) {
+            const updatedFallback = (
+              await tx
+                .update(PublicEntryRateTable)
+                .set({ isActive: true })
+                .where(eq(PublicEntryRateTable.rateId, fallback.rateId))
+                .returning()
+                .execute()
+            )[0];
 
-        // Find fallback rate (inactive ones except this)
-        const fallback = await db.query.PublicEntryRateTable.findFirst({
-          where: and(
-            eq(PublicEntryRateTable.category, existingRate.category),
-            eq(PublicEntryRateTable.mode, existingRate.mode),
-            eq(PublicEntryRateTable.isActive, false),
-            ne(PublicEntryRateTable.rateId, id)
-          ),
-          orderBy: desc(PublicEntryRateTable.createdAt), // or any order you prefer
-        });
-
-        // Activate fallback if found
-        if (fallback) {
-          await db
-            .update(PublicEntryRateTable)
-            .set({ isActive: true })
-            .where(eq(PublicEntryRateTable.rateId, fallback.rateId))
-            .execute();
+            if (updatedFallback) {
+              await tx
+                .insert(AuditLogsTable)
+                .values({
+                  userId,
+                  action: "update",
+                  tableName: "PUBLIC_ENTRY_RATE",
+                  recordId: updatedFallback.rateId,
+                  createdAt: new Date().toISOString(),
+                })
+                .execute();
+            }
+          }
         }
-      }
 
-      const updates = UpdatePublicEntryRateDTO.parse(await c.req.json());
+        const updatedRate = (
+          await tx
+            .update(PublicEntryRateTable)
+            .set(updates)
+            .where(eq(PublicEntryRateTable.rateId, id))
+            .returning()
+            .execute()
+        )[0];
 
-      await db
-        .update(PublicEntryRateTable)
-        .set(updates)
-        .where(eq(PublicEntryRateTable.rateId, id))
-        .execute();
+        await tx
+          .insert(AuditLogsTable)
+          .values({
+            userId,
+            action: "update",
+            tableName: "PUBLIC_ENTRY_RATE",
+            recordId: id,
+            createdAt: new Date().toISOString(),
+          })
+          .execute();
 
-      const updatedRate = await db.query.PublicEntryRateTable.findFirst({
-        where: eq(PublicEntryRateTable.rateId, id),
+        return updatedRate;
       });
 
-      return c.json(PublicEntryRateDTO.parse(updatedRate));
+      return c.json(PublicEntryRateDTO.parse(updated));
     } catch (err) {
       return errorHandler(err, c);
     }
@@ -414,31 +482,62 @@ publicEntryRateRoutes.openapi(
       if (!deletedRate) {
         throw new NotFoundError("Rate not found.");
       }
+      const deleted = await db.transaction(async (tx) => {
+        // If the rate is active, find fallback rate and activate it
+        if (deletedRate.isActive) {
+          const fallbackRate = await tx.query.PublicEntryRateTable.findFirst({
+            where: and(
+              eq(PublicEntryRateTable.mode, deletedRate.mode),
+              eq(PublicEntryRateTable.category, deletedRate.category),
+              ne(PublicEntryRateTable.rateId, id)
+            ),
+            orderBy: desc(PublicEntryRateTable.createdAt),
+          });
 
-      // If the rate is active, find fallback rate and activate it
-      if (deletedRate.isActive) {
-        const fallbackRate = await db.query.PublicEntryRateTable.findFirst({
-          where: and(
-            eq(PublicEntryRateTable.mode, deletedRate.mode),
-            eq(PublicEntryRateTable.category, deletedRate.category),
-            ne(PublicEntryRateTable.rateId, id)
-          ),
-          orderBy: desc(PublicEntryRateTable.createdAt),
-        });
+          if (fallbackRate) {
+            const updatedPublicEntryRate = (
+              await tx
+                .update(PublicEntryRateTable)
+                .set({ isActive: true })
+                .where(eq(PublicEntryRateTable.rateId, fallbackRate.rateId))
+                .returning()
+                .execute()
+            )[0];
 
-        if (fallbackRate) {
-          await db
-            .update(PublicEntryRateTable)
-            .set({ isActive: true })
-            .where(eq(PublicEntryRateTable.rateId, fallbackRate.rateId))
-            .execute();
+            await tx
+              .insert(AuditLogsTable)
+              .values({
+                userId: userId,
+                action: "update",
+                tableName: "PUBLIC_ENTRY_RATE",
+                recordId: updatedPublicEntryRate.rateId,
+                createdAt: new Date().toISOString(),
+              })
+              .execute();
+          }
         }
-      }
 
-      await db
-        .delete(PublicEntryRateTable)
-        .where(eq(PublicEntryRateTable.rateId, id))
-        .execute();
+        const deletePublicEntryRate = (
+          await tx
+            .delete(PublicEntryRateTable)
+            .where(eq(PublicEntryRateTable.rateId, id))
+            .returning()
+            .execute()
+        )[0];
+
+        await tx
+          .insert(AuditLogsTable)
+          .values({
+            userId: userId,
+            action: "delete",
+            tableName: "PUBLIC_ENTRY_RATE",
+            recordId: deletePublicEntryRate.rateId,
+            createdAt: new Date().toISOString(),
+          })
+          .execute();
+
+        return deletePublicEntryRate;
+      });
 
       return c.json({
         status: "success",

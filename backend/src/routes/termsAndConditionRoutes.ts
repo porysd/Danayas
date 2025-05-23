@@ -16,6 +16,7 @@ import {
   ForbiddenError,
   NotFoundError,
 } from "../utils/errors";
+import { AuditLogsTable } from "../schemas/schema";
 
 const termsRoutes = new OpenAPIHono<AuthContext>();
 
@@ -150,15 +151,30 @@ termsRoutes.openapi(
 
       const parsed = CreateTermsAndCondtionDTO.parse(await c.req.json());
 
-      const dbterms = (
-        await db
-          .insert(TermsAndConditionTable)
-          .values(parsed)
-          .returning()
-          .execute()
-      )[0];
+      const created = await db.transaction(async (tx) => {
+        const dbterms = (
+          await tx
+            .insert(TermsAndConditionTable)
+            .values(parsed)
+            .returning()
+            .execute()
+        )[0];
 
-      return c.json(termsConditionDTO.parse(dbterms), 201);
+        await tx
+          .insert(AuditLogsTable)
+          .values({
+            userId: userId,
+            action: "create",
+            tableName: "TERMS_AND_CONDITION",
+            recordId: dbterms.termsId,
+            createdAt: new Date().toISOString(),
+          })
+          .execute();
+
+        return dbterms;
+      });
+
+      return c.json(termsConditionDTO.parse(created), 201);
     } catch (error) {
       return errorHandler(error, c);
     }
@@ -215,10 +231,26 @@ termsRoutes.openapi(
         throw new NotFoundError("Terms and Condition not found.");
       }
 
-      await db
-        .delete(TermsAndConditionTable)
-        .where(eq(TermsAndConditionTable.termsId, id))
-        .execute();
+      await db.transaction(async (tx) => {
+        const deleteTermsAndCondition = (
+          await tx
+            .delete(TermsAndConditionTable)
+            .where(eq(TermsAndConditionTable.termsId, id))
+            .returning()
+            .execute()
+        )[0];
+
+        await tx
+          .insert(AuditLogsTable)
+          .values({
+            userId: userId,
+            action: "delete",
+            tableName: "TERMS_AND_CONDITION",
+            recordId: deleteTermsAndCondition.termsId,
+            createdAt: new Date().toISOString(),
+          })
+          .execute();
+      });
 
       return c.json({
         status: "success",
@@ -289,22 +321,35 @@ termsRoutes.openapi(
 
       const updates = UpdateTermsAndCondtionDTO.parse(await c.req.json());
 
-      await db
-        .update(TermsAndConditionTable)
-        .set(updates)
-        .where(eq(TermsAndConditionTable.termsId, id))
-        .returning()
-        .execute();
+      const updated = await db.transaction(async (tx) => {
+        const updatedTerms = (
+          await db
+            .update(TermsAndConditionTable)
+            .set(updates)
+            .where(eq(TermsAndConditionTable.termsId, id))
+            .returning()
+            .execute()
+        )[0];
 
-      const updatedTerms = await db.query.TermsAndConditionTable.findFirst({
-        where: eq(TermsAndConditionTable.termsId, id),
+        if (!updatedTerms) {
+          throw new NotFoundError("Terms and Condition not found.");
+        }
+
+        await tx
+          .insert(AuditLogsTable)
+          .values({
+            userId: userId,
+            action: "update",
+            tableName: "TERMS_AND_CONDITION",
+            recordId: updatedTerms.termsId,
+            createdAt: new Date().toISOString(),
+          })
+          .execute();
+
+        return updatedTerms;
       });
 
-      if (!updatedTerms) {
-        throw new NotFoundError("Terms and Condition not found.");
-      }
-
-      return c.json(termsConditionDTO.parse(updatedTerms), 201);
+      return c.json(termsConditionDTO.parse(updated), 201);
     } catch (error) {
       return errorHandler(error, c);
     }
