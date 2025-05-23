@@ -6,6 +6,7 @@ import { apiReference } from "@scalar/hono-api-reference";
 import { authMiddleware } from "./middlewares/authMiddleware";
 import { cors } from "hono/cors";
 import { errorHandler } from "./middlewares/errorHandler";
+import { serveStatic } from "hono/bun";
 
 const app = new OpenAPIHono()
   .doc("/openapi", {
@@ -27,10 +28,15 @@ const app = new OpenAPIHono()
   .use(
     cors({
       origin: "http://localhost:4000",
-      allowMethods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
+      allowMethods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
       allowHeaders: ["Content-Type", "Authorization"],
     })
   )
+  .use("/PaymentImages/*", logger())
+  .use("/PaymentImages/*", serveStatic({ root: "./public" }))
+
+  .use("/PackageImages/*", logger())
+  .use("/PackageImages/*", serveStatic({ root: "./public" }))
   .onError(errorHandler)
   .get("/", (c) => {
     return c.json({ message: "Working!" });

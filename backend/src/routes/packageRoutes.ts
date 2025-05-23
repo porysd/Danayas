@@ -18,6 +18,8 @@ import { authMiddleware } from "../middlewares/authMiddleware";
 import type { AuthContext } from "../types";
 import { verifyPermission } from "../utils/permissionUtils";
 import { AuditLogsTable } from "../schemas/schema";
+import fs from "fs/promises";
+import path from "path";
 
 const packageRoutes = new OpenAPIHono<AuthContext>();
 
@@ -251,7 +253,6 @@ packageRoutes.openapi(
       const updatedBody = {
         ...body,
         updatedAt: new Date().toISOString().slice(0, 19).replace("T", " "),
-        isPromo: body.isPromo ? 1 : 0,
       };
 
       const updated = await db.transaction(async (tx) => {
@@ -284,7 +285,6 @@ packageRoutes.openapi(
 
       return c.json({
         ...updated,
-        isPromo: updated.isPromo === 1,
         imageUrl: updated.imageUrl || "",
       });
     } catch (err) {
@@ -380,7 +380,7 @@ packageRoutes.openapi(
     request: {
       body: {
         content: {
-          "application/json": {
+          multi: {
             schema: CreatePackageDTO,
           },
         },
@@ -411,25 +411,76 @@ packageRoutes.openapi(
         "PACKAGES",
         "create"
       );
+      const formData = new FormData();
+      const allowedStatuses = ["active", "inactive"];
 
       if (!hasPermission) {
         throw new ForbiddenError("No permission to create package.");
       }
 
-      const body = c.req.valid("json");
+      const body = await c.req.parseBody();
+      const file = body["imageUrl"] as File;
+
+      for (const key in body) {
+        if (key === "imageUrl") {
+          formData.append("imageUrl", body[key]);
+        } else {
+          formData.append(key, body[key]);
+        }
+      }
+
+      if (!file) {
+        throw new BadRequestError("No file uploaded");
+      }
+
+      const allowedMimeTypes = [
+        "image/jpeg",
+        "image/png",
+        "image/jpg",
+        "image/jfif",
+      ];
+
+      if (!allowedMimeTypes.includes(file.type)) {
+        throw new BadRequestError(
+          "Invalid file type, Only Jpeg, Png, and Jpg are allowed"
+        );
+      }
+
+      const uploadDir = path.join(process.cwd(), "public", "PackageImages");
+      await fs.mkdir(uploadDir, { recursive: true });
+
+      const uniqueFileName = `${Date.now()}-${file.name}`;
+      const filePath = path.join(uploadDir, uniqueFileName);
+
+      const fileBuffer = await file.arrayBuffer();
+      await fs.writeFile(filePath, Buffer.from(fileBuffer));
+
+      console.log("Save to:", filePath);
+      const imageUrl = `/PackageImages/${uniqueFileName}`;
+
+      body.imageUrl = file;
 
       const existingPackage = await db.query.PackagesTable.findFirst({
-        where: eq(PackagesTable.name, body.name),
+        where: eq(PackagesTable.name, String(body.name)),
       });
 
       if (existingPackage) {
         throw new ConflictError("Package already exists.");
       }
 
+      const parsed = CreatePackageDTO.parse(body);
+
+      const status = allowedStatuses.includes(parsed.status as any)
+        ? (parsed.status as "active" | "inactive")
+        : "inactive";
+
       const updatedBody = {
-        ...body,
-        isPromo: body.isPromo ? 1 : 0,
+        ...parsed,
+        status,
+        imageUrl,
       };
+      console.log("updatedBody.isPromo:", updatedBody.isPromo);
+      console.log("FINAL isPromo going into DB:", updatedBody.isPromo);
 
       const created = await db.transaction(async (tx) => {
         const dbPackage = (
@@ -457,7 +508,6 @@ packageRoutes.openapi(
       return c.json(
         {
           ...created,
-          isPromo: created.isPromo === 1,
           imageUrl: created.imageUrl || "",
         },
         201
