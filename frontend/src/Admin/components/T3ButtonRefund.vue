@@ -197,9 +197,7 @@ onUnmounted(() => {
     >
       Are you sure you want to
       <strong class="text-red-500">FAILED</strong> this refund:
-      <span class="font-black font-[Poppins]">{{
-        bookingName(refund.refundId)
-      }}</span
+      <span class="font-black font-[Poppins]">{{ refund.refundId }}</span
       >?
     </span>
 

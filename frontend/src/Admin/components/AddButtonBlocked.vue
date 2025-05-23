@@ -1,10 +1,18 @@
 <script setup>
-import { ref, defineProps, defineEmits } from "vue";
+import { ref, defineProps, defineEmits, onMounted, computed } from "vue";
 import Button from "primevue/button";
 import Dialog from "primevue/dialog";
 import Toast from "primevue/toast";
 import { useToast } from "primevue/usetoast";
 import DatePicker from "primevue/datepicker";
+import { useBookingStore } from "../../stores/bookingStore.js";
+import { usePublicEntryStore } from "../../stores/publicEntryStore.js";
+import { useBlockedStore } from "../../stores/blockedDateStore.js";
+// import { formatDate } from "../../utility/dateFormat";
+
+const bookingStore = useBookingStore();
+const publicStore = usePublicEntryStore();
+const blockStore = useBlockedStore();
 
 const toast = useToast();
 const showBlocked = ref(false);
@@ -14,8 +22,99 @@ const newBlocked = ref({
   others: "" || null,
 });
 
+onMounted(() => {
+  bookingStore.fetchUserBookings();
+  publicStore.fetchAllPublic();
+  blockStore.fetchAllBlocked();
+});
+
 defineProps(["data"]);
 const emit = defineEmits(["addBlocked"]);
+
+const minDate = new Date();
+
+const disabledDates = computed(() => {
+  const disabled = [];
+
+  // Blocked dates
+  blockStore.blocked.forEach((bd) => {
+    if (bd.blockedDates) {
+      disabled.push(new Date(bd.blockedDates));
+    }
+  });
+
+  bookingStore.bookings.forEach((b) => {
+    if (b.checkInDate) {
+      disabled.push(new Date(b.checkInDate));
+    }
+  });
+  publicStore.public.forEach((p) => {
+    if (p.entryDate) {
+      disabled.push(new Date(p.entryDate));
+    }
+  });
+
+  return disabled;
+});
+
+const getBookingStyle = (slotDate) => {
+  const formattedDate = `${slotDate.year}-${String(slotDate.month + 1).padStart(
+    2,
+    "0"
+  )}-${String(slotDate.day).padStart(2, "0")}`;
+
+  // Collect all booking/public modes for the date
+  const mode = new Set();
+  let isBlocked = false;
+
+  bookingStore.bookings.forEach((b) => {
+    if (b.checkInDate === formattedDate) {
+      mode.add(b.mode);
+    }
+  });
+
+  publicStore.public.forEach((p) => {
+    if (p.entryDate === formattedDate) {
+      mode.add(p.mode);
+    }
+  });
+
+  if (blockStore.blocked.some((bd) => bd.blockedDates === formattedDate)) {
+    isBlocked = true;
+  }
+
+  let backgroundColor, color;
+
+  if (isBlocked) {
+    backgroundColor = "grey";
+    color = "white";
+  } else if (
+    mode.has("whole-day") ||
+    (mode.has("day-time") && mode.has("night-time"))
+  ) {
+    backgroundColor = "#FF6B6B"; // Fully Booked
+    color = "white";
+  } else if (mode.has("day-time")) {
+    backgroundColor = "#6A5ACD"; // Night Available
+    color = "white";
+  } else if (mode.has("night-time")) {
+    backgroundColor = "#FFD580"; // Day Available
+    color = "black";
+  } else {
+  }
+
+  return {
+    backgroundColor,
+    color,
+    width: "40px",
+    height: "40px",
+    display: "inline-flex",
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: "10rem",
+    fontSize: "17px",
+  };
+};
 
 const openModal = () => {
   showBlocked.value = true;
@@ -25,8 +124,21 @@ const closeModals = () => {
   showBlocked.value = false;
 };
 
+const formatDate = (date) => {
+  if (!date) return "";
+  const d = new Date(date);
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  const year = d.getFullYear();
+  return `${month}-${day}-${year}`;
+};
+
 const confirmAddRate = () => {
-  emit("addBlocked", { ...newBlocked.value });
+  const blockDate = {
+    ...newBlocked.value,
+    blockedDates: formatDate(newBlocked.value.blockedDates),
+  };
+  emit("addBlocked", blockDate);
   toast.add({
     severity: "success",
     summary: "Added Blocked Dates",
@@ -63,7 +175,20 @@ const confirmAddRate = () => {
             fluid
             iconDisplay="input"
             dateFormat="mm-dd-yy"
-          />
+            :minDate="minDate"
+            :disabledDates="disabledDates"
+          >
+            <template #date="slotProps">
+              <span>
+                <strong
+                  :style="getBookingStyle(slotProps.date)"
+                  class="date-box"
+                >
+                  {{ slotProps.date.day }}
+                </strong>
+              </span>
+            </template></DatePicker
+          >
         </div>
         <div class="addPackInput">
           <div>
