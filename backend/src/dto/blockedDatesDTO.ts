@@ -21,6 +21,11 @@ export const BlockedDatesDTO = z.object({
       description: "Category for the blocked dates",
       example: "maintenance",
     }),
+  status: z.enum(["active", "cancelled"]).openapi({
+    description: "Blocked date status",
+    example: "active",
+    default: "active",
+  }),
   others: z.string().nullable().optional().openapi({
     description: "Other reason",
     example: "internal use",
@@ -37,6 +42,7 @@ export const BlockedDatesDTO = z.object({
 
 export const CreateBlockedDatesDTO = BlockedDatesDTO.omit({
   blockedDatesId: true,
+  status: true,
   createdBy: true,
   createdAt: true,
 });

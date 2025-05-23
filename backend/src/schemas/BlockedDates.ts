@@ -20,6 +20,9 @@ export const BlockedDatesTable = sqliteTable("BLOCKED_DATES", {
       "others",
     ],
   }).notNull(),
+  status: text("status", { enum: ["active", "cancelled"] })
+    .notNull()
+    .default("active"),
   others: text("others"),
   createdBy: integer("createdBy")
     .references(() => UsersTable.userId)

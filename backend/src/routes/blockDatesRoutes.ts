@@ -184,7 +184,7 @@ blockedRoutes.openapi(
       200: {
         content: {
           "application/json": {
-            schema: BlockedDatesDTO,
+            schema: CreateBlockedDatesDTO,
           },
         },
         description: "Blocked Dates created successfully",
@@ -213,8 +213,6 @@ blockedRoutes.openapi(
       const body = await c.req.json();
       const { category, others } = body;
 
-      const parsed = CreateBlockedDatesDTO.parse(await c.req.json());
-
       if (category === "others" && (!others || others.trim() === "")) {
         throw new BadRequestError(
           "Others reason is required for 'others' category"
@@ -222,7 +220,7 @@ blockedRoutes.openapi(
       }
 
       const format = {
-        ...parsed,
+        ...processBookingData(body),
         createdBy: userId,
       };
 
@@ -307,9 +305,11 @@ blockedRoutes.openapi(
 
       const updates = UpdateBlockedDatesDTO.parse(await c.req.json());
 
+      const processedData = processBookingData(updates);
+
       await db
         .update(BlockedDatesTable)
-        .set(updates)
+        .set(processedData)
         .where(eq(BlockedDatesTable.blockedDatesId, id))
         .execute();
 

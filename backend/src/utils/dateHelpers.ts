@@ -33,5 +33,8 @@ export const processBookingData = (bookingData: any) => {
     entryDate: bookingData.entryDate
       ? toISODate(bookingData.entryDate)
       : undefined,
+    blockedDates: bookingData.blockedDates
+      ? toISODate(bookingData.blockedDates)
+      : undefined,
   };
 };
