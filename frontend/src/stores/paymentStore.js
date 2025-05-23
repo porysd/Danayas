@@ -1,5 +1,4 @@
 import { defineStore } from "pinia";
-import { useTransactionStore } from "./transactionStore";
 import { useAuthStore } from "./authStore";
 
 export const usePaymentStore = defineStore("payment", {
@@ -75,16 +74,21 @@ export const usePaymentStore = defineStore("payment", {
 
     // Add PAYMENT
     async addPayment(paymentDetails) {
-      const transactionStore = useTransactionStore();
+      const formData = new FormData();
       const auth = useAuthStore();
       if (!auth.isLoggedIn) return;
+
+      for (const key in paymentDetails) {
+        formData.append(key, paymentDetails[key]);
+      }
+
       const res = await fetch("http://localhost:3000/payments", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
+          // "Content-Type": "application/json",
           Authorization: `Bearer ${auth.accessToken}`,
         },
-        body: JSON.stringify(paymentDetails),
+        body: formData,
       });
 
       if (!res.ok) {
