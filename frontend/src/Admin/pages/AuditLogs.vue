@@ -27,7 +27,7 @@ onMounted(() => {
 const total = computed(() => filtered.value.length);
 
 const first = ref(0);
-const rows = ref(5);
+const rows = ref(10);
 
 const paginatedLogs = computed(() => {
   return filtered.value.slice(first.value, first.value + rows.value);
@@ -118,7 +118,7 @@ const filtered = computed(() => {
           <Paginator
             :first="first"
             :rows="rows"
-            :totalRecords="totalRates"
+            :totalRecords="total"
             :rowsPerPageOptions="[5, 10, 20, 30]"
             @page="onPageChangeCat"
             class="rowPagination"

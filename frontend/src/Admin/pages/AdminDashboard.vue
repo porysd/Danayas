@@ -14,13 +14,16 @@ import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import { useBookingStore } from "../../stores/bookingStore.js";
 import { usePublicEntryStore } from "../../stores/publicEntryStore.js";
+import { useBlockedStore } from "../../stores/blockedDateStore.js";
 
 const bookingStore = useBookingStore();
 const publicStore = usePublicEntryStore();
+const blockStore = useBlockedStore();
 
 onMounted(async () => {
   await bookingStore.fetchUserBookings();
   await publicStore.fetchAllPublic();
+  await blockStore.fetchAllBlocked();
 
   processBookings();
 });
@@ -150,21 +153,21 @@ const countRescheduledBooking = computed(() => {
 });
 
 // Get PENDING CANCELLATION Booking Status
-const countPendingCancellationBookings = computed(() => {
-  const bPendingCancel = bookingStore.bookingCancelled.filter(
-    (b) =>
-      b.bookStatus &&
-      b.bookStatus.trim().toLowerCase() === "pending-cancellation"
-  ).length;
+// const countPendingCancellationBookings = computed(() => {
+//   const bPendingCancel = bookingStore.bookingCancelled.filter(
+//     (b) =>
+//       b.bookStatus &&
+//       b.bookStatus.trim().toLowerCase() === "pending-cancellation"
+//   ).length;
 
-  const pPendingCancel = publicStore.pendingCancellation.filter(
-    (p) => p.status && p.status.trim().toLowerCase() === "pending-cancellation"
-  ).legnth;
+//   const pPendingCancel = publicStore.pendingCancellation.filter(
+//     (p) => p.status && p.status.trim().toLowerCase() === "pending-cancellation"
+//   ).legnth;
 
-  const pendingCancelDates = bPendingCancel + pPendingCancel;
+//   const pendingCancelDates = bPendingCancel + pPendingCancel;
 
-  return pendingCancelDates;
-});
+//   return pendingCancelDates;
+// });
 
 // Get CANCELLED Booking Status
 const countCancelledBookings = computed(() => {
@@ -198,50 +201,60 @@ const countCompletedBookings = computed(() => {
 
 // Process booking days
 // FOR CALENDAR
-const mapBookingsToEvents = (bookings) => {
-  // Step 1: Filter to only relevant statuses
-  const filtered = bookings.filter(
-    (b) =>
-      (b.bookStatus &&
-        ["reserved", "rescheduled", "pending"].includes(
-          b.bookStatus.trim().toLowerCase()
-        )) ||
-      (b.status &&
-        ["reserved", "rescheduled", "pending"].includes(
-          b.status.trim().toLowerCase()
-        ))
-  );
+const mapBookingsToEvents = (
+  bookings = [],
+  publics = [],
+  blockedDates = []
+) => {
+  const eventByDate = {};
 
-  // Step 2: Group by date
-  const bookingsByDate = {};
-  filtered.forEach((b) => {
-    const date = b.checkInDate || b.entryDate;
-    if (!bookingsByDate[date]) bookingsByDate[date] = [];
-    bookingsByDate[date].push(b.mode);
+  bookings.forEach((b) => {
+    const date = b.checkInDate;
+    if (!eventByDate[date])
+      eventByDate[date] = { modes: new Set(), blocked: null };
+    eventByDate[date].modes.add(b.mode);
   });
 
-  // Step 3: Create events per date
-  return Object.entries(bookingsByDate).map(([date, modes]) => {
-    const uniqueModes = Array.from(new Set(modes));
-    let backgroundColor = "#90EE94";
-    let textColor = "#15803D";
-    let title = "Available";
+  publics.forEach((p) => {
+    const date = p.entryDate;
+    if (!eventByDate[date])
+      eventByDate[date] = { modes: new Set(), blocked: null };
+    eventByDate[date].modes.add(p.mode);
+  });
 
-    if (
-      uniqueModes.includes("whole-day") ||
-      (uniqueModes.includes("day-time") && uniqueModes.includes("night-time"))
+  blockedDates.forEach((bd) => {
+    const date = bd.blockedDates;
+    if (!eventByDate[date])
+      eventByDate[date] = { modes: new Set(), blocked: null };
+    eventByDate[date].blocked = bd;
+  });
+
+  return Object.entries(eventByDate).map(([date, { modes, blocked }]) => {
+    let backgroundColor, textColor, title;
+
+    if (blocked) {
+      backgroundColor = "grey";
+      textColor = "white";
+      title = "Not Available";
+    } else if (
+      modes.has("whole-day") ||
+      (modes.has("day-time") && modes.has("night-time"))
     ) {
       backgroundColor = "#FF6B6B";
       textColor = "white";
       title = "Fully Booked";
-    } else if (uniqueModes.includes("day-time")) {
+    } else if (modes.has("day-time")) {
       backgroundColor = "#6A5ACD";
       textColor = "white";
       title = "Night Available";
-    } else if (uniqueModes.includes("night-time")) {
+    } else if (modes.has("night-time")) {
       backgroundColor = "#FFD580";
       textColor = "black";
       title = "Day Available";
+    } else {
+      backgroundColor = "#90EE90";
+      textColor = "#15803D";
+      title = "Available";
     }
 
     return {
@@ -254,6 +267,14 @@ const mapBookingsToEvents = (bookings) => {
     };
   });
 };
+
+const calendarEvents = computed(() => {
+  return mapBookingsToEvents(
+    bookingStore.bookings,
+    publicStore.public,
+    blockStore.blocked
+  );
+});
 
 const calendarOptions = ref({
   plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin],
@@ -268,11 +289,7 @@ const calendarOptions = ref({
   selectMirror: false,
   dayMaxEvents: false,
   weekends: true,
-  events: computed(
-    () =>
-      mapBookingsToEvents(bookingStore.bookings) &&
-      mapBookingsToEvents(publicStore.public)
-  ),
+  events: calendarEvents,
 });
 </script>
 

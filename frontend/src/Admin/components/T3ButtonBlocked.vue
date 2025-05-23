@@ -137,6 +137,15 @@ onUnmounted(() => {
               </template>
             </div>
           </div>
+          <div class="addPackInput">
+            <div>
+              <label>Status:</label>
+              <select v-model="formData.status" placeholder="Add Ons Name">
+                <option value="active">Active</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+            </div>
+          </div>
         </div>
       </div>
 

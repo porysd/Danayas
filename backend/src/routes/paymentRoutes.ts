@@ -206,44 +206,7 @@ paymentRoutes.openapi(
 
       const body = await c.req.parseBody();
       const file = body["imageUrl"] as File;
-
-      for (const key in body) {
-        if (key === "imageUrl") {
-          formData.append("imageUrl", body[key]);
-        } else {
-          formData.append(key, body[key]);
-        }
-      }
-
-      if (!file) {
-        throw new BadRequestError("No file uploaded");
-      }
-
-      const allowedMimeTypes = [
-        "image/jpeg",
-        "image/png",
-        "image/jpg",
-        "image/jfif",
-      ];
-
-      if (!allowedMimeTypes.includes(file.type)) {
-        throw new BadRequestError(
-          "Invalid file type, Only Jpeg, Png, and Jpg are allowed"
-        );
-      }
-
-      const uploadDir = path.join(process.cwd(), "public", "PaymentImages");
-      await fs.mkdir(uploadDir, { recursive: true });
-
-      const uniqueFileName = `${Date.now()}-${file.name}`;
-      const filePath = path.join(uploadDir, uniqueFileName);
-
-      const fileBuffer = await file.arrayBuffer();
-      await fs.writeFile(filePath, Buffer.from(fileBuffer));
-
-      const imageUrl = `/PaymentImages/${uniqueFileName}`;
-
-      body.imageUrl = file;
+      let imageUrl = null;
 
       const parsed = CreatePaymentDTO.parse(body);
       const {
@@ -265,17 +228,45 @@ paymentRoutes.openapi(
       const isCustomer = user.role === "customer";
       const isEmployee = user.role === "admin" || user.role === "staff";
 
-      if (
-        paymentMethod === "gcash" &&
-        (!parsed.reference || !parsed.imageUrl)
-      ) {
-        return c.json(
-          {
-            error: "Reference and imageUrl are required for online payments",
-          },
-          400
-        );
+      if (paymentMethod === "gcash") {
+        if (!parsed.reference || !parsed.imageUrl) {
+          return c.json(
+            {
+              error: "Reference and imageUrl are required for online payments",
+            },
+            400
+          );
+        }
+
+        if (!file) {
+          throw new BadRequestError("No file uploaded");
+        }
+
+        const allowedMimeTypes = [
+          "image/jpeg",
+          "image/png",
+          "image/jpg",
+          "image/jfif",
+        ];
+
+        if (!allowedMimeTypes.includes(file.type)) {
+          throw new BadRequestError(
+            "Invalid file type, Only Jpeg, Png, and Jpg are allowed"
+          );
+        }
+
+        const uploadDir = path.join(process.cwd(), "public", "PaymentImages");
+        await fs.mkdir(uploadDir, { recursive: true });
+
+        const uniqueFileName = `${Date.now()}-${file.name}`;
+        const filePath = path.join(uploadDir, uniqueFileName);
+
+        const fileBuffer = await file.arrayBuffer();
+        await fs.writeFile(filePath, Buffer.from(fileBuffer));
+
+        imageUrl = `/PaymentImages/${uniqueFileName}`;
       }
+
       if (paymentMethod === "cash" && (parsed.reference || parsed.imageUrl)) {
         return c.json(
           {

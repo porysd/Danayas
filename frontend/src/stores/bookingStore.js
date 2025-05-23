@@ -98,6 +98,8 @@ export const useBookingStore = defineStore("booking", {
         // userId: booking.userId ? Number(booking.userId) : null,
         userId: auth.user.userId,
         packageId: Number(booking.packageId),
+        checkInDate: formatDate(booking.checkInDate),
+        checkOutDate: formatDate(booking.checkOutDate),
         numberOfGuest: Number(booking.numberOfGuest),
         discountId: Number(booking.discountId),
         remainingBalance: booking.remainingBalance

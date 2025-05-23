@@ -6,12 +6,20 @@ import Toast from "primevue/toast";
 import { useToast } from "primevue/usetoast";
 import DatePicker from "primevue/datepicker";
 import MultiSelect from "primevue/multiselect";
+import Select from "primevue/select";
 import FileUpload from "primevue/fileupload";
 import { useCatalogStore } from "../../stores/catalogStore.js";
 import { useDiscountStore } from "../../stores/discountStore.js";
 import { formatDate } from "../../utility/dateFormat.js";
 import InputText from "primevue/inputtext";
 import InputNumber from "primevue/inputnumber";
+import { useBookingStore } from "../../stores/bookingStore.js";
+import { usePublicEntryStore } from "../../stores/publicEntryStore.js";
+import { useBlockedStore } from "../../stores/blockedDateStore.js";
+
+const bookingStore = useBookingStore();
+const publicStore = usePublicEntryStore();
+const blockStore = useBlockedStore();
 
 const toast = useToast();
 const catalogStore = useCatalogStore();
@@ -20,6 +28,9 @@ const discountStore = useDiscountStore();
 onMounted(() => {
   catalogStore.fetchAllCatalogs();
   discountStore.fetchAllDiscounts();
+  bookingStore.fetchUserBookings();
+  publicStore.fetchAllPublic();
+  blockStore.fetchAllBlocked();
 });
 
 const showAddBookingModal = ref(false);
@@ -38,6 +49,7 @@ const newPublic = ref({
   numKids: 0,
   adultGuestNames: [],
   kidGuestNames: [],
+  discountId: "" || null,
 });
 
 const paymentDetails = ref({
@@ -94,17 +106,107 @@ watch(
   }
 );
 
+const minDate = new Date();
+
+const disabledDates = computed(() => {
+  const disabled = [];
+
+  // Blocked dates
+  blockStore.blocked.forEach((bd) => {
+    if (bd.blockedDates) {
+      disabled.push(new Date(bd.blockedDates));
+    }
+  });
+
+  // Fully booked dates (whole-day or both day-time and night-time)
+  const bookingsByDate = {};
+  bookingStore.bookings.forEach((b) => {
+    if (b.checkInDate) {
+      const date = b.checkInDate;
+      if (!bookingsByDate[date]) bookingsByDate[date] = new Set();
+      bookingsByDate[date].add(b.mode);
+    }
+  });
+  publicStore.public.forEach((p) => {
+    if (p.entryDate) {
+      const date = p.entryDate;
+      if (!bookingsByDate[date]) bookingsByDate[date] = new Set();
+      bookingsByDate[date].add(p.mode);
+    }
+  });
+
+  Object.entries(bookingsByDate).forEach(([date, modes]) => {
+    if (
+      modes.has("whole-day") ||
+      (modes.has("day-time") && modes.has("night-time"))
+    ) {
+      disabled.push(new Date(date));
+    }
+  });
+
+  return disabled;
+});
+
+const getBookingStyle = (slotDate) => {
+  const formattedDate = `${slotDate.year}-${String(slotDate.month + 1).padStart(
+    2,
+    "0"
+  )}-${String(slotDate.day).padStart(2, "0")}`;
+
+  // Collect all booking/public modes for the date
+  const mode = new Set();
+  let isBlocked = false;
+
+  bookingStore.bookings.forEach((b) => {
+    if (b.checkInDate === formattedDate) {
+      mode.add(b.mode);
+    }
+  });
+
+  publicStore.public.forEach((p) => {
+    if (p.entryDate === formattedDate) {
+      mode.add(p.mode);
+    }
+  });
+
+  if (blockStore.blocked.some((bd) => bd.blockedDates === formattedDate)) {
+    isBlocked = true;
+  }
+
+  let backgroundColor, color;
+
+  if (isBlocked) {
+    backgroundColor = "grey";
+    color = "white";
+  } else if (
+    mode.has("whole-day") ||
+    (mode.has("day-time") && mode.has("night-time"))
+  ) {
+    backgroundColor = "#FF6B6B"; // Fully Booked
+    color = "white";
+  } else if (mode.has("day-time")) {
+    backgroundColor = "#6A5ACD"; // Night Available
+    color = "white";
+  } else if (mode.has("night-time")) {
+    backgroundColor = "#FFD580"; // Day Available
+    color = "black";
+  } else {
+  }
+
+  return {
+    backgroundColor,
+    color,
+    width: "40px",
+    height: "40px",
+    display: "inline-flex",
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: "10rem",
+    fontSize: "17px",
+  };
+};
+
 const confirmBooking = async () => {
-  // if (
-  //   !newPublic.value.packageId ||
-  //   !newPublic.value.checkInDate ||
-  //   !newPublic.value.checkOutDate ||
-  //   !newPublic.value.mode ||
-  //   !newPublic.value.paymentTerms
-  // ) {
-  //   alert("Please fill in all required fields.");
-  //   return;
-  // }
   // Find the discount by ID or name
   const discount = discountStore.discounts.find(
     (d) =>
@@ -119,7 +221,17 @@ const confirmBooking = async () => {
     // bookingAddOns: newBooking.value.bookingAddOns || [],
   };
 
-  emit("addBooking", bookingData, paymentDetails.value);
+  const paymentPayload = {
+    paymentMethod: paymentDetails.value.paymentMethod,
+    senderName: paymentDetails.value.senderName,
+    tenderedAmount: paymentDetails.value.tenderedAmount,
+  };
+  if (paymentDetails.value.paymentMethod === "gcash") {
+    paymentPayload.reference = paymentDetails.value.reference;
+    paymentPayload.imageUrl = paymentDetails.value.imageUrl;
+  }
+
+  emit("addBooking", bookingData, paymentPayload);
 
   closeAddBookingModal();
 };
@@ -203,7 +315,20 @@ console.log("Booking Data:", newPublic.value, paymentDetails.value);
               fluid
               iconDisplay="input"
               dateFormat="mm-dd-yy"
-            />
+              :minDate="minDate"
+              :disabledDates="disabledDates"
+            >
+              <template #date="slotProps">
+                <span>
+                  <strong
+                    :style="getBookingStyle(slotProps.date)"
+                    class="date-box"
+                  >
+                    {{ slotProps.date.day }}
+                  </strong>
+                </span>
+              </template></DatePicker
+            >
           </div>
           <div>
             <label>Mode:</label>
@@ -215,9 +340,17 @@ console.log("Booking Data:", newPublic.value, paymentDetails.value);
         </div>
 
         <div class="flex justify-center gap-3">
-          <div class="w-[40%]">
-            <label>Discount Code:</label>
-            <input class="packEvents" placeholder="" style="width: 100%" />
+          <div class="w-full md:w-[40%]">
+            <label for="discount">Discount ID or Name:</label>
+            <Select
+              id="discount"
+              v-model="newPublic.discountId"
+              :options="discountStore.discounts"
+              optionLabel="name"
+              optionValue="discountId"
+              placeholder="Select a Discount"
+              class="w-full"
+            />
           </div>
           <div class="w-[40%]">
             <label>Add Ons:</label>
@@ -358,33 +491,45 @@ console.log("Booking Data:", newPublic.value, paymentDetails.value);
             </select>
           </div>
           <div>
-            <template v-if="paymentDetails.paymentMethod === 'gcash'">
+            <label>Tendered Amount:</label>
+            <input
+              v-model.number="paymentDetails.tenderedAmount"
+              placeholder="Total Amount"
+            />
+          </div>
+        </div>
+
+        <div class="packEvent">
+          <template v-if="paymentDetails.paymentMethod === 'gcash'">
+            <div>
               <label>Reference No:</label>
               <input
                 v-model="paymentDetails.reference"
                 placeholder="Reference No"
               />
-              <h1 class="text-xl font-bold font-[Poppins] mb-3 mt-3">
-                Proof of Payment:
-              </h1>
+            </div>
+
+            <div>
+              <label>Proof of Payment:</label>
               <FileUpload
                 ref="fileupload"
+                v-model="paymentDetails.imageUrl"
                 mode="basic"
-                name="demo[]"
+                name="imageUrl"
                 url="/api/upload"
                 accept="image/*"
                 :maxFileSize="1000000"
-                @upload="onUpload"
+                @select="onFileSelect"
               />
-            </template>
-            <template v-else>
-              <label>Total Amount:</label>
-              <input v-model.number="paymentDetails.tenderedAmount"
-              placeholder="Total Amount"
-            </template>
-          </div>
+            </div>
+          </template>
         </div>
 
+        <!-- <div class="packEvent">
+          <div>
+            <label>Total Amount: {{ formatPeso(totalAmount) }}</label>
+          </div>
+        </div> -->
         <!--<div class="packEvent">
           <div>
             <label>Reservation Type:</label>
