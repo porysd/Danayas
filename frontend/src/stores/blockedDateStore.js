@@ -53,17 +53,14 @@ export const useBlockedStore = defineStore("blockedDates", {
       try {
         const auth = useAuthStore();
         if (!auth.isLoggedIn) return;
-        const format = {
-          ...b,
-          blockedDates: formatDate(b.blockedDates),
-        };
+
         const res = await fetch("http://localhost:3000/blockeddates", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${auth.accessToken}`,
           },
-          body: JSON.stringify(format),
+          body: JSON.stringify(b),
         });
 
         if (!res.ok) {
@@ -85,6 +82,8 @@ export const useBlockedStore = defineStore("blockedDates", {
         const auth = useAuthStore();
         if (!auth.isLoggedIn) return;
 
+        const format = formatDate(b.blockedDates);
+
         const res = await fetch(
           `http://localhost:3000/blockeddates/${b.blockedDatesId}`,
           {
@@ -93,7 +92,7 @@ export const useBlockedStore = defineStore("blockedDates", {
               "Content-Type": "application/json",
               Authorization: `Bearer ${auth.accessToken}`,
             },
-            body: JSON.stringify(b),
+            body: JSON.stringify({ ...b, blockedDates: format }),
           }
         );
 
