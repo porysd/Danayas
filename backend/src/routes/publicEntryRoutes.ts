@@ -330,17 +330,17 @@ publicEntryRoutes.openapi(
       };
 
       // Map mode values to match accepted types in dateConflicts
-      // const mappedMode =
-      //   body.mode === "day-time"
-      //     ? "day"
-      //     : body.mode === "night-time"
-      //     ? "night"
-      //     : body.mode;
+      const mappedMode =
+        body.mode === "day-time"
+          ? "day"
+          : body.mode === "night-time"
+          ? "night"
+          : "whole-day";
 
-      // await dateConflicts({
-      //   date: updatedBody.entryDate,
-      //   mode: mappedMode,
-      // });
+      await dateConflicts({
+        date: updatedBody.entryDate,
+        mode: mappedMode,
+      });
 
       const created = await db.transaction(async (tx) => {
         const dbPublic = (
@@ -443,34 +443,24 @@ publicEntryRoutes.openapi(
 
       const processedData = processBookingData(res);
 
-      // const conflict = await db.query.PublicEntryTable.findFirst({
-      //   where: sql`publicEntryId != ${publicEntryId} AND status NOT IN ('cancelled', 'completed') AND date(entryDate) = date(${processedData.entryDate}))`,
-      // });
+      const dateChanged =
+        processedData.entryDate !== publics.entryDate.split("T")[0];
+      const modeChanged = res.mode && res.mode !== publics.mode;
 
-      // if (conflict) {
-      //   throw new BadRequestError(
-      //     `This date is already booked for ${res.mode}. Please choose a different date or time mode.`
-      //   );
-      // }
+      if (dateChanged || modeChanged) {
+        const mappedMode =
+          res.mode === "day-time"
+            ? "day"
+            : res.mode === "night-time"
+            ? "night"
+            : "whole-day";
 
-      // Map mode values to match accepted types in dateConflicts
-      // const mappedMode =
-      //   res.mode === "day-time"
-      //     ? "day"
-      //     : res.mode === "night-time"
-      //     ? "night"
-      //     : res.mode;
-
-      // if (!mappedMode) {
-      //   throw new BadRequestError("Mode is required and must be valid.");
-      // }
-
-      // await dateConflicts({
-      //   date: processedData.entryDate,
-      //   mode: mappedMode,
-      //   publicEntryId: publicEntryId.toString(),
-      //   bookingId: undefined, // this is a Booking, so no booking ID
-      // });
+        await dateConflicts({
+          date: processedData.entryDate,
+          mode: mappedMode,
+          publicEntryId: publics.publicEntryId.toString(),
+        });
+      }
 
       const updated = await db.transaction(async (tx) => {
         const updatedPublic = (
@@ -506,6 +496,7 @@ publicEntryRoutes.openapi(
     }
   }
 );
+
 publicEntryRoutes.openapi(
   createRoute({
     tags: ["Public Entry"],

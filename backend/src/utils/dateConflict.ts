@@ -1,4 +1,8 @@
-import { PublicEntryTable, BookingsTable } from "../schemas/schema";
+import {
+  PublicEntryTable,
+  BookingsTable,
+  BlockedDatesTable,
+} from "../schemas/schema";
 import { db } from "../config/database";
 import { sql } from "drizzle-orm";
 import { BadRequestError } from "./errors";
@@ -11,9 +15,24 @@ export async function dateConflicts({
 }: {
   date: string;
   mode: "day" | "night" | "whole-day";
-  bookingId?: string;
-  publicEntryId?: string;
+  bookingId?: string | number;
+  publicEntryId?: string | number;
 }) {
+  // Check blocked dates
+  const blocked = await db.query.BlockedDatesTable.findFirst({
+    where: sql`date(blockedDates) = date(${date})`,
+  });
+
+  if (blocked) {
+    throw new BadRequestError(`This date is blocked: ${blocked.category}`);
+  }
+  console.log("Checking date conflicts for:", {
+    date,
+    mode,
+    bookingId,
+    publicEntryId,
+  });
+
   // PublicEntry conflict
   const publicEntryConflict = await db.query.PublicEntryTable.findFirst({
     where: sql`

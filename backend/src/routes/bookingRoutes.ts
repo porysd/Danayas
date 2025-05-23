@@ -306,49 +306,17 @@ bookingRoutes.openapi(
         remainingBalance: totalAmount,
       };
 
-      // Check for date conflicts
-      // const conflictingBooking = await db.query.BookingsTable.findFirst({
-      //   where: sql`
-      //     bookStatus NOT IN ('cancelled', 'completed')
-      //     AND date(checkInDate) = date(${processedBody.checkInDate})
-      //     AND (
-      //       (${body.mode} = 'whole-day')
-      //       OR
-      //       (mode = 'whole-day')
-      //       OR
-      //       (mode = ${body.mode})
-      //     )
-      //   `,
-      // });
+      const mappedMode =
+        body.mode === "day-time"
+          ? "day"
+          : body.mode === "night-time"
+          ? "night"
+          : "whole-day";
 
-      // if (conflictingBooking) {
-      //   if (body.mode === "whole-day") {
-      //     throw new BadRequestError(
-      //       `Cannot make a whole-day booking as there are existing bookings on this date.`
-      //     );
-      //   } else if (conflictingBooking.mode === "whole-day") {
-      //     throw new BadRequestError(
-      //       `Cannot book on this date as it is already booked for whole day.`
-      //     );
-      //   } else {
-      //     throw new BadRequestError(
-      //       `This date is already booked for ${body.mode}. Please choose a different date or time mode.`
-      //     );
-      //   }
-      // }
-
-      // Map mode values to match accepted types in dateConflicts
-      // const mappedMode =
-      //   body.mode === "day-time"
-      //     ? "day"
-      //     : body.mode === "night-time"
-      //     ? "night"
-      //     : body.mode;
-
-      // await dateConflicts({
-      //   date: processedBody.checkInDate,
-      //   mode: mappedMode,
-      // });
+      await dateConflicts({
+        date: processedBody.checkInDate,
+        mode: mappedMode,
+      });
 
       const created = await db.transaction(async (tx) => {
         const insertedBooking = (
@@ -447,56 +415,24 @@ bookingRoutes.openapi(
 
       const processedData = processBookingData(requestData);
 
-      // Check for date conflicts
-      // const conflictingBooking = await db.query.BookingsTable.findFirst({
-      //   where: sql`
-      //     bookingId != ${bookingId}
-      //     AND bookStatus NOT IN ('cancelled', 'completed')
-      //     AND date(checkInDate) = date(${processedData.checkInDate})
-      //     AND (
-      //       (${requestData.mode} = 'whole-day')
-      //       OR
-      //       (mode = 'whole-day')
-      //       OR
-      //       (mode = ${requestData.mode})
-      //     )
-      //   `,
-      // });
+      const dateChanged =
+        processedData.checkInDate !== booking.checkInDate.split("T")[0];
+      const modeChanged = requestData.mode && requestData.mode !== booking.mode;
 
-      // if (conflictingBooking) {
-      //   if (requestData.mode === "whole-day") {
-      //     throw new BadRequestError(
-      //       `Cannot make a whole-day booking as there are existing bookings on this date.`
-      //     );
-      //   } else if (conflictingBooking.mode === "whole-day") {
-      //     throw new BadRequestError(
-      //       `Cannot book on this date as it is already booked for whole day.`
-      //     );
-      //   } else {
-      //     throw new BadRequestError(
-      //       `This date is already booked for ${requestData.mode}. Please choose a different date or time mode.`
-      //     );
-      //   }
-      // }
+      if (dateChanged || modeChanged) {
+        const mappedMode =
+          requestData.mode === "day-time"
+            ? "day"
+            : requestData.mode === "night-time"
+            ? "night"
+            : "whole-day";
 
-      // Map mode values to match accepted types in dateConflicts
-      // const mappedMode =
-      //   requestData.mode === "day-time"
-      //     ? "day"
-      //     : requestData.mode === "night-time"
-      //     ? "night"
-      //     : requestData.mode;
-
-      // if (!mappedMode) {
-      //   throw new BadRequestError("Mode is required and must be valid.");
-      // }
-
-      // await dateConflicts({
-      //   date: processedData.checkInDate,
-      //   mode: mappedMode,
-      //   bookingId: bookingId.toString(),
-      //   publicEntryId: undefined, // this is a Booking, so no public entry ID
-      // });
+        await dateConflicts({
+          date: processedData.checkInDate,
+          mode: mappedMode,
+          bookingId: booking.bookingId.toString(),
+        });
+      }
 
       const hasRescheduled =
         processedData.checkInDate !== booking.checkInDate.split("T")[0] ||
