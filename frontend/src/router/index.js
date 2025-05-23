@@ -20,6 +20,7 @@ import EmployeeManagement from "../Admin/pages/EmployeeManagement.vue";
 import Booking from "../Admin/pages/Booking.vue";
 import PublicEntry from "../Admin/pages/PublicEntry.vue";
 import PublicRates from "../Admin/pages/PublicRate.vue";
+import BlockedDate from "../Admin/pages/BlockedDates.vue";
 import Payment from "../Admin/pages/Payment.vue";
 import Refund from "../Admin/pages/RefundManagement.vue";
 import Transaction from "../Admin/pages/Transaction.vue";
@@ -36,6 +37,7 @@ import Footer from "../Admin/pages/Footer.vue";
 import TermsAndCondition from "../Admin/pages/TermsAndCondition.vue";
 import Archived from "../Admin/pages/Archived.vue";
 import Profile from "../Admin/pages/Profile.vue";
+import AuditLogs from "../Admin/pages/AuditLogs.vue";
 
 // Not Found
 import NotFound from "../pages/NotFound.vue";
@@ -75,6 +77,11 @@ const routes = [
   {
     path: "/admin/public-booking",
     component: PublicEntry,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/admin/blocked-dates",
+    component: BlockedDate,
     meta: { requiresAuth: true },
   },
   {
@@ -142,6 +149,7 @@ const routes = [
   //   meta: { requiresAuth: true },
   // },
   { path: "/admin/profile", component: Profile, meta: { requiresAuth: true } },
+  { path: "/admin/audit-logs", component: AuditLogs },
 
   // Not Found Page
   { path: "/:pathMatch(.*)*", component: NotFound },
