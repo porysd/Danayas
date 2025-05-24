@@ -407,7 +407,7 @@ userRoutes.openapi(
             schema: GetUserDTO,
           },
         },
-        description: "User Created Sucessfully",
+        description: "User Created Successfully",
       },
       400: {
         description: "Invalid user data",
