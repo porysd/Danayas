@@ -228,6 +228,8 @@ userRoutes.openapi(
             action: "update",
             tableName: "USER",
             recordId: updateUser.userId,
+            data: JSON.stringify(GetUserDTO.parse(updateUser)),
+            remarks: "User updated",
             createdAt: new Date().toISOString(),
           })
           .execute();
@@ -299,11 +301,11 @@ userRoutes.openapi(
             action: "delete",
             tableName: "USER",
             recordId: deleteUser.userId,
+            data: JSON.stringify(GetUserDTO.parse(deletedUser)),
+            remarks: "User deleted",
             createdAt: new Date().toISOString(),
           })
           .execute();
-
-        return;
       });
 
       return c.json({
@@ -458,6 +460,8 @@ userRoutes.openapi(
             action: "create",
             tableName: "USER",
             recordId: dbUser.userId,
+            data: JSON.stringify(GetUserDTO.parse(dbUser)),
+            remarks: "User created",
             createdAt: new Date().toISOString(),
           })
           .execute();
@@ -533,6 +537,8 @@ userRoutes.openapi(
             action: "status-change",
             tableName: "USER",
             recordId: disableUser.userId,
+            data: JSON.stringify(GetUserDTO.parse(disableUser)),
+            remarks: "User disabled",
             createdAt: new Date().toISOString(),
           })
           .execute();
@@ -606,6 +612,8 @@ userRoutes.openapi(
             action: "status-change",
             tableName: "USER",
             recordId: activateUser.userId,
+            data: JSON.stringify(GetUserDTO.parse(activateUser)),
+            remarks: "User enabled",
             createdAt: new Date().toISOString(),
           })
           .execute();

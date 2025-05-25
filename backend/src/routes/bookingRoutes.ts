@@ -334,6 +334,8 @@ bookingRoutes.openapi(
             action: "create",
             tableName: "BOOKING",
             recordId: insertedBooking.bookingId,
+            data: JSON.stringify(BookingDTO.parse(insertedBooking)),
+            remarks: "Booking created",
             createdAt: new Date().toISOString(),
           })
           .execute();
@@ -457,6 +459,8 @@ bookingRoutes.openapi(
           action: "update",
           tableName: "BOOKING",
           recordId: bookingId,
+          data: JSON.stringify(BookingDTO.parse(updatedBooking)),
+          remarks: "Booking updated",
           createdAt: new Date().toISOString(),
         });
 
@@ -601,6 +605,13 @@ bookingRoutes.openapi(
                 action: "create",
                 tableName: "REFUND",
                 recordId: refund.refundId,
+                data: JSON.stringify({
+                  bookingId: bookingId,
+                  refundAmount: refund.refundAmount,
+                  refundStatus: refund.refundStatus,
+                  refundReason: refund.refundReason,
+                }),
+                remarks: "Refund created for booking cancellation",
                 createdAt: new Date().toISOString(),
               })
               .execute();
@@ -643,6 +654,13 @@ bookingRoutes.openapi(
             action: "status-change",
             tableName: "BOOKING",
             recordId: bookingId,
+            data: JSON.stringify({
+              bookingId: updatedBooking.bookingId,
+              bookStatus: updatedBooking.bookStatus,
+              cancelCategory: updatedBooking.cancelCategory,
+              cancelReason: updatedBooking.cancelReason,
+            }),
+            remarks: `Booking status updated to ${updatedBooking.bookStatus}`,
             createdAt: new Date().toISOString(),
           })
           .execute();
@@ -719,6 +737,8 @@ bookingRoutes.openapi(
             action: "delete",
             tableName: "BOOKING",
             recordId: bookingId,
+            data: JSON.stringify(BookingDTO.parse(deletedBooking)),
+            remarks: "Booking deleted",
             createdAt: new Date().toISOString(),
           })
           .execute();

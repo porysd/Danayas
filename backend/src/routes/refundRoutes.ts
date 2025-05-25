@@ -283,6 +283,8 @@ refundRoutes.openapi(
               action: "update",
               tableName: "BOOKINGS",
               recordId: updatedBooking.bookingId,
+              data: JSON.stringify(updatedBooking),
+              remarks: "Booking cancelled due to refund",
               createdAt: new Date().toISOString(),
             })
             .execute();
@@ -312,6 +314,8 @@ refundRoutes.openapi(
               action: "create",
               tableName: "REFUNDS",
               recordId: refund.refundId,
+              data: JSON.stringify(refund),
+              remarks: "Refund created for booking",
               createdAt: new Date().toISOString(),
             })
             .execute();
@@ -391,6 +395,8 @@ refundRoutes.openapi(
               action: "update",
               tableName: "PUBLIC_ENTRY",
               recordId: updatedBooking.publicEntryId,
+              data: JSON.stringify(updatedBooking),
+              remarks: "Public entry cancelled due to refund",
               createdAt: new Date().toISOString(),
             })
             .execute();
@@ -420,6 +426,8 @@ refundRoutes.openapi(
               action: "create",
               tableName: "REFUNDS",
               recordId: refund.refundId,
+              data: JSON.stringify(refund),
+              remarks: "Refund created for public entry",
               createdAt: new Date().toISOString(),
             })
             .execute();
@@ -578,6 +586,8 @@ refundRoutes.openapi(
                 action: "update",
                 tableName: "BOOKINGS",
                 recordId: updatedBooking.bookingId,
+                data: JSON.stringify(updatedBooking),
+                remarks: "Booking cancelled due to refund",
                 createdAt: new Date().toISOString(),
               })
               .execute();
@@ -618,6 +628,8 @@ refundRoutes.openapi(
                 action: "update",
                 tableName: "PUBLIC_ENTRY",
                 recordId: updatedBooking.publicEntryId,
+                data: JSON.stringify(updatedBooking),
+                remarks: "Public entry cancelled due to refund",
                 createdAt: new Date().toISOString(),
               })
               .execute();
@@ -655,6 +667,8 @@ refundRoutes.openapi(
             action: "update",
             tableName: "REFUNDS",
             recordId: result.refundId,
+            data: JSON.stringify(result),
+            remarks: "Refund updated",
             createdAt: new Date().toISOString(),
           })
           .execute();

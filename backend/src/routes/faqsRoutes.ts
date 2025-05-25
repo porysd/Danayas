@@ -206,6 +206,8 @@ faqsRoutes.openapi(
             action: "create",
             tableName: "FAQS",
             recordId: dbFaq.faqsId,
+            data: JSON.stringify(dbFaq),
+            remarks: "FAQ created",
             createdAt: new Date().toISOString(),
           })
           .execute();
@@ -299,11 +301,13 @@ faqsRoutes.openapi(
             action: "update",
             tableName: "FAQS",
             recordId: updatedFaq.faqsId,
+            data: JSON.stringify(updatedFaq),
+            remarks: "FAQ updated",
             createdAt: new Date().toISOString(),
           })
           .execute();
 
-        return;
+        return updatedFaq;
       });
 
       return c.json(FaqsDTO.parse(updated), 201);
@@ -361,7 +365,7 @@ faqsRoutes.openapi(
         throw new NotFoundError("FAQ not found.");
       }
 
-      const deleted = await db.transaction(async (tx) => {
+      await db.transaction(async (tx) => {
         const deleteFaqs = (
           await tx
             .delete(FaqsTable)
@@ -377,11 +381,11 @@ faqsRoutes.openapi(
             action: "delete",
             tableName: "FAQS",
             recordId: deleteFaqs.faqsId,
+            data: JSON.stringify(deleteFaqs),
+            remarks: "FAQ deleted",
             createdAt: new Date().toISOString(),
           })
           .execute();
-
-        return deleteFaqs;
       });
 
       return c.json({

@@ -167,6 +167,8 @@ termsRoutes.openapi(
             action: "create",
             tableName: "TERMS_AND_CONDITION",
             recordId: dbterms.termsId,
+            data: JSON.stringify(dbterms),
+            remarks: "Terms and Condition created",
             createdAt: new Date().toISOString(),
           })
           .execute();
@@ -247,6 +249,8 @@ termsRoutes.openapi(
             action: "delete",
             tableName: "TERMS_AND_CONDITION",
             recordId: deleteTermsAndCondition.termsId,
+            data: JSON.stringify(deleteTermsAndCondition),
+            remarks: "Terms and Condition deleted",
             createdAt: new Date().toISOString(),
           })
           .execute();
@@ -342,6 +346,8 @@ termsRoutes.openapi(
             action: "update",
             tableName: "TERMS_AND_CONDITION",
             recordId: updatedTerms.termsId,
+            data: JSON.stringify(updatedTerms),
+            remarks: "Terms and Condition updated",
             createdAt: new Date().toISOString(),
           })
           .execute();

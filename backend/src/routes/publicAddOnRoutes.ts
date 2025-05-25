@@ -196,6 +196,8 @@ publicAddOnRoutes.openapi(
             action: "create",
             tableName: "PUBLIC_ENTRY_ADD_ONS",
             recordId: createPublicEntryAddOn.publicAddOnId,
+            data: JSON.stringify(createPublicEntryAddOn),
+            remarks: "Public add-on created",
             createdAt: new Date().toISOString(),
           })
           .execute();

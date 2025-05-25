@@ -227,6 +227,8 @@ catalogAddOnRoutes.openapi(
             action: "create",
             tableName: "CATALOG_ADD_ONS",
             recordId: createCatalogAddOn.catalogAddOnId,
+            data: JSON.stringify(createCatalogAddOn),
+            remarks: "Catalog Add-On created",
             createdAt: new Date().toISOString(),
           })
           .execute();
@@ -320,6 +322,8 @@ catalogAddOnRoutes.openapi(
             action: "update",
             tableName: "CATALOG_ADD_ONS",
             recordId: id,
+            data: JSON.stringify(updatedCatalog),
+            remarks: "Catalog Add-On updated",
             createdAt: new Date().toISOString(),
           })
           .execute();
@@ -399,6 +403,8 @@ catalogAddOnRoutes.openapi(
             action: "delete",
             tableName: "CATALOG_ADD_ONS",
             recordId: id,
+            data: JSON.stringify(deletedCatalog),
+            remarks: "Catalog Add-On deleted",
             createdAt: new Date().toISOString(),
           })
           .execute();

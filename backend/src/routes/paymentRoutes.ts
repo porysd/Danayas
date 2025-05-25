@@ -170,7 +170,7 @@ paymentRoutes.openapi(
     request: {
       body: {
         content: {
-          "application/json": {
+          "multipart/form-data": {
             schema: CreatePaymentDTO,
           },
         },
@@ -390,6 +390,8 @@ paymentRoutes.openapi(
               action: "create",
               tableName: "PAYMENTS",
               recordId: newPayment.paymentId,
+              data: JSON.stringify(newPayment),
+              remarks: "Payment created for booking",
               createdAt: new Date().toISOString(),
             })
             .execute();
@@ -420,6 +422,13 @@ paymentRoutes.openapi(
                 action: "update",
                 tableName: "BOOKINGS",
                 recordId: bookingId,
+                data: JSON.stringify({
+                  amountPaid: updatedAmountPaid,
+                  remainingBalance: updatedRemainingBalance,
+                  bookingPaymentStatus: updatedBookingPaymentStatus,
+                  bookStatus: "reserved",
+                }),
+                remarks: "Updated booking due to payment creation",
                 createdAt: new Date().toISOString(),
               })
               .execute();
@@ -523,7 +532,7 @@ paymentRoutes.openapi(
           };
 
           const newPayment = (
-            await tx.insert(PaymentsTable).values(paymentData).returning()
+            await tx.insert(PaymentsTable).values(paymentData).returning().execute()
           )[0];
 
           await tx
@@ -533,6 +542,8 @@ paymentRoutes.openapi(
               action: "create",
               tableName: "PAYMENTS",
               recordId: newPayment.paymentId,
+              data: JSON.stringify(newPayment),
+              remarks: "Payment created for public entry",
               createdAt: new Date().toISOString(),
             })
             .execute();
@@ -563,6 +574,13 @@ paymentRoutes.openapi(
                 action: "update",
                 tableName: "PUBLIC_ENTRY",
                 recordId: publicEntryId,
+                data: JSON.stringify({
+                  amountPaid: updatedAmountPaid,
+                  remainingBalance: updatePublicBalance,
+                  publicPaymentStatus: updatePublicStatus,
+                  status: "reserved",
+                }),
+                remarks: "Updated public entry due to payment creation",
                 createdAt: new Date().toISOString(),
               })
               .execute();
@@ -688,6 +706,13 @@ paymentRoutes.openapi(
                 action: "update",
                 tableName: "BOOKINGS",
                 recordId: payment.bookingId,
+                data: JSON.stringify({
+                  amountPaid: amountPaid,
+                  remainingBalance: remainingBalance,
+                  bookingPaymentStatus: bookingPaymentStatus,
+                  bookStatus: "reserved",
+                }),
+                remarks: "Updated booking due to payment verification",
                 createdAt: new Date().toISOString(),
               })
               .execute();
@@ -732,6 +757,13 @@ paymentRoutes.openapi(
                 action: "update",
                 tableName: "PUBLIC_ENTRY",
                 recordId: payment.publicEntryId,
+                data: JSON.stringify({
+                  amountPaid: amountPaid,
+                  remainingBalance: remainingBalance,
+                  publicPaymentStatus: publicPaymentStatus,
+                  status: "reserved",
+                }),
+                remarks: "Updated public entry due to payment verification",
                 createdAt: new Date().toISOString(),
               })
               .execute();
@@ -820,6 +852,13 @@ paymentRoutes.openapi(
                   action: "update",
                   tableName: "BOOKINGS",
                   recordId: payment.bookingId,
+                  data: JSON.stringify({
+                    amountPaid: amountPaid,
+                    remainingBalance: remainingBalance,
+                    bookingPaymentStatus: bookingPaymentStatus,
+                    bookStatus: bookStatus,
+                  }),
+                  remarks: "Updated booking due to payment voiding",
                   createdAt: new Date().toISOString(),
                 })
                 .execute();
@@ -891,6 +930,13 @@ paymentRoutes.openapi(
                   action: "update",
                   tableName: "PUBLIC_ENTRY",
                   recordId: payment.publicEntryId,
+                  data: JSON.stringify({
+                    amountPaid: amountPaid,
+                    remainingBalance: remainingBalance,
+                    publicPaymentStatus: publicPaymentStatus,
+                    status: status,
+                  }),
+                  remarks: "Updated public entry due to payment voiding",
                   createdAt: new Date().toISOString(),
                 })
                 .execute();
@@ -914,6 +960,8 @@ paymentRoutes.openapi(
             action: "update",
             tableName: "PAYMENTS",
             recordId: result.paymentId,
+            data: JSON.stringify(result),
+            remarks: `Payment ${paymentStatus} by user ${userId}`,
             createdAt: new Date().toISOString(),
           })
           .execute();

@@ -235,6 +235,8 @@ publicEntryRateRoutes.openapi(
               action: "update",
               tableName: "PUBLIC_ENTRY_RATE",
               recordId: updatePublicEntryRate.rateId,
+              data: JSON.stringify(updatePublicEntryRate),
+              remarks: "Deactivated previous active rate",
               createdAt: new Date().toISOString(),
             })
             .execute();
@@ -259,6 +261,8 @@ publicEntryRateRoutes.openapi(
             action: "create",
             tableName: "PUBLIC_ENTRY_RATE",
             recordId: createPublicEntryRate.rateId,
+            data: JSON.stringify(createPublicEntryRate),
+            remarks: "Public entry rate created",
             createdAt: new Date().toISOString(),
           })
           .execute();
@@ -358,6 +362,8 @@ publicEntryRateRoutes.openapi(
                 action: "update",
                 tableName: "PUBLIC_ENTRY_RATE",
                 recordId: rate.rateId,
+                data: JSON.stringify(rate),
+                remarks: "Deactivated previous active rate",
                 createdAt: new Date().toISOString(),
               })
               .execute();
@@ -396,6 +402,8 @@ publicEntryRateRoutes.openapi(
                   action: "update",
                   tableName: "PUBLIC_ENTRY_RATE",
                   recordId: updatedFallback.rateId,
+                  data: JSON.stringify(updatedFallback),
+                  remarks: "Activated fallback rate",
                   createdAt: new Date().toISOString(),
                 })
                 .execute();
@@ -419,6 +427,8 @@ publicEntryRateRoutes.openapi(
             action: "update",
             tableName: "PUBLIC_ENTRY_RATE",
             recordId: id,
+            data: JSON.stringify(updatedRate),
+            remarks: "Public entry rate updated",
             createdAt: new Date().toISOString(),
           })
           .execute();
@@ -511,6 +521,8 @@ publicEntryRateRoutes.openapi(
                 action: "update",
                 tableName: "PUBLIC_ENTRY_RATE",
                 recordId: updatedPublicEntryRate.rateId,
+                data: JSON.stringify(updatedPublicEntryRate),
+                remarks: "Activated fallback rate after deletion",
                 createdAt: new Date().toISOString(),
               })
               .execute();
@@ -532,6 +544,8 @@ publicEntryRateRoutes.openapi(
             action: "delete",
             tableName: "PUBLIC_ENTRY_RATE",
             recordId: deletePublicEntryRate.rateId,
+            data: JSON.stringify(deletePublicEntryRate),
+            remarks: "Public entry rate deleted",
             createdAt: new Date().toISOString(),
           })
           .execute();

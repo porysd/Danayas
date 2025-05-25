@@ -212,6 +212,8 @@ discountRoutes.openapi(
               action: "create",
               tableName: "DISCOUNTS",
               recordId: createDiscount.discountId,
+              data: JSON.stringify(createDiscount),
+              remarks: "Discount created",
               createdAt: new Date().toISOString(),
             })
             .execute();
@@ -301,6 +303,8 @@ discountRoutes.openapi(
               action: "update",
               tableName: "DISCOUNTS",
               recordId: updateDiscount.discountId,
+              data: JSON.stringify(updateDiscount),
+              remarks: "Discount updated",
               createdAt: new Date().toISOString(),
             })
             .execute();
@@ -370,6 +374,8 @@ discountRoutes.openapi(
               action: "delete",
               tableName: "DISCOUNTS",
               recordId: deleteDiscount.discountId,
+              data: JSON.stringify(deleteDiscount),
+              remarks: "Discount deleted",
               createdAt: new Date().toISOString(),
             })
             .execute();

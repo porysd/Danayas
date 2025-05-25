@@ -358,6 +358,8 @@ publicEntryRoutes.openapi(
             action: "create",
             tableName: "PUBLIC_ENTRY",
             recordId: dbPublic.publicEntryId,
+            data: JSON.stringify(dbPublic),
+            remarks: "Public entry created",
             createdAt: new Date().toISOString(),
           })
           .execute();
@@ -464,7 +466,7 @@ publicEntryRoutes.openapi(
 
       const updated = await db.transaction(async (tx) => {
         const updatedPublic = (
-          await db
+          await tx
             .update(PublicEntryTable)
             .set({ ...processedData, status: "rescheduled" })
             .where(eq(PublicEntryTable.publicEntryId, publicEntryId))
@@ -479,6 +481,8 @@ publicEntryRoutes.openapi(
             action: "update",
             tableName: "PUBLIC_ENTRY",
             recordId: updatedPublic.publicEntryId,
+            data: JSON.stringify(updatedPublic),
+            remarks: "Public entry updated",
             createdAt: new Date().toISOString(),
           })
           .execute();
@@ -627,6 +631,8 @@ publicEntryRoutes.openapi(
                 action: "refund-issued",
                 tableName: "REFUND",
                 recordId: refund.refundId,
+                data: JSON.stringify(refund),
+                remarks: "Refund issued for public cancellation",
                 createdAt: new Date().toISOString(),
               })
               .execute();
@@ -667,6 +673,13 @@ publicEntryRoutes.openapi(
             action: "status-change",
             tableName: "PUBLIC_ENTRY",
             recordId: updatedBooking.publicEntryId,
+            data: JSON.stringify({
+              publicEntryId: updatedBooking.publicEntryId,
+              status: updatedBooking.status,
+              cancelCategory: updatedBooking.cancelCategory,
+              cancelReason: updatedBooking.cancelReason,
+            }),
+            remarks: `Public status updated to ${updatedBooking.status}`,
             createdAt: new Date().toISOString(),
           })
           .execute();
@@ -745,6 +758,8 @@ publicEntryRoutes.openapi(
             action: "delete",
             tableName: "PUBLIC_ENTRY",
             recordId: id,
+            data: JSON.stringify(entry),
+            remarks: "Public Entry deleted",
             createdAt: new Date().toISOString(),
           })
           .execute();

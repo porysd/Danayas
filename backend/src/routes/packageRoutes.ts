@@ -276,6 +276,8 @@ packageRoutes.openapi(
             action: "update",
             tableName: "PACKAGES",
             recordId: dbPackage.packageId,
+            data: JSON.stringify(dbPackage),
+            remarks: "Package updated",
             createdAt: new Date().toISOString(),
           })
           .execute();
@@ -339,7 +341,7 @@ packageRoutes.openapi(
         throw new NotFoundError("Package not found");
       }
 
-      const deleted = await db.transaction(async (tx) => {
+      await db.transaction(async (tx) => {
         const deletePackage = (
           await tx
             .delete(PackagesTable)
@@ -355,11 +357,11 @@ packageRoutes.openapi(
             action: "delete",
             tableName: "PACKAGES",
             recordId: deletePackage.packageId,
+            data: JSON.stringify(deletePackage),
+            remarks: "Package deleted",
             createdAt: new Date().toISOString(),
           })
           .execute();
-
-        return deletePackage;
       });
 
       return c.json({
@@ -380,7 +382,7 @@ packageRoutes.openapi(
     request: {
       body: {
         content: {
-          multi: {
+          "multipart/form-data": {
             schema: CreatePackageDTO,
           },
         },
@@ -498,6 +500,8 @@ packageRoutes.openapi(
             action: "create",
             tableName: "PACKAGES",
             recordId: dbPackage.packageId,
+            data: JSON.stringify(dbPackage),
+            remarks: "Package created",
             createdAt: new Date().toISOString(),
           })
           .execute();
