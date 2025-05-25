@@ -25,12 +25,18 @@ faqsRoutes.openapi(
     method: "get",
     path: "/",
     request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
+        }),
+      }),
       query: z.object({
-        limit: z.coerce.number().nonnegative().openapi({
-          example: 10,
+        limit: z.coerce.number().nonnegative().min(1).default(20).openapi({
+          example: 50,
           description: "Limit that the server will give",
         }),
-        page: z.coerce.number().nonnegative().openapi({
+        page: z.coerce.number().nonnegative().min(1).default(1).openapi({
           example: 1,
           description: "Page to get",
         }),
@@ -101,6 +107,12 @@ faqsRoutes.openapi(
     method: "get",
     path: "/:id",
     request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
+        }),
+      }),
       params: z.object({
         id: z.coerce
           .number()
@@ -156,6 +168,12 @@ faqsRoutes.openapi(
     method: "post",
     path: "/",
     request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
+        }),
+      }),
       body: {
         description: "Create a new FAQ",
         required: true,
@@ -229,6 +247,12 @@ faqsRoutes.openapi(
     method: "patch",
     path: "/:id",
     request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
+        }),
+      }),
       params: z.object({
         id: z.coerce
           .number()
@@ -324,6 +348,12 @@ faqsRoutes.openapi(
     method: "delete",
     path: "/:id",
     request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
+        }),
+      }),
       params: z.object({
         id: z.coerce
           .number()

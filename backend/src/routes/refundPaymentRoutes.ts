@@ -2,7 +2,11 @@ import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { db } from "../config/database";
 import { RefundPaymentsTable } from "../schemas/RefundPayment";
 import { eq } from "drizzle-orm";
-import { BadRequestError, ForbiddenError, NotFoundError } from "../utils/errors";
+import {
+  BadRequestError,
+  ForbiddenError,
+  NotFoundError,
+} from "../utils/errors";
 import { errorHandler } from "../middlewares/errorHandler";
 import { authMiddleware } from "../middlewares/authMiddleware";
 import { verifyPermission } from "../utils/permissionUtils";
@@ -20,12 +24,18 @@ refundPaymentRoutes.openapi(
     method: "get",
     path: "/",
     request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
+        }),
+      }),
       query: z.object({
-        limit: z.coerce.number().nonnegative().openapi({
+        limit: z.coerce.number().nonnegative().min(1).default(20).openapi({
           example: 50,
           description: "Limit that the server will give",
         }),
-        page: z.coerce.number().nonnegative().openapi({
+        page: z.coerce.number().nonnegative().min(1).default(1).openapi({
           example: 1,
           description: "Page to get",
         }),
@@ -57,7 +67,11 @@ refundPaymentRoutes.openapi(
   async (c) => {
     try {
       const userId = c.get("userId");
-      const hasPermission = await verifyPermission(userId, "REFUND_PAYMENTS", "read");
+      const hasPermission = await verifyPermission(
+        userId,
+        "REFUND_PAYMENTS",
+        "read"
+      );
 
       if (!hasPermission) {
         throw new ForbiddenError("No permission to get refund payments.");

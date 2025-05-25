@@ -36,14 +36,20 @@ paymentRoutes.openapi(
     method: "get",
     path: "/",
     request: {
-      query: z.object({
-        limit: z.coerce.number().nonnegative().openapi({
-          example: 10,
-          description: "Number of records per page",
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
         }),
-        page: z.coerce.number().nonnegative().openapi({
+      }),
+      query: z.object({
+        limit: z.coerce.number().nonnegative().min(1).default(20).openapi({
+          example: 50,
+          description: "Limit that the server will give",
+        }),
+        page: z.coerce.number().nonnegative().min(1).default(1).openapi({
           example: 1,
-          description: "Page number to retrieve",
+          description: "Page to get",
         }),
       }),
     },
@@ -111,6 +117,12 @@ paymentRoutes.openapi(
     method: "get",
     path: "/:id",
     request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
+        }),
+      }),
       params: z.object({
         id: z.coerce.number().openapi({ description: "Id to find" }),
       }),
@@ -168,6 +180,12 @@ paymentRoutes.openapi(
     method: "post",
     path: "/",
     request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
+        }),
+      }),
       body: {
         content: {
           "multipart/form-data": {
@@ -532,7 +550,11 @@ paymentRoutes.openapi(
           };
 
           const newPayment = (
-            await tx.insert(PaymentsTable).values(paymentData).returning().execute()
+            await tx
+              .insert(PaymentsTable)
+              .values(paymentData)
+              .returning()
+              .execute()
           )[0];
 
           await tx
@@ -609,6 +631,12 @@ paymentRoutes.openapi(
     method: "patch",
     path: "/:id",
     request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
+        }),
+      }),
       body: {
         description: "Update Payment",
         required: true,

@@ -32,8 +32,14 @@ packageRoutes.openapi(
     method: "get",
     path: "/",
     request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
+        }),
+      }),
       query: z.object({
-        limit: z.coerce.number().nonnegative().openapi({
+        limit: z.coerce.number().nonnegative().min(1).default(20).openapi({
           example: 50,
           description: "Limit that the server will give",
         }),
@@ -88,6 +94,12 @@ packageRoutes.openapi(
     method: "get",
     path: "/search",
     request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
+        }),
+      }),
       query: z.object({
         limit: z.coerce.number().nonnegative().openapi({
           example: 50,
@@ -159,6 +171,12 @@ packageRoutes.openapi(
     method: "get",
     path: "/:id",
     request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
+        }),
+      }),
       params: z.object({
         id: z.coerce.number().openapi({ description: "Id to find" }),
       }),
@@ -208,6 +226,12 @@ packageRoutes.openapi(
     method: "patch",
     path: "/:id",
     request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
+        }),
+      }),
       params: z.object({
         id: z.coerce.number().openapi({ description: "Id to find" }),
       }),
@@ -302,6 +326,12 @@ packageRoutes.openapi(
     method: "delete",
     path: "/:id",
     request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
+        }),
+      }),
       params: z.object({
         id: z.coerce.number().openapi({ description: "ID to delete" }),
       }),
@@ -380,6 +410,12 @@ packageRoutes.openapi(
     method: "post",
     path: "/",
     request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
+        }),
+      }),
       body: {
         content: {
           "multipart/form-data": {

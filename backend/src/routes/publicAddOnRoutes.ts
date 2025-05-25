@@ -32,12 +32,18 @@ publicAddOnRoutes.openapi(
     method: "get",
     path: "/",
     request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
+        }),
+      }),
       query: z.object({
-        limit: z.coerce.number().nonnegative().openapi({
+        limit: z.coerce.number().nonnegative().min(1).default(20).openapi({
           example: 50,
           description: "Limit that the server will give",
         }),
-        page: z.coerce.number().nonnegative().openapi({
+        page: z.coerce.number().nonnegative().min(1).default(1).openapi({
           example: 1,
           description: "Page to get",
         }),
@@ -112,6 +118,12 @@ publicAddOnRoutes.openapi(
     method: "post",
     path: "/",
     request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
+        }),
+      }),
       body: {
         description: "Public add-on data",
         required: true,
@@ -177,7 +189,6 @@ publicAddOnRoutes.openapi(
       const price = selectedCatalogAddOn.price;
 
       const created = await db.transaction(async (tx) => {
-
         const createPublicEntryAddOn = (
           await tx
             .insert(PublicEntryAddOnsTable)
@@ -201,11 +212,9 @@ publicAddOnRoutes.openapi(
             createdAt: new Date().toISOString(),
           })
           .execute();
-		  
-		  return createPublicEntryAddOn;
-      });
 
-      
+        return createPublicEntryAddOn;
+      });
 
       return c.json(PublicEntryAddOnDTO.parse(created), 201);
     } catch (err) {

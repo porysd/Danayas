@@ -38,12 +38,18 @@ bookingRoutes.openapi(
     method: "get",
     path: "/",
     request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
+        }),
+      }),
       query: z.object({
-        limit: z.coerce.number().nonnegative().openapi({
+        limit: z.coerce.number().nonnegative().min(1).default(20).openapi({
           example: 50,
           description: "Limit that the server will give",
         }),
-        page: z.coerce.number().nonnegative().openapi({
+        page: z.coerce.number().nonnegative().min(1).default(1).openapi({
           example: 1,
           description: "Page to get",
         }),
@@ -114,6 +120,12 @@ bookingRoutes.openapi(
     method: "get",
     path: "/:id",
     request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
+        }),
+      }),
       params: z.object({
         id: z.coerce.number().openapi({ description: "Booking ID" }),
       }),
@@ -177,6 +189,12 @@ bookingRoutes.openapi(
     method: "post",
     path: "/",
     request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
+        }),
+      }),
       body: {
         description: "Booking credentials",
         required: true,
@@ -363,6 +381,12 @@ bookingRoutes.openapi(
     method: "patch",
     path: "/:id",
     request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
+        }),
+      }),
       body: {
         description: "Update Booking",
         required: true,
@@ -485,6 +509,12 @@ bookingRoutes.openapi(
     method: "patch",
     path: "/:id/status",
     request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
+        }),
+      }),
       body: {
         description: "Update Booking Status",
         required: true,
@@ -687,6 +717,14 @@ bookingRoutes.openapi(
     summary: "Delete booking by ID",
     method: "delete",
     path: "/:id",
+    request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
+        }),
+      }),
+    },
     responses: {
       200: {
         description: "Booking Deleted",

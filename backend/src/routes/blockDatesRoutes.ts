@@ -31,12 +31,18 @@ blockedRoutes.openapi(
     method: "get",
     path: "/",
     request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
+        }),
+      }),
       query: z.object({
-        limit: z.coerce.number().nonnegative().openapi({
+        limit: z.coerce.number().nonnegative().min(1).default(20).openapi({
           example: 50,
           description: "Limit that the server will give",
         }),
-        page: z.coerce.number().nonnegative().openapi({
+        page: z.coerce.number().nonnegative().min(1).default(1).openapi({
           example: 1,
           description: "Page to get",
         }),
@@ -110,6 +116,12 @@ blockedRoutes.openapi(
     method: "get",
     path: "/:id",
     request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
+        }),
+      }),
       params: z.object({
         id: z.coerce.number().openapi({ description: "Blocked dates ID" }),
       }),
@@ -171,6 +183,12 @@ blockedRoutes.openapi(
     method: "post",
     path: "/",
     request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
+        }),
+      }),
       body: {
         description: "Blocked Dates credentials",
         required: true,
@@ -264,6 +282,12 @@ blockedRoutes.openapi(
     method: "patch",
     path: "/:id",
     request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
+        }),
+      }),
       params: z.object({
         id: z.coerce
           .number()
@@ -369,6 +393,12 @@ blockedRoutes.openapi(
     method: "delete",
     path: "/:id",
     request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
+        }),
+      }),
       params: z.object({
         id: z.coerce
           .number()
