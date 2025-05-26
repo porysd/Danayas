@@ -560,6 +560,12 @@ refundRoutes.openapi(
       }
 
       const verifiedBy = parsed.verifiedBy;
+      if (!verifiedBy || isNaN(verifiedBy)) {
+        return c.json(
+          { error: "verifiedBy is required and must be a valid user ID." },
+          400
+        );
+      }
       const refundStatus = parsed.refundStatus;
 
       const refund = await db.query.RefundsTable.findFirst({
@@ -568,12 +574,35 @@ refundRoutes.openapi(
       if (!refund) {
         throw new NotFoundError("Refund not found.");
       }
+      if (
+        refund.refundStatus === "completed" &&
+        parsed.refundStatus !== "completed"
+      ) {
+        throw new BadRequestError("Cannot revert a completed refund.");
+      }
 
       const updatedRefund = await db.transaction(async (tx) => {
         if (
           refund.refundStatus !== "completed" &&
           parsed.refundStatus === "completed"
         ) {
+          if (
+            !parsed.refundMethod ||
+            parsed.refundMethod.toString().trim() === ""
+          ) {
+            throw new BadRequestError(
+              "refundMethod is required to complete a refund."
+            );
+          }
+          if (
+            !parsed.senderName ||
+            parsed.senderName.toString().trim() === ""
+          ) {
+            throw new BadRequestError(
+              "senderName is required to complete a refund."
+            );
+          }
+
           if (refund.publicEntryId == null) {
             if (refund.bookingId == null) {
               throw new NotFoundError("Booking ID is missing for this refund.");
@@ -660,14 +689,83 @@ refundRoutes.openapi(
           }
         }
 
-        if (refundStatus === "failed") {
+        if (
+          refund.refundStatus !== "failed" &&
+          parsed.refundStatus === "failed"
+        ) {
           if (!parsed.remarks) {
-            return c.json(
-              {
-                error: "Remarks are required when a refund fails.",
-              },
-              400
+            throw new BadRequestError(
+              "Remarks are required to mark a refund as failed."
             );
+          }
+          if (refund.publicEntryId == null) {
+            if (refund.bookingId == null) {
+              throw new NotFoundError("Booking ID is missing for this refund.");
+            }
+            const booking = await tx.query.BookingsTable.findFirst({
+              where: eq(BookingsTable.bookingId, refund.bookingId),
+            });
+            if (!booking) {
+              throw new NotFoundError("Booking not found.");
+            }
+
+            const updatedBooking = (
+              await tx
+                .update(BookingsTable)
+                .set({
+                  bookStatus: "cancelled",
+                })
+                .where(eq(BookingsTable.bookingId, refund.bookingId))
+                .returning()
+                .execute()
+            )[0];
+
+            await tx
+              .insert(AuditLogsTable)
+              .values({
+                userId: userId,
+                action: "update",
+                tableName: "BOOKINGS",
+                recordId: updatedBooking.bookingId,
+                data: JSON.stringify(updatedBooking),
+                remarks: "Booking cancelled due to refund",
+                createdAt: new Date().toISOString(),
+              })
+              .execute();
+          }
+          if (refund.bookingId == null) {
+            if (refund.publicEntryId == null) {
+              throw new NotFoundError("Public Entry ID not found");
+            }
+            const booking = await tx.query.PublicEntryTable.findFirst({
+              where: eq(PublicEntryTable.publicEntryId, refund.publicEntryId),
+            });
+            if (!booking) {
+              throw new NotFoundError("Booking not found.");
+            }
+            const updatedBooking = (
+              await tx
+                .update(PublicEntryTable)
+                .set({
+                  status: "cancelled",
+                })
+                .where(eq(PublicEntryTable.publicEntryId, refund.publicEntryId))
+                .returning()
+                .execute()
+            )[0];
+
+            await tx
+              .insert(AuditLogsTable)
+              .values({
+                userId: userId,
+                action: "update",
+                tableName: "PUBLIC_ENTRY",
+                recordId: updatedBooking.publicEntryId,
+                data: JSON.stringify(updatedBooking),
+                remarks: "Public entry cancelled due to refund",
+                createdAt: new Date().toISOString(),
+              })
+              .execute();
           }
         }
 
