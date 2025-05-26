@@ -1,3 +1,4 @@
+``
 <script setup>
 import { onMounted, ref, computed } from "vue";
 import { useRouter } from "vue-router";
@@ -19,12 +20,10 @@ import Footer from "../components/Footer.vue";
 import { useBookingStore } from "../stores/bookingStore";
 import { usePaymentStore } from "../stores/paymentStore";
 import { useToast } from "primevue/usetoast";
-import { usePackageStore } from "../stores/packageStore";
 import { useDiscountStore } from "../stores/discountStore";
 import { formatPeso } from "../utility/pesoFormat";
 import { formatDate } from "../utility/dateFormat";
 import { formatDates } from "../utility/dateFormat";
-import { useTransactionStore } from "../stores/transactionStore";
 import Message from "primevue/message";
 import FullCalendar from "@fullcalendar/vue3";
 import dayGridPlugin from "@fullcalendar/daygrid";
@@ -33,19 +32,23 @@ import interactionPlugin from "@fullcalendar/interaction";
 import { useAuthStore } from "../stores/authStore";
 import { useUserStore } from "../stores/userStore";
 import TermsCondition from "../components/TermsCondition.vue";
+import { usePublicEntryStore } from "../stores/publicEntryStore.js";
+import { useBlockedStore } from "../stores/blockedDateStore.js";
 
 const toast = useToast();
 const router = useRouter();
 
 const bookingStore = useBookingStore();
-const transactionStore = useTransactionStore();
 const paymentStore = usePaymentStore();
-const packageStore = usePackageStore();
 const discountStore = useDiscountStore();
+const publicStore = usePublicEntryStore();
+const blockStore = useBlockedStore();
 
 onMounted(() => {
   bookingStore.fetchUserBookings();
   discountStore.fetchAllDiscounts();
+  publicStore.fetchAllPublic();
+  blockStore.fetchAllBlocked();
 });
 
 const header = ref([
@@ -76,10 +79,11 @@ const newBooking = ref({
 });
 
 const paymentDetails = ref({
-  mode: "gcash",
+  paymentMethod: "gcash",
   reference: "",
   imageUrl: null,
   senderName: "",
+  tenderedAmount: "",
 });
 
 const onFileSelect = (event) => {
@@ -109,13 +113,11 @@ const addBookingHandler = async (newBooking, paymentDetails) => {
     const bookingId = createdBooking.bookingId;
 
     // 2: Get Transaction ID and create Data
-    const newTransaction = await transactionStore.addTransaction({ bookingId });
-    const transactionId = newTransaction.transactionId;
 
     // 3: Connect Transaction to Payment
     const formatPayment = {
       ...paymentDetails.value,
-      transactionId,
+      bookingId,
     };
     await paymentStore.addPayment(formatPayment);
 
@@ -141,6 +143,106 @@ const stepOneBtn = (activateCallback) => {
     activateCallback("2");
   }
   // activateCallback("2");
+};
+
+const minDate = new Date();
+
+const disabledDates = computed(() => {
+  const disabled = [];
+
+  // Blocked dates
+  blockStore.blocked.forEach((bd) => {
+    if (bd.blockedDates) {
+      disabled.push(new Date(bd.blockedDates));
+    }
+  });
+
+  // Fully booked dates (whole-day or both day-time and night-time)
+  const bookingsByDate = {};
+  bookingStore.bookings.forEach((b) => {
+    if (b.checkInDate) {
+      const date = b.checkInDate;
+      if (!bookingsByDate[date]) bookingsByDate[date] = new Set();
+      bookingsByDate[date].add(b.mode);
+    }
+  });
+  publicStore.public.forEach((p) => {
+    if (p.entryDate) {
+      const date = p.entryDate;
+      if (!bookingsByDate[date]) bookingsByDate[date] = new Set();
+      bookingsByDate[date].add(p.mode);
+    }
+  });
+
+  Object.entries(bookingsByDate).forEach(([date, modes]) => {
+    if (
+      modes.has("whole-day") ||
+      (modes.has("day-time") && modes.has("night-time"))
+    ) {
+      disabled.push(new Date(date));
+    }
+  });
+
+  return disabled;
+});
+
+const getBookingStyle = (slotDate) => {
+  const formattedDate = `${slotDate.year}-${String(slotDate.month + 1).padStart(
+    2,
+    "0"
+  )}-${String(slotDate.day).padStart(2, "0")}`;
+
+  // Collect all booking/public modes for the date
+  const mode = new Set();
+  let isBlocked = false;
+
+  bookingStore.bookings.forEach((b) => {
+    if (b.checkInDate === formattedDate) {
+      mode.add(b.mode);
+    }
+  });
+
+  publicStore.public.forEach((p) => {
+    if (p.entryDate === formattedDate) {
+      mode.add(p.mode);
+    }
+  });
+
+  if (blockStore.blocked.some((bd) => bd.blockedDates === formattedDate)) {
+    isBlocked = true;
+  }
+
+  let backgroundColor, color;
+
+  if (isBlocked) {
+    backgroundColor = "grey";
+    color = "white";
+  } else if (
+    mode.has("whole-day") ||
+    (mode.has("day-time") && mode.has("night-time"))
+  ) {
+    backgroundColor = "#FF6B6B"; // Fully Booked
+    color = "white";
+  } else if (mode.has("day-time")) {
+    backgroundColor = "#6A5ACD"; // Night Available
+    color = "white";
+  } else if (mode.has("night-time")) {
+    backgroundColor = "#FFD580"; // Day Available
+    color = "black";
+  } else {
+  }
+
+  return {
+    backgroundColor,
+    color,
+    width: "40px",
+    height: "40px",
+    display: "inline-flex",
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: "10rem",
+    fontSize: "17px",
+  };
 };
 
 //STEP 2
@@ -256,40 +358,80 @@ const prevBtn = () => {
 };
 
 // FOR CALENDAR
-const mapBookingsToEvents = (bookings) => {
-  return bookings
-    .filter((b) => b.bookStatus === "reserved")
-    .map((b) => {
-      let backgroundColor;
-      let textColor = "white";
+const mapBookingsToEvents = (
+  bookings = [],
+  publics = [],
+  blockedDates = []
+) => {
+  const eventByDate = {};
 
-      switch (b.mode) {
-        case "day-time":
-          backgroundColor = "#FFD5";
-          textColor = "black";
-          break;
-        case "night-time":
-          backgroundColor = "#6A5ACD";
-          break;
-        case "whole-day":
-          backgroundColor = "#FF6B6B";
-          break;
-        default:
-          backgroundColor = "#90EE94";
-          textColor = "#15803D";
-      }
+  bookings.forEach((b) => {
+    const date = b.checkInDate;
+    if (!eventByDate[date])
+      eventByDate[date] = { modes: new Set(), blocked: null };
+    eventByDate[date].modes.add(b.mode);
+  });
 
-      return {
-        id: b.bookingId,
-        title: b.mode,
-        start: b.checkInDate,
-        // end: b.checkOutDate,
-        backgroundColor: backgroundColor,
-        textColor: textColor,
-        allDay: true,
-      };
-    });
+  publics.forEach((p) => {
+    const date = p.entryDate;
+    if (!eventByDate[date])
+      eventByDate[date] = { modes: new Set(), blocked: null };
+    eventByDate[date].modes.add(p.mode);
+  });
+
+  blockedDates.forEach((bd) => {
+    const date = bd.blockedDates;
+    if (!eventByDate[date])
+      eventByDate[date] = { modes: new Set(), blocked: null };
+    eventByDate[date].blocked = bd;
+  });
+
+  return Object.entries(eventByDate).map(([date, { modes, blocked }]) => {
+    let backgroundColor, textColor, title;
+
+    if (blocked) {
+      backgroundColor = "grey";
+      textColor = "white";
+      title = "Not Available";
+    } else if (
+      modes.has("whole-day") ||
+      (modes.has("day-time") && modes.has("night-time"))
+    ) {
+      backgroundColor = "#FF6B6B";
+      textColor = "white";
+      title = "Fully Booked";
+    } else if (modes.has("day-time")) {
+      backgroundColor = "#6A5ACD";
+      textColor = "white";
+      title = "Night Available";
+    } else if (modes.has("night-time")) {
+      backgroundColor = "#FFD580";
+      textColor = "black";
+      title = "Day Available";
+    } else {
+      backgroundColor = "#90EE90";
+      textColor = "#15803D";
+      title = "Available";
+    }
+
+    return {
+      id: `summary-${date}`,
+      title,
+      start: date,
+      backgroundColor,
+      textColor,
+      allDay: true,
+    };
+  });
 };
+
+const calendarEvents = computed(() => {
+  return mapBookingsToEvents(
+    bookingStore.bookings,
+    publicStore.public,
+    blockStore.blocked
+  );
+});
 
 const calendarOptions = ref({
   plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin],
@@ -302,9 +444,9 @@ const calendarOptions = ref({
   editable: false,
   selectable: false,
   selectMirror: false,
-  dayMaxEvents: true,
+  dayMaxEvents: false,
   weekends: true,
-  events: computed(() => mapBookingsToEvents(bookingStore.bookings)),
+  events: calendarEvents,
 });
 </script>
 
@@ -325,7 +467,7 @@ const calendarOptions = ref({
       class="stepHeader card flex justify-center w-[`100`%] m-auto align-center mt-6"
     >
       <Stepper value="1" linear class="basis-[95rem]">
-        <StepList class="h-50 bg-[#c7e3b6] w-[95rem]">
+        <StepList class="h-50 bg-[##c7e3b6] w-[95rem]">
           <Step value="1">
             <i
               class="pi pi-calendar z-10 absolute top-5 right-67"
@@ -384,7 +526,20 @@ const calendarOptions = ref({
                             inputId="on_label"
                             showIcon
                             iconDisplay="input"
-                          />
+                            :minDate="minDate"
+                            :disabledDates="disabledDates"
+                          >
+                            <template #date="slotProps">
+                              <span>
+                                <strong
+                                  :style="getBookingStyle(slotProps.date)"
+                                  class="date-box"
+                                >
+                                  {{ slotProps.date.day }}
+                                </strong>
+                              </span>
+                            </template></DatePicker
+                          >
                           <label for="on_label">Check-In</label>
                         </FloatLabel>
                         <FloatLabel variant="on">
@@ -393,7 +548,20 @@ const calendarOptions = ref({
                             inputId="on_label"
                             showIcon
                             iconDisplay="input"
-                          />
+                            :minDate="minDate"
+                            :disabledDates="disabledDates"
+                          >
+                            <template #date="slotProps">
+                              <span>
+                                <strong
+                                  :style="getBookingStyle(slotProps.date)"
+                                  class="date-box"
+                                >
+                                  {{ slotProps.date.day }}
+                                </strong>
+                              </span>
+                            </template></DatePicker
+                          >
                           <label for="on_label">Check-Out</label>
                         </FloatLabel>
                       </div>
@@ -443,133 +611,58 @@ const calendarOptions = ref({
                     <b>{{ timeText }}</b> <i>{{ event.title }}</i>
                   </template>
                 </FullCalendar>
-                <div
-                  class="datePicker"
-                  style="
-                    background-color: none;
-                    width: 100%;
-                    margin: auto;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    margin-bottom: 2rem;
-                    margin-top: 5rem;
-                    gap: 5rem;
-                  "
-                >
-                  <!--<DatePicker
-                    v-model="date"
-                    inline
-                    class="dateChart w-full sm:w-[60rem]"
+                <div class="mb-20 mt-30 relative -top-24">
+                  <div
+                    class="bg-[#9edf9c] h-40 w-full flex flex-col md:flex-row align-center gap-10 px-10 py-6 rounded relative"
                   >
-                    <template #date="slotProps">
-                      <span>
-                        <strong
-                          :style="getBookingStyle(slotProps.date)"
-                          class="date-box"
+                    <h1
+                      class="text-3xl font-[Poppins] font-black text-center text-left mb-4 mr-10 relative bottom-[-2rem]"
+                    >
+                      Date Status:
+                    </h1>
+
+                    <div class="flex flex-col gap-10 mr-50">
+                      <div class="flex items-center gap-4">
+                        <span class="w-6 h-6 rounded-full bg-white"></span>
+                        <label class="text-sm font-semibold">AVAILABLE</label>
+                      </div>
+                      <div class="flex items-center gap-4">
+                        <span class="w-6 h-6 rounded-full bg-[#ffd580]"></span>
+                        <label class="text-sm font-semibold"
+                          >DAY AVAILABLE</label
                         >
-                          {{ slotProps.date.day }}
-                        </strong>
-                      </span>
-                    </template>
-                  </DatePicker>-->
-                </div>
+                      </div>
+                    </div>
 
-                <div
-                  class="flex m-auto justify-center content-center text-3xl font-[Poppins] font-black mb-5 mt-8"
-                >
-                  <h1>Date Status:</h1>
-                </div>
-
-                <div
-                  class="Status-br mb-20"
-                  style="
-                    background-color: #c7e3b6;
-                    height: 10rem;
-                    display: flex;
-                    width: 100%;
-                    justify-content: center;
-                    align-items: center;
-                    gap: 30rem;
-                  "
-                >
-                  <div
-                    class="status-left"
-                    style="
-                      display: flex;
-                      flex-direction: column;
-                      align-items: flex-start;
-                      margin: auto;
-                      margin-left: 25rem;
-                      gap: 2rem;
-                    "
-                  >
-                    <span
-                      class="dot"
-                      id="Available"
-                      style="background-color: #90ee94"
-                    >
-                      <label for="dot" style="margin-left: 50px"
-                        >AVAILABLE</label
-                      >
-                    </span>
-                    <span
-                      class="dot"
-                      id="DayAvailable"
-                      style="background-color: #ffd580"
-                    >
-                      <label for="dot" style="margin-left: 50px; width: 145px"
-                        >DAY AVAILABLE</label
-                      >
-                    </span>
-                  </div>
-
-                  <div
-                    class="status-right"
-                    style="
-                      display: flex;
-                      flex-direction: column;
-                      align-items: flex-start;
-                      margin: auto;
-                      margin-right: 35rem;
-                      gap: 2rem;
-                    "
-                  >
-                    <span
-                      class="dot"
-                      id="FullyBooked"
-                      style="background-color: #ff6b6b"
-                    >
-                      <label
-                        for="dot"
-                        style="margin-left: 50px; width: 145px; font-size: 16px"
-                        >FULLY BOOKED</label
-                      >
-                    </span>
-                    <span
-                      class="dot"
-                      id="NightAvailable"
-                      style="background-color: #6a5acd"
-                    >
-                      <label for="dot" style="margin-left: 50px; width: 145px"
-                        >NIGHT AVAILABLE</label
-                      >
-                    </span>
+                    <div class="flex flex-col gap-4 gap-10">
+                      <div class="flex items-center gap-4">
+                        <span class="w-6 h-6 rounded-full bg-[#ff6b6b]"></span>
+                        <label class="text-sm font-semibold"
+                          >FULLY BOOKED</label
+                        >
+                      </div>
+                      <div class="flex items-center gap-4">
+                        <span class="w-6 h-6 rounded-full bg-[#6a5acd]"></span>
+                        <label class="text-sm font-semibold"
+                          >NIGHT AVAILABLE</label
+                        >
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div class="flex items-center gap-5 ml-20">
-              <button
+            <div class="flex items-center gap-5 ml-90">
+              <Button
                 @click="
                   nextBtn();
                   stepOneBtn(activateCallback);
                 "
-                class="bg-[#194d1d] text-white w-50 h-15 font-black font-[Poppins] text-xl rounded-xl cursor-pointer ml-[45rem]"
+                class="bg-[#194d1d] relative top-[-9rem] text-white w-50 h-15 font-black font-[Poppins] text-xl rounded-xl cursor-pointer ml-[45rem]"
               >
                 CONTINUE
-              </button>
+              </Button>
             </div>
           </StepPanel>
           <StepPanel v-slot="{ activateCallback }" value="2">
@@ -596,7 +689,7 @@ const calendarOptions = ref({
                 class="flex-col flex justify-center items-center font-medium h-auto w-[40rem] mt-5"
               >
                 <div
-                  class="bg-[#c7e3b6] p-5 rounded-lg w-[30rem] h-[55rem] mt-10"
+                  class="bg-[#9edf9c] p-5 rounded-lg w-[30rem] h-[55rem] mt-10"
                 >
                   <h1
                     class="font-black font-[Poppins] text-2xl p-5 flex align-center justify-center m-auto"
@@ -637,9 +730,7 @@ const calendarOptions = ref({
                       </p>
                       <p>Mode: {{ selectedPackage?.mode }}</p>
                     </div>
-                    <div class="bg-[#CDDA54] p-1 rounde-sm">
-                      <p>VAT Charged:</p>
-                    </div>
+
                     <div class="bg-[#4BB344] p-1 rounded-sm">
                       <p>
                         TOTAL CHARGED: {{ formatPeso(selectedPackage?.price) }}
@@ -833,7 +924,7 @@ const calendarOptions = ref({
               <div
                 class="flex-col flex justify-center items-center font-medium h-auto w-[40rem] mt-5"
               >
-                <div class="bg-[#c7e3b6] p-5 rounded-lg w-[30rem] h-auto mt-10">
+                <div class="bg-[#9edf9c] p-5 rounded-lg w-[30rem] h-auto mt-10">
                   <h1
                     class="font-black font-[Poppins] text-2xl p-5 flex align-center justify-center m-auto"
                   >
@@ -873,9 +964,7 @@ const calendarOptions = ref({
                       </p>
                       <p>Mode: {{ selectedPackage?.mode }}</p>
                     </div>
-                    <div class="bg-[#CDDA54] p-1 rounded-sm">
-                      <p>VAT Charged:</p>
-                    </div>
+
                     <div class="bg-[#4BB344] p-1 rounded-sm">
                       <p>
                         TOTAL CHARGED: {{ formatPeso(selectedPackage?.price) }}
@@ -888,18 +977,25 @@ const calendarOptions = ref({
                         09xx xxx xxxx
                       </h1>
                       <h1 class="text-lg font-bold font-[Poppins]">
-                        Payment Terms:
+                        Tendered Amount:
                       </h1>
-                      <div class="bg-[#4BB344]">
-                        <p>TOTAL CHARGED: {{ selectedPacakge?.price }}</p>
+                      <div class="bg-[#fcfcfc] mb-2 rounded">
+                        <div>
+                          <input
+                            class="p-2 w-full"
+                            placeholder="e.g. 2000"
+                            v-model="paymentDetails.tenderedAmount"
+                          />
+                        </div>
                       </div>
+
                       <h1 class="text-m font-[Poppins]">
                         GCASH Reference Code:
                       </h1>
                       <div class="bg-[#fcfcfc] mb-2 rounded">
                         <div>
                           <input
-                            class="p-2"
+                            class="p-2 w-full"
                             placeholder="FEJIJKA4381FK9"
                             v-model="paymentDetails.reference"
                           />
@@ -933,7 +1029,10 @@ const calendarOptions = ref({
                         </h1>
                         <div class="bg-[#fcfcfc] mb-2 p-1 rounded-sm">
                           <div>
-                            <input class="p-2" placeholder="Juan Dela Cruz" />
+                            <input
+                              class="p-2 w-full"
+                              placeholder="Juan Dela Cruz"
+                            />
                           </div>
                         </div>
                       </div>
@@ -966,7 +1065,7 @@ const calendarOptions = ref({
               class="flex-col flex justify-center items-center font-medium h-auto w-[100%] mt-5"
             >
               <div
-                class="bg-[#c7e3b6] p-5 rounded-lg w-[70rem] h-auto mt-10 mb-10"
+                class="bg-[#9edf9c] p-5 rounded-lg w-[70rem] h-auto mt-10 mb-10"
               >
                 <h1
                   class="font-black font-[Poppins] text-3xl p-5 flex align-center justify-center m-auto"
@@ -1033,9 +1132,6 @@ const calendarOptions = ref({
                     </p>
                     <p>Mode: {{ selectedPackage?.mode }}</p>
                   </div>
-                  <div class="bg-[#CDDA54] p-1 rounded-sm">
-                    <p>VAT Charged:</p>
-                  </div>
                   <div class="bg-[#4BB344] p-1 rounded-sm">
                     <p>
                       TOTAL CHARGED:{{ formatPeso(selectedPackage?.price) }}
@@ -1069,16 +1165,16 @@ const calendarOptions = ref({
     <Dialog
       v-model:visible="showTermsAndCondition"
       modal
-      header="Terms & Condition"
       :style="{ width: '70rem' }"
       :breakpoints="{ '1199px': '75vw', '575px': '90vw' }"
     >
-      <ol class="list-decimal list-inside space-y-2 text-black">
+      <hr class="Header" data-content="Terms & Condition" />
+
+      <ol class="list-decimal list-inside space-y-2 text-black border-1">
         <li>
           A downpayment Reservation fee of P 2000-3000.00 is required to ensure
           the client's specified schedule.
         </li>
-
         <li>
           Reservation in case of delay, shall be given an allowance of two (2)
           Days based on agreed time. Without prior notice, the management can
@@ -1125,29 +1221,26 @@ const calendarOptions = ref({
           accounted to the customer.
         </li>
         <li>No refund policy is implemented</li>
-
+        <li>Clients must properly observe the house rules</li>
         <li>
-          <div>Clients must property observe the house rules</div>
-        </li>
-        <li>
-          <div>
-            It is understood that the customers agreed on the terms and
-            conditions of the Danayas Resorts Events Venue.
-          </div>
+          It is understood that the customers agreed on the terms and conditions
+          of the Danayas Resorts Events Venue.
         </li>
       </ol>
-
-      <div class="checkboxConfirmation" style="margin: auto">
+      <div class="flex items-center gap-2">
         <input type="checkbox" id="signupCheck" v-model="isChecked" />
-        <label for="bookingCheck">I accept all terms & conditions</label>
+        <label for="signupCheck">I accept all terms & conditions</label>
       </div>
-      <button
-        class="Bookingbtn"
-        :disabled="!isChecked"
-        @click="OpenContinueModal"
-      >
-        Continue
-      </button>
+
+      <div class="mt-4 text-center">
+        <button
+          class="Bookingbtn"
+          :disabled="!isChecked"
+          @click="OpenContinueModal"
+        >
+          Continue
+        </button>
+      </div>
     </Dialog>
 
     <div v-if="showContinueModal" class="modal">
@@ -1161,6 +1254,43 @@ const calendarOptions = ref({
 </template>
 
 <style scoped>
+.Header {
+  line-height: 1rem;
+  position: relative;
+  outline: 0;
+  border: 0;
+  font-weight: bolder;
+  font-size: 1.3rem;
+  margin-top: 20px;
+  margin-bottom: 2rem;
+  color: rgb(2, 2, 2);
+  text-align: center;
+  height: 1.5rem;
+}
+
+.Header::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(
+    -50%,
+    -50%
+  ); /* Center the line horizontally and vertically */
+  background: #000000;
+  width: 50%; /* or a percentage like 80% if you want shorter lines */
+  height: 1.2px;
+  z-index: -1; /* Optional: keeps the line behind the text */
+}
+
+.Header::after {
+  content: attr(data-content);
+  position: relative;
+  color: rgb(0, 0, 0);
+  padding: 0 0.5em;
+  background-color: #ffffff;
+}
+
 .Bookingbtn {
   padding: 10px 20px;
   border: none;
@@ -1278,7 +1408,7 @@ const calendarOptions = ref({
     padding-left: 13rem;
     padding-right: 13rem;
     padding-bottom: 4rem;
-    background-color: #c7e3b6;
+    background-color: #9edf9c;
   }
   .p-step {
     font-size: 20px;

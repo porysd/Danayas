@@ -215,16 +215,31 @@ const Initials = computed(() => {
 .nav-links ul li a,
 .dropbtn {
   text-decoration: none;
-  color: rgb(52, 48, 48);
+  color: rgb(73, 62, 62);
   font-size: 16px;
   font-weight: 500;
   transition: color 0.3s;
 }
 
-.nav-links ul li a:hover,
+.nav-links ul li,
+.logs:hover,
 .dropbtn:hover {
   color: #00ab5e;
-  text-decoration: underline;
+  text-decoration: none;
+  position: relative;
+}
+a::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 0;
+  height: 2px;
+  background-color: #00ab5e;
+  transition: width 0.3s ease;
+}
+a:hover::after {
+  width: 100%;
 }
 
 .active-route {
@@ -236,19 +251,18 @@ const Initials = computed(() => {
   position: relative;
   margin-right: 10px;
   font-weight: 500;
+  font-size: 16px;
   color: rgb(52, 48, 48);
 }
 
 .logs:hover,
 .dropper:hover {
-  color: #00ab5e;
-  text-decoration: underline;
 }
 
 .signup-btn-container {
   display: flex;
   gap: 10px;
-
+  font-size: 16px;
   margin-right: 100px;
 }
 
