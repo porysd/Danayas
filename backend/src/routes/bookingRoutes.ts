@@ -578,88 +578,81 @@ bookingRoutes.openapi(
         throw new NotFoundError("Booking not found");
       }
 
+      if (
+        bookStatus === "cancelled" &&
+        (!cancelCategory?.trim() || !cancelReason?.trim())
+      ) {
+        throw new BadRequestError("Cancel details required");
+      }
+
       const updated = await db.transaction(async (tx) => {
-        if (bookStatus === "cancelled") {
-          if (!cancelCategory) {
+        if (bookStatus === "pending-cancellation") {
+          if (!cancelCategory?.trim() || !cancelReason?.trim()) {
+            throw new BadRequestError("Cancel details required");
+          }
+          // Check all existing payments for the booking thats valid
+          const allValidPayments = await db.query.PaymentsTable.findMany({
+            where: and(
+              eq(PaymentsTable.bookingId, bookingId),
+              eq(PaymentsTable.paymentStatus, "valid")
+            ),
+          });
+
+          if (allValidPayments.length === 0) {
             throw new BadRequestError(
-              "Cancel category is required for cancellation"
+              "No valid payments found for the booking."
             );
           }
 
-          if (
-            cancelCategory === "others" &&
-            (!cancelReason || cancelReason.trim() === "")
-          ) {
-            throw new BadRequestError(
-              "Cancel Reason is required for 'others' category"
-            );
-          }
-          // If natural disaster, process refund
-          if (cancelCategory === "natural-disaster") {
-            // Check all existing payments for the booking thats valid
-            const allValidPayments = await db.query.PaymentsTable.findMany({
-              where: and(
-                eq(PaymentsTable.bookingId, bookingId),
-                eq(PaymentsTable.paymentStatus, "valid")
-              ),
-            });
+          const totalPaid = allValidPayments.reduce((sum, payment) => {
+            return sum + payment.netPaidAmount;
+          }, 0);
 
-            if (allValidPayments.length === 0) {
-              throw new BadRequestError(
-                "No valid payments found for the booking."
-              );
-            }
+          const refund = (
+            await tx
+              .insert(RefundsTable)
+              .values({
+                bookingId: bookingId,
+                publicEntryId: null,
+                refundAmount: totalPaid * 0.5,
+                refundStatus: "pending",
+                refundReason: "Booking Cancelled due to " + cancelCategory,
+              })
+              .returning()
+              .execute()
+          )[0];
 
-            const totalPaid = allValidPayments.reduce((sum, payment) => {
-              return sum + payment.netPaidAmount;
-            }, 0);
+          await tx
+            .insert(AuditLogsTable)
+            .values({
+              userId: userId,
+              action: "create",
+              tableName: "REFUND",
+              recordId: refund.refundId,
+              data: JSON.stringify({
+                bookingId: bookingId,
+                refundAmount: refund.refundAmount,
+                refundStatus: refund.refundStatus,
+                refundReason: refund.refundReason,
+              }),
+              remarks: "Refund created for booking cancellation",
+              createdAt: new Date().toISOString(),
+            })
+            .execute();
 
-            const refund = (
-              await tx
-                .insert(RefundsTable)
+          await Promise.all(
+            allValidPayments.map((payment) =>
+              tx
+                .insert(RefundPaymentsTable)
                 .values({
-                  bookingId: bookingId,
-                  publicEntryId: null,
-                  refundAmount: totalPaid * 0.5,
-                  refundStatus: "pending",
-                  refundReason: "Booking Cancelled due to " + cancelCategory,
+                  refundId: refund.refundId,
+                  paymentId: payment.paymentId,
+                  amountRefunded: payment.netPaidAmount * 0.5,
                 })
                 .returning()
                 .execute()
-            )[0];
-
-            await tx
-              .insert(AuditLogsTable)
-              .values({
-                userId: userId,
-                action: "create",
-                tableName: "REFUND",
-                recordId: refund.refundId,
-                data: JSON.stringify({
-                  bookingId: bookingId,
-                  refundAmount: refund.refundAmount,
-                  refundStatus: refund.refundStatus,
-                  refundReason: refund.refundReason,
-                }),
-                remarks: "Refund created for booking cancellation",
-                createdAt: new Date().toISOString(),
-              })
-              .execute();
-
-            await Promise.all(
-              allValidPayments.map((payment) =>
-                tx
-                  .insert(RefundPaymentsTable)
-                  .values({
-                    refundId: refund.refundId,
-                    paymentId: payment.paymentId,
-                    amountRefunded: payment.netPaidAmount * 0.5,
-                  })
-                  .returning()
-                  .execute()
-              )
-            );
-          }
+            )
+          );
         }
 
         const updatedBooking = (
@@ -668,9 +661,15 @@ bookingRoutes.openapi(
             .set({
               bookStatus,
               cancelCategory:
-                bookStatus === "cancelled" ? cancelCategory : null,
+                bookStatus === "cancelled" ||
+                bookStatus === "pending-cancellation"
+                  ? cancelCategory
+                  : null,
               cancelReason:
-                bookStatus === "cancelled" ? cancelReason ?? null : null,
+                bookStatus === "cancelled" ||
+                bookStatus === "pending-cancellation"
+                  ? cancelReason ?? null
+                  : null,
             })
             .where(eq(BookingsTable.bookingId, bookingId))
             .returning()
