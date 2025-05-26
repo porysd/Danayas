@@ -16,8 +16,6 @@ import { AuditLogsTable } from "../schemas/schema";
 
 const faqsRoutes = new OpenAPIHono<AuthContext>();
 
-faqsRoutes.use("/*", authMiddleware);
-
 faqsRoutes.openapi(
   createRoute({
     tags: ["Faqs"],
@@ -25,12 +23,6 @@ faqsRoutes.openapi(
     method: "get",
     path: "/",
     request: {
-      headers: z.object({
-        Authorization: z.string().openapi({
-          description: "Bearer access token",
-          example: "Bearer <token>",
-        }),
-      }),
       query: z.object({
         limit: z.coerce.number().nonnegative().min(1).default(20).openapi({
           example: 50,
@@ -46,7 +38,10 @@ faqsRoutes.openapi(
       200: {
         content: {
           "application/json": {
-            schema: FaqsDTO.array(),
+            schema: z.object({
+              total: z.number().openapi({ example: 10 }),
+              items: FaqsDTO.array(),
+            }),
           },
         },
         description: "Retrieve all questions and answers",
@@ -64,12 +59,12 @@ faqsRoutes.openapi(
   }),
   async (c) => {
     try {
-      const userId = c.get("userId");
-      const hasPermission = await verifyPermission(userId, "FAQs", "read");
+      // const userId = c.get("userId");
+      // const hasPermission = await verifyPermission(userId, "FAQs", "read");
 
-      if (!hasPermission) {
-        throw new ForbiddenError("No permission to get bookings.");
-      }
+      // if (!hasPermission) {
+      //   throw new ForbiddenError("No permission to get bookings.");
+      // }
 
       const { limit, page } = c.req.valid("query");
 
@@ -99,6 +94,8 @@ faqsRoutes.openapi(
     }
   }
 );
+
+faqsRoutes.use("/*", authMiddleware);
 
 faqsRoutes.openapi(
   createRoute({

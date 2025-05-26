@@ -9,8 +9,8 @@ export const useFaqsStore = defineStore("faqs", {
   actions: {
     // Fetch All FAQs
     async fetchAllFAQs() {
-      const auth = useAuthStore();
-      if (!auth.isLoggedIn) return;
+      // const auth = useAuthStore();
+      // if (!auth.isLoggedIn) return;
       try {
         this.faqs = [];
         const limit = 50;
@@ -23,7 +23,7 @@ export const useFaqsStore = defineStore("faqs", {
             {
               headers: {
                 "Content-Type": "application/json",
-                Authorization: `Bearer ${auth.accessToken}`,
+                //Authorization: `Bearer ${auth.accessToken}`,
               },
             }
           );

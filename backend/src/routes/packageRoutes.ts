@@ -23,8 +23,6 @@ import path from "path";
 
 const packageRoutes = new OpenAPIHono<AuthContext>();
 
-packageRoutes.use("/*", authMiddleware);
-
 packageRoutes.openapi(
   createRoute({
     tags: ["Packages"],
@@ -32,12 +30,6 @@ packageRoutes.openapi(
     method: "get",
     path: "/",
     request: {
-      headers: z.object({
-        Authorization: z.string().openapi({
-          description: "Bearer access token",
-          example: "Bearer <token>",
-        }),
-      }),
       query: z.object({
         limit: z.coerce.number().nonnegative().min(1).default(20).openapi({
           example: 50,
@@ -63,12 +55,12 @@ packageRoutes.openapi(
   }),
   async (c) => {
     try {
-      const userId = c.get("userId");
-      const hasPermission = await verifyPermission(userId, "PACKAGES", "read");
+      // const userId = c.get("userId");
+      // const hasPermission = await verifyPermission(userId, "PACKAGES", "read");
 
-      if (!hasPermission) {
-        throw new ForbiddenError("No permission to get all packages.");
-      }
+      // if (!hasPermission) {
+      //   throw new ForbiddenError("No permission to get all packages.");
+      // }
 
       const { limit, page } = c.req.valid("query");
 
@@ -86,6 +78,8 @@ packageRoutes.openapi(
     }
   }
 );
+
+packageRoutes.use("/*", authMiddleware);
 
 packageRoutes.openapi(
   createRoute({
@@ -154,9 +148,17 @@ packageRoutes.openapi(
         throw new NotFoundError("No packages found.");
       }
 
+      const allPackages = packages.map((packages) => {
+        try {
+          return PackageDTO.parse(packages);
+        } catch (err) {
+          throw new BadRequestError("Invalid package data.");
+        }
+      });
+
       return c.json({
         total: packages.length,
-        items: packages,
+        items: allPackages,
       });
     } catch (err) {
       return errorHandler(err, c);
@@ -185,12 +187,12 @@ packageRoutes.openapi(
       200: {
         description: "Successful package retrieval",
       },
-      404: {
-        description: "Package not found",
-      },
-      500: {
-        description: "Internal server error",
-      },
+    },
+    404: {
+      description: "Package not found",
+    },
+    500: {
+      description: "Internal server error",
     },
   }),
   async (c) => {
@@ -212,7 +214,7 @@ packageRoutes.openapi(
         throw new NotFoundError("Package not found");
       }
 
-      return c.json(dbPackage);
+      return c.json(PackageDTO.parse(dbPackage));
     } catch (err) {
       return errorHandler(err, c);
     }
