@@ -38,12 +38,18 @@ bookingRoutes.openapi(
     method: "get",
     path: "/",
     request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
+        }),
+      }),
       query: z.object({
-        limit: z.coerce.number().nonnegative().openapi({
+        limit: z.coerce.number().nonnegative().min(1).default(20).openapi({
           example: 50,
           description: "Limit that the server will give",
         }),
-        page: z.coerce.number().nonnegative().openapi({
+        page: z.coerce.number().nonnegative().min(1).default(1).openapi({
           example: 1,
           description: "Page to get",
         }),
@@ -114,6 +120,12 @@ bookingRoutes.openapi(
     method: "get",
     path: "/:id",
     request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
+        }),
+      }),
       params: z.object({
         id: z.coerce.number().openapi({ description: "Booking ID" }),
       }),
@@ -177,6 +189,12 @@ bookingRoutes.openapi(
     method: "post",
     path: "/",
     request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
+        }),
+      }),
       body: {
         description: "Booking credentials",
         required: true,
@@ -334,6 +352,8 @@ bookingRoutes.openapi(
             action: "create",
             tableName: "BOOKING",
             recordId: insertedBooking.bookingId,
+            data: JSON.stringify(BookingDTO.parse(insertedBooking)),
+            remarks: "Booking created",
             createdAt: new Date().toISOString(),
           })
           .execute();
@@ -361,6 +381,12 @@ bookingRoutes.openapi(
     method: "patch",
     path: "/:id",
     request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
+        }),
+      }),
       body: {
         description: "Update Booking",
         required: true,
@@ -457,6 +483,8 @@ bookingRoutes.openapi(
           action: "update",
           tableName: "BOOKING",
           recordId: bookingId,
+          data: JSON.stringify(BookingDTO.parse(updatedBooking)),
+          remarks: "Booking updated",
           createdAt: new Date().toISOString(),
         });
 
@@ -481,6 +509,12 @@ bookingRoutes.openapi(
     method: "patch",
     path: "/:id/status",
     request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
+        }),
+      }),
       body: {
         description: "Update Booking Status",
         required: true,
@@ -601,6 +635,13 @@ bookingRoutes.openapi(
                 action: "create",
                 tableName: "REFUND",
                 recordId: refund.refundId,
+                data: JSON.stringify({
+                  bookingId: bookingId,
+                  refundAmount: refund.refundAmount,
+                  refundStatus: refund.refundStatus,
+                  refundReason: refund.refundReason,
+                }),
+                remarks: "Refund created for booking cancellation",
                 createdAt: new Date().toISOString(),
               })
               .execute();
@@ -643,6 +684,13 @@ bookingRoutes.openapi(
             action: "status-change",
             tableName: "BOOKING",
             recordId: bookingId,
+            data: JSON.stringify({
+              bookingId: updatedBooking.bookingId,
+              bookStatus: updatedBooking.bookStatus,
+              cancelCategory: updatedBooking.cancelCategory,
+              cancelReason: updatedBooking.cancelReason,
+            }),
+            remarks: `Booking status updated to ${updatedBooking.bookStatus}`,
             createdAt: new Date().toISOString(),
           })
           .execute();
@@ -669,6 +717,14 @@ bookingRoutes.openapi(
     summary: "Delete booking by ID",
     method: "delete",
     path: "/:id",
+    request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
+        }),
+      }),
+    },
     responses: {
       200: {
         description: "Booking Deleted",
@@ -719,6 +775,8 @@ bookingRoutes.openapi(
             action: "delete",
             tableName: "BOOKING",
             recordId: bookingId,
+            data: JSON.stringify(BookingDTO.parse(deletedBooking)),
+            remarks: "Booking deleted",
             createdAt: new Date().toISOString(),
           })
           .execute();

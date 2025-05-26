@@ -30,12 +30,18 @@ publicEntryRateRoutes.openapi(
     method: "get",
     path: "/",
     request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
+        }),
+      }),
       query: z.object({
-        limit: z.coerce.number().nonnegative().openapi({
+        limit: z.coerce.number().nonnegative().min(1).default(20).openapi({
           example: 50,
           description: "Limit that the server will give",
         }),
-        page: z.coerce.number().nonnegative().openapi({
+        page: z.coerce.number().nonnegative().min(1).default(1).openapi({
           example: 1,
           description: "Page to get",
         }),
@@ -110,6 +116,12 @@ publicEntryRateRoutes.openapi(
     method: "get",
     path: "/:id",
     request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
+        }),
+      }),
       params: z.object({
         id: z.coerce.number().openapi({ description: "Public Entry ID" }),
       }),
@@ -169,6 +181,12 @@ publicEntryRateRoutes.openapi(
     method: "post",
     path: "/",
     request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
+        }),
+      }),
       body: {
         description: "Public Entry credentials",
         required: true,
@@ -235,6 +253,8 @@ publicEntryRateRoutes.openapi(
               action: "update",
               tableName: "PUBLIC_ENTRY_RATE",
               recordId: updatePublicEntryRate.rateId,
+              data: JSON.stringify(updatePublicEntryRate),
+              remarks: "Deactivated previous active rate",
               createdAt: new Date().toISOString(),
             })
             .execute();
@@ -259,6 +279,8 @@ publicEntryRateRoutes.openapi(
             action: "create",
             tableName: "PUBLIC_ENTRY_RATE",
             recordId: createPublicEntryRate.rateId,
+            data: JSON.stringify(createPublicEntryRate),
+            remarks: "Public entry rate created",
             createdAt: new Date().toISOString(),
           })
           .execute();
@@ -281,6 +303,12 @@ publicEntryRateRoutes.openapi(
     method: "patch",
     path: "/:id",
     request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
+        }),
+      }),
       params: z.object({
         id: z.coerce.number().int().openapi({ description: "Rate ID" }),
       }),
@@ -358,6 +386,8 @@ publicEntryRateRoutes.openapi(
                 action: "update",
                 tableName: "PUBLIC_ENTRY_RATE",
                 recordId: rate.rateId,
+                data: JSON.stringify(rate),
+                remarks: "Deactivated previous active rate",
                 createdAt: new Date().toISOString(),
               })
               .execute();
@@ -396,6 +426,8 @@ publicEntryRateRoutes.openapi(
                   action: "update",
                   tableName: "PUBLIC_ENTRY_RATE",
                   recordId: updatedFallback.rateId,
+                  data: JSON.stringify(updatedFallback),
+                  remarks: "Activated fallback rate",
                   createdAt: new Date().toISOString(),
                 })
                 .execute();
@@ -419,6 +451,8 @@ publicEntryRateRoutes.openapi(
             action: "update",
             tableName: "PUBLIC_ENTRY_RATE",
             recordId: id,
+            data: JSON.stringify(updatedRate),
+            remarks: "Public entry rate updated",
             createdAt: new Date().toISOString(),
           })
           .execute();
@@ -441,6 +475,12 @@ publicEntryRateRoutes.openapi(
     method: "delete",
     path: "/:id",
     request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
+        }),
+      }),
       params: z.object({
         id: z.coerce.number().int().openapi({ description: "Rate ID" }),
       }),
@@ -511,6 +551,8 @@ publicEntryRateRoutes.openapi(
                 action: "update",
                 tableName: "PUBLIC_ENTRY_RATE",
                 recordId: updatedPublicEntryRate.rateId,
+                data: JSON.stringify(updatedPublicEntryRate),
+                remarks: "Activated fallback rate after deletion",
                 createdAt: new Date().toISOString(),
               })
               .execute();
@@ -532,6 +574,8 @@ publicEntryRateRoutes.openapi(
             action: "delete",
             tableName: "PUBLIC_ENTRY_RATE",
             recordId: deletePublicEntryRate.rateId,
+            data: JSON.stringify(deletePublicEntryRate),
+            remarks: "Public entry rate deleted",
             createdAt: new Date().toISOString(),
           })
           .execute();

@@ -18,6 +18,7 @@ import { errorHandler } from "../middlewares/errorHandler";
 import { authMiddleware } from "../middlewares/authMiddleware";
 import { verifyPermission } from "../utils/permissionUtils";
 import type { AuthContext } from "../types";
+import { AuditLogsTable } from "../schemas/schema";
 
 const blockedRoutes = new OpenAPIHono<AuthContext>();
 
@@ -30,12 +31,18 @@ blockedRoutes.openapi(
     method: "get",
     path: "/",
     request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
+        }),
+      }),
       query: z.object({
-        limit: z.coerce.number().nonnegative().openapi({
+        limit: z.coerce.number().nonnegative().min(1).default(20).openapi({
           example: 50,
           description: "Limit that the server will give",
         }),
-        page: z.coerce.number().nonnegative().openapi({
+        page: z.coerce.number().nonnegative().min(1).default(1).openapi({
           example: 1,
           description: "Page to get",
         }),
@@ -109,6 +116,12 @@ blockedRoutes.openapi(
     method: "get",
     path: "/:id",
     request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
+        }),
+      }),
       params: z.object({
         id: z.coerce.number().openapi({ description: "Blocked dates ID" }),
       }),
@@ -170,6 +183,12 @@ blockedRoutes.openapi(
     method: "post",
     path: "/",
     request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
+        }),
+      }),
       body: {
         description: "Blocked Dates credentials",
         required: true,
@@ -224,9 +243,30 @@ blockedRoutes.openapi(
         createdBy: userId,
       };
 
-      const created = (
-        await db.insert(BlockedDatesTable).values(format).returning().execute()
-      )[0];
+      const created = await db.transaction(async (tx) => {
+        const createBlockedDate = (
+          await tx
+            .insert(BlockedDatesTable)
+            .values(format)
+            .returning()
+            .execute()
+        )[0];
+
+        await tx
+          .insert(AuditLogsTable)
+          .values({
+            userId: userId,
+            action: "create",
+            tableName: "BLOCKED_DATES",
+            recordId: createBlockedDate.blockedDatesId,
+            data: JSON.stringify(createBlockedDate),
+            remarks: "Blocked Dates created",
+            createdAt: new Date().toISOString(),
+          })
+          .execute();
+
+        return createBlockedDate;
+      });
 
       return c.json(BlockedDatesDTO.parse(created), 201);
     } catch (err) {
@@ -242,6 +282,12 @@ blockedRoutes.openapi(
     method: "patch",
     path: "/:id",
     request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
+        }),
+      }),
       params: z.object({
         id: z.coerce
           .number()
@@ -307,17 +353,33 @@ blockedRoutes.openapi(
 
       const processedData = processBookingData(updates);
 
-      await db
-        .update(BlockedDatesTable)
-        .set(processedData)
-        .where(eq(BlockedDatesTable.blockedDatesId, id))
-        .execute();
+      const created = await db.transaction(async (tx) => {
+        const updateBlockedDate = (
+          await tx
+            .update(BlockedDatesTable)
+            .set(processedData)
+            .where(eq(BlockedDatesTable.blockedDatesId, id))
+            .returning()
+            .execute()
+        )[0];
 
-      const updatedRate = await db.query.BlockedDatesTable.findFirst({
-        where: eq(BlockedDatesTable.blockedDatesId, id),
+        await tx
+          .insert(AuditLogsTable)
+          .values({
+            userId: userId,
+            action: "create",
+            tableName: "BLOCKED_DATES",
+            recordId: updateBlockedDate.blockedDatesId,
+            data: JSON.stringify(updateBlockedDate),
+            remarks: "Blocked Dates updated",
+            createdAt: new Date().toISOString(),
+          })
+          .execute();
+
+        return updateBlockedDate;
       });
 
-      return c.json(BlockedDatesDTO.parse(updatedRate));
+      return c.json(BlockedDatesDTO.parse(created));
     } catch (err) {
       return errorHandler(err, c);
     }
@@ -327,10 +389,16 @@ blockedRoutes.openapi(
 blockedRoutes.openapi(
   createRoute({
     tags: ["Blocked Dates"],
-    summary: "DeleteBlocked Datese by ID",
+    summary: "Delete Blocked Dates by ID",
     method: "delete",
     path: "/:id",
     request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
+        }),
+      }),
       params: z.object({
         id: z.coerce
           .number()
@@ -376,10 +444,25 @@ blockedRoutes.openapi(
         throw new NotFoundError("Rate not found.");
       }
 
-      await db
-        .delete(BlockedDatesTable)
-        .where(eq(BlockedDatesTable.blockedDatesId, id))
-        .execute();
+      await db.transaction(async (tx) => {
+        await tx
+          .delete(BlockedDatesTable)
+          .where(eq(BlockedDatesTable.blockedDatesId, id))
+          .execute();
+
+        await tx
+          .insert(AuditLogsTable)
+          .values({
+            userId: userId,
+            action: "delete",
+            tableName: "BLOCKED_DATES",
+            recordId: id,
+            data: JSON.stringify(deleteBlockedDates),
+            remarks: "Blocked Dates deleted",
+            createdAt: new Date().toISOString(),
+          })
+          .execute();
+      });
 
       return c.json({
         status: "success",

@@ -21,6 +21,14 @@ export const AuditLogDTO = z.object({
     description: "The ID of the record that was affected",
     example: 1,
   }),
+  data: z.string().optional().openapi({
+    description: "The data associated with the action, typically in JSON format",
+    example: '{"bookingId": 1, "userId": 3, "status": "pending"}',
+  }),
+  remarks: z.string().optional().openapi({
+    description: "Additional remarks or comments about the action",
+    example: "Booking status updated to reserved",
+  }),
   createdAt: z.string().openapi({
     description: "The date and time when the action was performed",
     example: new Date().toISOString(),

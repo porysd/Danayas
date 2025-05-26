@@ -29,12 +29,18 @@ catalogAddOnRoutes.openapi(
     method: "get",
     path: "/",
     request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
+        }),
+      }),
       query: z.object({
-        limit: z.coerce.number().nonnegative().openapi({
+        limit: z.coerce.number().nonnegative().min(1).default(20).openapi({
           example: 50,
           description: "Limit that the server will give",
         }),
-        page: z.coerce.number().nonnegative().openapi({
+        page: z.coerce.number().nonnegative().min(1).default(1).openapi({
           example: 1,
           description: "Page to get",
         }),
@@ -109,6 +115,12 @@ catalogAddOnRoutes.openapi(
     method: "get",
     path: "/:id",
     request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
+        }),
+      }),
       params: z.object({
         id: z.coerce
           .number()
@@ -169,6 +181,12 @@ catalogAddOnRoutes.openapi(
     method: "post",
     path: "/",
     request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
+        }),
+      }),
       body: {
         description: "Create Catalog Add-On",
         required: true,
@@ -227,6 +245,8 @@ catalogAddOnRoutes.openapi(
             action: "create",
             tableName: "CATALOG_ADD_ONS",
             recordId: createCatalogAddOn.catalogAddOnId,
+            data: JSON.stringify(createCatalogAddOn),
+            remarks: "Catalog Add-On created",
             createdAt: new Date().toISOString(),
           })
           .execute();
@@ -248,6 +268,12 @@ catalogAddOnRoutes.openapi(
     method: "patch",
     path: "/:id",
     request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
+        }),
+      }),
       params: z.object({
         id: z.coerce
           .number()
@@ -320,6 +346,8 @@ catalogAddOnRoutes.openapi(
             action: "update",
             tableName: "CATALOG_ADD_ONS",
             recordId: id,
+            data: JSON.stringify(updatedCatalog),
+            remarks: "Catalog Add-On updated",
             createdAt: new Date().toISOString(),
           })
           .execute();
@@ -340,6 +368,12 @@ catalogAddOnRoutes.openapi(
     method: "delete",
     path: "/:id",
     request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
+        }),
+      }),
       params: z.object({
         id: z.coerce
           .number()
@@ -386,11 +420,10 @@ catalogAddOnRoutes.openapi(
       }
 
       const deleted = await db.transaction(async (tx) => {
-
         const deleteCatalogAddOn = await tx
-        .delete(CatalogAddOnsTable)
-        .where(eq(CatalogAddOnsTable.catalogAddOnId, id))
-        .execute();
+          .delete(CatalogAddOnsTable)
+          .where(eq(CatalogAddOnsTable.catalogAddOnId, id))
+          .execute();
 
         await tx
           .insert(AuditLogsTable)
@@ -399,14 +432,14 @@ catalogAddOnRoutes.openapi(
             action: "delete",
             tableName: "CATALOG_ADD_ONS",
             recordId: id,
+            data: JSON.stringify(deletedCatalog),
+            remarks: "Catalog Add-On deleted",
             createdAt: new Date().toISOString(),
           })
           .execute();
 
         return deleteCatalogAddOn;
       });
-
-      
 
       return c.json({
         status: "success",

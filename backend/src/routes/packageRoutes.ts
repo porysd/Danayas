@@ -32,8 +32,14 @@ packageRoutes.openapi(
     method: "get",
     path: "/",
     request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
+        }),
+      }),
       query: z.object({
-        limit: z.coerce.number().nonnegative().openapi({
+        limit: z.coerce.number().nonnegative().min(1).default(20).openapi({
           example: 50,
           description: "Limit that the server will give",
         }),
@@ -88,6 +94,12 @@ packageRoutes.openapi(
     method: "get",
     path: "/search",
     request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
+        }),
+      }),
       query: z.object({
         limit: z.coerce.number().nonnegative().openapi({
           example: 50,
@@ -159,6 +171,12 @@ packageRoutes.openapi(
     method: "get",
     path: "/:id",
     request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
+        }),
+      }),
       params: z.object({
         id: z.coerce.number().openapi({ description: "Id to find" }),
       }),
@@ -208,6 +226,12 @@ packageRoutes.openapi(
     method: "patch",
     path: "/:id",
     request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
+        }),
+      }),
       params: z.object({
         id: z.coerce.number().openapi({ description: "Id to find" }),
       }),
@@ -276,6 +300,8 @@ packageRoutes.openapi(
             action: "update",
             tableName: "PACKAGES",
             recordId: dbPackage.packageId,
+            data: JSON.stringify(dbPackage),
+            remarks: "Package updated",
             createdAt: new Date().toISOString(),
           })
           .execute();
@@ -300,6 +326,12 @@ packageRoutes.openapi(
     method: "delete",
     path: "/:id",
     request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
+        }),
+      }),
       params: z.object({
         id: z.coerce.number().openapi({ description: "ID to delete" }),
       }),
@@ -339,7 +371,7 @@ packageRoutes.openapi(
         throw new NotFoundError("Package not found");
       }
 
-      const deleted = await db.transaction(async (tx) => {
+      await db.transaction(async (tx) => {
         const deletePackage = (
           await tx
             .delete(PackagesTable)
@@ -355,11 +387,11 @@ packageRoutes.openapi(
             action: "delete",
             tableName: "PACKAGES",
             recordId: deletePackage.packageId,
+            data: JSON.stringify(deletePackage),
+            remarks: "Package deleted",
             createdAt: new Date().toISOString(),
           })
           .execute();
-
-        return deletePackage;
       });
 
       return c.json({
@@ -378,9 +410,15 @@ packageRoutes.openapi(
     method: "post",
     path: "/",
     request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
+        }),
+      }),
       body: {
         content: {
-          multi: {
+          "multipart/form-data": {
             schema: CreatePackageDTO,
           },
         },
@@ -498,6 +536,8 @@ packageRoutes.openapi(
             action: "create",
             tableName: "PACKAGES",
             recordId: dbPackage.packageId,
+            data: JSON.stringify(dbPackage),
+            remarks: "Package created",
             createdAt: new Date().toISOString(),
           })
           .execute();

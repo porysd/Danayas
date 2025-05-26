@@ -10,6 +10,8 @@ export const AuditLogsTable = sqliteTable("AUDIT_LOGS", {
   action: text("action", { enum: ["create", "read", "update", "delete", "login", "logout", "status-change", "refund-issued", "payment-verified"] }).notNull(),
   tableName: text("tableName").notNull(),
   recordId: integer("recordId").notNull(),
+  data: text("data"),
+  remarks: text("remarks"),
   createdAt: text("createdAt")
     .notNull()
     .default(sql`(current_timestamp)`),

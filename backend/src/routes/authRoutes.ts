@@ -10,6 +10,7 @@ import { UnauthorizedError, ConflictError } from "../utils/errors";
 import { errorHandler } from "../middlewares/errorHandler";
 import type { AuthContext } from "../types";
 import { AuditLogsTable } from "../schemas/AuditLog";
+import { GetUserDTO } from "../dto/userDTO";
 
 export default new OpenAPIHono<AuthContext>()
   .openapi(
@@ -50,13 +51,33 @@ export default new OpenAPIHono<AuthContext>()
           throw new ConflictError("User already exists");
         }
 
-        await db
-          .insert(UsersTable)
-          .values({
-            ...body,
-            password: await Bun.password.hash(body.password),
-          })
-          .execute();
+        const created = await db.transaction(async (tx) => {
+          const createUser = (
+            await tx
+              .insert(UsersTable)
+              .values({
+                ...body,
+                password: await Bun.password.hash(body.password),
+              })
+              .returning()
+              .execute()
+          )[0];
+
+          await tx
+            .insert(AuditLogsTable)
+            .values({
+              userId: createUser.userId,
+              action: "create",
+              tableName: "USER",
+              recordId: createUser.userId,
+              data: JSON.stringify(GetUserDTO.parse(createUser)),
+              remarks: "User registration",
+              createdAt: new Date().toISOString(),
+            })
+            .execute();
+
+          return createUser;
+        });
 
         return c.redirect("/auth/login", 302);
       } catch (err) {
@@ -109,13 +130,18 @@ export default new OpenAPIHono<AuthContext>()
           throw new UnauthorizedError("Invalid email or password");
         }
 
-        await db.insert(AuditLogsTable).values({
-          userId: dbUser.userId,
-          action: "login",
-          tableName: "USER",
-          recordId: dbUser.userId,
-          createdAt: new Date().toISOString(),
-        }).execute();
+        await db
+          .insert(AuditLogsTable)
+          .values({
+            userId: dbUser.userId,
+            action: "login",
+            tableName: "USER",
+            recordId: dbUser.userId,
+            data: JSON.stringify(GetUserDTO.parse(dbUser)),
+            remarks: "User logged in",
+            createdAt: new Date().toISOString(),
+          })
+          .execute();
 
         const payload = {
           sub: dbUser.userId,

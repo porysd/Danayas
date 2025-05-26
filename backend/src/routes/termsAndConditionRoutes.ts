@@ -29,12 +29,18 @@ termsRoutes.openapi(
     method: "get",
     path: "/",
     request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
+        }),
+      }),
       query: z.object({
-        limit: z.coerce.number().nonnegative().openapi({
-          example: 10,
+        limit: z.coerce.number().nonnegative().min(1).default(20).openapi({
+          example: 50,
           description: "Limit that the server will give",
         }),
-        page: z.coerce.number().nonnegative().openapi({
+        page: z.coerce.number().nonnegative().min(1).default(1).openapi({
           example: 1,
           description: "Page to get",
         }),
@@ -111,6 +117,12 @@ termsRoutes.openapi(
     method: "post",
     path: "/",
     request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
+        }),
+      }),
       body: {
         description: "Create a new terms and condition",
         required: true,
@@ -167,6 +179,8 @@ termsRoutes.openapi(
             action: "create",
             tableName: "TERMS_AND_CONDITION",
             recordId: dbterms.termsId,
+            data: JSON.stringify(dbterms),
+            remarks: "Terms and Condition created",
             createdAt: new Date().toISOString(),
           })
           .execute();
@@ -188,6 +202,12 @@ termsRoutes.openapi(
     method: "delete",
     path: "/:id",
     request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
+        }),
+      }),
       params: z.object({
         id: z.coerce.number().openapi({
           description: "The ID of the Terms and Condition to delete",
@@ -247,6 +267,8 @@ termsRoutes.openapi(
             action: "delete",
             tableName: "TERMS_AND_CONDITION",
             recordId: deleteTermsAndCondition.termsId,
+            data: JSON.stringify(deleteTermsAndCondition),
+            remarks: "Terms and Condition deleted",
             createdAt: new Date().toISOString(),
           })
           .execute();
@@ -268,6 +290,12 @@ termsRoutes.openapi(
     method: "patch",
     path: "/:id",
     request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
+        }),
+      }),
       params: z.object({
         id: z.coerce.number().openapi({
           description: "The ID of the terms and conditions to update",
@@ -342,6 +370,8 @@ termsRoutes.openapi(
             action: "update",
             tableName: "TERMS_AND_CONDITION",
             recordId: updatedTerms.termsId,
+            data: JSON.stringify(updatedTerms),
+            remarks: "Terms and Condition updated",
             createdAt: new Date().toISOString(),
           })
           .execute();

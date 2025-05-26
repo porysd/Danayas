@@ -7,12 +7,20 @@
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { db } from "../config/database";
 import { BookingAddOnsTable } from "../schemas/BookingAddOns";
-import { BookingAddOnDTO, CreateBookingAddOnDTO, UpdateBookingAddOnDTO } from "../dto/BookingAddOnDTO";
+import {
+  BookingAddOnDTO,
+  CreateBookingAddOnDTO,
+  UpdateBookingAddOnDTO,
+} from "../dto/BookingAddOnDTO";
 import { eq } from "drizzle-orm";
 import { BookingsTable } from "../schemas/Booking";
 import { CatalogAddOnsTable } from "../schemas/CatalogAddOns";
 import { errorHandler } from "../middlewares/errorHandler";
-import { BadRequestError, ForbiddenError, NotFoundError } from "../utils/errors";
+import {
+  BadRequestError,
+  ForbiddenError,
+  NotFoundError,
+} from "../utils/errors";
 import { CatalogAddOnDTO } from "../dto/catalogAddOnDTO";
 import { authMiddleware } from "../middlewares/authMiddleware";
 import { verifyPermission } from "../utils/permissionUtils";
@@ -30,12 +38,18 @@ bookingAddOnRoutes.openapi(
     method: "get",
     path: "/",
     request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
+        }),
+      }),
       query: z.object({
-        limit: z.coerce.number().nonnegative().openapi({
+        limit: z.coerce.number().nonnegative().min(1).default(20).openapi({
           example: 50,
           description: "Limit that the server will give",
         }),
-        page: z.coerce.number().nonnegative().openapi({
+        page: z.coerce.number().nonnegative().min(1).default(1).openapi({
           example: 1,
           description: "Page to get",
         }),
@@ -64,7 +78,11 @@ bookingAddOnRoutes.openapi(
   async (c) => {
     try {
       const userId = c.get("userId");
-      const hasPermission = await verifyPermission(userId, "BOOKING_ADD_ONS", "read");
+      const hasPermission = await verifyPermission(
+        userId,
+        "BOOKING_ADD_ONS",
+        "read"
+      );
 
       if (!hasPermission) {
         throw new ForbiddenError("No permission to get bookings.");
@@ -106,6 +124,12 @@ bookingAddOnRoutes.openapi(
     method: "post",
     path: "/",
     request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
+        }),
+      }),
       body: {
         description: "Booking add-on data",
         required: true,
@@ -139,7 +163,11 @@ bookingAddOnRoutes.openapi(
   async (c) => {
     try {
       const userId = c.get("userId");
-      const hasPermission = await verifyPermission(userId, "BOOKING_ADD_ONS", "create");
+      const hasPermission = await verifyPermission(
+        userId,
+        "BOOKING_ADD_ONS",
+        "create"
+      );
 
       if (!hasPermission) {
         throw new ForbiddenError("No permission to create booking add-on.");
@@ -184,10 +212,34 @@ bookingAddOnRoutes.openapi(
 
         const updatedTotalAmount = selectedBooking.totalAmount + price;
 
+        const updateBooking = (
+          await tx
+            .update(BookingsTable)
+            .set({
+              totalAmount: updatedTotalAmount,
+              bookingPaymentStatus: "partially-paid",
+              remainingBalance: selectedBooking.remainingBalance + price,
+            })
+            .where(eq(BookingsTable.bookingId, bookingId))
+            .returning()
+            .execute()
+        )[0];
+
         await tx
-          .update(BookingsTable)
-          .set({ totalAmount: updatedTotalAmount, bookingPaymentStatus: "partially-paid", remainingBalance: selectedBooking.remainingBalance + price })
-          .where(eq(BookingsTable.bookingId, bookingId))
+          .insert(AuditLogsTable)
+          .values({
+            userId: userId,
+            action: "update",
+            tableName: "BOOKINGS",
+            recordId: bookingId,
+            data: JSON.stringify({
+              totalAmount: updateBooking.totalAmount,
+              remainingBalance: updateBooking.remainingBalance,
+              bookingPaymentStatus: updateBooking.bookingPaymentStatus,
+            }),
+            remarks: "Booking updated due to add-on creation",
+            createdAt: new Date().toISOString(),
+          })
           .execute();
 
         await tx
@@ -197,8 +249,11 @@ bookingAddOnRoutes.openapi(
             action: "create",
             tableName: "BOOKING_ADD_ONS",
             recordId: createBookingAddon.bookingAddOnId,
+            data: JSON.stringify(BookingAddOnDTO.parse(createBookingAddon)),
+            remarks: "Booking add-on created",
             createdAt: new Date().toISOString(),
-          }).execute();
+          })
+          .execute();
 
         return createBookingAddon;
       });

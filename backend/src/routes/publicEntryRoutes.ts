@@ -38,12 +38,18 @@ publicEntryRoutes.openapi(
     method: "get",
     path: "/",
     request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
+        }),
+      }),
       query: z.object({
-        limit: z.coerce.number().nonnegative().openapi({
+        limit: z.coerce.number().nonnegative().min(1).default(20).openapi({
           example: 50,
           description: "Limit that the server will give",
         }),
-        page: z.coerce.number().nonnegative().openapi({
+        page: z.coerce.number().nonnegative().min(1).default(1).openapi({
           example: 1,
           description: "Page to get",
         }),
@@ -120,6 +126,12 @@ publicEntryRoutes.openapi(
     method: "get",
     path: "/:id",
     request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
+        }),
+      }),
       params: z.object({
         id: z.coerce.number().openapi({ description: "Public Entry ID" }),
       }),
@@ -189,6 +201,12 @@ publicEntryRoutes.openapi(
     method: "post",
     path: "/",
     request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
+        }),
+      }),
       body: {
         description: "Public Entry credentials",
         required: true,
@@ -358,6 +376,8 @@ publicEntryRoutes.openapi(
             action: "create",
             tableName: "PUBLIC_ENTRY",
             recordId: dbPublic.publicEntryId,
+            data: JSON.stringify(dbPublic),
+            remarks: "Public entry created",
             createdAt: new Date().toISOString(),
           })
           .execute();
@@ -379,6 +399,12 @@ publicEntryRoutes.openapi(
     method: "patch",
     path: "/:id",
     request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
+        }),
+      }),
       params: z.object({
         id: z.coerce.number().openapi({ description: "Public Entry ID" }),
       }),
@@ -464,7 +490,7 @@ publicEntryRoutes.openapi(
 
       const updated = await db.transaction(async (tx) => {
         const updatedPublic = (
-          await db
+          await tx
             .update(PublicEntryTable)
             .set({ ...processedData, status: "rescheduled" })
             .where(eq(PublicEntryTable.publicEntryId, publicEntryId))
@@ -479,6 +505,8 @@ publicEntryRoutes.openapi(
             action: "update",
             tableName: "PUBLIC_ENTRY",
             recordId: updatedPublic.publicEntryId,
+            data: JSON.stringify(updatedPublic),
+            remarks: "Public entry updated",
             createdAt: new Date().toISOString(),
           })
           .execute();
@@ -504,6 +532,12 @@ publicEntryRoutes.openapi(
     method: "patch",
     path: "/:id/status",
     request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
+        }),
+      }),
       body: {
         description: "Update Public Status",
         required: true,
@@ -627,6 +661,8 @@ publicEntryRoutes.openapi(
                 action: "refund-issued",
                 tableName: "REFUND",
                 recordId: refund.refundId,
+                data: JSON.stringify(refund),
+                remarks: "Refund issued for public cancellation",
                 createdAt: new Date().toISOString(),
               })
               .execute();
@@ -667,6 +703,13 @@ publicEntryRoutes.openapi(
             action: "status-change",
             tableName: "PUBLIC_ENTRY",
             recordId: updatedBooking.publicEntryId,
+            data: JSON.stringify({
+              publicEntryId: updatedBooking.publicEntryId,
+              status: updatedBooking.status,
+              cancelCategory: updatedBooking.cancelCategory,
+              cancelReason: updatedBooking.cancelReason,
+            }),
+            remarks: `Public status updated to ${updatedBooking.status}`,
             createdAt: new Date().toISOString(),
           })
           .execute();
@@ -693,6 +736,12 @@ publicEntryRoutes.openapi(
     method: "delete",
     path: "/:id",
     request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
+        }),
+      }),
       params: z.object({
         id: z.coerce.number().openapi({ description: "Public Entry ID" }),
       }),
@@ -745,6 +794,8 @@ publicEntryRoutes.openapi(
             action: "delete",
             tableName: "PUBLIC_ENTRY",
             recordId: id,
+            data: JSON.stringify(entry),
+            remarks: "Public Entry deleted",
             createdAt: new Date().toISOString(),
           })
           .execute();

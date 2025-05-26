@@ -20,12 +20,18 @@ auditLogRoutes.openapi(
     method: "get",
     path: "/",
     request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
+        }),
+      }),
       query: z.object({
-        limit: z.coerce.number().nonnegative().openapi({
+        limit: z.coerce.number().nonnegative().min(1).default(20).openapi({
           example: 50,
           description: "Limit that the server will give",
         }),
-        page: z.coerce.number().nonnegative().openapi({
+        page: z.coerce.number().nonnegative().min(1).default(1).openapi({
           example: 1,
           description: "Page to get",
         }),
@@ -51,7 +57,11 @@ auditLogRoutes.openapi(
   async (c) => {
     try {
       const userId = c.get("userId");
-      const hasPermission = await verifyPermission(userId, "AUDIT_LOGS", "read");
+      const hasPermission = await verifyPermission(
+        userId,
+        "AUDIT_LOGS",
+        "read"
+      );
 
       if (!hasPermission) {
         throw new ForbiddenError("No permission to get audit logs.");
@@ -84,7 +94,7 @@ auditLogRoutes.openapi(
       return errorHandler(err, c);
     }
   }
-)
+);
 
 auditLogRoutes.openapi(
   createRoute({
@@ -93,6 +103,12 @@ auditLogRoutes.openapi(
     method: "get",
     path: "/:id",
     request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
+        }),
+      }),
       params: z.object({
         id: z.coerce.number().int().openapi({ description: "Audit log ID" }),
       }),
@@ -104,7 +120,7 @@ auditLogRoutes.openapi(
           "application/json": {
             schema: AuditLogDTO,
           },
-        }
+        },
       },
       400: {
         description: "Invalid request",
@@ -120,7 +136,11 @@ auditLogRoutes.openapi(
   async (c) => {
     try {
       const userId = c.get("userId");
-      const hasPermission = await verifyPermission(userId, "AUDIT_LOGS", "read");
+      const hasPermission = await verifyPermission(
+        userId,
+        "AUDIT_LOGS",
+        "read"
+      );
       if (!hasPermission) {
         throw new ForbiddenError("No permission to get audit logs.");
       }

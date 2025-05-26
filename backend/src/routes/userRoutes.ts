@@ -26,8 +26,14 @@ userRoutes.openapi(
     method: "get",
     path: "/search",
     request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
+        }),
+      }),
       query: z.object({
-        limit: z.coerce.number().nonnegative().default(50).openapi({
+        limit: z.coerce.number().nonnegative().min(1).default(20).openapi({
           example: 50,
           description: "Limit that the server will give",
         }),
@@ -96,6 +102,17 @@ userRoutes.openapi(
     summary: "Retrieve User by ID",
     method: "get",
     path: "/:id",
+    request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
+        }),
+      }),
+      params: z.object({
+        id: z.coerce.number().int().openapi({ description: "User ID" }),
+      }),
+    },
     responses: {
       200: {
         content: {
@@ -158,6 +175,12 @@ userRoutes.openapi(
     method: "patch",
     path: "/:id",
     request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
+        }),
+      }),
       body: {
         description: "Update User",
         required: true,
@@ -228,6 +251,8 @@ userRoutes.openapi(
             action: "update",
             tableName: "USER",
             recordId: updateUser.userId,
+            data: JSON.stringify(GetUserDTO.parse(updateUser)),
+            remarks: "User updated",
             createdAt: new Date().toISOString(),
           })
           .execute();
@@ -248,6 +273,14 @@ userRoutes.openapi(
     summary: "Delete User by ID",
     method: "delete",
     path: "/:id",
+    request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
+        }),
+      }),
+    },
     responses: {
       200: {
         description: "User Deleted Successfully",
@@ -299,11 +332,11 @@ userRoutes.openapi(
             action: "delete",
             tableName: "USER",
             recordId: deleteUser.userId,
+            data: JSON.stringify(GetUserDTO.parse(deletedUser)),
+            remarks: "User deleted",
             createdAt: new Date().toISOString(),
           })
           .execute();
-
-        return;
       });
 
       return c.json({
@@ -323,13 +356,19 @@ userRoutes.openapi(
     method: "get",
     path: "/",
     request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
+        }),
+      }),
       query: z.object({
-        limit: z.coerce.number().nonnegative().openapi({
+        limit: z.coerce.number().nonnegative().min(1).default(20).openapi({
           example: 50,
           description: "Limit that the server will give",
         }),
-        page: z.coerce.number().nonnegative().openapi({
-          example: 0,
+        page: z.coerce.number().nonnegative().min(1).default(1).openapi({
+          example: 1,
           description: "Page to get",
         }),
       }),
@@ -392,6 +431,12 @@ userRoutes.openapi(
     method: "post",
     path: "/",
     request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
+        }),
+      }),
       body: {
         description: "User login credentials",
         required: true,
@@ -458,6 +503,8 @@ userRoutes.openapi(
             action: "create",
             tableName: "USER",
             recordId: dbUser.userId,
+            data: JSON.stringify(GetUserDTO.parse(dbUser)),
+            remarks: "User created",
             createdAt: new Date().toISOString(),
           })
           .execute();
@@ -480,6 +527,17 @@ userRoutes.openapi(
     summary: "Disable a user by ID",
     method: "patch",
     path: "/disable/:id",
+    request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
+        }),
+      }),
+      params: z.object({
+        id: z.coerce.number().int().openapi({ description: "User ID" }),
+      }),
+    },
     responses: {
       200: {
         description: "User disabled successfully",
@@ -533,6 +591,8 @@ userRoutes.openapi(
             action: "status-change",
             tableName: "USER",
             recordId: disableUser.userId,
+            data: JSON.stringify(GetUserDTO.parse(disableUser)),
+            remarks: "User disabled",
             createdAt: new Date().toISOString(),
           })
           .execute();
@@ -552,6 +612,17 @@ userRoutes.openapi(
     summary: "Enable a user by ID",
     method: "patch",
     path: "/enable/:id",
+    request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
+        }),
+      }),
+      params: z.object({
+        id: z.coerce.number().int().openapi({ description: "User ID" }),
+      }),
+    },
     responses: {
       200: {
         description: "User enabled successfully",
@@ -606,6 +677,8 @@ userRoutes.openapi(
             action: "status-change",
             tableName: "USER",
             recordId: activateUser.userId,
+            data: JSON.stringify(GetUserDTO.parse(activateUser)),
+            remarks: "User enabled",
             createdAt: new Date().toISOString(),
           })
           .execute();
