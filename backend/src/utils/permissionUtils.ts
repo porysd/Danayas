@@ -54,11 +54,10 @@ const rolePermissions: Record<Roles, Record<string, string[]>> = {
   },
 };
 
-
 export async function verifyPermission(
   userId: number,
   table: string,
-  action: typeof permissionsArray[number],
+  action: (typeof permissionsArray)[number]
 ) {
   const user = await db.query.UsersTable.findFirst({
     where: eq(UsersTable.userId, userId),
@@ -84,7 +83,7 @@ export async function verifyPermission(
       operators.and(
         eq(fields.userId, userId),
         eq(fields.table, table),
-        eq(fields.action, action),
+        eq(fields.action, action)
       ),
   });
 
@@ -94,14 +93,17 @@ export async function verifyPermission(
 export async function grantPermission(
   userId: number,
   table: string,
-  action: typeof permissionsArray[number],
+  action: (typeof permissionsArray)[number]
 ) {
   try {
-    await db.insert(PermissionsTable).values({
-      userId,
-      table,
-      action,
-    }).execute();
+    await db
+      .insert(PermissionsTable)
+      .values({
+        userId,
+        table,
+        action,
+      })
+      .execute();
     return true;
   } catch (e) {
     console.error(e);
@@ -112,16 +114,19 @@ export async function grantPermission(
 export async function revokePermission(
   userId: number,
   table: string,
-  action: typeof permissionsArray[number],
+  action: (typeof permissionsArray)[number]
 ) {
   try {
-    await db.delete(PermissionsTable).where(
-      and(
-        eq(PermissionsTable.userId, userId),
-        eq(PermissionsTable.table, table),
-        eq(PermissionsTable.action, action),
-      ),
-    ).execute();
+    await db
+      .delete(PermissionsTable)
+      .where(
+        and(
+          eq(PermissionsTable.userId, userId),
+          eq(PermissionsTable.table, table),
+          eq(PermissionsTable.action, action)
+        )
+      )
+      .execute();
     return true;
   } catch (e) {
     console.error(e);

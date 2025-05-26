@@ -15,8 +15,8 @@ export const usePackageStore = defineStore("package", {
   actions: {
     // Fetch All PACKAGES Only
     async fetchAllPackages() {
-      const auth = useAuthStore();
-      if (!auth.isLoggedIn) return;
+      // const auth = useAuthStore();
+      // if (!auth.isLoggedIn) return;
       this.packages = [];
       const limit = 50;
       let page = 1;
@@ -28,7 +28,7 @@ export const usePackageStore = defineStore("package", {
           {
             headers: {
               "Content-Type": "application/json",
-              Authorization: `Bearer ${auth.accessToken}`,
+              // Authorization: `Bearer ${auth.accessToken}`,
             },
           }
         );
@@ -59,8 +59,8 @@ export const usePackageStore = defineStore("package", {
 
     // Fetch All PROMOS Only
     async fetchAllPromos() {
-      const auth = useAuthStore();
-      if (!auth.isLoggedIn) return;
+      // const auth = useAuthStore();
+      // if (!auth.isLoggedIn) return;
       this.promos = [];
       const limit = 50;
       let page = 1;
@@ -72,7 +72,7 @@ export const usePackageStore = defineStore("package", {
           {
             headers: {
               "Content-Type": "application/json",
-              Authorization: `Bearer ${auth.accessToken}`,
+              // Authorization: `Bearer ${auth.accessToken}`,
             },
           }
         );
