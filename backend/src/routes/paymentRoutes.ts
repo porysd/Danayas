@@ -20,7 +20,7 @@ import {
 } from "../utils/errors";
 import { errorHandler } from "../middlewares/errorHandler";
 import { authMiddleware } from "../middlewares/authMiddleware";
-import { verifyPermission } from "../utils/permissionUtils";
+import { revokePermission, verifyPermission } from "../utils/permissionUtils";
 import type { AuthContext } from "../types";
 import fs from "fs/promises";
 import path from "path";
@@ -695,6 +695,7 @@ paymentRoutes.openapi(
 
       const updatedPayment = await db.transaction(async (tx) => {
         if (paymentStatus === "valid" && payment.paymentStatus !== "valid") {
+          // TODO: Add process for refunding below 2k on installment and refunding exceeding amount when paid with gcash
           // Process Status in Private Booking
           if (payment.publicEntryId == null) {
             if (payment.bookingId == null) {
@@ -746,6 +747,7 @@ paymentRoutes.openapi(
               .execute();
           }
 
+          // TODO: Add process for refunding below 2k on installment and refunding exceeding amount when paid with gcash
           // Process Status in Public Entry
           if (payment.bookingId == null) {
             if (payment.publicEntryId == null) {
@@ -1002,6 +1004,158 @@ paymentRoutes.openapi(
       });
 
       return c.json(updatedPayment);
+    } catch (err) {
+      return errorHandler(err, c);
+    }
+  }
+);
+
+paymentRoutes.openapi(
+  createRoute({
+    tags: ["Payments"],
+    summary: "Override Tendered Amount (Admin PIN Required)",
+    method: "patch",
+    path: "/:id/override-tendered",
+    request: {
+      headers: z.object({
+        Authorization: z.string(),
+      }),
+      body: {
+        required: true,
+        content: {
+          "application/json": {
+            schema: z.object({
+              tenderedAmount: z.number().positive(),
+              remarks: z.string().min(1),
+            }),
+          },
+        },
+      },
+    },
+    responses: {
+      200: {
+        description: "Tendered amount overridden",
+      },
+      403: {
+        description: "Forbidden",
+      },
+      404: {
+        description: "Payment not found",
+      },
+    },
+  }),
+  async (c) => {
+    try {
+      const userId = c.get("userId");
+      const hasPermission = await verifyPermission(
+        userId,
+        "PAYMENT",
+        "overrideAmount"
+      );
+
+      if (!hasPermission) {
+        throw new ForbiddenError(
+          `Not authorized to override tendered amount.`
+        );
+      }
+
+      const paymentId = Number(c.req.param("id"));
+      if (isNaN(paymentId)) {
+        throw new BadRequestError("Invalid payment ID");
+      }
+
+      const { tenderedAmount, remarks } = await c.req.valid("json");
+
+      const payment = await db.query.PaymentsTable.findFirst({
+        where: eq(PaymentsTable.paymentId, paymentId),
+      });
+      if (!payment) {
+        throw new NotFoundError("Payment not found.");
+      }
+      if (payment.paymentStatus !== "pending") {
+        return c.json(
+          {
+            error:
+              "Only pending payments can have their tendered amount overridden.",
+          },
+          400
+        );
+      }
+
+      let contextData = null;
+
+      if (payment.bookingId !== null) {
+        contextData = await db.query.BookingsTable.findFirst({
+          where: eq(BookingsTable.bookingId, payment.bookingId),
+        });
+      } else if (payment.publicEntryId !== null) {
+        contextData = await db.query.PublicEntryTable.findFirst({
+          where: eq(PublicEntryTable.publicEntryId, payment.publicEntryId),
+        });
+      }
+
+      if (!contextData) {
+        throw new NotFoundError(
+          "Associated booking or public entry not found."
+        );
+      }
+      const changeAmount =  Math.max(tenderedAmount - contextData.remainingBalance, 0)
+
+      const updated = await db.transaction(async (tx) => {
+        const updatedPayment = (
+          await tx
+            .update(PaymentsTable)
+            .set({ tenderedAmount: tenderedAmount,
+              remarks: remarks,
+              changeAmount: changeAmount,
+              netPaidAmount: tenderedAmount - changeAmount
+             })
+            .where(eq(PaymentsTable.paymentId, paymentId))
+            .returning()
+            .execute()
+        )[0];
+
+        await tx
+          .insert(AuditLogsTable)
+          .values({
+            userId,
+            action: "update",
+            tableName: "PAYMENTS",
+            recordId: paymentId,
+            data: JSON.stringify({ tenderedAmount }),
+            remarks: `Tendered amount overridden: ${remarks}`,
+            createdAt: new Date().toISOString(),
+          })
+          .execute();
+
+        const user = await tx.query.UsersTable.findFirst({
+          where: eq(UsersTable.userId, userId),
+        });
+
+        if (user?.role !== "admin") {
+          await revokePermission(userId, "PAYMENT", "overrideAmount");
+
+          await tx
+            .insert(AuditLogsTable)
+            .values({
+              userId,
+              action: "delete",
+              tableName: "PERMISSION",
+              recordId: userId,
+              data: JSON.stringify({
+                table: "PAYMENT",
+                action: "overrideAmount",
+              }),
+              remarks: "Auto-revoked override permission",
+              createdAt: new Date().toISOString(),
+            })
+            .execute();
+        }
+
+        return updatedPayment;
+      });
+
+      return c.json(updated, 200);
     } catch (err) {
       return errorHandler(err, c);
     }

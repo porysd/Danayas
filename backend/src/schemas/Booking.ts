@@ -72,4 +72,5 @@ export const BookingsTable = sqliteTable("BOOKING", {
   createdAt: text("createdAt")
     .notNull()
     .default(sql`(current_timestamp)`),
+  forfeited: integer("forfeited").default(0).notNull(),
 });

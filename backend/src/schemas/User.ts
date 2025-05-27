@@ -15,6 +15,7 @@ export const UsersTable = sqliteTable("USER", {
     .default("active"),
   email: text("email").unique().notNull(),
   password: text("password").notNull(),
+  pin: text("pin"),
   role: text("role", { enum: ["admin", "staff", "customer"] })
     .notNull()
     .default("customer"),

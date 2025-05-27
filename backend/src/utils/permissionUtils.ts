@@ -10,11 +10,11 @@ export enum Roles {
   CUSTOMER = "customer",
 }
 
-export const permissionsArray = ["create", "read", "update", "delete"] as const;
+export const permissionsArray = ["create", "read", "update", "delete", "overrideAmount"] as const;
 
 const rolePermissions: Record<Roles, Record<string, string[]>> = {
   [Roles.ADMIN]: {
-    "*": ["create", "read", "update", "delete"], // Full access to all modules
+    "*": ["create", "read", "update", "delete", "overrideAmount"], // Full access to all modules
   },
 
   [Roles.STAFF]: {
