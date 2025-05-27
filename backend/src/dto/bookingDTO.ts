@@ -122,6 +122,11 @@ export const BookingDTO = z.object({
     description: "The date when the booking was created",
     example: new Date().toISOString(),
   }),
+  forfeited: z.coerce.boolean().default(false).openapi({
+    description:
+      "Indicates whether the booking has been forfeited due to expiration",
+    example: false,
+  }),
 });
 
 export const UpdateBookingDTO = BookingDTO.omit({
@@ -137,6 +142,7 @@ export const UpdateBookingDTO = BookingDTO.omit({
   cancelReason: true,
   cancelCategory: true,
   createdAt: true,
+  forfeited: true,
 })
   .partial()
   .extend({
@@ -164,6 +170,7 @@ export const CreateBookingDTO = BookingDTO.omit({
   remainingBalance: true,
   bookingPaymentStatus: true,
   hasRescheduled: true,
+  forfeited: true,
 }).extend({
   catering: z.preprocess(
     (val) => (val === null ? 0 : val), // Convert null to 0

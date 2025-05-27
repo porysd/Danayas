@@ -7,6 +7,7 @@ import { authMiddleware } from "./middlewares/authMiddleware";
 import { cors } from "hono/cors";
 import { errorHandler } from "./middlewares/errorHandler";
 import { serveStatic } from "hono/bun";
+import { startExpireBookingJob } from "./cron/expiredBookings";
 
 const app = new OpenAPIHono()
   .doc("/openapi", {
@@ -48,6 +49,8 @@ const app = new OpenAPIHono()
 routes.forEach(({ path, handler }) => {
   app.route(path, handler);
 });
+
+startExpireBookingJob();
 
 Bun.serve({
   port: 3000,
