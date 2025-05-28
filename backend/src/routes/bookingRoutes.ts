@@ -439,6 +439,13 @@ bookingRoutes.openapi(
         throw new NotFoundError("Booking not found.");
       }
 
+      if (
+        booking.bookStatus !== "reserved" &&
+        booking.bookStatus !== "rescheduled"
+      ) {
+        throw new BadRequestError("Only reserved bookings can be rescheduled.");
+      }
+
       const processedData = processBookingData(requestData);
 
       const dateChanged =
@@ -529,8 +536,13 @@ bookingRoutes.openapi(
                 "rescheduled",
                 "pending-cancellation",
               ]),
-              cancelCategory: z.enum(["natural-disaster", "others"]).optional(),
-              cancelReason: z.string().optional(),
+              cancelCategory: z
+                .enum(["natural-disaster", "others"])
+                .optional()
+                .nullable(),
+              cancelReason: z.string().optional().nullable(),
+              refundMethod: z.enum(["gcash", "cash"]).optional().nullable(),
+              receiveName: z.string().optional().nullable(),
             }),
           },
         },
@@ -566,7 +578,13 @@ bookingRoutes.openapi(
       }
 
       const bookingId = Number(c.req.param("id"));
-      const { bookStatus, cancelCategory, cancelReason } = await c.req.json();
+      const {
+        bookStatus,
+        cancelCategory,
+        cancelReason,
+        refundMethod,
+        receiveName,
+      } = await c.req.json();
 
       const existingBooking = await db
         .select()
@@ -576,6 +594,24 @@ bookingRoutes.openapi(
 
       if (!existingBooking || existingBooking.length === 0) {
         throw new NotFoundError("Booking not found");
+      }
+
+      const booking = await db.query.BookingsTable.findFirst({
+        where: eq(BookingsTable.bookingId, bookingId),
+      });
+      if (!booking) {
+        throw new NotFoundError("Booking not found");
+      }
+      if (
+        ["cancelled", "pending-cancellation", "completed"].includes(
+          bookStatus
+        ) &&
+        booking.bookStatus !== "reserved" &&
+        booking.bookStatus !== "rescheduled"
+      ) {
+        throw new BadRequestError(
+          "Only reserved bookings can be cancelled or completed."
+        );
       }
 
       if (
@@ -589,6 +625,15 @@ bookingRoutes.openapi(
         if (bookStatus === "pending-cancellation") {
           if (!cancelCategory?.trim() || !cancelReason?.trim()) {
             throw new BadRequestError("Cancel details required");
+          }
+          if (!refundMethod) {
+            throw new BadRequestError("Refund Method is required");
+          }
+
+          if (refundMethod === "cash") {
+            if (!receiveName) {
+              throw new BadRequestError("Receiver is required");
+            }
           }
           // Check all existing payments for the booking thats valid
           const allValidPayments = await db.query.PaymentsTable.findMany({
@@ -615,8 +660,11 @@ bookingRoutes.openapi(
                 bookingId: bookingId,
                 publicEntryId: null,
                 refundAmount: totalPaid * 0.5,
+                refundMethod: refundMethod,
+                receiveName: receiveName,
                 refundStatus: "pending",
-                refundReason: "Booking Cancelled due to " + cancelCategory,
+                refundReason:
+                  cancelCategory.toUpperCase() + ": " + cancelReason,
               })
               .returning()
               .execute()
@@ -634,6 +682,8 @@ bookingRoutes.openapi(
                 refundAmount: refund.refundAmount,
                 refundStatus: refund.refundStatus,
                 refundReason: refund.refundReason,
+                refundMethod: refund.refundMethod,
+                receiveName: refund.receiveName,
               }),
               remarks: "Refund created for booking cancellation",
               createdAt: new Date().toISOString(),
@@ -653,6 +703,16 @@ bookingRoutes.openapi(
                 .execute()
             )
           );
+        }
+
+        if (bookStatus === "completed") {
+          const booking = await db.query.BookingsTable.findFirst({
+            where: eq(BookingsTable.bookingId, bookingId),
+          });
+
+          if (!booking || booking.bookingPaymentStatus !== "paid") {
+            throw new BadRequestError("Booking should be paid to be completed");
+          }
         }
 
         const updatedBooking = (

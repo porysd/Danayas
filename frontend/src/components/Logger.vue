@@ -46,6 +46,7 @@ const closeModals = () => {
 };
 
 const confirmReschedule = () => {
+  rescheduleData.value.bookStatus = "rescheduled";
   emit("rescheduleBooking", rescheduleData.value);
   toast.add({
     severity: "success",

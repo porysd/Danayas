@@ -47,6 +47,18 @@ export const RefundDTO = z.object({
     description: "URL of the proof of refund image",
     example: "https://example.com/uploads/refund-proof.jpg",
   }),
+  receiveName: z.string().nullable().optional().openapi({
+    description: "Name of the receiver",
+    example: "GIO",
+  }),
+  acknowledge: z.enum(["yes", "no", "auto"]).nullable().optional().openapi({
+    description: "Customer acknowledgment status",
+    example: "yes",
+  }),
+  acknowledgeAt: z.string().nullable().optional().openapi({
+    description: "Timestamp when acknowledgment was made",
+    example: new Date().toISOString(),
+  }),
   remarks: z.string().nullable().optional().openapi({
     description: "Remarks or notes about the refund",
     example: "Refund received successfully",
@@ -93,4 +105,6 @@ export const UpdateRefundDTO = RefundDTO.pick({
   reference: true,
   imageUrl: true,
   remarks: true,
+  acknowledge: true,
+  acknowledgeAt: true,
 }).partial();

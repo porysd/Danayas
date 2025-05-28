@@ -348,12 +348,7 @@ publicEntryRoutes.openapi(
       };
 
       // Map mode values to match accepted types in dateConflicts
-      const mappedMode =
-        body.mode === "day-time"
-          ? "day-time"
-          : body.mode === "night-time"
-          ? "night-time"
-          : "whole-day";
+      const mappedMode = body.mode;
 
       await dateConflicts({
         date: updatedBody.entryDate,
@@ -552,8 +547,13 @@ publicEntryRoutes.openapi(
                 "rescheduled",
                 "pending-cancellation",
               ]),
-              cancelCategory: z.enum(["natural-disaster", "others"]).optional(),
-              cancelReason: z.string().optional(),
+              cancelCategory: z
+                .enum(["natural-disaster", "others"])
+                .optional()
+                .nullable(),
+              cancelReason: z.string().optional().nullable(),
+              refundMethod: z.enum(["gcash", "cash"]).optional().nullable(),
+              receiveName: z.string().optional().nullable(),
             }),
           },
         },
@@ -593,7 +593,13 @@ publicEntryRoutes.openapi(
       }
 
       const publicEntryId = Number(c.req.param("id"));
-      const { status, cancelCategory, cancelReason } = await c.req.json();
+      const {
+        status,
+        cancelCategory,
+        cancelReason,
+        refundMethod,
+        receiveName,
+      } = await c.req.json();
 
       const existingBooking = await db
         .select()
@@ -604,81 +610,124 @@ publicEntryRoutes.openapi(
       if (!existingBooking || existingBooking.length === 0) {
         throw new NotFoundError("Booking not found");
       }
+
+      const publics = await db.query.PublicEntryTable.findFirst({
+        where: eq(PublicEntryTable.publicEntryId, publicEntryId),
+      });
+
+      if (!publics) {
+        throw new BadRequestError("booking not found");
+      }
+
+      if (
+        ["cancelled", "pending-cancellation", "completed"].includes(status) &&
+        publics.status !== "reserved" &&
+        publics.status !== "rescheduled"
+      ) {
+        throw new BadRequestError(
+          "Only reserved and rescheduled can cancelled or complete a booking"
+        );
+      }
+
+      if (
+        status === "cancelled" &&
+        (!cancelCategory?.trim() || !cancelReason?.trim())
+      ) {
+        throw new BadRequestError("Cancel details required");
+      }
+
       const updated = await db.transaction(async (tx) => {
-        if (status === "cancelled") {
-          if (!cancelCategory) {
-            throw new BadRequestError(
-              "Cancel category is required for cancellation"
-            );
+        if (status === "pending-cancellation") {
+          if (!cancelCategory?.trim() || !cancelReason?.trim()) {
+            throw new BadRequestError("Cancel details required");
           }
 
-          if (
-            cancelCategory === "others" &&
-            (!cancelReason || cancelReason.trim() === "")
-          ) {
-            throw new BadRequestError(
-              "Cancel Reason is required for 'others' category"
-            );
+          if (!refundMethod) {
+            throw new BadRequestError("Refund method is required");
           }
-          // If natural disaster, process refund
-          if (cancelCategory === "natural-disaster") {
-            // Check all existing payments for the public thats valid
-            const allValidPayments = await tx.query.PaymentsTable.findMany({
-              where: and(
-                eq(PaymentsTable.publicEntryId, publicEntryId),
-                eq(PaymentsTable.paymentStatus, "valid")
-              ),
-            });
 
-            if (allValidPayments.length === 0) {
-              throw new BadRequestError(
-                "No valid payments found for the public."
-              );
+          if (refundMethod === "cash") {
+            if (!receiveName) {
+              throw new BadRequestError("Receiver name is required");
             }
+          }
 
-            const totalPaid = allValidPayments.reduce((sum, payment) => {
-              return sum + payment.netPaidAmount;
-            }, 0);
+          const allValidPayments = await tx.query.PaymentsTable.findMany({
+            where: and(
+              eq(PaymentsTable.publicEntryId, publicEntryId),
+              eq(PaymentsTable.paymentStatus, "valid")
+            ),
+          });
 
-            const refund = (
-              await tx
-                .insert(RefundsTable)
+          if (allValidPayments.length === 0) {
+            throw new BadRequestError(
+              "No valid payments ofund for this booking"
+            );
+          }
+
+          const totalPaid = allValidPayments.reduce((sum, payment) => {
+            return sum + payment.netPaidAmount;
+          }, 0);
+
+          const refund = (
+            await tx
+              .insert(RefundsTable)
+              .values({
+                bookingId: null,
+                publicEntryId: publicEntryId,
+                refundAmount: totalPaid * 0.5,
+                refundMethod: refundMethod,
+                receiveName: receiveName,
+                refundStatus: "pending",
+                refundReason:
+                  cancelCategory.toUpperCase() + ": " + cancelReason,
+              })
+              .returning()
+              .execute()
+          )[0];
+
+          await tx
+            .insert(AuditLogsTable)
+            .values({
+              userId: userId,
+              action: "create",
+              tableName: "REFUND",
+              recordId: refund.refundId,
+              data: JSON.stringify({
+                publicEntryId: publicEntryId,
+                refundAmount: refund.refundAmount,
+                refundStatus: refund.refundStatus,
+                refundReason: refund.refundReason,
+                refundMethod: refund.refundMethod,
+                receiveName: refund.receiveName,
+              }),
+              remarks: "Refund created for booking cancellation",
+              createdAt: new Date().toISOString(),
+            })
+            .execute();
+
+          await Promise.all(
+            allValidPayments.map((payment) =>
+              tx
+                .insert(RefundPaymentsTable)
                 .values({
-                  publicEntryId: publicEntryId,
-                  bookingId: null,
-                  refundAmount: totalPaid * 0.5,
-                  refundStatus: "pending",
-                  refundReason: "Booking Cancelled due to " + cancelCategory,
+                  refundId: refund.refundId,
+                  paymentId: payment.paymentId,
+                  amountRefunded: payment.netPaidAmount * 0.5,
                 })
                 .returning()
                 .execute()
-            )[0];
+            )
+          );
+        }
 
-            await tx
-              .insert(AuditLogsTable)
-              .values({
-                userId,
-                action: "refund-issued",
-                tableName: "REFUND",
-                recordId: refund.refundId,
-                data: JSON.stringify(refund),
-                remarks: "Refund issued for public cancellation",
-                createdAt: new Date().toISOString(),
-              })
-              .execute();
+        if (status === "completed") {
+          const publics = await db.query.PublicEntryTable.findFirst({
+            where: eq(PublicEntryTable.publicEntryId, publicEntryId),
+          });
 
-            await Promise.all(
-              allValidPayments.map((payment) =>
-                tx
-                  .insert(RefundPaymentsTable)
-                  .values({
-                    refundId: refund.refundId,
-                    paymentId: payment.paymentId,
-                    amountRefunded: payment.netPaidAmount * 0.5,
-                  })
-                  .execute()
-              )
-            );
+          if (!publics || publics.publicPaymentStatus !== "paid") {
+            throw new BadRequestError("Booking should be paid to be completed");
           }
         }
 
@@ -687,9 +736,14 @@ publicEntryRoutes.openapi(
             .update(PublicEntryTable)
             .set({
               status,
-              cancelCategory: status === "cancelled" ? cancelCategory : null,
+              cancelCategory:
+                status === "cancelled" || status === "pending-cancellation"
+                  ? cancelCategory
+                  : null,
               cancelReason:
-                status === "cancelled" ? cancelReason ?? null : null,
+                status === "cancelled" || status === "pending-cancellation"
+                  ? cancelReason ?? null
+                  : null,
             })
             .where(eq(PublicEntryTable.publicEntryId, publicEntryId))
             .returning()
@@ -702,23 +756,25 @@ publicEntryRoutes.openapi(
             userId: userId,
             action: "status-change",
             tableName: "PUBLIC_ENTRY",
-            recordId: updatedBooking.publicEntryId,
+            recordId: publicEntryId,
             data: JSON.stringify({
               publicEntryId: updatedBooking.publicEntryId,
               status: updatedBooking.status,
+
               cancelCategory: updatedBooking.cancelCategory,
               cancelReason: updatedBooking.cancelReason,
             }),
-            remarks: `Public status updated to ${updatedBooking.status}`,
+            remarks: `Booking status updated to ${updatedBooking.status}`,
             createdAt: new Date().toISOString(),
           })
           .execute();
 
         return updatedBooking;
       });
+
       return c.json(
         {
-          message: "Public status updated",
+          message: "Booking status updated",
           status: updated.status,
         },
         200

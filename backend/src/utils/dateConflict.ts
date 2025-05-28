@@ -33,6 +33,12 @@ export async function dateConflicts({
     publicEntryId,
   });
 
+  if (publicEntryId && mode === "whole-day") {
+    throw new BadRequestError(
+      "Public entry mode must be 'day-time' or 'night-time'."
+    );
+  }
+
   // PublicEntry conflict
   const publicEntryConflict = await db.query.PublicEntryTable.findFirst({
     where: sql`

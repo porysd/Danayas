@@ -13,6 +13,7 @@ async function createAdminAccount() {
       email: "admin@example.com",
       password: await Bun.password.hash("admin123"),
       role: "admin" as const,
+      pin: await Bun.password.hash("123456"),
     };
 
     // Insert into the database

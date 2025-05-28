@@ -35,6 +35,8 @@ import { useUserStore } from "../stores/userStore";
 import TermsCondition from "../components/TermsCondition.vue";
 import InputText from "primevue/inputtext";
 import InputNumber from "primevue/inputnumber";
+import { usePublicEntryStore } from "../stores/publicEntryStore.js";
+import { useBlockedStore } from "../stores/blockedDateStore.js";
 
 const toast = useToast();
 const router = useRouter();
@@ -42,12 +44,15 @@ const router = useRouter();
 const bookingStore = useBookingStore();
 const transactionStore = useTransactionStore();
 const paymentStore = usePaymentStore();
-const packageStore = usePackageStore();
 const discountStore = useDiscountStore();
+const publicStore = usePublicEntryStore();
+const blockStore = useBlockedStore();
 
 onMounted(() => {
   bookingStore.fetchUserBookings();
   discountStore.fetchAllDiscounts();
+  publicStore.fetchAllPublic();
+  blockStore.fetchAllBlocked();
 });
 
 const header = ref([
@@ -62,26 +67,24 @@ const newBooking = ref({
   firstName: "" || null,
   lastName: "" || null,
   contactNo: "" || null,
-  emailAddress: "" || null,
   address: "" || null,
-  packageId: "",
-  eventType: "" || null,
-  checkInDate: "",
-  checkOutDate: "",
-  mode: "",
-  arrivalTime: "" || null,
-  catering: "" || null,
-  numberOfGuest: "" || null,
   discountId: "" || null,
-  bookingAddOns: [] || null,
+  mode: "",
   paymentTerms: "",
+  entryDate: "",
+  numAdults: 0,
+  numKids: 0,
+  adultGuestNames: [],
+  kidGuestNames: [],
+  discountId: "" || null,
 });
 
 const paymentDetails = ref({
-  mode: "gcash",
-  reference: "",
-  imageUrl: null,
-  senderName: "",
+  paymentMethod: "gcash",
+  reference: "" || null,
+  imageUrl: "" || null,
+  senderName: "" || null,
+  tenderedAmount: "" || null,
 });
 
 const onFileSelect = (event) => {
@@ -100,26 +103,38 @@ const discount = discountStore.discounts.find(
 
 const addBookingHandler = async (newBooking, paymentDetails) => {
   try {
-    // 1: Create Booking
     const formatBooking = {
       ...newBooking.value,
-      checkInDate: formatDate(newBooking.value.checkInDate),
-      checkOutDate: formatDate(newBooking.value.checkOutDate),
+      entryDate: formatDate(newBooking.value.entryDate),
       discountId: discount?.discountId || null,
     };
-    const createdBooking = await bookingStore.addBooking(formatBooking);
-    const bookingId = createdBooking.bookingId;
 
-    // 2: Get Transaction ID and create Data
-    const newTransaction = await transactionStore.addTransaction({ bookingId });
-    const transactionId = newTransaction.transactionId;
+    // 1: Create Booking
+    const newPublic = await publicStore.addPublic(formatBooking);
+    if (!newPublic || !newPublic.publicEntryId) {
+      throw new Error("Failed to create booking: No publicEntryId returned.");
+    }
 
-    // 3: Connect Transaction to Payment
-    const formatPayment = {
+    const publicEntryId = newPublic.publicEntryId;
+
+    // const paymentPayload = {
+    //   paymentMethod: paymentDetails.value.paymentMethod,
+    //   senderName: paymentDetails.value.senderName,
+    //   tenderedAmount: paymentDetails.value.tenderedAmount,
+    // };
+    // if (paymentDetails.value.paymentMethod === "gcash") {
+    //   paymentPayload.reference = paymentDetails.value.reference;
+    //   paymentPayload.imageUrl = paymentDetails.value.imageUrl;
+    // }
+
+    // 2: Create Payment with id
+    const fullPaymentDetails = {
       ...paymentDetails.value,
-      transactionId,
+      publicEntryId,
     };
-    await paymentStore.addPayment(formatPayment);
+
+    console.log("Full payment details being sent:", fullPaymentDetails);
+    await paymentStore.addPayment(fullPaymentDetails);
 
     toast.add({
       severity: "success",
@@ -128,7 +143,7 @@ const addBookingHandler = async (newBooking, paymentDetails) => {
       life: 3000,
     });
 
-    await bookingStore.fetchUserBookings();
+    await publicStore.fetchAllPublic();
   } catch (err) {
     console.error("Error adding booking", err);
   }
@@ -143,6 +158,106 @@ const stepOneBtn = (activateCallback) => {
   //   activateCallback("2");
   // }
   activateCallback("2");
+};
+
+const minDate = new Date();
+
+const disabledDates = computed(() => {
+  const disabled = [];
+
+  // Blocked dates
+  blockStore.blocked.forEach((bd) => {
+    if (bd.blockedDates) {
+      disabled.push(new Date(bd.blockedDates));
+    }
+  });
+
+  // Fully booked dates (whole-day or both day-time and night-time)
+  const bookingsByDate = {};
+  bookingStore.bookings.forEach((b) => {
+    if (b.checkInDate) {
+      const date = b.checkInDate;
+      if (!bookingsByDate[date]) bookingsByDate[date] = new Set();
+      bookingsByDate[date].add(b.mode);
+    }
+  });
+  publicStore.public.forEach((p) => {
+    if (p.entryDate) {
+      const date = p.entryDate;
+      if (!bookingsByDate[date]) bookingsByDate[date] = new Set();
+      bookingsByDate[date].add(p.mode);
+    }
+  });
+
+  Object.entries(bookingsByDate).forEach(([date, modes]) => {
+    if (
+      modes.has("whole-day") ||
+      (modes.has("day-time") && modes.has("night-time"))
+    ) {
+      disabled.push(new Date(date));
+    }
+  });
+
+  return disabled;
+});
+
+const getBookingStyle = (slotDate) => {
+  const formattedDate = `${slotDate.year}-${String(slotDate.month + 1).padStart(
+    2,
+    "0"
+  )}-${String(slotDate.day).padStart(2, "0")}`;
+
+  // Collect all booking/public modes for the date
+  const mode = new Set();
+  let isBlocked = false;
+
+  bookingStore.bookings.forEach((b) => {
+    if (b.checkInDate === formattedDate) {
+      mode.add(b.mode);
+    }
+  });
+
+  publicStore.public.forEach((p) => {
+    if (p.entryDate === formattedDate) {
+      mode.add(p.mode);
+    }
+  });
+
+  if (blockStore.blocked.some((bd) => bd.blockedDates === formattedDate)) {
+    isBlocked = true;
+  }
+
+  let backgroundColor, color;
+
+  if (isBlocked) {
+    backgroundColor = "grey";
+    color = "white";
+  } else if (
+    mode.has("whole-day") ||
+    (mode.has("day-time") && mode.has("night-time"))
+  ) {
+    backgroundColor = "#FF6B6B"; // Fully Booked
+    color = "white";
+  } else if (mode.has("day-time")) {
+    backgroundColor = "#6A5ACD"; // Night Available
+    color = "white";
+  } else if (mode.has("night-time")) {
+    backgroundColor = "#FFD580"; // Day Available
+    color = "black";
+  } else {
+  }
+
+  return {
+    backgroundColor,
+    color,
+    width: "40px",
+    height: "40px",
+    display: "inline-flex",
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: "10rem",
+    fontSize: "17px",
+  };
 };
 
 //STEP 2
@@ -167,27 +282,29 @@ const stepTwoBtn = (activateCallback) => {
   activateCallback("3");
 };
 
-const guestCount = ref(0);
-const guests = ref([]);
-
-const kidCount = ref(0);
-const kids = ref([]);
-
-watch(guestCount, (newVal, oldVal) => {
-  if (newVal > oldVal) {
-    for (let i = oldVal; i < newVal; i++) guests.value.push("");
-  } else {
-    guests.value.splice(newVal);
+watch(
+  () => newBooking.value.numAdults,
+  (newVal, oldVal) => {
+    if (newVal > oldVal) {
+      for (let i = oldVal; i < newVal; i++)
+        newBooking.value.adultGuestNames.push("");
+    } else {
+      newBooking.value.adultGuestNames.splice(newVal);
+    }
   }
-});
+);
 
-watch(kidCount, (newVal, oldVal) => {
-  if (newVal > oldVal) {
-    for (let i = oldVal; i < newVal; i++) kids.value.push("");
-  } else {
-    kids.value.splice(newVal);
+watch(
+  () => newBooking.value.numKids,
+  (newVal, oldVal) => {
+    if (newVal > oldVal) {
+      for (let i = oldVal; i < newVal; i++)
+        newBooking.value.kidGuestNames.push("");
+    } else {
+      newBooking.value.kidGuestNames.splice(newVal);
+    }
   }
-});
+);
 
 //STEP 3
 const stepThreeBtn = (activateCallback) => {
@@ -280,40 +397,80 @@ const prevBtn = () => {
 };
 
 // FOR CALENDAR
-const mapBookingsToEvents = (bookings) => {
-  return bookings
-    .filter((b) => b.bookStatus === "reserved")
-    .map((b) => {
-      let backgroundColor;
-      let textColor = "white";
+const mapBookingsToEvents = (
+  bookings = [],
+  publics = [],
+  blockedDates = []
+) => {
+  const eventByDate = {};
 
-      switch (b.mode) {
-        case "day-time":
-          backgroundColor = "#FFD5";
-          textColor = "black";
-          break;
-        case "night-time":
-          backgroundColor = "#6A5ACD";
-          break;
-        case "whole-day":
-          backgroundColor = "#FF6B6B";
-          break;
-        default:
-          backgroundColor = "#90EE94";
-          textColor = "#15803D";
-      }
+  bookings.forEach((b) => {
+    const date = b.checkInDate;
+    if (!eventByDate[date])
+      eventByDate[date] = { modes: new Set(), blocked: null };
+    eventByDate[date].modes.add(b.mode);
+  });
 
-      return {
-        id: b.bookingId,
-        title: b.mode,
-        start: b.checkInDate,
-        // end: b.checkOutDate,
-        backgroundColor: backgroundColor,
-        textColor: textColor,
-        allDay: true,
-      };
-    });
+  publics.forEach((p) => {
+    const date = p.entryDate;
+    if (!eventByDate[date])
+      eventByDate[date] = { modes: new Set(), blocked: null };
+    eventByDate[date].modes.add(p.mode);
+  });
+
+  blockedDates.forEach((bd) => {
+    const date = bd.blockedDates;
+    if (!eventByDate[date])
+      eventByDate[date] = { modes: new Set(), blocked: null };
+    eventByDate[date].blocked = bd;
+  });
+
+  return Object.entries(eventByDate).map(([date, { modes, blocked }]) => {
+    let backgroundColor, textColor, title;
+
+    if (blocked) {
+      backgroundColor = "grey";
+      textColor = "white";
+      title = "Not Available";
+    } else if (
+      modes.has("whole-day") ||
+      (modes.has("day-time") && modes.has("night-time"))
+    ) {
+      backgroundColor = "#FF6B6B";
+      textColor = "white";
+      title = "Fully Booked";
+    } else if (modes.has("day-time")) {
+      backgroundColor = "#6A5ACD";
+      textColor = "white";
+      title = "Night Available";
+    } else if (modes.has("night-time")) {
+      backgroundColor = "#FFD580";
+      textColor = "black";
+      title = "Day Available";
+    } else {
+      backgroundColor = "#90EE90";
+      textColor = "#15803D";
+      title = "Available";
+    }
+
+    return {
+      id: `summary-${date}`,
+      title,
+      start: date,
+      backgroundColor,
+      textColor,
+      allDay: true,
+    };
+  });
 };
+
+const calendarEvents = computed(() => {
+  return mapBookingsToEvents(
+    bookingStore.bookings,
+    publicStore.public,
+    blockStore.blocked
+  );
+});
 
 const calendarOptions = ref({
   plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin],
@@ -326,9 +483,9 @@ const calendarOptions = ref({
   editable: false,
   selectable: false,
   selectMirror: false,
-  dayMaxEvents: true,
+  dayMaxEvents: false,
   weekends: true,
-  events: computed(() => mapBookingsToEvents(bookingStore.bookings)),
+  events: calendarEvents,
 });
 </script>
 
@@ -396,7 +553,7 @@ const calendarOptions = ref({
                 <div
                   class="flex m-auto justify-center align-center mt-20 mb-20"
                 >
-                  <div class="flex gap-40">
+                  <div class="flex gap-40 mr-53 ml-53">
                     <div>
                       <h1 class="mb-10 text-center font-[600] text-lg">
                         Select Entry Date
@@ -405,10 +562,24 @@ const calendarOptions = ref({
                         <FloatLabel variant="on">
                           <DatePicker
                             v-model="newBooking.entryDate"
-                            inputId="on_label"
                             showIcon
+                            fluid
                             iconDisplay="input"
-                          />
+                            dateFormat="mm-dd-yy"
+                            :minDate="minDate"
+                            :disabledDates="disabledDates"
+                          >
+                            <template #date="slotProps">
+                              <span>
+                                <strong
+                                  :style="getBookingStyle(slotProps.date)"
+                                  class="date-box"
+                                >
+                                  {{ slotProps.date.day }}
+                                </strong>
+                              </span>
+                            </template></DatePicker
+                          >
                           <label for="on_label">Entry Date</label>
                         </FloatLabel>
                       </div>
@@ -448,113 +619,55 @@ const calendarOptions = ref({
                     <b>{{ timeText }}</b> <i>{{ event.title }}</i>
                   </template>
                 </FullCalendar>
-                <div
-                  class="datePicker"
-                  style="
-                    background-color: none;
-                    width: 100%;
-                    margin: auto;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    margin-bottom: 2rem;
-                    margin-top: 5rem;
-                    gap: 5rem;
-                  "
-                ></div>
-
-                <div
-                  class="flex m-auto justify-center content-center text-3xl font-[Poppins] font-black mb-5 mt-8"
-                >
-                  <h1>Date Status:</h1>
-                </div>
-
-                <div
-                  class="Status-br mb-20"
-                  style="
-                    background-color: #9edf9c;
-                    height: 10rem;
-                    display: flex;
-                    width: 100%;
-                    justify-content: center;
-                    align-items: center;
-                    gap: 30rem;
-                  "
-                >
+                <div class="mb-20 mt-30 relative -top-24">
                   <div
-                    class="status-left"
-                    style="
-                      display: flex;
-                      flex-direction: column;
-                      align-items: flex-start;
-                      margin: auto;
-                      margin-left: 25rem;
-                      gap: 2rem;
-                    "
+                    class="bg-[#9edf9c] h-40 w-full flex flex-col md:flex-row align-center gap-10 px-10 py-6 rounded relative"
                   >
-                    <span
-                      class="dot"
-                      id="Available"
-                      style="background-color: #fff"
+                    <h1
+                      class="text-3xl font-[Poppins] font-black text-center text-left mb-4 mr-10 relative bottom-[-2rem]"
                     >
-                      <label for="dot" style="margin-left: 50px"
-                        >AVAILABLE</label
-                      >
-                    </span>
-                    <span
-                      class="dot"
-                      id="DayAvailable"
-                      style="background-color: #ffd580"
-                    >
-                      <label for="dot" style="margin-left: 50px; width: 145px"
-                        >DAY AVAILABLE</label
-                      >
-                    </span>
-                  </div>
+                      Date Status:
+                    </h1>
 
-                  <div
-                    class="status-right"
-                    style="
-                      display: flex;
-                      flex-direction: column;
-                      align-items: flex-start;
-                      margin: auto;
-                      margin-right: 35rem;
-                      gap: 2rem;
-                    "
-                  >
-                    <span
-                      class="dot"
-                      id="FullyBooked"
-                      style="background-color: #ff6b6b"
-                    >
-                      <label
-                        for="dot"
-                        style="margin-left: 50px; width: 145px; font-size: 16px"
-                        >FULLY BOOKED</label
-                      >
-                    </span>
-                    <span
-                      class="dot"
-                      id="NightAvailable"
-                      style="background-color: #6a5acd"
-                    >
-                      <label for="dot" style="margin-left: 50px; width: 145px"
-                        >NIGHT AVAILABLE</label
-                      >
-                    </span>
+                    <div class="flex flex-col gap-10 mr-50">
+                      <div class="flex items-center gap-4">
+                        <span class="w-6 h-6 rounded-full bg-white"></span>
+                        <label class="text-sm font-semibold">AVAILABLE</label>
+                      </div>
+                      <div class="flex items-center gap-4">
+                        <span class="w-6 h-6 rounded-full bg-[#ffd580]"></span>
+                        <label class="text-sm font-semibold"
+                          >DAY AVAILABLE</label
+                        >
+                      </div>
+                    </div>
+
+                    <div class="flex flex-col gap-4 gap-10">
+                      <div class="flex items-center gap-4">
+                        <span class="w-6 h-6 rounded-full bg-[#ff6b6b]"></span>
+                        <label class="text-sm font-semibold"
+                          >FULLY BOOKED</label
+                        >
+                      </div>
+                      <div class="flex items-center gap-4">
+                        <span class="w-6 h-6 rounded-full bg-[#6a5acd]"></span>
+                        <label class="text-sm font-semibold"
+                          >NIGHT AVAILABLE</label
+                        >
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div class="flex items-center gap-5 ml-20">
+            <div class="flex items-center gap-5 ml-90">
               <Button
                 @click="
                   nextBtn();
                   stepOneBtn(activateCallback);
                 "
-                class="bg-[#194d1d] text-white w-50 h-15 font-black font-[Poppins] text-xl rounded-xl cursor-pointer ml-[45rem] rounded-xl"
+                class="bg-[#194d1d] relative top-[-9rem] text-white w-50 h-15 font-black font-[Poppins] text-xl rounded-xl cursor-pointer ml-[45rem]"
               >
                 CONTINUE
               </Button>
@@ -636,12 +749,12 @@ const calendarOptions = ref({
                     <div class="flex flex-row gap-80 items-start">
                       <!-- Adults -->
                       <div class="flex flex-col mb-20">
-                        <label>No. of Adults</label>
+                        <label>Number of Adults:</label>
                         <InputNumber
-                          v-model="guestCount"
+                          v-model="newBooking.numAdults"
                           showButtons
                           buttonLayout="horizontal"
-                          style="width: 3rem"
+                          style="width: 100%"
                           :min="0"
                           :max="99"
                         >
@@ -654,12 +767,13 @@ const calendarOptions = ref({
                         </InputNumber>
 
                         <div
-                          v-for="(guest, index) in guests"
+                          v-for="(adult, index) in newBooking.adultGuestNames"
                           :key="'adult-' + index"
-                          class="mt-2 w-full"
+                          class="mt-2"
+                          style="width: 100%"
                         >
                           <InputText
-                            v-model="guests[index]"
+                            v-model="newBooking.adultGuestNames[index]"
                             placeholder="Enter guest name"
                           />
                         </div>
@@ -667,12 +781,12 @@ const calendarOptions = ref({
 
                       <!-- Kids -->
                       <div class="flex flex-col mb-20">
-                        <label>No. of Kids</label>
+                        <label>Number of Kids:</label>
                         <InputNumber
-                          v-model="kidCount"
+                          v-model="newBooking.numKids"
                           showButtons
                           buttonLayout="horizontal"
-                          style="width: 3rem"
+                          style="width: 100%"
                           :min="0"
                           :max="99"
                         >
@@ -685,12 +799,13 @@ const calendarOptions = ref({
                         </InputNumber>
 
                         <div
-                          v-for="(kid, index) in kids"
+                          v-for="(kid, index) in newBooking.kidGuestNames"
                           :key="'kid-' + index"
-                          class="mt-2 w-full"
+                          class="mt-2"
+                          style="width: 100%"
                         >
                           <InputText
-                            v-model="kids[index]"
+                            v-model="newBooking.kidGuestNames[index]"
                             placeholder="Enter kid's name"
                           />
                         </div>
@@ -744,9 +859,7 @@ const calendarOptions = ref({
                       </p>
                       <p>Mode: {{ selectedPackage?.mode }}</p>
                     </div>
-                    <div class="bg-[#CDDA54] p-1 rounde-sm">
-                      <p>VAT Charged:</p>
-                    </div>
+
                     <div class="bg-[#4BB344] p-1 rounded-sm">
                       <p>
                         TOTAL CHARGED: {{ formatPeso(selectedPackage?.price) }}
@@ -832,8 +945,16 @@ const calendarOptions = ref({
 
                         <div class="mt-10 mb-10">
                           <h1 class="text-lg font-bold font-[Poppins] mb-3">
-                            Payment Terms:
+                            Tendered Amount:
                           </h1>
+
+                          <div>
+                            <InputText
+                              class="p-2 bg-[#fcfcfc] mb-2 rounded w-100"
+                              placeholder="e.g. 2000"
+                              v-model="paymentDetails.tenderedAmount"
+                            />
+                          </div>
                           <h1 class="text-m font-[Poppins] mb-1">
                             GCASH Reference Code:
                           </h1>
@@ -858,7 +979,7 @@ const calendarOptions = ref({
                             <InputText
                               class="p-2 bg-[#fcfcfc] mb-2 rounded w-100"
                               placeholder="Pocholo Diolola"
-                              v-model="paymentDetails.reference"
+                              v-model="paymentDetails.senderName"
                             />
                           </div>
                         </div>
@@ -947,63 +1068,11 @@ const calendarOptions = ref({
                       </p>
                       <p>Mode: {{ selectedPackage?.mode }}</p>
                     </div>
-                    <div class="bg-[#CDDA54] p-1 rounded-sm">
-                      <p>VAT Charged:</p>
-                    </div>
+
                     <div class="bg-[#4BB344] p-1 rounded-sm">
                       <p>
                         TOTAL CHARGED: {{ formatPeso(selectedPackage?.price) }}
                       </p>
-                    </div>
-                    <div>
-                      <h1 class="text-lg font-bold font-[Poppins]">Payment:</h1>
-                      <h1 class="text-lg font-sm font-[Poppins] text-center">
-                        DANAYAS RESORTS EVENTS VENUE: <br />
-                        09xx xxx xxxx
-                      </h1>
-                      <h1 class="text-lg font-bold font-[Poppins]">
-                        Payment Terms:
-                      </h1>
-                      <div class="bg-[#4BB344]">
-                        <p>TOTAL CHARGED: {{ selectedPacakge?.price }}</p>
-                      </div>
-                      <h1 class="text-m font-[Poppins]">
-                        GCASH Reference Code:
-                      </h1>
-                      <div class="bg-[#fcfcfc] mb-2 rounded">
-                        <div>
-                          <input
-                            class="p-2"
-                            placeholder="FEJIJKA4381FK9"
-                            v-model="paymentDetails.reference"
-                          />
-                        </div>
-                      </div>
-                      <div class="gcashUpload">
-                        <h1 class="text-xl font-bold font-[Poppins] mb-3 mt-3">
-                          Proof of Payment:
-                        </h1>
-                        <FileUpload
-                          ref="fileupload"
-                          v-model="paymentDetails.imageUrl"
-                          mode="basic"
-                          name="imageUrl"
-                          url="/api/upload"
-                          accept="image/*"
-                          :maxFileSize="1000000"
-                          @select="onFileSelect"
-                        />
-                      </div>
-                      <div>
-                        <h1 class="text-m font-[Poppins]">
-                          Name of the Sender:
-                        </h1>
-                        <div class="bg-[#fcfcfc] mb-2 p-1 rounded-sm">
-                          <div>
-                            <input class="p-2" placeholder="Juan Dela Cruz" />
-                          </div>
-                        </div>
-                      </div>
                     </div>
                   </div>
                   <div class="flex pt-6 gap-2 flex-col">
@@ -1100,9 +1169,7 @@ const calendarOptions = ref({
                     </p>
                     <p>Mode: {{ selectedPackage?.mode }}</p>
                   </div>
-                  <div class="bg-[#CDDA54] p-1 rounded-sm">
-                    <p>VAT Charged:</p>
-                  </div>
+
                   <div class="bg-[#4BB344] p-1 rounded-sm">
                     <p>
                       TOTAL CHARGED:{{ formatPeso(selectedPackage?.price) }}
