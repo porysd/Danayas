@@ -559,21 +559,85 @@ refundRoutes.openapi(
         );
       }
 
-      const verifiedBy = parsed.verifiedBy;
-      if (!verifiedBy || isNaN(verifiedBy)) {
-        return c.json(
-          { error: "verifiedBy is required and must be a valid user ID." },
-          400
-        );
-      }
       const refundStatus = parsed.refundStatus;
 
       const refund = await db.query.RefundsTable.findFirst({
         where: eq(RefundsTable.refundId, refundId),
       });
+
       if (!refund) {
         throw new NotFoundError("Refund not found.");
       }
+
+      // Remove acknowledge to process remarks on CASH
+      if (
+        (parsed.acknowledge !== undefined ||
+          parsed.acknowledgeAt !== undefined) &&
+        refund.refundMethod !== "gcash"
+      ) {
+        delete parsed.acknowledge;
+        delete parsed.acknowledgeAt;
+      }
+
+      // Customer acknowledging a GCash refund
+      if (
+        parsed.acknowledge !== undefined ||
+        parsed.acknowledgeAt !== undefined
+      ) {
+        if (refund.refundMethod !== "gcash") {
+          throw new BadRequestError(
+            "Acknowledgment is only for GCash refunds."
+          );
+        }
+        parsed.acknowledgeAt = new Date().toISOString();
+      }
+
+      // Allow remarks update without changing refundStatus for cash
+      if (
+        refund.refundMethod === "cash" &&
+        refund.refundStatus !== "completed"
+      ) {
+        delete parsed.acknowledge;
+        delete parsed.acknowledgeAt;
+
+        if (
+          !parsed.refundStatus &&
+          Object.keys(parsed).every((key) => key === "remarks")
+        ) {
+          const updated = await db
+            .update(RefundsTable)
+            .set({ remarks: parsed.remarks })
+            .where(eq(RefundsTable.refundId, refundId))
+            .returning()
+            .execute();
+
+          await db
+            .insert(AuditLogsTable)
+            .values({
+              userId,
+              action: "update",
+              tableName: "REFUNDS",
+              recordId: updated[0].refundId,
+              data: JSON.stringify(updated[0]),
+              remarks: "Remarks updated for pending cash refund",
+              createdAt: new Date().toISOString(),
+            })
+            .execute();
+
+          return c.json(updated[0]);
+        }
+      }
+
+      // Auto-acknowledge if Staff
+      if (
+        refund.refundStatus !== "completed" &&
+        parsed.refundStatus === "completed" &&
+        refund.refundMethod === "cash"
+      ) {
+        parsed.acknowledge = "yes";
+        parsed.acknowledgeAt = new Date().toISOString();
+      }
+
       if (
         refund.refundStatus === "completed" &&
         parsed.refundStatus !== "completed"
@@ -645,6 +709,7 @@ refundRoutes.openapi(
               })
               .execute();
           }
+
           if (refund.bookingId == null) {
             if (refund.publicEntryId == null) {
               throw new NotFoundError("Public Entry ID not found");
@@ -772,7 +837,7 @@ refundRoutes.openapi(
         const result = (
           await tx
             .update(RefundsTable)
-            .set({ ...parsed, verifiedBy, refundStatus })
+            .set({ ...parsed, refundStatus })
             .where(eq(RefundsTable.refundId, refundId))
             .returning()
             .execute()

@@ -29,6 +29,15 @@ export const RefundsTable = sqliteTable("REFUND", {
   senderName: text("senderName"),
   reference: text("reference"),
   imageUrl: text("imageUrl"),
+
+  // CASH ONLY
+  receiveName: text("receiveName"), // Name of the person receiving cash refund
+
+  // GCash ACKNOWLEDGMENT
+  acknowledge: text("acknowledge", {
+    enum: ["yes", "no", "auto"], // Can be null = no response yet
+  }),
+  acknowledgeAt: text("acknowledgeAt"), // Date when customer clicked yes/no or was auto-acknowledged
   // STATUS & METADATA
   remarks: text("remarks"),
   createdAt: text("createdAt")

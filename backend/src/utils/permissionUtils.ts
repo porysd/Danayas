@@ -10,7 +10,13 @@ export enum Roles {
   CUSTOMER = "customer",
 }
 
-export const permissionsArray = ["create", "read", "update", "delete", "overrideAmount"] as const;
+export const permissionsArray = [
+  "create",
+  "read",
+  "update",
+  "delete",
+  "overrideAmount",
+] as const;
 
 const rolePermissions: Record<Roles, Record<string, string[]>> = {
   [Roles.ADMIN]: {
@@ -42,7 +48,7 @@ const rolePermissions: Record<Roles, Record<string, string[]>> = {
     PAYMENT: ["create", "read"], // their own payment
     PACKAGES: ["read"],
     DISCOUNTS: ["read"],
-    REFUND: ["read"], // their own refund
+    REFUND: ["read", "update"], // their own refund
     BOOKING_ADD_ONS: ["read"],
     CATALOG_ADD_ONS: ["read"],
     FAQS: ["read"],
