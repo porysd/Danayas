@@ -159,15 +159,13 @@ const getStatusSeverity = (status) => {
   </div>
 
   <div class="Logs-Container">
-    <hr class="Header" data-content="History" />
+    <hr class="Header" data-content=" History " />
   </div>
 
   <div class="w-[70%] m-auto justify-center">
-    <div v-if="bookingDone.length > 0"></div>
+    <div v-if="userBookings.length > 0"></div>
     <div v-else>
-      <p class="flex justify-center m-auto">
-        No completed or cancelled bookings found.
-      </p>
+      <p class="flex justify-center m-auto">No bookings found for this user.</p>
     </div>
 
     <div
@@ -175,34 +173,27 @@ const getStatusSeverity = (status) => {
       v-for="booking in bookingDone"
       :key="booking.bookingId"
     >
-      <div class="w-full relative inline-block">
-        <div class="flex justify-end mr-3">
-          <button
-            @click.stop="isMenuOpen2 = !isMenuOpen2"
-            class="pi pi-ellipsis-v"
-            style="font-size: 1.5rem"
-          ></button>
-
-          <div
-            v-if="isMenuOpen2"
-            class="absolute right-2 mt-4 w-35 shadow-md z-50 bg-[#fcf5f5] p-4 rounded"
-          >
-            <button class="hover:bg-[#FF8080]">Delete</button>
-          </div>
-        </div>
+      <div class="w-full mt-10 text-right">
+        <!-- <Logger
+          :booking="booking"
+          @rescheduleBooking="rescheduleHandler"
+          @cancelBooking="cancelHandler"
+        /> -->
       </div>
 
       <div class="information">
-        <p>Package Name: {{ getPackageName(booking.packageId) }}</p>
+        c
+        <p>Package Name: {{ getPakageName(booking.packageId) }}</p>
+
         <p>
           Date: {{ formatDates(booking.checkInDate) }} to
           {{ formatDates(booking.checkOutDate) }}
         </p>
         <p>
-          Personal Information: {{ booking.firstName }} {{ booking.lastName }}
+          Personal Information: {{ booking.firstName }}
+          {{ booking.lastName }}
         </p>
       </div>
-
       <div class="flex justify-end mb-10" style="position: relative">
         <Tag
           class="mb"
