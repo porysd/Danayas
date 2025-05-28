@@ -317,6 +317,7 @@ refundRoutes.openapi(
                 refundStatus: "completed",
                 refundReason: parsed.refundReason ?? "",
                 refundMethod: parsed.refundMethod,
+                refundType: parsed.refundType ?? "cancellation",
                 reference: parsed.reference ?? "",
                 imageUrl: parsed.imageUrl ?? "",
                 remarks: parsed.remarks ?? "",
@@ -429,6 +430,7 @@ refundRoutes.openapi(
                 refundStatus: "completed",
                 refundReason: parsed.refundReason ?? "",
                 refundMethod: parsed.refundMethod,
+                refundType: parsed.refundType ?? "cancellation",
                 reference: parsed.reference ?? "",
                 imageUrl: parsed.imageUrl ?? "",
                 remarks: parsed.remarks ?? "",
@@ -677,10 +679,23 @@ refundRoutes.openapi(
             if (!booking) {
               throw new NotFoundError("Booking not found.");
             }
+
+            const isOverPayment = refund.refundType === "overpayment";
+            const isLowAmount = refund.refundType === "low-amount";
             const refundAmount = refund.refundAmount;
-            const remainingBalance = booking.remainingBalance + refundAmount;
             const amountPaid = booking.amountPaid - refundAmount;
-            const bookingPaymentStatus = "partially-paid";
+            let remainingBalance = booking.remainingBalance;
+            let bookingPaymentStatus = booking.bookingPaymentStatus;
+
+            if (isLowAmount) {
+              remainingBalance = booking.remainingBalance + refundAmount;
+              bookingPaymentStatus =
+                amountPaid === 0 ? "unpaid" : "partially-paid";
+            }
+            if (isOverPayment) {
+              remainingBalance = Math.max(booking.remainingBalance, 0);
+              bookingPaymentStatus = "paid";
+            }
 
             const updatedBooking = (
               await tx
@@ -688,7 +703,9 @@ refundRoutes.openapi(
                 .set({
                   remainingBalance: remainingBalance,
                   bookingPaymentStatus: bookingPaymentStatus,
-                  bookStatus: "cancelled",
+                  ...(refund.refundType === "cancellation" && {
+                    bookStatus: "cancelled",
+                  }),
                   amountPaid: amountPaid,
                 })
                 .where(eq(BookingsTable.bookingId, refund.bookingId))
@@ -704,7 +721,7 @@ refundRoutes.openapi(
                 tableName: "BOOKINGS",
                 recordId: updatedBooking.bookingId,
                 data: JSON.stringify(updatedBooking),
-                remarks: "Booking cancelled due to refund",
+                remarks: "Booking updated due to refund",
                 createdAt: new Date().toISOString(),
               })
               .execute();
@@ -720,10 +737,22 @@ refundRoutes.openapi(
             if (!booking) {
               throw new NotFoundError("Booking not found.");
             }
+            const isOverPayment = refund.refundType === "overpayment";
+            const isLowAmount = refund.refundType === "low-amount";
             const refundAmount = refund.refundAmount;
-            const remainingBalance = booking.remainingBalance + refundAmount;
             const amountPaid = booking.amountPaid - refundAmount;
-            const publicPaymentStatus = "partially-paid";
+            let remainingBalance = booking.remainingBalance;
+            let publicPaymentStatus = booking.publicPaymentStatus;
+
+            if (isLowAmount) {
+              remainingBalance = booking.remainingBalance + refundAmount;
+              publicPaymentStatus =
+                amountPaid === 0 ? "unpaid" : "partially-paid";
+            }
+            if (isOverPayment) {
+              remainingBalance = Math.max(booking.remainingBalance, 0);
+              publicPaymentStatus = "paid";
+            }
 
             const updatedBooking = (
               await tx
@@ -731,7 +760,9 @@ refundRoutes.openapi(
                 .set({
                   remainingBalance: remainingBalance,
                   publicPaymentStatus: publicPaymentStatus,
-                  status: "cancelled",
+                  ...(refund.refundType === "cancellation" && {
+                    status: "cancelled",
+                  }),
                   amountPaid: amountPaid,
                 })
                 .where(eq(PublicEntryTable.publicEntryId, refund.publicEntryId))

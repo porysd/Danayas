@@ -25,6 +25,9 @@ export const RefundsTable = sqliteTable("REFUND", {
     .notNull()
     .default("pending"),
   refundReason: text("refundReason").notNull(),
+  refundType: text("refundType", {
+    enum: ["low-amount", "overpayment", "cancellation"],
+  }).notNull(),
   // TRANSACTION INFO
   senderName: text("senderName"),
   reference: text("reference"),
