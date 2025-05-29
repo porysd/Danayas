@@ -226,7 +226,7 @@ bookingRoutes.openapi(
       let createdByUser = null;
 
       if (reservationType === "online") {
-        if (!body.userId) {
+        if (!userId) {
           throw new BadRequestError(
             "Online reservations require a user account."
           );
@@ -235,7 +235,7 @@ bookingRoutes.openapi(
         userDetails = await db
           .select()
           .from(UsersTable)
-          .where(eq(UsersTable.userId, body.userId))
+          .where(eq(UsersTable.userId, userId))
           .then((rows) => rows[0]);
 
         if (!userDetails) {
@@ -249,7 +249,7 @@ bookingRoutes.openapi(
         }
       }
       if (reservationType === "walk-in") {
-        if (!body.userId) {
+        if (!userId) {
           throw new BadRequestError(
             "Walk-in bookings must be created by staff or admin."
           );
@@ -258,7 +258,7 @@ bookingRoutes.openapi(
         createdByUser = await db
           .select()
           .from(UsersTable)
-          .where(eq(UsersTable.userId, body.userId))
+          .where(eq(UsersTable.userId, userId))
           .then((rows) => rows[0]);
 
         if (!createdByUser) {
@@ -282,6 +282,23 @@ bookingRoutes.openapi(
         throw new BadRequestError("Invalid package ID");
       }
 
+      let additionalGuestFee = 0;
+      const numberOfGuest = body.numberOfGuest;
+
+      if (numberOfGuest == null) {
+        throw new BadRequestError("Number of guests is required.");
+      }
+
+      let feeAmount = 100; // Default fee amount
+      if (body.mode === "whole-day" || body.mode === "night-time") {
+        feeAmount = 150;
+      }
+
+      if (numberOfGuest > selectedPackage.maxPax) {
+        const excessGuests = numberOfGuest - selectedPackage.maxPax;
+        additionalGuestFee = excessGuests * feeAmount;
+      }
+
       let discountPercent = 0;
       // Getting Discount Percentage if not null
       if (discountId) {
@@ -295,11 +312,13 @@ bookingRoutes.openapi(
       }
 
       const totalAmount =
-        selectedPackage.price - selectedPackage.price * (discountPercent / 100);
+        selectedPackage.price -
+        selectedPackage.price * (discountPercent / 100) +
+        additionalGuestFee;
 
       const processedBody = {
         ...processBookingData(body),
-        userId: body.userId,
+        userId: userId,
         totalAmount,
         catering: body.catering ? 1 : 0,
         firstName: body.firstName || userDetails?.firstName || null,
@@ -427,10 +446,11 @@ bookingRoutes.openapi(
       }
 
       if (
-        booking.bookStatus !== "reserved" &&
-        booking.bookStatus !== "rescheduled"
+        booking.bookStatus !== "reserved" 
+        // &&
+        // booking.bookStatus !== "rescheduled"
       ) {
-        throw new BadRequestError("Only reserved bookings can be rescheduled.");
+        throw new BadRequestError("Only reserved bookings can be updated.");
       }
 
       const processedData = processBookingData(requestData);
@@ -453,10 +473,45 @@ bookingRoutes.openapi(
           bookingId: booking.bookingId.toString(),
         });
       }
+      let additionalGuestFee = 0;
 
-      const hasRescheduled =
-        processedData.checkInDate !== booking.checkInDate.split("T")[0] ||
-        processedData.checkOutDate !== booking.checkOutDate.split("T")[0];
+      if (requestData.numberOfGuest != null) {
+        if (booking.numberOfGuest == null) {
+          throw new BadRequestError(
+            "Existing booking is missing number of guests."
+          );
+        }
+        if (requestData.numberOfGuest < booking.numberOfGuest) {
+          throw new BadRequestError(
+            "Number of guests cannot be less than the current number of guests."
+          );
+        }
+
+        const numberOfGuest = requestData.numberOfGuest;
+        let feeAmount = 100; // Default fee amount
+        if (booking.mode === "whole-day" || booking.mode === "night-time") {
+          feeAmount = 150;
+        }
+
+        const selectedPackage = await db.query.PackagesTable.findFirst({
+          where: eq(PackagesTable.packageId, booking.packageId),
+        });
+  
+        if (!selectedPackage) {
+          throw new BadRequestError("Invalid package ID");
+        }
+
+        if (numberOfGuest > selectedPackage.maxPax) {
+          const excessGuests = numberOfGuest - booking.numberOfGuest;
+          additionalGuestFee = excessGuests * feeAmount;
+        }
+      }
+      const totalAmount = booking.totalAmount + additionalGuestFee;
+      const remainingBalance = booking.remainingBalance + additionalGuestFee;
+
+      // const hasRescheduled =
+      //   processedData.checkInDate !== booking.checkInDate.split("T")[0] ||
+      //   processedData.checkOutDate !== booking.checkOutDate.split("T")[0];
 
       const updated = await db.transaction(async (tx) => {
         const updatedBooking = (
@@ -464,8 +519,15 @@ bookingRoutes.openapi(
             .update(BookingsTable)
             .set({
               ...processedData,
-              hasRescheduled: hasRescheduled ? 1 : 0,
-              bookStatus: "rescheduled",
+              totalAmount: totalAmount,
+              remainingBalance: remainingBalance,
+              bookingPaymentStatus:
+                additionalGuestFee > 0 &&
+                booking.bookingPaymentStatus !== "unpaid"
+                  ? "partially-paid"
+                  : booking.bookingPaymentStatus,
+              // hasRescheduled: hasRescheduled ? 1 : 0,
+              // bookStatus: hasRescheduled ? "rescheduled" : booking.bookStatus,
             })
             .where(eq(BookingsTable.bookingId, bookingId))
             .returning()
@@ -593,8 +655,9 @@ bookingRoutes.openapi(
         ["cancelled", "pending-cancellation", "completed"].includes(
           bookStatus
         ) &&
-        booking.bookStatus !== "reserved" &&
-        booking.bookStatus !== "rescheduled"
+        booking.bookStatus !== "reserved" 
+        // &&
+        // booking.bookStatus !== "rescheduled"
       ) {
         throw new BadRequestError(
           "Only reserved bookings can be cancelled or completed."

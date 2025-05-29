@@ -29,7 +29,7 @@ export const processBookingData = (bookingData: any) => {
       ? toISODateTime(bookingData.checkInDate, bookingData.arrivalTime)
       : undefined,
     createdAt: new Date().toISOString(),
-    catering: bookingData.catering === 1 ? 1 : 0,
+    catering: bookingData.catering ? 1 : 0,
     entryDate: bookingData.entryDate
       ? toISODate(bookingData.entryDate)
       : undefined,

@@ -13,6 +13,7 @@ export const PackagesTable = sqliteTable("PACKAGES", {
     enum: ["day-time", "night-time", "whole-day"],
   }).notNull(),
   isPromo: integer("isPromo", { mode: "boolean" }).notNull().default(false),
+  maxPax: integer("maxPax").notNull(),
   promoStart: text("promoStart"),
   promoEnd: text("promoEnd"),
   createdAt: text("createdAt")

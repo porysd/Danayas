@@ -37,7 +37,7 @@ export const BookingDTO = z.object({
     description: "The type of event for the booking",
     example: "Birthday",
   }),
-  numberOfGuest: z.number().int().nullable().optional().openapi({
+  numberOfGuest: z.number().nonnegative().int().nullable().optional().openapi({
     description: "The number of guests expected",
     example: 50,
   }),
@@ -82,10 +82,10 @@ export const BookingDTO = z.object({
       description: "Status of the booking",
       example: "pending",
     }),
-  hasRescheduled: z.coerce.boolean().nullable().optional().openapi({
-    description: "Indicates whether the booking has been rescheduled",
-    example: false,
-  }),
+  // hasRescheduled: z.coerce.boolean().nullable().optional().openapi({
+  //   description: "Indicates whether the booking has been rescheduled",
+  //   example: false,
+  // }),
   cancelCategory: z
     .enum(["natural-disaster", "others"])
     .nullable()
@@ -150,17 +150,18 @@ export const UpdateBookingDTO = BookingDTO.omit({
       .union([z.boolean(), z.number().int().min(0).max(1)])
       .transform((val) => Number(val))
       .optional(),
-    hasRescheduled: z.preprocess(
-      (val) => (val === null ? 0 : val), // Convert null to 0
-      z
-        .union([z.boolean(), z.number().int().min(0).max(1)])
-        .transform((val) => Number(val))
-        .optional()
-    ),
+    // hasRescheduled: z.preprocess(
+    //   (val) => (val === null ? 0 : val), // Convert null to 0
+    //   z
+    //     .union([z.boolean(), z.number().int().min(0).max(1)])
+    //     .transform((val) => Number(val))
+    //     .optional()
+    // ),
   });
 
 export const CreateBookingDTO = BookingDTO.omit({
   bookingId: true,
+  userId: true,
   createdAt: true,
   totalAmount: true,
   bookStatus: true,
@@ -169,7 +170,7 @@ export const CreateBookingDTO = BookingDTO.omit({
   amountPaid: true,
   remainingBalance: true,
   bookingPaymentStatus: true,
-  hasRescheduled: true,
+  // hasRescheduled: true,
   forfeited: true,
 }).extend({
   catering: z.preprocess(
@@ -179,11 +180,11 @@ export const CreateBookingDTO = BookingDTO.omit({
       .transform((val) => Number(val))
       .optional()
   ),
-  hasRescheduled: z.preprocess(
-    (val) => (val === null ? 0 : val), // Convert null to 0
-    z
-      .union([z.boolean(), z.number().int().min(0).max(1)])
-      .transform((val) => Number(val))
-      .optional()
-  ),
+  // hasRescheduled: z.preprocess(
+  //   (val) => (val === null ? 0 : val), // Convert null to 0
+  //   z
+  //     .union([z.boolean(), z.number().int().min(0).max(1)])
+  //     .transform((val) => Number(val))
+  //     .optional()
+  // ),
 });
