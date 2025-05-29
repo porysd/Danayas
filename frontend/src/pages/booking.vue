@@ -1,6 +1,6 @@
 ``
 <script setup>
-import { onMounted, ref, computed } from "vue";
+import { onMounted, ref, computed, watch } from "vue";
 import { useRouter } from "vue-router";
 import Stepper from "primevue/stepper";
 import StepList from "primevue/steplist";
@@ -13,8 +13,14 @@ import DatePicker from "primevue/datepicker";
 import FloatLabel from "primevue/floatlabel";
 import RadioButton from "primevue/radiobutton";
 import BookPackage from "../components/BookPackage.vue";
+import Package from "../components/Packages.vue";
 import FileUpload from "primevue/fileupload";
 import Dialog from "primevue/dialog";
+import Divider from "primevue/divider";
+import MultiSelect from "primevue/multiselect";
+import TreeTable from "primevue/treetable";
+import Column from "primevue/column";
+import TermsAndCondition from "../Admin/pages/TermsAndCondition.vue";
 import NavBar from "../components/NavBar.vue";
 import Footer from "../components/Footer.vue";
 import { useBookingStore } from "../stores/bookingStore";
@@ -34,6 +40,12 @@ import { useUserStore } from "../stores/userStore";
 import TermsCondition from "../components/TermsCondition.vue";
 import { usePublicEntryStore } from "../stores/publicEntryStore.js";
 import { useBlockedStore } from "../stores/blockedDateStore.js";
+import { usePackageStore } from "../stores/packageStore.js";
+import { useRoute } from "vue-router";
+import Toast from "primevue/toast";
+import InputNumber from "primevue/inputnumber";
+import { useCatalogStore } from "../stores/catalogStore";
+import { useAddOnsStore } from "../stores/addOnsStore";
 
 const toast = useToast();
 const router = useRouter();
@@ -43,13 +55,68 @@ const paymentStore = usePaymentStore();
 const discountStore = useDiscountStore();
 const publicStore = usePublicEntryStore();
 const blockStore = useBlockedStore();
+const packageStore = usePackageStore();
+const addOnStore = useAddOnsStore();
+const catalogStore = useCatalogStore();
 
-onMounted(() => {
+const route = useRoute();
+const selectedPackage = ref(null);
+const selectedmode = ref("");
+const selectedAddOns = ref("");
+
+const nodes = ref([
+  {
+    key: 1,
+    data: {
+      description: "No package selected",
+      price: selectedPackage.value
+        ? formatPeso(selectedPackage.value.price)
+        : "₱0",
+    },
+  },
+]);
+
+onMounted(async () => {
   bookingStore.fetchUserBookings();
   discountStore.fetchAllDiscounts();
   publicStore.fetchAllPublic();
   blockStore.fetchAllBlocked();
+  catalogStore.fetchAllCatalogs();
+
+  if (packageStore.packages.length === 0 && packageStore.fetchAllPackages) {
+    await packageStore.fetchAllPackages();
+  }
+
+  const packageId = route.query.packageId;
+  if (packageId) {
+    const pkg = packageStore.packages.find(
+      (p) => String(p.packageId) === String(packageId)
+    );
+    if (pkg) {
+      selectedPackage.value = pkg;
+      selectedmode.value = pkg.mode;
+      newBooking.value.packageId = pkg.packageId;
+      newBooking.value.mode = pkg.mode;
+      newBooking.value.bookingAddOns = pkg.bookingAddOns;
+
+      // if (newBooking.value.mode !== pkg.mode) {
+      //   toast.add({
+      //     severity: "success",
+      //     summary: "Refund Completed ",
+      //     detail: "The refund has been completed successfully.",
+      //     life: 3000,
+      //   });
+      // }
+    }
+  }
 });
+
+const availPackageHandler = (pkg) => {
+  selectedPackage.value = pkg;
+  selectedmode.value = pkg.mode; // <-- Fix here
+  newBooking.value.packageId = pkg.packageId;
+  newBooking.value.mode = pkg.mode;
+};
 
 const header = ref([
   "Check-in & Check-out Date",
@@ -100,6 +167,45 @@ const discount = discountStore.discounts.find(
     d.name.toLowerCase() === newBooking.value.discountId?.toLowerCase()
 );
 
+const selectedDiscount = computed(() => {
+  return discountStore.discounts.find(
+    (d) => d.discountId === newBooking.value.discountId
+  );
+});
+
+const addOnsTotal = computed(() => {
+  if (!newBooking.value.bookingAddOns || !catalogStore.catalog) return 0;
+  return newBooking.value.bookingAddOns.reduce((sum, addOnId) => {
+    const addOn = catalogStore.catalog.find(
+      (c) => c.catalogAddOnId === addOnId
+    );
+    return sum + (addOn?.price || 0);
+  }, 0);
+});
+const totalAmount = computed(() => {
+  const pkgPrice = selectedPackage.value?.price || 0;
+  const discount = selectedDiscount.value?.percentage || 0;
+  const discounted = pkgPrice - pkgPrice * (discount / 100);
+  return Math.max(discounted + addOnsTotal.value, 0);
+});
+
+watch(
+  () => [newBooking.value.checkInDate, newBooking.value.mode],
+  ([checkInDate, mode]) => {
+    if (!checkInDate) {
+      newBooking.value.checkOutDate = "";
+      return;
+    }
+    const date = new Date(checkInDate);
+    if (mode === "night-time" || mode === "whole-day") {
+      date.setDate(date.getDate() + 1);
+      newBooking.value.checkOutDate = formatDate(date);
+    } else {
+      newBooking.value.checkOutDate = checkInDate;
+    }
+  }
+);
+
 const addBookingHandler = async (newBooking, paymentDetails) => {
   try {
     // 1: Create Booking
@@ -121,6 +227,12 @@ const addBookingHandler = async (newBooking, paymentDetails) => {
     };
     await paymentStore.addPayment(formatPayment);
 
+    if (newBooking.bookingAddOns?.length > 0) {
+      for (const catalogAddOnId of booking.bookingAddOns) {
+        await addOnStore.addAddOn({ bookingId, catalogAddOnId });
+      }
+    }
+
     toast.add({
       severity: "success",
       summary: "Success",
@@ -136,14 +248,78 @@ const addBookingHandler = async (newBooking, paymentDetails) => {
 
 //STEP: 1
 const stepOneBtn = (activateCallback) => {
+  console.log("isLoggedIn", authStore.isLoggedIn);
   const { checkInDate, checkOutDate, mode } = newBooking.value;
-  if (!checkInDate || !checkOutDate || !mode) {
-    alert("Please fill up all fields");
-  } else {
-    activateCallback("2");
-  }
-  // activateCallback("2");
+  // if (!checkInDate || !checkOutDate || !mode || !authStore.isLoggedIn) {
+  //   alert("Please fill up all fields or Login or SignUp first");
+  // } else {
+  //   activateCallback("2");
+  // }
+  activateCallback("2");
 };
+
+watch(
+  () => newBooking.value.mode,
+  (newMode, oldMode) => {
+    if (
+      selectedPackage.value &&
+      newMode &&
+      selectedPackage.value.mode !== newMode
+    ) {
+      toast.add({
+        severity: "warn",
+        summary: "Mode Mismatch",
+        detail:
+          "The selected package is not applicable to the mode you selected. Please select a matching package or mode.",
+        life: 4000,
+      });
+    }
+  }
+);
+watch(
+  [
+    selectedPackage,
+    () => newBooking.value.bookingAddOns,
+    () => catalogStore.catalog,
+  ],
+  ([pkg, addOns, catalog]) => {
+    // Build add-ons HTML
+    let addOnsHtml = "";
+    let addOnsTotal = 0;
+    if (addOns && addOns.length && catalog && catalog.length) {
+      addOnsHtml = addOns
+        .map((addOnId) => {
+          const addOn = catalog.find(
+            (a) => String(a.catalogAddOnId) == String(addOnId)
+          );
+          if (addOn) {
+            addOnsTotal += addOn.price || 0;
+            return `<br><strong>Add-On:</strong> ${
+              addOn.itemName
+            } - ${formatPeso(addOn.price)}`;
+          }
+          return "";
+        })
+        .join("");
+    }
+
+    nodes.value = [
+      {
+        key: 1,
+        data: {
+          description: pkg
+            ? `<strong>Package:</strong> ${pkg.name}<br>
+               <strong>Inclusion:</strong> ${pkg.inclusion}<br>
+               <strong>Mode:</strong> ${pkg.mode}${
+                addOnsHtml ? addOnsHtml : ""
+              }`
+            : "No package selected",
+          price: pkg ? formatPeso((pkg.price || 0) + addOnsTotal) : "₱0",
+        },
+      },
+    ];
+  }
+);
 
 const minDate = new Date();
 
@@ -249,32 +425,53 @@ const getBookingStyle = (slotDate) => {
 
 // ref = reactive state
 // selectedPackage is a reactive state that will hold the selected package fromt child (BookPackage)
-const selectedPackage = ref(null);
-
-// availPackageHandler = function for the availPackage in BookPackage
-const availPackageHandler = (pkg) => {
-  selectedPackage.value = pkg; // this will update the reactive state of the selectedPackage = ref(null) into the selected package from the BookPackage
-  newBooking.value.packageId = pkg.packageId;
-  console.log("Selected Package:", newBooking.value.packageId);
-};
-
 const stepTwoBtn = (activateCallback) => {
   if (!newBooking.value.packageId) {
     alert("Please select a package");
   } else {
     activateCallback("3");
   }
-  // activateCallback("3");
+  activateCallback("3");
 };
 
 //STEP 3
 const stepThreeBtn = (activateCallback) => {
-  if (!newBooking.value.paymentTerms || !paymentDetails.value.reference) {
-    alert("Please fill up al the fields");
-  } else {
-    activateCallback("4");
+  const paymentTerms = newBooking.value.paymentTerms;
+  const tenderedAmount = paymentDetails.value.tenderedAmount;
+  const pkg = selectedPackage.value;
+
+  if (!paymentTerms || !paymentDetails.value.reference || !tenderedAmount) {
+    alert("Please fill in all payment fields.");
+    return;
   }
-  // activateCallback("4");
+
+  if (paymentTerms === "installment" && tenderedAmount < 2000) {
+    toast.add({
+      severity: "warn",
+      summary: "Installment Warning",
+      detail: "Down payment must be at least ₱2,000 for installment.",
+      life: 4000,
+    });
+    return; // Block step
+  }
+
+  if (
+    paymentTerms === "full-payment" &&
+    pkg &&
+    Number(tenderedAmount) < Number(pkg.price)
+  ) {
+    toast.add({
+      severity: "warn",
+      summary: "Full Payment Warning",
+      detail: `Tendered amount must be equal to the total price (${formatPeso(
+        pkg.price
+      )}) for full payment.`,
+      life: 4000,
+    });
+    return;
+  }
+
+  activateCallback("4");
 };
 
 const authStore = useAuthStore();
@@ -597,6 +794,7 @@ const calendarOptions = ref({
                             name="bookingMode"
                             value="whole-day"
                             size="large"
+                            :disabled="ismodeLocked"
                           />
                           <label for="wholeDay" class="text-xl font-[Poppins]"
                             >WHOLE DAY</label
@@ -714,7 +912,7 @@ const calendarOptions = ref({
                     </div>
                   </div>
 
-                  <div class="bg-[#fcfcfc] p-2 rounded">
+                  <div v-if="selectedPackage" class="bg-[#fcfcfc] p-2 rounded">
                     <p>Mode: {{ newBooking.mode }}</p>
                   </div>
 
@@ -729,17 +927,54 @@ const calendarOptions = ref({
                         {{ selectedPackage?.inclusion }}
                       </p>
                       <p>Mode: {{ selectedPackage?.mode }}</p>
+
+                      <p>
+                        Add Ons:
+                        <span
+                          v-if="
+                            catalogStore.catalog.length &&
+                            newBooking.bookingAddOns &&
+                            newBooking.bookingAddOns.length
+                          "
+                        >
+                          <ul>
+                            <li
+                              v-for="addOnId in newBooking.bookingAddOns"
+                              :key="addOnId"
+                            >
+                              {{
+                                catalogStore.catalog.find(
+                                  (a) =>
+                                    String(a.catalogAddOnId) == String(addOnId)
+                                )?.itemName || "Unknown Add-On"
+                              }}
+                              -
+                              {{
+                                formatPeso(
+                                  catalogStore.catalog.find(
+                                    (a) =>
+                                      String(a.catalogAddOnId) ==
+                                      String(addOnId)
+                                  )?.price || 0
+                                )
+                              }}
+                            </li>
+                          </ul>
+                        </span>
+                        <span v-else> None </span>
+                      </p>
                     </div>
 
                     <div class="bg-[#4BB344] p-1 rounded-sm">
                       <p>
-                        TOTAL CHARGED: {{ formatPeso(selectedPackage?.price) }}
+                        TOTAL CHARGED:
+                        {{ formatPeso(totalAmount) }}
                       </p>
                     </div>
                   </div>
                   <div class="btn flex pt-6">
                     <Button
-                      label="Continue"
+                      label="Continue "
                       iconPos="right"
                       @click="
                         nextBtn();
@@ -764,7 +999,7 @@ const calendarOptions = ref({
               <div
                 class="flex-col flex justify-center items-center font-medium h-auto w-[50rem] mt-5"
               >
-                <div class="flex flex-col overflow-auto h-[65rem]">
+                <div class="flex flex-col overflow-auto h-[65rem] w-[50rem]">
                   <h1
                     class="text-left w-[100%] flex font-black text-4xl font-[Poppins] mt-10"
                   >
@@ -817,7 +1052,7 @@ const calendarOptions = ref({
                       </div>
                     </div>
 
-                    <div class="guestInfo">
+                    <div class="guestInfo border">
                       <div>
                         <label>Arrival Time:</label>
                         <input class="packEvents" placeholder="Arrival Time" />
@@ -848,15 +1083,22 @@ const calendarOptions = ref({
                         <label>Discount Code:</label>
                         <input class="packEvents" placeholder="" />
                       </div>
-                      <div>
-                        <label for="addOns">Add Ons:</label>
-                        <select name="addOns" id="addOns">
-                          <option value="videoke">Videoke</option>
-                          <option value="rooms">Rooms</option>
-                          <option value="nipaHut">Nipa Hut</option>
-                          <option value="chairs">Chairs</option>
-                          <option value="table">Table</option>
-                        </select>
+                      <div class="">
+                        <label>Add Ons:</label>
+                        <MultiSelect
+                          v-model="newBooking.bookingAddOns"
+                          :options="catalogStore.catalog"
+                          optionLabel="itemName"
+                          optionValue="catalogAddOnId"
+                          style="
+                            width: 100%;
+                            border: 1px solid #41ab5d;
+                            background-color: #fcfcfc;
+                            border-radius: 10px;
+                            height: 40px;
+                            margin-top: 5px;
+                          "
+                        />
                       </div>
                     </div>
                   </div>
@@ -895,7 +1137,7 @@ const calendarOptions = ref({
                       </div>
                     </div>
                     <Message v-if="visible" severity="error"
-                      >You are required to pay a ₱3,000 down payment. The
+                      >You are required to pay a ₱2,000 down payment. The
                       remaining balance must be settled on the reserved date.<br />📌
                       Bookings are non-refundable.<br /><br />
                       <span
@@ -914,11 +1156,10 @@ const calendarOptions = ref({
                         @click="termsVisible = true"
                       >
                         View full Terms and Conditions
-                      </span></Message
-                    >
+                      </span>
+                      <TermsCondition v-model:visible="termsVisible" />
+                    </Message>
                   </div>
-
-                  <TermsCondition v-model:visible="termsVisible" />
                 </div>
               </div>
               <div
@@ -963,12 +1204,46 @@ const calendarOptions = ref({
                         {{ selectedPackage?.inclusion }}
                       </p>
                       <p>Mode: {{ selectedPackage?.mode }}</p>
+
+                      <p>
+                        Add Ons:
+                        <span
+                          v-if="
+                            catalogStore.catalog.length &&
+                            newBooking.bookingAddOns &&
+                            newBooking.bookingAddOns.length
+                          "
+                        >
+                          <ul>
+                            <li
+                              v-for="addOnId in newBooking.bookingAddOns"
+                              :key="addOnId"
+                            >
+                              {{
+                                catalogStore.catalog.find(
+                                  (a) =>
+                                    String(a.catalogAddOnId) == String(addOnId)
+                                )?.itemName || "Unknown Add-On"
+                              }}
+                              -
+                              {{
+                                formatPeso(
+                                  catalogStore.catalog.find(
+                                    (a) =>
+                                      String(a.catalogAddOnId) ==
+                                      String(addOnId)
+                                  )?.price || 0
+                                )
+                              }}
+                            </li>
+                          </ul>
+                        </span>
+                        <span v-else> None </span>
+                      </p>
                     </div>
 
                     <div class="bg-[#4BB344] p-1 rounded-sm">
-                      <p>
-                        TOTAL CHARGED: {{ formatPeso(selectedPackage?.price) }}
-                      </p>
+                      <p>TOTAL CHARGED: {{ formatPeso(totalAmount) }}</p>
                     </div>
                     <div>
                       <h1 class="text-lg font-bold font-[Poppins]">Payment:</h1>
@@ -981,9 +1256,13 @@ const calendarOptions = ref({
                       </h1>
                       <div class="bg-[#fcfcfc] mb-2 rounded">
                         <div>
-                          <input
-                            class="p-2 w-full"
+                          <InputNumber
+                            class="w-full"
                             placeholder="e.g. 2000"
+                            inputId="currency-php"
+                            mode="currency"
+                            currency="PHP"
+                            locale="en-PH"
                             v-model="paymentDetails.tenderedAmount"
                           />
                         </div>
@@ -1062,81 +1341,174 @@ const calendarOptions = ref({
           </StepPanel>
           <StepPanel v-slot="{ activateCallback }" value="4">
             <div
-              class="flex-col flex justify-center items-center font-medium h-auto w-[100%] mt-5"
+              class="flex flex-col justify-center m-auto items-center font-medium drop-shadow-2xl h-auto w-full max-w-[1400px] bg-[#FFFBE6]-50 mt-5"
             >
-              <div
-                class="bg-[#9edf9c] p-5 rounded-lg w-[70rem] h-auto mt-10 mb-10"
-              >
-                <h1
-                  class="font-black font-[Poppins] text-3xl p-5 flex align-center justify-center m-auto"
-                >
-                  Booking Summary:
-                </h1>
+              <div class="p-5 rounded-lg w-[70rem] h-auto mt-10 mb-10 gap-20">
+                <div class="flex">
+                  <div>
+                    <img
+                      src="../Admin/assets/drevslogo.png"
+                      alt=""
+                      class="w-40 h-40"
+                    />
+                  </div>
 
-                <div class="bg-[#fcfcfc] mb-2 p-2 rounded-sm">
-                  <div class="flex gap-2">
-                    <p>
-                      Date: {{ formatDates(newBooking.checkInDate) }} to
-                      {{ formatDates(newBooking.checkOutDate) }}
-                    </p>
-                  </div>
-                  <div class="flex gap-2">
-                    <p>Check-in: {{ formatDates(newBooking.checkInDate) }}</p>
-                  </div>
-                  <div class="flex gap-2">
-                    <p>Check-out: {{ formatDates(newBooking.checkOutDate) }}</p>
-                    <button class=""></button>
-                  </div>
-                  <div class="">
-                    <p>Mode: {{ newBooking.mode }}</p>
-                  </div>
-                  <div class="">
-                    <p>Arrival Time: {{ newBooking.arrivalTime }}</p>
-                  </div>
-                  <div class="">
-                    <p>Catering: {{ newBooking.catering }}</p>
+                  <div class="flex flex-col justify-center m-auto text-2xl">
+                    <h1
+                      class="font-black text-5xl flex align-center justify-center"
+                      style="font-style: 'Times New Roman'"
+                    >
+                      Danayas Resort Events Venue
+                    </h1>
+                    <h2>
+                      #27 Jones St. Extension, Dulong Bayan 2, San Mateo Rizal
+                    </h2>
+                    <h2 class="text-center">09912166870</h2>
                   </div>
                 </div>
 
-                <div>
-                  <h1 class="text-lg font-bold font-[Poppins]">
-                    Guest Information:
-                  </h1>
-                  <div class="bg-[#fcfcfc] mb-2 p-2 rounded-sm">
-                    <div class="">
+                <div class="mb-2 p-2 rounded-sm">
+                  <div class="">
+                    <Divider />
+
+                    <h1
+                      class="font-bold font-[16px] font-[Poppins] mt-[2rem] text-center"
+                    >
+                      Booking Summary
+                    </h1>
+                  </div>
+                </div>
+                <Divider />
+                <div class="relative">
+                  <div>
+                    <h1 class="font-bold font-[Poppins] mt-[2rem] mb-[1rem]">
+                      Guest Information:
+                    </h1>
+                  </div>
+                  <div class="flex gap-80">
+                    <div>
+                      <div class="">
+                        <p>
+                          Name: {{ userData.firstName }}
+                          {{ userData.lastName }}
+                        </p>
+                      </div>
+                      <div class="">
+                        <p>Contact No.: {{ userData.contactNo }}</p>
+                      </div>
+                      <div class="">
+                        <p>Email Address: {{ userData.email }}</p>
+                      </div>
+                      <div class="">
+                        <p>Address: {{ userData.address }}</p>
+                      </div>
+                    </div>
+                    <div>
+                      <div class=" ">
+                        <p>
+                          Date: {{ formatDates(newBooking.checkInDate) }} to
+                          {{ formatDates(newBooking.checkOutDate) }}
+                        </p>
+                      </div>
+                      <div class="flex gap-2">
+                        <p>
+                          Check-in: {{ formatDates(newBooking.checkInDate) }}
+                        </p>
+                      </div>
+                      <div class="flex gap-2">
+                        <p>
+                          Check-out:
+                          {{ formatDates(newBooking.checkOutDate) }}
+                        </p>
+                        <button class=""></button>
+                      </div>
+                      <div class="">
+                        <p>Mode: {{ newBooking.mode }}</p>
+                      </div>
+
                       <p>
-                        Name: {{ userData.firstName }} {{ userData.lastName }}
+                        Add Ons:
+                        <span
+                          v-if="
+                            catalogStore.catalog.length &&
+                            newBooking.bookingAddOns &&
+                            newBooking.bookingAddOns.length
+                          "
+                        >
+                          <ul>
+                            <li
+                              v-for="addOnId in newBooking.bookingAddOns"
+                              :key="addOnId"
+                            >
+                              {{
+                                catalogStore.catalog.find(
+                                  (a) =>
+                                    String(a.catalogAddOnId) == String(addOnId)
+                                )?.itemName || "Unknown Add-On"
+                              }}
+                              -
+                              {{
+                                formatPeso(
+                                  catalogStore.catalog.find(
+                                    (a) =>
+                                      String(a.catalogAddOnId) ==
+                                      String(addOnId)
+                                  )?.price || 0
+                                )
+                              }}
+                            </li>
+                          </ul>
+                        </span>
+                        <span v-else> None </span>
                       </p>
                     </div>
-                    <div class="">
-                      <p>Contact No.: {{ userData.contactNo }}</p>
-                    </div>
-                    <div class="">
-                      <p>Email Address: {{ userData.email }}</p>
-                    </div>
-                    <div class="">
-                      <p>Address: {{ userData.address }}</p>
-                    </div>
                   </div>
                 </div>
 
-                <div class="flex flex-col gap-2">
-                  <h1 class="text-lg font-bold font-[Poppins]">
-                    Package Selected:
-                  </h1>
-                  <div class="flex flex-col bg-[#fcfcfc] p-1 rounded-sm">
-                    <p>Package Name: {{ selectedPackage?.name }}</p>
-                    <p>Inclusion:</p>
-                    <p class="whitespace-pre-wrap">
-                      {{ selectedPackage?.inclusion }}
-                    </p>
-                    <p>Mode: {{ selectedPackage?.mode }}</p>
+                <div class="card">
+                  <TreeTable :value="nodes" tableStyle="min-width: 50rem">
+                    <Column
+                      field="description"
+                      header="Description"
+                      style="width: 250px"
+                      headerStyle="text-align: center"
+                    >
+                      <template #body="{ node }">
+                        <span
+                          v-html="node.data.description"
+                          style="white-space: pre-line"
+                        ></span>
+                      </template>
+                      <Divider layout="vertical" />
+                    </Column>
+                    <Column
+                      field="price"
+                      header="Total Price"
+                      style="width: 150px"
+                      headerStyle="text-align: center"
+                      bodyStyle="text-align: center"
+                    />
+                    <Divider />
+                  </TreeTable>
+                </div>
+                <div class="w-full justify-items-end">
+                  <div class="mt-5 text-right w-[30%] mr-5">
+                    <h1>
+                      SubTotal (Package):
+                      {{ formatPeso(selectedPackage?.price) }}
+                    </h1>
+                    <h1>Add-Ons: {{ formatPeso(addOnsTotal) }}</h1>
+                    <h1 class="mt-10">TAX(0%) : 0</h1>
+                    <Divider />
+                    <h1>
+                      <strong>TOTAL: </strong>{{ formatPeso(totalAmount) }}
+                    </h1>
                   </div>
-                  <div class="bg-[#4BB344] p-1 rounded-sm">
-                    <p>
-                      TOTAL CHARGED:{{ formatPeso(selectedPackage?.price) }}
-                    </p>
-                  </div>
+                </div>
+                <div class="">
+                  <h1 class="mb-1 font-12 font-bold">Payment Information</h1>
+                  <h2>Account Name: Jason Isaac Mendoza</h2>
+                  <h2>Account No.: 09565187842</h2>
                 </div>
 
                 <div class="flex pt-6 flex-col gap-2">
@@ -1244,13 +1616,13 @@ const calendarOptions = ref({
     </Dialog>
 
     <div v-if="showContinueModal" class="modal">
-      <div class="BookingBox">
-        <div class="signup"></div>
-        <h1>Package pending..</h1>
+      <div class="BookingBox drop-shadow-lg">
+        <h1>Booking pending..</h1>
       </div>
     </div>
   </section>
   <Footer />
+  <Toast />
 </template>
 
 <style scoped>
@@ -1261,8 +1633,9 @@ const calendarOptions = ref({
   border: 0;
   font-weight: bolder;
   font-size: 1.3rem;
-  margin-top: 20px;
-  margin-bottom: 2rem;
+  margin-top: 5px;
+  margin-bottom: 30px;
+
   color: rgb(2, 2, 2);
   text-align: center;
   height: 1.5rem;
@@ -1290,10 +1663,19 @@ const calendarOptions = ref({
   padding: 0 0.5em;
   background-color: #ffffff;
 }
+.list-decimal {
+  border-radius: 10px;
+  position: relative;
+  top: -10px;
+  padding: 2px 5px;
+  border: 2px solid green;
+}
 
 .Bookingbtn {
   padding: 10px 20px;
   border: none;
+  width: 30%;
+
   border-radius: 5px;
   cursor: pointer;
   font-weight: bold;
@@ -1321,9 +1703,7 @@ const calendarOptions = ref({
   height: 300px;
   width: 300px;
   filter: drop-shadow(0px 0px 10px rgba(97, 95, 95, 0.5));
-  background: #eef9eb;
-  box-shadow: 0px 0px 10px rgba(28, 216, 34, 0.5);
-  border: 1px solid #38dc87;
+  background: #ffffff;
   border-radius: 10px;
 }
 .modal {
@@ -1494,8 +1874,8 @@ const calendarOptions = ref({
   justify-content: center;
 }
 
-.personalInfo div,
-.guestInfo div {
+.personalInfo > div,
+.guestInfo > div:not(.multi-select-row) {
   display: flex;
   flex-direction: column;
   width: 40%;
@@ -1536,5 +1916,10 @@ const calendarOptions = ref({
   .p-fileupload-choose-button {
     background: #41ab5d;
   }
+}
+table,
+th,
+td {
+  border: 1px solid black;
 }
 </style>

@@ -37,6 +37,9 @@ import InputText from "primevue/inputtext";
 import InputNumber from "primevue/inputnumber";
 import { usePublicEntryStore } from "../stores/publicEntryStore.js";
 import { useBlockedStore } from "../stores/blockedDateStore.js";
+import Divider from "primevue/divider";
+import TreeTable from "primevue/treetable";
+import Column from "primevue/column";
 
 const toast = useToast();
 const router = useRouter();
@@ -151,13 +154,13 @@ const addBookingHandler = async (newBooking, paymentDetails) => {
 
 //STEP: 1
 const stepOneBtn = (activateCallback) => {
-  // const { checkInDate, checkOutDate, mode } = newBooking.value;
-  // if (!checkInDate || !checkOutDate || !mode) {
-  //   alert("Please fill up all fields");
-  // } else {
-  //   activateCallback("2");
-  // }
-  activateCallback("2");
+  const { entryDate, mode } = newBooking.value;
+  if (!entryDate || !mode) {
+    alert("Please fill up all fields");
+  } else {
+    activateCallback("2");
+  }
+  // activateCallback("2");
 };
 
 const minDate = new Date();
@@ -308,12 +311,18 @@ watch(
 
 //STEP 3
 const stepThreeBtn = (activateCallback) => {
-  // if (!newBooking.value.paymentTerms || !paymentDetails.value.reference) {
-  //   alert("Please fill up al the fields");
-  // } else {
-  //   activateCallback("4");
-  // }
-  activateCallback("4");
+  if (
+    !newBooking.value.paymentTerms ||
+    !paymentDetails.value.reference ||
+    !paymentDetails.value.tenderedAmount ||
+    !paymentDetails.value.imageUrl ||
+    !paymentDetails.value.senderName
+  ) {
+    alert("Please fill up al the fields");
+  } else {
+    activateCallback("4");
+  }
+  // activateCallback("4");
 };
 
 const authStore = useAuthStore();
@@ -587,33 +596,64 @@ const calendarOptions = ref({
                     <div class="flex">
                       <div class="ml-10">
                         <h1 class="mb-10 text-center font-[600] c">Mode</h1>
-                        <div class="flex items-center gap-2">
-                          <RadioButton
-                            v-model="newBooking.mode"
-                            inputId="dayMode"
-                            name="bookingMode"
-                            value="day-time"
-                            size="large"
-                          />
-                          <label for="dayMode" class="text-xl font-[Poppins]"
-                            >DAY TIME</label
-                          >
+                        <div class="flex items-center gap-10">
+                          <div class="flex gap-5">
+                            <RadioButton
+                              v-model="newBooking.mode"
+                              inputId="dayMode"
+                              name="bookingMode"
+                              value="day-time"
+                              size="large"
+                            />
+                            <div class="mr-5">
+                              <label
+                                for="dayMode"
+                                class="text-xl font-[Poppins]"
+                                >DAY TIME</label
+                              >
+                              <h6>(8am To 5pm)</h6>
+                            </div>
+                          </div>
 
-                          <RadioButton
-                            v-model="newBooking.mode"
-                            inputId="nightMode"
-                            name="bookingMode"
-                            value="night-time"
-                            size="large"
-                          />
-                          <label for="nightMode" class="text-xl font-[Poppins]"
-                            >NIGHT TIME</label
-                          >
+                          <div class="flex gap-5">
+                            <RadioButton
+                              v-model="newBooking.mode"
+                              inputId="nightMode"
+                              name="bookingMode"
+                              value="night-time"
+                              size="large"
+                            />
+                            <div>
+                              <label
+                                for="nightMode"
+                                class="text-xl font-[Poppins]"
+                                >NIGHT TIME</label
+                              >
+                              <h6>(6pm To 5am)</h6>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
                 </div>
+                <table style="width: 100%; background-color: #9edf9c">
+                  <thead class="text-center">
+                    <tr>
+                      <th colspan="2">PUBLIC RATE</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr class="text-center">
+                      <td class="bold">DAY SWIMMING/ NIGHT SWIMMING</td>
+                      <td>
+                        <h1>Php 100</h1>
+                        <h6>(for both adults and kids)</h6>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+
                 <FullCalendar class="fullCalendar" :options="calendarOptions">
                   <template #eventContent="{ event, timeText }">
                     <b>{{ timeText }}</b> <i>{{ event.title }}</i>
@@ -1540,5 +1580,11 @@ const calendarOptions = ref({
   .p-fileupload-choose-button {
     background: #41ab5d;
   }
+}
+table,
+th,
+td {
+  border: 1px solid rgb(46, 197, 96);
+  height: 5vh;
 }
 </style>

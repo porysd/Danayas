@@ -700,28 +700,29 @@ const showAction = ref(false);
           <p><strong>Payment ID:</strong> {{ selectedPayment?.paymentId }}</p>
           <p>
             <strong>Transaction ID:</strong>
-            {{ selectedPayment?.transactionId }}
+            {{ selectedPayment?.bookingId }}
           </p>
           <p>
             <strong>Name:</strong>
-            {{ getBookingName(selectedPayment?.transactionId) }}
+            {{ getPaymentName(selectedPayment?.bookingId) }}
           </p>
           <p>
             <strong>Downpayment Amount: </strong
-            >{{ formatPeso(selectedPayment?.downPaymentAmount) }}
+            >{{ formatPeso(selectedPayment?.tenderedAmount) }}
           </p>
           <p>
             <strong>Amount Paid:</strong>
             {{ formatPeso(selectedPayment?.amountPaid) }}
           </p>
-          <p><strong>Mode:</strong> {{ selectedPayment?.mode }}</p>
+          <p><strong>Mode:</strong> {{ selectedPayment?.paymentMethod }}</p>
           <p><strong>Reference: </strong>{{ selectedPayment?.reference }}</p>
           <p>
             <strong>Payment Status: </strong
             >{{ selectedPayment?.paymentStatus }}
           </p>
           <p>
-            <strong>Paid At: </strong>{{ formatDates(selectedPayment?.paidAt) }}
+            <strong>Paid At: </strong
+            >{{ formatDates(selectedPayment?.createdAt) }}
           </p>
           <Divider />
           <button class="closeDetails mt-5 w-[100%]" @click="closeModal">
