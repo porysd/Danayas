@@ -273,7 +273,7 @@ onUnmounted(() => {
                       <th>AMOUNT</th>
                       <th>STATUS</th>
                       <th>REASON</th>
-                      <th>IMAGE</th>
+                      <th>ACKNOWLEDGE</th>
                       <th>PAID AT</th>
                       <th></th>
                     </tr>
@@ -305,10 +305,11 @@ onUnmounted(() => {
                         {{ refund.refundReason }}
                       </td>
                       <td class="w-[10%]">
-                        <!-- {{
-                          // refund.imageUrl ||
-                          // refund.imageUrl
-                        }} -->
+                        {{
+                          refund.acknowledge == null
+                            ? "N/A"
+                            : refund.acknowledge
+                        }}
                       </td>
                       <td class="w-[10%]">
                         {{ formatDates(refund.createdAt) }}
@@ -318,7 +319,7 @@ onUnmounted(() => {
                           :refund="refund"
                           @completedRefund="updateRefundHandler"
                           @failedRefund="updateRefundHandler"
-                          :bookingName="getBookingName"
+                          :bookingName="getPaymentName"
                         />
                       </td>
                     </tr>
@@ -346,7 +347,7 @@ onUnmounted(() => {
                       <th>AMOUNT</th>
                       <th>STATUS</th>
                       <th>REASON</th>
-                      <th>IMAGE</th>
+                      <th>ACKNOWLEDGE</th>
                       <th>PAID AT</th>
                       <th></th>
                     </tr>
@@ -378,7 +379,13 @@ onUnmounted(() => {
                       <td class="w-[9%]">
                         {{ refund.refundReason }}
                       </td>
-                      <td class="w-[10%]">{{ refund.imageUrl }}</td>
+                      <td class="w-[10%]">
+                        {{
+                          refund.acknowledge == null
+                            ? "Waiting..."
+                            : refund.acknowledge
+                        }}
+                      </td>
                       <td class="w-[10%]">
                         {{ formatDates(refund.createdAt) }}
                       </td>
@@ -387,7 +394,7 @@ onUnmounted(() => {
                           :refund="refund"
                           @completedRefund="updateRefundHandler"
                           @failedRefund="updateRefundHandler"
-                          :bookingName="getBookingName"
+                          :bookingName="getPaymentName"
                         />
                       </td>
                     </tr>
@@ -415,7 +422,7 @@ onUnmounted(() => {
                       <th>AMOUNT</th>
                       <th>STATUS</th>
                       <th>REASON</th>
-                      <th>IMAGE</th>
+                      <th>ACKNOWLEDGE</th>
                       <th>PAID AT</th>
                       <th></th>
                     </tr>
@@ -446,7 +453,13 @@ onUnmounted(() => {
                       <td class="w-[9%]">
                         {{ refund.refundReason }}
                       </td>
-                      <td class="w-[10%]">{{ refund.imageUrl }}</td>
+                      <td class="w-[10%]">
+                        {{
+                          refund.acknowledge == null
+                            ? "N/A"
+                            : refund.acknowledge
+                        }}
+                      </td>
                       <td class="w-[10%]">
                         {{ formatDates(refund.createdAt) }}
                       </td>
@@ -455,7 +468,7 @@ onUnmounted(() => {
                           :refund="refund"
                           @completedRefund="updateRefundHandler"
                           @failedRefund="updateRefundHandler"
-                          :bookingName="getBookingName"
+                          :bookingName="getPaymentName"
                         />
                       </td>
                     </tr>
@@ -490,7 +503,7 @@ onUnmounted(() => {
           </p>
           <p>
             <strong>Name:</strong>
-            {{ getBookingName(selectedRefund?.bookingId) }}
+            {{ getPaymentName(selectedRefund?.bookingId) }}
           </p>
           <p>
             <strong>Refund Method: </strong>{{ selectedRefund?.refundMethod }}
@@ -527,7 +540,6 @@ onUnmounted(() => {
 table,
 th,
 td {
-  border: 1px solid black;
 }
 .customerM {
   background-color: #eef9eb;

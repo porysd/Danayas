@@ -6,28 +6,35 @@ import {
   onMounted,
   onUnmounted,
   computed,
+  watch,
 } from "vue";
 import Button from "primevue/button";
 import Dialog from "primevue/dialog";
 import DatePicker from "primevue/datepicker";
+import InputText from "primevue/inputtext";
 import Toast from "primevue/toast";
 import { useToast } from "primevue/usetoast";
 import FullCalendar from "@fullcalendar/vue3";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
+import Textarea from "primevue/textarea";
 import { useBookingStore } from "../stores/bookingStore";
+import { usePublicEntryStore } from "../stores/publicEntryStore.js";
+import { useBlockedStore } from "../stores/blockedDateStore.js";
 
 const toast = useToast();
 
 const bookingStore = useBookingStore();
+const publicStore = usePublicEntryStore();
+const blockStore = useBlockedStore();
 const showMenu = ref(false);
 const showRescheduleModal = ref(false);
 const rescheduleData = ref({});
 const showCancelDialog = ref(false);
 const cancelData = ref({});
 
-const props = defineProps(["booking"]);
+const props = defineProps(["booking", "showAction", "refund"]);
 const emit = defineEmits(["rescheduleBooking", "cancelBooking"]);
 
 const openRescheduleModal = () => {
@@ -45,6 +52,23 @@ const closeModals = () => {
   showCancelDialog.value = false;
 };
 
+watch(
+  () => [rescheduleData.value.checkInDate, rescheduleData.value.mode],
+  ([checkInDate, mode]) => {
+    if (!checkInDate) {
+      rescheduleData.value.checkOutDate = "";
+      return;
+    }
+    const date = new Date(checkInDate);
+    if (mode === "night-time" || mode === "whole-day") {
+      date.setDate(date.getDate() + 1);
+      rescheduleData.value.checkOutDate = formatDate(date);
+    } else {
+      rescheduleData.value.checkOutDate = checkInDate;
+    }
+  }
+);
+
 const confirmReschedule = () => {
   rescheduleData.value.bookStatus = "rescheduled";
   emit("rescheduleBooking", rescheduleData.value);
@@ -60,19 +84,23 @@ const confirmReschedule = () => {
 const openCancelDialog = () => {
   cancelData.value = {
     bookStatus: "pending-cancellation",
+    cancelCategory: props.booking.cancelCategory,
+    cancelReason: props.booking.cancelReason,
+    refundMethod: props.booking.refundMethod,
+    receiveName: props.booking.receiveName || null,
   };
   showCancelDialog.value = true;
   showMenu.value = false;
-};
-
-const closeCancelDialog = () => {
-  showCancelDialog.value = false;
 };
 
 const confirmCancellation = () => {
   emit("cancelBooking", {
     ...props.booking,
     bookStatus: "pending-cancellation",
+    cancelCategory: cancelData.value.cancelCategory,
+    cancelReason: cancelData.value.cancelReason,
+    refundMethod: cancelData.value.refundMethod,
+    receiveName: cancelData.value.receiveName || null,
   });
   toast.add({
     severity: "info",
@@ -98,46 +126,181 @@ onUnmounted(() => {
   document.removeEventListener("click", closeMenu);
 });
 
-// Process booking days
-const mapBookingsToEvents = (bookings) => {
-  return bookings
-    .filter((b) => b.bookStatus === "reserved")
-    .map((b) => {
-      let backgroundColor;
-      let textColor = "white";
-      let title;
+const minDate = new Date();
 
-      switch (b.mode) {
-        case "day-time": // if someone booked day status it will give Night Available
-          backgroundColor = "#6A5ACD";
-          textColor = "white";
-          title = "Night Available";
-          break;
-        case "night-time": // if someone booked night status it will give Day Available
-          backgroundColor = "#FFD580";
-          textColor = "black";
-          title = "Day Available";
-          break;
-        case "whole-day": // if someone booked day and night status and whole day status it will give Fully Booked
-          backgroundColor = "#FF6B6B";
-          title = "Fully Booked";
-          break;
-        default:
-          backgroundColor = "#90EE94";
-          textColor = "#15803D";
-      }
+const disabledDates = computed(() => {
+  const disabled = [];
 
-      return {
-        id: b.bookingId,
-        title: title,
-        start: b.checkInDate,
-        // end: b.checkOutDate,
-        backgroundColor: backgroundColor,
-        textColor: textColor,
-        allDay: true,
-      };
-    });
+  // Blocked dates
+  blockStore.blocked.forEach((bd) => {
+    if (bd.blockedDates) {
+      disabled.push(new Date(bd.blockedDates));
+    }
+  });
+
+  // Fully booked dates (whole-day or both day-time and night-time)
+  const bookingsByDate = {};
+  bookingStore.bookings.forEach((b) => {
+    if (b.checkInDate) {
+      const date = b.checkInDate;
+      if (!bookingsByDate[date]) bookingsByDate[date] = new Set();
+      bookingsByDate[date].add(b.mode);
+    }
+  });
+  publicStore.public.forEach((p) => {
+    if (p.entryDate) {
+      const date = p.entryDate;
+      if (!bookingsByDate[date]) bookingsByDate[date] = new Set();
+      bookingsByDate[date].add(p.mode);
+    }
+  });
+
+  Object.entries(bookingsByDate).forEach(([date, modes]) => {
+    if (
+      modes.has("whole-day") ||
+      (modes.has("day-time") && modes.has("night-time"))
+    ) {
+      disabled.push(new Date(date));
+    }
+  });
+
+  return disabled;
+});
+
+const getBookingStyle = (slotDate) => {
+  const formattedDate = `${slotDate.year}-${String(slotDate.month + 1).padStart(
+    2,
+    "0"
+  )}-${String(slotDate.day).padStart(2, "0")}`;
+
+  // Collect all booking/public modes for the date
+  const mode = new Set();
+  let isBlocked = false;
+
+  bookingStore.bookings.forEach((b) => {
+    if (b.checkInDate === formattedDate) {
+      mode.add(b.mode);
+    }
+  });
+
+  publicStore.public.forEach((p) => {
+    if (p.entryDate === formattedDate) {
+      mode.add(p.mode);
+    }
+  });
+
+  if (blockStore.blocked.some((bd) => bd.blockedDates === formattedDate)) {
+    isBlocked = true;
+  }
+
+  let backgroundColor, color;
+
+  if (isBlocked) {
+    backgroundColor = "grey";
+    color = "white";
+  } else if (
+    mode.has("whole-day") ||
+    (mode.has("day-time") && mode.has("night-time"))
+  ) {
+    backgroundColor = "#FF6B6B"; // Fully Booked
+    color = "white";
+  } else if (mode.has("day-time")) {
+    backgroundColor = "#6A5ACD"; // Night Available
+    color = "white";
+  } else if (mode.has("night-time")) {
+    backgroundColor = "#FFD580"; // Day Available
+    color = "black";
+  } else {
+  }
+
+  return {
+    backgroundColor,
+    color,
+    width: "40px",
+    height: "40px",
+    display: "inline-flex",
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: "10rem",
+    fontSize: "17px",
+  };
 };
+
+// Process booking days
+const mapBookingsToEvents = (
+  bookings = [],
+  publics = [],
+  blockedDates = []
+) => {
+  const eventByDate = {};
+
+  bookings.forEach((b) => {
+    const date = b.checkInDate;
+    if (!eventByDate[date])
+      eventByDate[date] = { modes: new Set(), blocked: null };
+    eventByDate[date].modes.add(b.mode);
+  });
+
+  publics.forEach((p) => {
+    const date = p.entryDate;
+    if (!eventByDate[date])
+      eventByDate[date] = { modes: new Set(), blocked: null };
+    eventByDate[date].modes.add(p.mode);
+  });
+
+  blockedDates.forEach((bd) => {
+    const date = bd.blockedDates;
+    if (!eventByDate[date])
+      eventByDate[date] = { modes: new Set(), blocked: null };
+    eventByDate[date].blocked = bd;
+  });
+
+  return Object.entries(eventByDate).map(([date, { modes, blocked }]) => {
+    let backgroundColor, textColor, title;
+
+    if (blocked) {
+      backgroundColor = "grey";
+      textColor = "white";
+      title = "Not Available";
+    } else if (
+      modes.has("whole-day") ||
+      (modes.has("day-time") && modes.has("night-time"))
+    ) {
+      backgroundColor = "#FF6B6B";
+      textColor = "white";
+      title = "Fully Booked";
+    } else if (modes.has("day-time")) {
+      backgroundColor = "#6A5ACD";
+      textColor = "white";
+      title = "Night Available";
+    } else if (modes.has("night-time")) {
+      backgroundColor = "#FFD580";
+      textColor = "black";
+      title = "Day Available";
+    } else {
+      backgroundColor = "#90EE90";
+      textColor = "#15803D";
+      title = "Available";
+    }
+
+    return {
+      id: `summary-${date}`,
+      title,
+      start: date,
+      backgroundColor,
+      textColor,
+      allDay: true,
+    };
+  });
+};
+
+const calendarEvents = computed(() => {
+  return mapBookingsToEvents(
+    bookingStore.bookings,
+    publicStore.public,
+    blockStore.blocked
+  );
+});
 
 const calendarOptions = ref({
   plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin],
@@ -152,18 +315,18 @@ const calendarOptions = ref({
   selectMirror: false,
   dayMaxEvents: false,
   weekends: true,
-  events: computed(() => mapBookingsToEvents(bookingStore.bookings)),
+  events: calendarEvents,
 });
 </script>
 
 <template>
   <div class="relative menu-container inline-block">
     <button
-      @click.stop="showMenu = !showMenu"
+      @click.stop="$emit('click')"
       class="logBtn pi pi-ellipsis-v cursor-pointer"
     ></button>
 
-    <div v-if="showMenu" ref="hideMenu" class="loggerBtn">
+    <div v-if="showAction" ref="hideMenu" class="loggerBtn">
       <ul>
         <li
           class="hover:bg-gray-100 dark:hover:bg-gray-700"
@@ -209,7 +372,17 @@ const calendarOptions = ref({
           iconDisplay="input"
           dateFormat="mm-dd-yy"
           placeholder="Check-In"
-        />
+          :minDate="minDate"
+          :disabledDates="disabledDates"
+        >
+          <template #date="slotProps">
+            <span>
+              <strong :style="getBookingStyle(slotProps.date)" class="date-box">
+                {{ slotProps.date.day }}
+              </strong>
+            </span>
+          </template></DatePicker
+        >
       </div>
       <div>
         <label>Check-Out Date: </label>
@@ -219,7 +392,17 @@ const calendarOptions = ref({
           iconDisplay="input"
           dateFormat="mm-dd-yy"
           placeholder="Check-Out"
-        />
+          :minDate="minDate"
+          :disabledDates="disabledDates"
+        >
+          <template #date="slotProps">
+            <span>
+              <strong :style="getBookingStyle(slotProps.date)" class="date-box">
+                {{ slotProps.date.day }}
+              </strong>
+            </span>
+          </template></DatePicker
+        >
       </div>
     </div>
 
@@ -250,6 +433,44 @@ const calendarOptions = ref({
       Are you sure you want to <strong class="text-red-500">CANCEL</strong>?
       Downpayment is non-refundable except in cases of verified natural
       disasters. All requests are reviewed by admin.
+    </div>
+
+    <div>
+      <label>Cancel Category:</label>
+      <select
+        v-model="cancelData.cancelCategory"
+        class="border p-2 rounded w-full"
+        required
+      >
+        <option value="natural-disaster">Natural Disaster</option>
+        <option value="others">Others:</option>
+      </select>
+      <label>Reason for Cancellation:</label>
+      <Textarea
+        class="w-full"
+        v-model="cancelData.cancelReason"
+        autoResize
+        rows="3"
+        cols="30"
+        placeholder="Please provide a message or link(if natural disaster)"
+      />
+
+      <label>Refund Method:</label>
+      <select
+        v-model="cancelData.refundMethod"
+        class="border p-2 rounded w-full"
+        required
+      >
+        <option value="gcash">GCash</option>
+        <option value="cash">Cash</option>
+      </select>
+
+      <template v-if="cancelData.refundMethod === 'cash'">
+        <div class="flex flex-col">
+          <label>Receiver Name:</label>
+          <InputText v-model="cancelData.receiveName" />
+        </div>
+      </template>
     </div>
 
     <div class="flex justify-center gap-2 mt-4 font-[Poppins]">

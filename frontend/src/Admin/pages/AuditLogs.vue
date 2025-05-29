@@ -72,7 +72,7 @@ const filtered = computed(() => {
     <SideBar />
     <div class="container">
       <div class="headers">
-        <h1 class="text-5xl font-black">Audit Logs</h1>
+        <h1 class="text-5xl font-black">Logs</h1>
         <div class="flex items-center gap-5">
           <DarkModeButton />
           <Notification />
@@ -91,7 +91,7 @@ const filtered = computed(() => {
                 <th>USER ID</th>
                 <th>ACTION</th>
                 <th>TABLE NAME</th>
-                <th>RECORD ID</th>
+                <th>REMARKS</th>
                 <th>CREATED AT</th>
               </tr>
             </thead>
@@ -108,8 +108,9 @@ const filtered = computed(() => {
                 <td>
                   {{ logs.tableName }}
                 </td>
+
                 <td>
-                  {{ logs.recordId }}
+                  {{ logs.remarks }}
                 </td>
                 <td>{{ formatDates(logs.createdAt) }}</td>
               </tr>
@@ -129,13 +130,15 @@ const filtered = computed(() => {
       <div v-if="details" class="modal">
         <div class="modal-content font-[Poppins]">
           <h2 class="text-xl font-bold m-auto justify-center flex">
-            Audit Log Details
+            Log Details
           </h2>
           <Divider />
           <div class="flex flex-col gap-2">
             <p><strong>User ID:</strong> {{ selected?.userId }}</p>
             <p><strong>Action:</strong> {{ selected?.action }}</p>
             <p><strong>Table Name:</strong> {{ selected?.tableName }}</p>
+            <p><strong>Data:</strong> {{ selected?.data }}</p>
+            <p><strong>Renarks:</strong> {{ selected?.remarks }}</p>
             <p><strong>Record Id:</strong> {{ selected?.recordId }}</p>
             <p>
               <strong>Created At:</strong>
@@ -314,7 +317,7 @@ const filtered = computed(() => {
   background: white;
   padding: 20px;
   border-radius: 5px;
-  width: auto;
+  width: 50%;
 }
 
 .closeDetails {

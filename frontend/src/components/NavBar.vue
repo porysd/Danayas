@@ -1,26 +1,43 @@
 <script setup>
-import { computed, ref, onMounted, onUnmounted } from "vue";
+import { computed, ref, onMounted, onUnmounted, watch } from "vue";
 import { useRouter } from "vue-router";
 import Login from "../components/Login.vue";
 import SignUp from "../components/SignUp.vue";
 import { useAuthStore } from "../stores/authStore";
 import { useUserStore } from "../stores/userStore";
+import { useLogStore } from "../stores/auditLogStore";
 import Avatar from "primevue/avatar";
+import Badge from "primevue/badge";
+import Toast from "primevue/toast";
+import { useToast } from "primevue/usetoast";
+
+const toast = useToast();
 
 const authStore = useAuthStore();
 const userStore = useUserStore();
+const logStore = useLogStore();
 const router = useRouter();
 
 const isLoggedIn = computed(() => authStore.isLoggedIn);
 const showMenu = ref(false);
 const hideMenu = ref(null);
 
+const showLoginModal = ref(false);
+const showSignUpModal = ref(false);
+
 function handleSignUpSuccess() {
-  isLoggedIn.value = true; // User is logged in after sign up
+  showSignUpModal.value = false;
+  showLoginModal.value = true;
 }
 
 function handleLoginSuccess() {
-  isLoggedIn.value = true; // User is logged in after login
+  showSignUpModal.value = true;
+  showLoginModal.value = false;
+}
+
+function openLoginModal() {
+  showLoginModal.value = true;
+  showSignUpModal.value = false;
 }
 
 const logout = () => {
@@ -57,6 +74,10 @@ onMounted(async () => {
     return;
   }
 
+  if (userId) {
+    await logStore.fetchAllLogs();
+  }
+
   console.log("Fetching user details for userId:", userId);
   const fetchedUser = await userStore.getUserById(userId);
 
@@ -79,6 +100,35 @@ const Initials = computed(() => {
     return "";
   }
 });
+
+const bookingReservedLogs = computed(() =>
+  logStore.logs.filter((log) => {
+    if (log.action === "update" && log.tableName === "BOOKINGS" && log.data) {
+      try {
+        const data = JSON.parse(log.data);
+        return data.bookStatus === "reserved";
+      } catch {
+        return false;
+      }
+    }
+    return false;
+  })
+);
+
+watch(
+  bookingReservedLogs,
+  (logs) => {
+    logs.forEach((log) => {
+      toast.value?.add({
+        severity: "success",
+        summary: "Booking Confirmed",
+        detail: `Your booking #${log.recordId} is now reserved.`,
+        life: 4000,
+      });
+    });
+  },
+  { immediate: true }
+);
 </script>
 
 <template>
@@ -141,8 +191,13 @@ const Initials = computed(() => {
     <div class="signup-btn-container">
       <template v-if="isLoggedIn">
         <router-link to="/logs" active-class="active-route " class="logs"
-          >HISTORY</router-link
-        >
+          >HISTORY
+          <Badge
+            v-if="bookingReservedLogs.length > 0"
+            :value="bookingReservedLogs.length"
+            severity="success"
+            style="margin-left: 6px"
+        /></router-link>
         <div class="profilepage">
           <Avatar
             :label="Initials"
@@ -178,6 +233,7 @@ const Initials = computed(() => {
     </div>
   </nav>
 
+  <Toast />
   <main>
     <router-view />
   </main>

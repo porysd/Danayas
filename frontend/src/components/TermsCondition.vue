@@ -21,17 +21,16 @@ const openTermsAndCondition = () => {
     <Dialog
       v-model:visible="showTermsAndConditionModal"
       modal
-      header="Terms & Conditions"
-      class="terms-button"
-      :style="{ width: '50rem' }"
+      :style="{ width: '70rem' }"
       :breakpoints="{ '1199px': '75vw', '575px': '90vw' }"
     >
+      <hr class="Header" data-content="Terms & Condition" />
+
       <ol class="list-decimal list-inside space-y-2 text-black">
         <li>
           A downpayment Reservation fee of P 2000-3000.00 is required to ensure
           the client's specified schedule.
         </li>
-
         <li>
           Reservation in case of delay, shall be given an allowance of two (2)
           Days based on agreed time. Without prior notice, the management can
@@ -78,15 +77,10 @@ const openTermsAndCondition = () => {
           accounted to the customer.
         </li>
         <li>No refund policy is implemented</li>
-
+        <li>Clients must properly observe the house rules</li>
         <li>
-          <div>Clients must property observe the house rules</div>
-        </li>
-        <li>
-          <div>
-            It is understood that the customers agreed on the terms and
-            conditions of the Danayas Resorts Events Venue.
-          </div>
+          It is understood that the customers agreed on the terms and conditions
+          of the Danayas Resorts Events Venue.
         </li>
       </ol>
     </Dialog>
@@ -97,9 +91,54 @@ const openTermsAndCondition = () => {
   display: flex;
   font-size: 15px;
   color: white;
+  width: 30%;
+
   font-family: Poppins;
   font-weight: bold;
   text-align: center;
   margin-top: 2rem;
+}
+.Header {
+  line-height: 1rem;
+  position: relative;
+  outline: 0;
+  border: 0;
+  font-weight: bolder;
+  font-size: 1.3rem;
+  margin-top: 5px;
+  margin-bottom: 30px;
+  color: rgb(2, 2, 2);
+  text-align: center;
+  height: 1.5rem;
+}
+
+.Header::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(
+    -50%,
+    -50%
+  ); /* Center the line horizontally and vertically */
+  background: #000000;
+  width: 50%; /* or a percentage like 80% if you want shorter lines */
+  height: 1.2px;
+  z-index: -1; /* Optional: keeps the line behind the text */
+}
+
+.Header::after {
+  content: attr(data-content);
+  position: relative;
+  color: rgb(0, 0, 0);
+  padding: 0 0.5em;
+  background-color: #ffffff;
+}
+.list-decimal {
+  border-radius: 10px;
+  position: relative;
+  top: -20px;
+  padding: 2px 5px;
+  border: 2px solid green;
 }
 </style>

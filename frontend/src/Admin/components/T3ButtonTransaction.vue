@@ -6,6 +6,8 @@ import Toast from "primevue/toast";
 import Checkbox from "primevue/checkbox";
 import { useToast } from "primevue/usetoast";
 import { formatPeso } from "../../utility/pesoFormat";
+import InputOtp from "primevue/inputotp";
+import { usePinStore } from "../../stores/pinStore";
 
 const toast = useToast();
 const showMenu = ref(false);
@@ -13,7 +15,10 @@ const showVoidModal = ref(false);
 const showValidModal = ref(false);
 const showInvalidModal = ref(false);
 const showPayModal = ref(false);
+const showRefractorModal = ref(false);
 const formData = ref({});
+
+const pinStore = usePinStore();
 
 const prop = defineProps({
   payment: Object,
@@ -21,9 +26,14 @@ const prop = defineProps({
     type: String,
     default: "Unknown",
   },
+  showAction: true,
 });
-const emit = defineEmits(["voidPayment", "validPayment", "invalidPayment"]);
-let previousStatus = null;
+const emit = defineEmits([
+  "voidPayment",
+  "validPayment",
+  "invalidPayment",
+  "refractorPayment",
+]);
 
 const openVoidModal = () => {
   formData.value = { ...prop.payment };
@@ -44,17 +54,65 @@ const openInvalidModal = () => {
   showMenu.value = false;
 };
 
-const openPayModal = () => {
-  formData.value = { ...prop.payment };
-  showPayModal.value = true;
+const showOtp = ref(false);
+const value = ref("");
+
+const openOtp = () => {
+  showOtp.value = true;
   showMenu.value = false;
+};
+
+const verifyOtp = async () => {
+  formData.value = { ...prop.payment };
+  if (!/^\d{6}$/.test(value.value)) {
+    toast.add({
+      severity: "error",
+      summary: "Invalid PIN",
+      detail: "PIN must be 6 digits.",
+      life: 3000,
+    });
+    return;
+  }
+  try {
+    const result = await pinStore.verifyPin(value.value);
+    if (result) {
+      showRefractorModal.value = true;
+      showOtp.value = false;
+    } else {
+      toast.add({
+        severity: "error",
+        summary: "Invalid PIN",
+        detail: "The PIN you entered is incorrect.",
+        life: 3000,
+      });
+    }
+  } catch (err) {
+    toast.add({
+      severity: "error",
+      summary: "PIN Verification Failed",
+      detail: err.message,
+      life: 3000,
+    });
+  }
+};
+
+const confirmOverride = () => {
+  emit("refractorPayment", formData.value);
+  toast.add({
+    severity: "success",
+    summary: "Refractored Amount",
+    detail: "The tendered amount has been refractor successfully.",
+    life: 3000,
+  });
+  closeModals();
 };
 
 const closeModals = () => {
   showVoidModal.value = false;
-  showPayModal.value = false;
   showValidModal.value = false;
   showInvalidModal.value = false;
+  showRefractorModal.value = false;
+  showOtp.value = false;
 };
 
 const confirmPay = () => {
@@ -109,18 +167,6 @@ const confirmVoid = () => {
   closeModals();
 };
 
-const revertPayment = () => {
-  formData.value.paymentStatus = "valid";
-  emit("voidPayment", formData.value);
-  toast.add({
-    severity: "success",
-    summary: "Payment Reverted",
-    detail: "The payment has been reverted.",
-    life: 3000,
-  });
-  showMenu.value = false;
-};
-
 const hideMenu = ref(false);
 
 const closeMenu = (event) => {
@@ -160,19 +206,25 @@ onUnmounted(() => {
           Invalid
         </li>
         <li
-          v-if="payment.paymentStatus !== 'voided'"
           @click="openVoidModal"
           class="hover:bg-gray-100 dark:hover:bg-gray-700"
         >
           Void
         </li>
         <li
+          v-if="showAction"
+          class="hover:bg-gray-100 dark:hover:bg-gray-700"
+          @click="openOtp"
+        >
+          Refractor
+        </li>
+        <!-- <li
           v-else
           @click="revertPayment"
           class="hover:bg-gray-100 dark:hover:bg-gray-700"
         >
           Revert
-        </li>
+        </li> -->
       </ul>
     </div>
   </div>
@@ -271,6 +323,103 @@ onUnmounted(() => {
         label="Void"
         severity="danger"
         @click="confirmVoid"
+        class="font-bold w-full"
+      />
+    </div>
+  </Dialog>
+
+  <Dialog
+    v-model:visible="showOtp"
+    modal
+    :style="{ width: '30rem' }"
+    class="rounded-xl shadow-md"
+  >
+    <template #header>
+      <div class="flex flex-col items-center justify-center w-full">
+        <h2
+          class="text-2xl font-bold font-[Poppins] text-gray-800 dark:text-white"
+        >
+          Enter PIN
+        </h2>
+      </div>
+    </template>
+
+    <p
+      class="text-lg text-center text-surface-700 dark:text-surface-300 mb-6 font-[Poppins] px-4"
+    >
+      Please confirm if you want to
+      <strong class="text-green-500">validate</strong> this payment.
+    </p>
+
+    <div class="flex justify-center mb-6">
+      <InputOtp v-model="value" :length="6" mask />
+    </div>
+
+    <div class="flex justify-center gap-4 px-4">
+      <Button
+        type="button"
+        label="Cancel"
+        severity="secondary"
+        @click="closeModals"
+        class="font-bold w-full font-[Poppins]"
+      />
+      <Button
+        type="button"
+        label="Submit"
+        severity="success"
+        @click="verifyOtp"
+        class="font-bold w-full font-[Poppins]"
+      />
+    </div>
+  </Dialog>
+
+  <Dialog
+    v-model:visible="showRefractorModal"
+    modal
+    :style="{ width: '30rem' }"
+  >
+    <template #header>
+      <div class="flex flex-col items-center justify-center w-full">
+        <h2 class="text-xl font-bold font-[Poppins]">
+          Refractor Tendered Amount
+        </h2>
+      </div>
+    </template>
+
+    <div class="space-y-4 font-[Poppins] px-4">
+      <p class="text-center text-lg">
+        Please enter new
+        <strong class="text-green-600">tendered amount</strong> for this
+        payment?
+      </p>
+
+      <div class="text-left text-base space-y-2">
+        <div class="flex flex-col">
+          <div class="w-[100%]">
+            <label>Tendered Amount:</label>
+            <input class="w-full" v-model.number="formData.tenderedAmount" />
+          </div>
+          <div class="w-[100%]">
+            <label>Remarks:</label>
+            <input class="w-full" v-model.number="formData.remarks" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="flex justify-center gap-2 mt-6 font-[Poppins] px-4">
+      <Button
+        type="button"
+        label="Cancel"
+        severity="secondary"
+        @click="closeModals"
+        class="font-bold w-full"
+      />
+      <Button
+        type="button"
+        label="Next"
+        severity="success"
+        @click="confirmOverride"
         class="font-bold w-full"
       />
     </div>

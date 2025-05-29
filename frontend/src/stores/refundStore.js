@@ -109,12 +109,12 @@ export const useRefundStore = defineStore("refund", {
 
         if (!response.ok) throw new Error("Failed to update refund");
 
-        const index = this.refunds.findIndex(
-          (p) => p.refundId === refund.refundId
-        );
-        if (index !== -1) {
-          Object.assign(this.refunds[index], refund);
-        }
+        // const index = this.refunds.findIndex(
+        //   (p) => p.refundId === refund.refundId
+        // );
+        // if (index !== -1) {
+        //   Object.assign(this.refunds[index], refund);
+        // }
 
         await this.fetchRefunds();
       } catch (err) {

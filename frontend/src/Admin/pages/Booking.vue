@@ -23,11 +23,12 @@ import { usePaymentStore } from "../../stores/paymentStore.js";
 import { useTransactionStore } from "../../stores/transactionStore.js";
 import { formatPeso } from "../../utility/pesoFormat";
 import { formatDates } from "../../utility/dateFormat";
+import { useAddOnsStore } from "../../stores/addOnsStore";
 
 const bookingStore = useBookingStore();
-const transactionStore = useTransactionStore();
 const packageStore = usePackageStore();
 const paymentStore = usePaymentStore();
+const addOnStore = useAddOnsStore();
 
 onMounted(() => {
   bookingStore.fetchUserBookings();
@@ -35,18 +36,15 @@ onMounted(() => {
   packageStore.fetchAllPromos();
 });
 
+const showAction = ref(false);
+
 const addBookingHandler = async (booking, paymentDetails) => {
   try {
-    // 1: Create Booking
+    // 1: Get Booking
     const newBooking = await bookingStore.addBooking(booking);
     const bookingId = newBooking.bookingId;
 
-    // 2: Create Transaction
-    // const newTransaction = await transactionStore.addTransaction({ bookingId });
-    // console.log("Created transaction:", newTransaction);
-    // const transactionId = newTransaction.transactionId;
-
-    // 3: Create Payment with transaction
+    // 32: Create Payment with booking id
     const fullPaymentDetails = {
       ...paymentDetails,
       bookingId,
@@ -54,6 +52,7 @@ const addBookingHandler = async (booking, paymentDetails) => {
 
     console.log("Full payment details being sent:", fullPaymentDetails);
     await paymentStore.addPayment(fullPaymentDetails);
+
 
     toast.add({
       severity: "success",
@@ -70,17 +69,6 @@ const addBookingHandler = async (booking, paymentDetails) => {
 
 // Upadte Booking Status by ID
 const updateBookingHandler = async (booking) => {
-  console.log("Booking payload:", booking);
-
-  // const bookingId = (booking) => {
-  //   booking.bookingId === bookingId;
-  // };
-
-  // const transactionId = await transactionStore.getTransactionById(booking);
-
-  // if (booking.bookStatus === "cancelled") {
-  //   transactionId
-  // }
   await bookingStore.updateBookingStatus(booking);
 };
 
@@ -103,6 +91,9 @@ const totalBookings = computed(() => filteredBooking.value.length);
 const totalPendings = computed(() => filteredPendings.value.length);
 const totalReserved = computed(() => filteredReserved.value.length);
 const totalRescheduled = computed(() => filteredRescheduled.value.length);
+const totalCancellation = computed(
+  () => filteredPendingCancellation.value.legth
+);
 const totalCancelled = computed(() => filteredCancelled.value.length);
 const totalCompleted = computed(() => filteredCompleted.value.length);
 
@@ -113,16 +104,6 @@ const getPackageName = (packageId) => {
     packageStore.promos.find((p) => p.packageId === packageId);
   return pkg ? pkg.name : "Unknown Package";
 };
-
-// // Get Payment ID === Booking ID
-// const getPaymentId = async (id) => {
-//   const bookingId = await bookingStore.getBookingById(id);
-
-//   const paymentId = await paymentStore.getPaymentById(id);
-//   const getPaymentId = paymentStore.fetchPayments(
-//     (p) => p.bookingId === bookingId
-//   );
-// };
 
 // Booking Details Modal
 const selectedBooking = ref(null);
@@ -170,41 +151,40 @@ const getPaymentStatusSeverity = (status) => {
 
 // Paginator or pagination of the tables
 const first = ref(0);
+const firstPending = ref(0);
+const firstReserved = ref(0);
+const firstPendingCancellation = ref(0);
+const firstCancelled = ref(0);
+const firstRescheduled = ref(0);
+const firstCompleted = ref(0);
 const rows = ref(10);
-
-const paginatedBookings = computed(() => {
-  return filteredBooking.value.slice(first.value, first.value + rows.value);
-});
-
-const paginatedPendings = computed(() => {
-  return filteredPendings.value.slice(first.value, first.value + rows.value);
-});
-
-const paginatedReserved = computed(() => {
-  return filteredReserved.value.slice(first.value, first.value + rows.value);
-});
-
-const paginatedCancellation = computed(() => {
-  return filteredPendingCancellation.value.slice(
-    first.value,
-    first.value + rows.value
-  );
-});
-
-const paginatedCancelled = computed(() => {
-  return filteredCancelled.value.slice(first.value, first.value + rows.value);
-});
-
-const paginatedCompleted = computed(() => {
-  return filteredCompleted.value.slice(first.value, first.value + rows.value);
-});
-
-const paginatedRescheduled = computed(() => {
-  return filteredRescheduled.value.slice(first.value, first.value + rows.value);
-});
 
 const onPageChange = (event) => {
   first.value = event.first;
+  rows.value = event.rows;
+};
+const onPageChangePending = (event) => {
+  firstPending.value = event.first;
+  rows.value = event.rows;
+};
+const onPageChangeReserved = (event) => {
+  firstReserved.value = event.first;
+  rows.value = event.rows;
+};
+const onPageChangeRescheduled = (event) => {
+  firstRescheduled.value = event.first;
+  rows.value = event.rows;
+};
+const onPageChangeCancellation = (event) => {
+  firstPendingCancellation.value = event.first;
+  rows.value = event.rows;
+};
+const onPageChangeCancelled = (event) => {
+  firstCancelled.value = event.first;
+  rows.value = event.rows;
+};
+const onPageChangeCompleted = (event) => {
+  firstCompleted.value = event.first;
   rows.value = event.rows;
 };
 
@@ -276,7 +256,7 @@ const filteredBooking = computed(() => {
   }
 
   // Sort booking
-  result = result.sort((a, b) => {
+  result = [...result].sort((a, b) => {
     const statusOrder = {
       pending: 1,
       reserved: 2,
@@ -288,7 +268,7 @@ const filteredBooking = computed(() => {
     return statusOrder[a.bookStatus] - statusOrder[b.bookStatus];
   });
 
-  result = result.sort((a, b) => {
+  result = [...result].sort((a, b) => {
     const statusOrder = {
       unpaid: 1,
       "partially-paid": 2,
@@ -379,6 +359,53 @@ const filteredRescheduled = computed(() => {
   }
   return result;
 });
+
+const paginatedBookings = computed(() => {
+  return filteredBooking.value.slice(first.value, first.value + rows.value);
+});
+
+const paginatedPendings = computed(() => {
+  return filteredPendings.value.slice(
+    firstPending.value,
+    firstPending.value + rows.value
+  );
+});
+
+const paginatedReserved = computed(() => {
+  return filteredReserved.value.slice(
+    firstReserved.value,
+    firstReserved.value + rows.value
+  );
+});
+
+const paginatedCancellation = computed(() => {
+  return filteredPendingCancellation.value.slice(
+    firstPendingCancellation.value,
+    firstPendingCancellation.value + rows.value
+  );
+});
+
+const paginatedCancelled = computed(() => {
+  return filteredCancelled.value.slice(
+    firstCancelled.value,
+    firstCancelled.value + rows.value
+  );
+});
+
+const paginatedCompleted = computed(() => {
+  return filteredCompleted.value.slice(
+    firstCompleted.value,
+    firstCompleted.value + rows.value
+  );
+});
+
+const paginatedRescheduled = computed(() => {
+  return filteredRescheduled.value.slice(
+    firstRescheduled.value,
+    firstRescheduled.value + rows.value
+  );
+});
+
 const hideMenu = ref(false);
 
 const closeMenu = (event) => {
@@ -392,7 +419,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
-  document.addEventListener("click", closeMenu);
+  document.removeEventListener("click", closeMenu);
 });
 </script>
 
@@ -708,8 +735,8 @@ onUnmounted(() => {
                         <T3ButtonBooking
                           :booking="booking"
                           :payment="booking"
+                          :showAction="!showAction"
                           :packageName="getPackageName(booking.packageId)"
-                          @deleteBooking="deleteBookingHandler"
                           @updateStatus="updateBookingHandler"
                           @updateBooking="updateBookingDateHandler"
                           @payPayment="secondPaymentHandler"
@@ -719,15 +746,16 @@ onUnmounted(() => {
                   </tbody>
                 </table>
                 <Paginator
-                  :first="first"
+                  :first="firstPending"
                   :rows="rows"
                   :totalRecords="totalPendings"
                   :rowsPerPageOptions="[5, 10, 20, 30]"
-                  @page="onPageChange"
+                  @page="onPageChangePending"
                   class="rowPagination"
                 />
               </div>
             </TabPanel>
+
             <TabPanel value="1">
               <div class="tableContainer">
                 <table class="dTable border-[#194D1D] dark:border-[#FCFCFC]">
@@ -807,7 +835,6 @@ onUnmounted(() => {
                           :booking="booking"
                           :payment="booking"
                           :packageName="getPackageName(booking.packageId)"
-                          @deleteBooking="deleteBookingHandler"
                           @updateStatus="updateBookingHandler"
                           @updateBooking="updateBookingDateHandler"
                           @payPayment="secondPaymentHandler"
@@ -817,15 +844,16 @@ onUnmounted(() => {
                   </tbody>
                 </table>
                 <Paginator
-                  :first="first"
+                  :first="firstReserved"
                   :rows="rows"
                   :totalRecords="totalReserved"
                   :rowsPerPageOptions="[5, 10, 20, 30]"
-                  @page="onPageChange"
+                  @page="onPageChangeReserved"
                   class="rowPagination"
                 />
               </div>
             </TabPanel>
+
             <TabPanel value="2">
               <div class="tableContainer">
                 <table class="dTable border-[#194D1D] dark:border-[#FCFCFC]">
@@ -905,7 +933,6 @@ onUnmounted(() => {
                           :booking="booking"
                           :payment="booking"
                           :packageName="getPackageName(booking.packageId)"
-                          @deleteBooking="deleteBookingHandler"
                           @updateStatus="updateBookingHandler"
                           @updateBooking="updateBookingDateHandler"
                           @payPayment="secondPaymentHandler"
@@ -915,15 +942,16 @@ onUnmounted(() => {
                   </tbody>
                 </table>
                 <Paginator
-                  :first="first"
+                  :first="firstRescheduled"
                   :rows="rows"
                   :totalRecords="totalRescheduled"
                   :rowsPerPageOptions="[5, 10, 20, 30]"
-                  @page="onPageChange"
+                  @page="onPageChangeRescheduled"
                   class="rowPagination"
                 />
               </div>
             </TabPanel>
+
             <TabPanel value="3">
               <div class="tableContainer">
                 <table class="dTable border-[#194D1D] dark:border-[#FCFCFC]">
@@ -1002,8 +1030,8 @@ onUnmounted(() => {
                         <T3ButtonBooking
                           :booking="booking"
                           :payment="booking"
+                          :showAction="!showAction"
                           :packageName="getPackageName(booking.packageId)"
-                          @deleteBooking="deleteBookingHandler"
                           @updateStatus="updateBookingHandler"
                           @updateBooking="updateBookingDateHandler"
                           @payPayment="secondPaymentHandler"
@@ -1013,15 +1041,16 @@ onUnmounted(() => {
                   </tbody>
                 </table>
                 <Paginator
-                  :first="first"
+                  :first="firstPendingCancellation"
                   :rows="rows"
-                  :totalRecords="totalCancelled"
+                  :totalRecords="totalCancellation"
                   :rowsPerPageOptions="[5, 10, 20, 30]"
-                  @page="onPageChange"
+                  @page="onPageChangeCancellation"
                   class="rowPagination"
                 />
               </div>
             </TabPanel>
+
             <TabPanel value="4">
               <div class="tableContainer">
                 <table class="dTable border-[#194D1D] dark:border-[#FCFCFC]">
@@ -1100,8 +1129,8 @@ onUnmounted(() => {
                         <T3ButtonBooking
                           :booking="booking"
                           :payment="booking"
+                          :showAction="!showAction"
                           :packageName="getPackageName(booking.packageId)"
-                          @deleteBooking="deleteBookingHandler"
                           @updateStatus="updateBookingHandler"
                           @updateBooking="updateBookingDateHandler"
                           @payPayment="secondPaymentHandler"
@@ -1111,15 +1140,16 @@ onUnmounted(() => {
                   </tbody>
                 </table>
                 <Paginator
-                  :first="first"
+                  :first="firstCancelled"
                   :rows="rows"
                   :totalRecords="totalCancelled"
                   :rowsPerPageOptions="[5, 10, 20, 30]"
-                  @page="onPageChange"
+                  @page="onPageChangeCancelled"
                   class="rowPagination"
                 />
               </div>
             </TabPanel>
+
             <TabPanel value="5">
               <div class="tableContainer">
                 <table class="dTable border-[#194D1D] dark:border-[#FCFCFC]">
@@ -1199,7 +1229,6 @@ onUnmounted(() => {
                           :booking="booking"
                           :payment="booking"
                           :packageName="getPackageName(booking.packageId)"
-                          @deleteBooking="deleteBookingHandler"
                           @updateStatus="updateBookingHandler"
                           @updateBooking="updateBookingDateHandler"
                           @payPayment="secondPaymentHandler"
@@ -1209,15 +1238,16 @@ onUnmounted(() => {
                   </tbody>
                 </table>
                 <Paginator
-                  :first="first"
+                  :first="firstCompleted"
                   :rows="rows"
                   :totalRecords="totalCompleted"
                   :rowsPerPageOptions="[5, 10, 20, 30]"
-                  @page="onPageChange"
+                  @page="onPageChangeCompleted"
                   class="rowPagination"
                 />
               </div>
             </TabPanel>
+
             <TabPanel value="6">
               <div class="tableContainer">
                 <table class="dTable border-[#194D1D] dark:border-[#FCFCFC]">
@@ -1297,7 +1327,6 @@ onUnmounted(() => {
                           :booking="booking"
                           :payment="booking"
                           :packageName="getPackageName(booking.packageId)"
-                          @deleteBooking="deleteBookingHandler"
                           @updateStatus="updateBookingHandler"
                           @updateBooking="updateBookingDateHandler"
                           @payPayment="secondPaymentHandler"

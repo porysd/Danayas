@@ -1,5 +1,5 @@
 <script setup>
-import { ref, defineProps, defineEmits, onMounted, computed } from "vue";
+import { ref, defineProps, defineEmits, onMounted, watch, computed } from "vue";
 import Button from "primevue/button";
 import Dialog from "primevue/dialog";
 import Toast from "primevue/toast";
@@ -57,7 +57,7 @@ const newBooking = ref({
   catering: "" || null,
   numberOfGuest: "" || null,
   discountId: "" || null,
-  bookingAddOns: [] || null,
+  catalogAddOnIds: [] || null,
   paymentTerms: "",
 });
 
@@ -213,22 +213,40 @@ const selectedDiscount = computed(() => {
   );
 });
 
-// Not yet working
-// const addOnsTotal = computed(() => {
-//   if (!newBooking.value.bookingAddOns || !catalogStore.catalog) return 0;
-//   return newBooking.value.bookingAddOns.reduce((sum, addOnId) => {
-//     const addOn = catalogStore.catalog.find((c) => c.catalogId === addOnId);
-//     return sum + (addOn?.price || 0);
-//   }, 0);
-// });
+const addOnsTotal = computed(() => {
+  if (!newBooking.value.catalogAddOnIds || !catalogStore.catalog) return 0;
+  return newBooking.value.catalogAddOnIds.reduce((sum, addOnId) => {
+    const addOn = catalogStore.catalog.find(
+      (c) => c.catalogAddOnId === addOnId
+    );
+    return sum + (addOn?.price || 0);
+  }, 0);
+});
 
 const totalAmount = computed(() => {
   const pkgPrice = selectedPackage.value?.price || 0;
   const discount = selectedDiscount.value?.percentage || 0;
   const discounted = pkgPrice - pkgPrice * (discount / 100);
-  // return Math.max(discouted + addOnsTotal.value, 0);
-  return discounted;
+  return Math.max(discounted + addOnsTotal.value, 0);
+  // return discounted;
 });
+
+watch(
+  () => [newBooking.value.checkInDate, newBooking.value.mode],
+  ([checkInDate, mode]) => {
+    if (!checkInDate) {
+      newBooking.value.checkOutDate = "";
+      return;
+    }
+    const date = new Date(checkInDate);
+    if (mode === "night-time" || mode === "whole-day") {
+      date.setDate(date.getDate() + 1);
+      newBooking.value.checkOutDate = formatDate(date);
+    } else {
+      newBooking.value.checkOutDate = checkInDate;
+    }
+  }
+);
 
 const confirmBooking = async () => {
   if (
@@ -243,16 +261,14 @@ const confirmBooking = async () => {
   }
   // Find the discount by ID or name
   const discount = discountStore.discounts.find(
-    (d) =>
-      d.id === newBooking.value.discountId ||
-      d.name.toLowerCase() === newBooking.value.discountId?.toLowerCase()
+    (d) => d.discountId === newBooking.value.discountId
   );
 
   const bookingData = {
     ...newBooking.value,
     packageId: newBooking.value.packageName,
     discountId: discount?.discountId || null,
-    bookingAddOns: newBooking.value.bookingAddOns || [],
+    catalogAddOnIds: newBooking.value.catalogAddOnIds || [],
   };
 
   const paymentPayload = {
@@ -471,9 +487,10 @@ const confirmBooking = async () => {
           <div class="w-[40%]">
             <label>Add Ons:</label>
             <MultiSelect
-              v-model="newBooking.bookingAddOns"
+              v-model="newBooking.catalogAddOnIds"
               :options="catalogStore.catalog"
               optionLabel="itemName"
+              optionValue="catalogAddOnId"
               style="width: 100%"
             />
           </div>

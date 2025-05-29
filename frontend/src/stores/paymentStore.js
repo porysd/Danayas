@@ -158,6 +158,39 @@ export const usePaymentStore = defineStore("payment", {
         throw err;
       }
     },
+
+    // Override Amount PIN is required
+    async overrideAmount(payment) {
+      const auth = useAuthStore();
+      if (!auth.isLoggedIn) return;
+
+      try {
+        const response = await fetch(
+          `http://localhost:3000/payments/${payment.paymentId}/override-tendered`,
+          {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${auth.accessToken}`,
+            },
+            body: JSON.stringify(payment),
+          }
+        );
+
+        if (!response.ok) throw new Error("Failed to override amount");
+
+        const index = this.payments.findIndex(
+          (p) => p.paymentId === payment.paymentId
+        );
+        if (index !== -1) {
+          Object.assign(this.payments[index], payment);
+        }
+
+        await this.fetchPayments();
+      } catch (err) {
+        console.error(err);
+      }
+    },
   },
 });
 

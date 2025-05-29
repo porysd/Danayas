@@ -70,6 +70,12 @@ const updatePaymentHandler = async (payment) => {
   await paymentStore.updatePayment(payment);
 };
 
+// Override Tendered Amount
+const overrideAmountHandler = async (payment) => {
+  console.log(payment);
+  await paymentStore.overrideAmount(payment);
+};
+
 // Payment Details
 const selectedPayment = ref(null);
 const selectedTransaction = ref(null);
@@ -274,6 +280,8 @@ onMounted(() => {
 onUnmounted(() => {
   document.addEventListener("click", closeMenu);
 });
+
+const showAction = ref(false);
 </script>
 
 <template>
@@ -388,7 +396,7 @@ onUnmounted(() => {
                           <Image
                             :src="`http://localhost:3000${payment.imageUrl}`"
                             alt="Image"
-                            width="250"
+                            width="50"
                             preview
                           />
                         </div>
@@ -402,9 +410,11 @@ onUnmounted(() => {
                       <td class="w-[3%]" @click.stop>
                         <T3ButtonTransaction
                           :payment="payment"
+                          :showAction="!showAction"
                           @validPayment="updatePaymentHandler"
                           @invalidPayment="updatePaymentHandler"
                           @voidPayment="updatePaymentHandler"
+                          @refractorPayment="overrideAmountHandler"
                         />
                       </td>
                     </tr>
@@ -472,7 +482,7 @@ onUnmounted(() => {
                           <Image
                             :src="`http://localhost:3000${payment.imageUrl}`"
                             alt="Image"
-                            width="250"
+                            width="50"
                             preview
                           />
                         </div>
@@ -486,6 +496,7 @@ onUnmounted(() => {
                       <td class="w-[3%]" @click.stop>
                         <T3ButtonTransaction
                           :payment="payment"
+                          :showAction="showAction"
                           @validPayment="updatePaymentHandler"
                           @invalidPayment="updatePaymentHandler"
                           @voidPayment="updatePaymentHandler"
@@ -556,7 +567,7 @@ onUnmounted(() => {
                           <Image
                             :src="`http://localhost:3000${payment.imageUrl}`"
                             alt="Image"
-                            width="250"
+                            width="50"
                             preview
                           />
                         </div>
@@ -570,6 +581,7 @@ onUnmounted(() => {
                       <td class="w-[3%]" @click.stop>
                         <T3ButtonTransaction
                           :payment="payment"
+                          :showAction="showAction"
                           @validPayment="updatePaymentHandler"
                           @invalidPayment="updatePaymentHandler"
                           @voidPayment="updatePaymentHandler"
@@ -640,7 +652,7 @@ onUnmounted(() => {
                           <Image
                             :src="`http://localhost:3000${payment.imageUrl}`"
                             alt="Image"
-                            width="250"
+                            width="50"
                             preview
                           />
                         </div>
@@ -654,6 +666,7 @@ onUnmounted(() => {
                       <td class="w-[3%]" @click.stop>
                         <T3ButtonTransaction
                           :payment="payment"
+                          :showAction="showAction"
                           @validPayment="updatePaymentHandler"
                           @invalidPayment="updatePaymentHandler"
                           @voidPayment="updatePaymentHandler"
@@ -687,28 +700,29 @@ onUnmounted(() => {
           <p><strong>Payment ID:</strong> {{ selectedPayment?.paymentId }}</p>
           <p>
             <strong>Transaction ID:</strong>
-            {{ selectedPayment?.transactionId }}
+            {{ selectedPayment?.bookingId }}
           </p>
           <p>
             <strong>Name:</strong>
-            {{ getBookingName(selectedPayment?.transactionId) }}
+            {{ getPaymentName(selectedPayment?.bookingId) }}
           </p>
           <p>
             <strong>Downpayment Amount: </strong
-            >{{ formatPeso(selectedPayment?.downPaymentAmount) }}
+            >{{ formatPeso(selectedPayment?.tenderedAmount) }}
           </p>
           <p>
             <strong>Amount Paid:</strong>
             {{ formatPeso(selectedPayment?.amountPaid) }}
           </p>
-          <p><strong>Mode:</strong> {{ selectedPayment?.mode }}</p>
+          <p><strong>Mode:</strong> {{ selectedPayment?.paymentMethod }}</p>
           <p><strong>Reference: </strong>{{ selectedPayment?.reference }}</p>
           <p>
             <strong>Payment Status: </strong
             >{{ selectedPayment?.paymentStatus }}
           </p>
           <p>
-            <strong>Paid At: </strong>{{ formatDates(selectedPayment?.paidAt) }}
+            <strong>Paid At: </strong
+            >{{ formatDates(selectedPayment?.createdAt) }}
           </p>
           <Divider />
           <button class="closeDetails mt-5 w-[100%]" @click="closeModal">

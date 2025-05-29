@@ -86,12 +86,39 @@ const totalPublic = computed(() => filteredPublic.value.length);
 const totalPendings = computed(() => filteredPendings.value.length);
 const totalReserved = computed(() => filteredReserved.value.length);
 const totalRescheduled = computed(() => filteredRescheduled.value.length);
+const totalCancellation = computed(
+  () => filteredPendingCancellation.value.length
+);
 const totalCancelled = computed(() => filteredCancelled.value.length);
 const totalCompleted = computed(() => filteredCompleted.value.length);
 
 // Booking Details Modal
 const selectedPublic = ref(null);
 const publicDetails = ref(false);
+
+const adultNames = computed(() => {
+  if (!selectedPublic.value || !selectedPublic.value.adultGuestNames) return "";
+  if (Array.isArray(selectedPublic.value.adultGuestNames)) {
+    return selectedPublic.value.adultGuestNames.join(", ");
+  }
+  return String(selectedPublic.value.adultGuestNames)
+    .replace(/^\[|\]$/g, "")
+    .split(",")
+    .map((name) => name.trim())
+    .join(", ");
+});
+
+const kidsNames = computed(() => {
+  if (!selectedPublic.value || !selectedPublic.value.kidGuestNames) return "";
+  if (Array.isArray(selectedPublic.value.kidGuestNames)) {
+    return selectedPublic.value.kidGuestNames.join(", ");
+  }
+  return String(selectedPublic.value.kidGuestNames)
+    .replace(/^\[|\]$/g, "")
+    .split(",")
+    .map((name) => name.trim())
+    .join(", ");
+});
 
 const openPublicDetails = (booking) => {
   selectedPublic.value = booking;
@@ -104,6 +131,12 @@ const closeModal = () => {
 
 // Paginator or pagination of the tables
 const first = ref(0);
+const firstPending = ref(0);
+const firstReserved = ref(0);
+const firstPendingCancellation = ref(0);
+const firstCancelled = ref(0);
+const firstRescheduled = ref(0);
+const firstCompleted = ref(0);
 const rows = ref(10);
 
 const paginatedPublic = computed(() => {
@@ -111,34 +144,73 @@ const paginatedPublic = computed(() => {
 });
 
 const paginatedPendings = computed(() => {
-  return filteredPendings.value.slice(first.value, first.value + rows.value);
+  return filteredPendings.value.slice(
+    firstPending.value,
+    firstPending.value + rows.value
+  );
 });
 
 const paginatedReserved = computed(() => {
-  return filteredReserved.value.slice(first.value, first.value + rows.value);
+  return filteredReserved.value.slice(
+    firstReserved.value,
+    firstReserved.value + rows.value
+  );
 });
 
 const paginatedCancellation = computed(() => {
   return filteredPendingCancellation.value.slice(
-    first.value,
-    first.value + rows.value
+    firstPendingCancellation.value,
+    firstPendingCancellation.value + rows.value
   );
 });
 
 const paginatedCancelled = computed(() => {
-  return filteredCancelled.value.slice(first.value, first.value + rows.value);
+  return filteredCancelled.value.slice(
+    firstCancelled.value,
+    firstCancelled.value + rows.value
+  );
 });
 
 const paginatedCompleted = computed(() => {
-  return filteredCompleted.value.slice(first.value, first.value + rows.value);
+  return filteredCompleted.value.slice(
+    firstCompleted.value,
+    firstCompleted.value + rows.value
+  );
 });
 
 const paginatedRescheduled = computed(() => {
-  return filteredRescheduled.value.slice(first.value, first.value + rows.value);
+  return filteredRescheduled.value.slice(
+    firstRescheduled.value,
+    firstRescheduled.value + rows.value
+  );
 });
 
 const onPageChange = (event) => {
   first.value = event.first;
+  rows.value = event.rows;
+};
+const onPageChangePending = (event) => {
+  firstPending.value = event.first;
+  rows.value = event.rows;
+};
+const onPageChangeReserved = (event) => {
+  firstReserved.value = event.first;
+  rows.value = event.rows;
+};
+const onPageChangeRescheduled = (event) => {
+  firstRescheduled.value = event.first;
+  rows.value = event.rows;
+};
+const onPageChangeCancellation = (event) => {
+  firstPendingCancellation.value = event.first;
+  rows.value = event.rows;
+};
+const onPageChangeCancelled = (event) => {
+  firstCancelled.value = event.first;
+  rows.value = event.rows;
+};
+const onPageChangeCompleted = (event) => {
+  firstCompleted.value = event.first;
   rows.value = event.rows;
 };
 
@@ -210,7 +282,7 @@ const filteredPublic = computed(() => {
   }
 
   // Sort booking
-  result = result.sort((a, b) => {
+  result = [...result].sort((a, b) => {
     const statusOrder = {
       pending: 1,
       reserved: 2,
@@ -222,7 +294,7 @@ const filteredPublic = computed(() => {
     return statusOrder[a.bookStatus] - statusOrder[b.bookStatus];
   });
 
-  result = result.sort((a, b) => {
+  result = [...result].sort((a, b) => {
     const statusOrder = {
       unpaid: 1,
       "partially-paid": 2,
@@ -685,11 +757,11 @@ onUnmounted(() => {
                   </tbody>
                 </table>
                 <Paginator
-                  :first="first"
+                  :first="firstPending"
                   :rows="rows"
                   :totalRecords="totalPendings"
                   :rowsPerPageOptions="[5, 10, 20, 30]"
-                  @page="onPageChange"
+                  @page="onPageChangePending"
                   class="rowPagination"
                 />
               </div>
@@ -783,11 +855,11 @@ onUnmounted(() => {
                   </tbody>
                 </table>
                 <Paginator
-                  :first="first"
+                  :first="firstReserved"
                   :rows="rows"
                   :totalRecords="totalReserved"
                   :rowsPerPageOptions="[5, 10, 20, 30]"
-                  @page="onPageChange"
+                  @page="onPageChangeReserved"
                   class="rowPagination"
                 />
               </div>
@@ -881,11 +953,11 @@ onUnmounted(() => {
                   </tbody>
                 </table>
                 <Paginator
-                  :first="first"
+                  :first="firstRescheduled"
                   :rows="rows"
                   :totalRecords="totalRescheduled"
                   :rowsPerPageOptions="[5, 10, 20, 30]"
-                  @page="onPageChange"
+                  @page="onPageChangeRescheduled"
                   class="rowPagination"
                 />
               </div>
@@ -979,11 +1051,11 @@ onUnmounted(() => {
                   </tbody>
                 </table>
                 <Paginator
-                  :first="first"
+                  :first="firstPendingCancellation"
                   :rows="rows"
-                  :totalRecords="totalCancelled"
+                  :totalRecords="totalCancellation"
                   :rowsPerPageOptions="[5, 10, 20, 30]"
-                  @page="onPageChange"
+                  @page="onPageChangeCancellation"
                   class="rowPagination"
                 />
               </div>
@@ -1077,11 +1149,11 @@ onUnmounted(() => {
                   </tbody>
                 </table>
                 <Paginator
-                  :first="first"
+                  :first="firstCancelled"
                   :rows="rows"
                   :totalRecords="totalCancelled"
                   :rowsPerPageOptions="[5, 10, 20, 30]"
-                  @page="onPageChange"
+                  @page="onPageChangeCancelled"
                   class="rowPagination"
                 />
               </div>
@@ -1175,11 +1247,11 @@ onUnmounted(() => {
                   </tbody>
                 </table>
                 <Paginator
-                  :first="first"
+                  :first="firstCompleted"
                   :rows="rows"
                   :totalRecords="totalCompleted"
                   :rowsPerPageOptions="[5, 10, 20, 30]"
-                  @page="onPageChange"
+                  @page="onPageChangeCompleted"
                   class="rowPagination"
                 />
               </div>
@@ -1317,11 +1389,11 @@ onUnmounted(() => {
           <p><strong>No. of Kids:</strong> {{ selectedPublic?.numKids }}</p>
           <p>
             <strong>Adult Guest Name:</strong>
-            {{ selectedPublic?.adultGuestNames }}
+            {{ adultNames }}
           </p>
           <p>
             <strong>Kid Guest Name:</strong>
-            {{ selectedPublic?.kidGuestNames }}
+            {{ kidsNames }}
           </p>
           <p>
             <strong>Payment Terms:</strong> {{ selectedPublic?.paymentTerms }}

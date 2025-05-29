@@ -53,17 +53,23 @@ export const useAddOnsStore = defineStore("addOns", {
         const auth = useAuthStore();
         if (!auth.isLoggedIn) return;
 
-        const res = await fetch("http://localhost:3000/bookingaddon ", {
+        const format = {
+          bookingId: Number(addOnDetails.bookingId),
+          catalogAddOnId: Number(addOnDetails.catalogAddOnId),
+        };
+
+        const res = await fetch("http://localhost:3000/bookingaddon", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${auth.accessToken}`,
           },
-          body: JSON.stringify(addOnDetails),
+          body: JSON.stringify(format),
         });
 
         if (!res.ok) {
-          console.error("Failed to create addOn data");
+          const errorText = await res.text();
+          console.error("Failed to create addOn data:", errorText);
           return;
         }
 
