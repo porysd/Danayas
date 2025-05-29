@@ -180,6 +180,10 @@ export const CreateBookingDTO = BookingDTO.omit({
       .transform((val) => Number(val))
       .optional()
   ),
+  catalogAddOnIds: z.array(z.number().int()).optional().default([]).openapi({
+    description: "Array of catalog add-on IDs to be included in the booking",
+    example: [1, 2, 3],
+  })
   // hasRescheduled: z.preprocess(
   //   (val) => (val === null ? 0 : val), // Convert null to 0
   //   z
