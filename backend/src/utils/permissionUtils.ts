@@ -52,6 +52,7 @@ const rolePermissions: Record<Roles, Record<string, string[]>> = {
     BOOKING_ADD_ONS: ["read"],
     CATALOG_ADD_ONS: ["read"],
     FAQS: ["read"],
+    AUDIT_LOGS: ["read"],
     TERMS_AND_CONDITION: ["read"],
     PUBLIC_ENTRY: ["create", "read"],
     PUBLIC_ENTRY_RATE: ["read"],

@@ -29,8 +29,6 @@ import { AuditLogsTable } from "../schemas/schema.ts";
 
 const publicEntryRoutes = new OpenAPIHono<AuthContext>();
 
-publicEntryRoutes.use("/*", authMiddleware);
-
 publicEntryRoutes.openapi(
   createRoute({
     tags: ["Public Entry"],
@@ -38,12 +36,12 @@ publicEntryRoutes.openapi(
     method: "get",
     path: "/",
     request: {
-      headers: z.object({
-        Authorization: z.string().openapi({
-          description: "Bearer access token",
-          example: "Bearer <token>",
-        }),
-      }),
+      // headers: z.object({
+      //   Authorization: z.string().openapi({
+      //     description: "Bearer access token",
+      //     example: "Bearer <token>",
+      //   }),
+      // }),
       query: z.object({
         limit: z.coerce.number().nonnegative().min(1).default(20).openapi({
           example: 50,
@@ -77,17 +75,6 @@ publicEntryRoutes.openapi(
   }),
   async (c) => {
     try {
-      const userId = c.get("userId");
-      const hasPermission = await verifyPermission(
-        userId,
-        "PUBLIC_ENTRY",
-        "read"
-      );
-
-      if (!hasPermission) {
-        throw new ForbiddenError("No permission to get public.");
-      }
-
       const { limit, page } = c.req.valid("query");
 
       if (limit < 1 || page < 1) {
@@ -118,6 +105,8 @@ publicEntryRoutes.openapi(
     }
   }
 );
+
+publicEntryRoutes.use("/*", authMiddleware);
 
 publicEntryRoutes.openapi(
   createRoute({

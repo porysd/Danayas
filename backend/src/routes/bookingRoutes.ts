@@ -29,8 +29,6 @@ import { AuditLogsTable } from "../schemas/AuditLog";
 
 const bookingRoutes = new OpenAPIHono<AuthContext>();
 
-bookingRoutes.use("/*", authMiddleware);
-
 bookingRoutes.openapi(
   createRoute({
     tags: ["Bookings"],
@@ -99,6 +97,8 @@ bookingRoutes.openapi(
     }
   }
 );
+
+bookingRoutes.use("/*", authMiddleware);
 
 bookingRoutes.openapi(
   createRoute({
@@ -446,7 +446,7 @@ bookingRoutes.openapi(
       }
 
       if (
-        booking.bookStatus !== "reserved" 
+        booking.bookStatus !== "reserved"
         // &&
         // booking.bookStatus !== "rescheduled"
       ) {
@@ -496,7 +496,7 @@ bookingRoutes.openapi(
         const selectedPackage = await db.query.PackagesTable.findFirst({
           where: eq(PackagesTable.packageId, booking.packageId),
         });
-  
+
         if (!selectedPackage) {
           throw new BadRequestError("Invalid package ID");
         }
@@ -655,7 +655,7 @@ bookingRoutes.openapi(
         ["cancelled", "pending-cancellation", "completed"].includes(
           bookStatus
         ) &&
-        booking.bookStatus !== "reserved" 
+        booking.bookStatus !== "reserved"
         // &&
         // booking.bookStatus !== "rescheduled"
       ) {
