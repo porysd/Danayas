@@ -17,6 +17,8 @@ import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import Dialog from "primevue/dialog";
+import Tag from "primevue/tag";
+import "animate.css";
 
 const bookingStore = useBookingStore();
 const router = useRouter();
@@ -129,9 +131,29 @@ const calendarOptions = ref({
 
 const showMapDialog = ref(false);
 
-const openMapDialog = () => {
-  showMapDialog.value = true;
-};
+onMounted(() => {
+  // Only run if user hasn't opted for reduced motion
+  if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    addAnimation();
+  }
+});
+
+function addAnimation() {
+  const scrollers = document.querySelectorAll(".scroller");
+  scrollers.forEach((scroller) => {
+    scroller.setAttribute("data-animated", true);
+
+    const scrollerInner = scroller.querySelector(".scroller__inner");
+    if (!scrollerInner) return;
+    const scrollerContent = Array.from(scrollerInner.children);
+
+    scrollerContent.forEach((item) => {
+      const duplicatedItem = item.cloneNode(true);
+      duplicatedItem.setAttribute("aria-hidden", true);
+      scrollerInner.appendChild(duplicatedItem);
+    });
+  });
+}
 </script>
 
 <template>
@@ -254,46 +276,74 @@ const openMapDialog = () => {
       </div>
     </div>
 
-    <!-- Spacer to allow scrolling -->
+    <div class="scroller" data-speed="fast">
+      <ul
+        class="tag-list scroller__inner flex flex-row m-auto align-center justify-center align-content gap-[2rem]"
+      >
+        <li class="flex items-center gap-4 min-w-[250px] whitespace-nowrap">
+          <img src="../assets/Fulencious.png" alt="" class="logoImages" />
+          <a href="https://web.facebook.com/FulgenciosCatering"
+            >Fulgencios Catering
+          </a>
+        </li>
+        <li class="flex items-center gap-4 min-w-[250px] whitespace-nowrap">
+          <img src="../assets/AC.png" alt="" class="logoImages" />
+
+          <a href="https://web.facebook.com/profile.php?id=100063801351820"
+            >AC Catering</a
+          >
+        </li>
+        <li class="flex items-center gap-4 min-w-[250px] whitespace-nowrap">
+          <img src="../assets/lightSounds.jpg" alt="" class="logoImages" />
+
+          <a href="https://web.facebook.com/profile.php?id=61572277925983"
+            >Light and Sounds</a
+          >
+        </li>
+        <li class="flex items-center gap-4 min-w-[250px] whitespace-nowrap">
+          <img src="../assets/sweetCakes.jpg" alt="" class="logoImages" />
+          <a href="https://web.facebook.com/dfntlymmy.ph">Sweet and Cakes</a>
+        </li>
+        <li class="flex items-center gap-4 min-w-[250px] whitespace-nowrap">
+          <img src="../assets/photoBooth.jpg" alt="" class="logoImages" />
+
+          <a href="https://web.facebook.com/profile.php?id=100090045882677"
+            >Photography and Photobooth</a
+          >
+        </li>
+      </ul>
+    </div>
+
     <div style="height: 10px"></div>
 
     <div
-      class="textWrap"
+      class="textWrap text-gray-600"
       v-animateonscroll="{
         enterClass:
           'animate-enter fade-in-10 slide-in-from-l-8 animate-duration-1000',
         leaveClass: 'animate-leave fade-out-0',
       }"
     >
-      <p id="p-text" class="text-black" style="font-size: 20px">
-        "Step into the enchanting world of Danayas Resorts Events Venue,
-        <br />
-        where every corner tells a story of simplicity and elegance"
+      <p id="p-text" class="font-semibold" style="font-size: 20px">
+        "Step into the enchanting world of Danayas Resorts Events Venue, where
+        every corner tells a story of simplicity and elegance"
       </p>
     </div>
-    <div style="height: 12x"></div>
 
-    <div
-      class="features-background bg-[#C1F2B0] dark:bg-[#333] !important"
-      v-animateonscroll="{
-        enterClass:
-          'animate-enter fade-in-10 slide-in-from-l-8 animate-duration-1000',
-        leaveClass: 'animate-leave fade-out-0',
-      }"
-    >
+    <div class="features-background !important">
       <div
-        class="featureSection content-center justify-center m-auto flex flex-auto border-xl"
+        class="featureSection flex px-4 content-center align-center justify-center m-auto relative bottom-[-3rem]"
       >
-        <div class="feature-image">
-          <img
-            src="../assets/danayas.jpg"
-            alt="feature1"
-            style="width: 75rem; height: 480px; border-radius: 30px"
-          />
-        </div>
         <div class="text text-black dark:text-white">
+          <Tag severity="success" value="About"></Tag>
+
           <h1
             class="dark:text-white"
+            v-animateonscroll="{
+              enterClass:
+                'animate-enter fade-in-10 slide-in-from-l-8 animate-duration-1000',
+              leaveClass: 'animate-leave fade-out-0',
+            }"
             style="
               font-weight: bold;
               font-family: Libre Baskerville;
@@ -309,10 +359,10 @@ const openMapDialog = () => {
             class="line dark:bg-white"
             style="width: 500px; margin-bottom: 1rem"
           />
-          <p style="font-size: 20px; font-family: 'poppins'">
+          <p style="font-size: 16px; font-family: 'poppins'; width: 400px">
             Danayas Resorts Events Venue offers affordable events packages
             including comfortable guest accommodations, event spaces for
-            weddings. conferences, and celebrations, in a serene, stree-free
+            weddings. conferences, and celebrations, in a serene, stress-free
             environment. With versatile spaces and excellent services, it's the
             perfect choice for hosting memorable occasions.
           </p>
@@ -337,21 +387,88 @@ const openMapDialog = () => {
           >
             Learn more
           </button>
+          <div class="feature-image relative flex gap-10 ml-[230px]">
+            <div class="flex flex-col gap-10">
+              <div>
+                <img
+                  src="../assets/danayas.jpg"
+                  alt="feature1"
+                  class="w-50 h-50 object-cover -mt-20"
+                  v-animateonscroll="{
+                    enterClass:
+                      'animate-enter fade-in-10 zoom-in-50 slide-in-from-t-20 animate-duration-1000',
+                    leaveClass: 'animate-leave fade-out-0',
+                  }"
+                  style="border-radius: 10px; flex-wrap: wrap"
+                />
+              </div>
+              <div>
+                <img
+                  src="../assets/danayas.jpg"
+                  alt="feature1"
+                  class="w-50 h-50 object-cover -mt-0"
+                  v-animateonscroll="{
+                    enterClass:
+                      'animate-enter fade-in-10 zoom-in-50 slide-in-from-t-20 animate-duration-2000',
+                    leaveClass: 'animate-leave fade-out-0',
+                  }"
+                  style="border-radius: 10px; flex-wrap: wrap"
+                />
+              </div>
+            </div>
+
+            <div>
+              <img
+                src="../assets/danayas.jpg"
+                alt="feature1"
+                class="w-90 h-112 object-cover -mt-20"
+                v-animateonscroll="{
+                  enterClass:
+                    'animate-enter fade-in-10 zoom-in-50 slide-in-from-t-20 animate-duration-2000',
+                  leaveClass: 'animate-leave fade-out-0',
+                }"
+                style="border-radius: 10px; flex-wrap: wrap"
+              />
+            </div>
+          </div>
         </div>
       </div>
     </div>
 
-    <div
+    <!-- <div
       class="DiscountBackground"
       v-animateonscroll="{
         enterClass:
-          'animate-enter fade-in-10 slide-in-from-l-8 animate-duration-1000',
+          'animate-enter fade-in-20 slide-in-from-r-15 animate-duration-1000',
         leaveClass: 'animate-leave fade-out-0',
       }"
     >
-      <div class="DiscountSection flex content-center justify-center m-auto">
-        <div class="discount-text mr-180">
-          <h1 id="title">DISCOUNT FOR HOLIDAY AND EVENTS?</h1>
+      <div class="DiscountSection flex content-center justify-center">
+        <div class="relative w-100 h-112 overflow-hidden group">
+          <img
+            src="../assets/danayas_event1.jpg"
+            alt=""
+            class="absolute top-0 left-0 w-full h-full object-cover z-0"
+          />
+
+          <img
+            src="../assets/danayas_event.jpg"
+            alt=""
+            class="absolute top-0 left-0 w-full h-full object-cover z-10 transition-transform duration-500 ease-in-out group-hover:translate-x-50 group-hover:rotate-20"
+          />
+        </div>
+
+        <div class="discount-text ml-100">
+          <h1
+            id="title"
+            v-animateonscroll="{
+              enterClass:
+                'animate-enter fade-in-10 slide-in-from-r-15 animate-duration-1000',
+              leaveClass: 'animate-leave fade-out-0',
+            }"
+          >
+            DISCOUNT FOR HOLIDAY AND EVENTS?
+          </h1>
           <p id="discountText">
             I'm a paragraph. Click here to add your own text and<br />edit me.
             I'm a great place for you to tell a story and let <br />
@@ -359,39 +476,39 @@ const openMapDialog = () => {
           </p>
         </div>
       </div>
-    </div>
-
+    </div> -->
     <section class="DanayasPackages">
       <div class="packageSection content-center justify-center m-auto">
-        <h1
+        <H1
           style="
-            font-size: 60px;
+            font-size: 70px;
             font-weight: Bold;
             text-align: center;
             color: #194d1d;
             text-shadow: 0px 2px 2px rgb(40, 135, 21);
           "
+          >Danayas Packages</H1
         >
-          Danayas Packages
-        </h1>
         <p
           style="
             font-size: 20px;
             font-weight: 400;
             color: black;
             text-align: center;
-            margin-bottom: 2rem;
+            margin-bottom: 20px;
             word-wrap: break-word;
             margin-top: 10px;
           "
         >
-          “Danayas Resorts Events Venue offers flexible options that cater to
-          your unique needs and budget.<br />
-          Enjoy added perks and special promos that make your dream occasion
-          extra ordinary.”
+          “Immerse yourself in the seamless fusion of timeless architecture
+          and<br />
+          modern design, where each home tells a story of its own”
         </p>
-        <div class="SeeAllBtn content-center justify-center m-auto">
-          <button @click="$router.push('/packages')">SEE ALL PACKAGES</button>
+        <div
+          class="SeeAllBtn content-center justify-center m-auto"
+          @click="$router.push('/Packages')"
+        >
+          <button>SEE ALL PACKAGES</button>
         </div>
         <div class="packageComponent">
           <HomePackage />
@@ -402,7 +519,8 @@ const openMapDialog = () => {
     <div
       class="DanayasAddress"
       style="
-        background-color: #c1f2b0;
+        background-color: #82c895;
+
         margin: 0;
         left: 0;
         right: 0;
@@ -517,9 +635,9 @@ const openMapDialog = () => {
   justify-content: center;
   align-items: center;
   align-content: center;
-  width: 100%;
+  width: 95%;
   height: 560px;
-  max-width: 85rem;
+
   aspect-ratio: 16 / 9;
   margin: auto;
   flex-wrap: wrap;
@@ -584,13 +702,6 @@ const openMapDialog = () => {
 .date-picker-wrapper {
   display: flex;
   flex-direction: column;
-}
-
-:deep(.date-picker-wrapper) {
-  .p-datepicker-input {
-    border: none;
-    background-color: #c7e3b6;
-  }
 }
 
 #from,
@@ -703,32 +814,43 @@ const openMapDialog = () => {
 }
 
 .features-background {
-  height: 530px;
-  width: 85rem;
   margin: auto;
-  border-radius: 25px;
+  background-color: #82c895;
+  width: 100%;
+  border: none;
+  height: fit-content;
+  max-height: 650px;
+  box-shadow: 100px 100px 500px #eef9eb inset;
   position: relative;
-  top: -6rem;
-  padding: 20px;
+  margin-bottom: 5rem;
+  overflow: hidden;
 }
 
 .feature-image {
-  margin-top: 10px;
-  margin-left: 5rem;
+  margin-left: 35rem;
+  filter: drop-shadow(0px 0px 4px);
+  position: relative;
+  top: -20rem;
+  display: flex;
+}
+.DanayasImages {
+  filter: blur(1px);
 }
 
 .DiscountBackground {
-  background-color: #c1f2b0;
-  height: 250px;
-  color: #194d1d;
-  margin-bottom: 2rem;
+  background-color: #82c895;
+  box-shadow: 0px 150px 100px #eef9eb inset;
+  padding: 20px;
 }
 
 .discount-text {
-  color: #194d1d;
   line-height: 1.2;
   padding: 4rem;
   width: 687px;
+}
+.discountImages {
+  border-radius: 50%;
+  filter: blur(1px);
 }
 
 .SeeAllBtn {
@@ -771,18 +893,19 @@ h1 {
 }
 
 .textWrap {
-  width: 999px;
-  height: 128px;
+  max-width: 999px;
+  width: 100%;
+  height: auto;
   display: flex;
   justify-content: center;
   align-items: center;
   margin: auto;
   font-family: "Fraunces", serif;
-  font-weight: bold;
-  color: #f1eaea;
   text-align: center;
   line-height: 1.9;
   margin-bottom: 10rem;
+  margin-top: 5rem;
+  padding: 0 1rem;
 }
 
 .text {
@@ -877,7 +1000,73 @@ hr {
 
   .carousel {
     flex-wrap: wrap;
-    justify-content: center;
   }
+}
+.scroller {
+  max-width: 900px;
+  width: 100%;
+  border: solid rgb(44, 170, 49);
+  justify-content: center;
+  align-content: center;
+  margin: auto;
+}
+
+.scroller__inner {
+  padding-block: 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4rem;
+}
+
+.scroller[data-animated="true"] {
+  overflow: hidden;
+  -webkit-mask: linear-gradient(
+    90deg,
+    transparent,
+    white 20%,
+    white 80%,
+    transparent
+  );
+  mask: linear-gradient(90deg, transparent, white 20%, white 80%, transparent);
+}
+
+.scroller[data-animated="true"] .scroller__inner {
+  width: max-content;
+  flex-wrap: nowrap;
+  animation: scroll var(--_animation-duration, 40s)
+    var(--_animation-direction, forwards) linear infinite;
+}
+
+.scroller[data-direction="right"] {
+  --_animation-direction: reverse;
+}
+
+.scroller[data-speed="fast"] {
+  --_animation-duration: 20s;
+}
+
+@keyframes scroll {
+  to {
+    transform: translate(calc(-50% - 0.5rem));
+  }
+}
+
+.tag-list {
+  margin: 0;
+  padding-inline: 0;
+  list-style: none;
+}
+
+.tag-list li {
+  padding: 1rem;
+  background: var(--clr-primary-400);
+  border-radius: 0.5rem;
+  box-shadow: 0 0.5rem 1rem -0.25rem var(--clr-primary-900);
+}
+.logoImages {
+  border-radius: 50%;
+  height: 60px;
+  width: 60px;
+  object-fit: cover;
 }
 </style>
