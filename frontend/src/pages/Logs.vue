@@ -2,36 +2,45 @@
 import { ref, onMounted, onUnmounted, computed } from "vue";
 import NavBar from "../components/NavBar.vue";
 import Footer from "../components/Footer.vue";
-import DatePicker from "primevue/datepicker";
+import Dialog from "primevue/dialog";
 import { useBookingStore } from "../stores/bookingStore";
+import { usePublicEntryStore } from "../stores/publicEntryStore";
 import { useUserStore } from "../stores/userStore";
 import { formatDates } from "../utility/dateFormat";
+import { formatPeso } from "../utility/pesoFormat";
 import { usePackageStore } from "../stores/packageStore";
 import { useAuthStore } from "../stores/authStore";
+import { useRefundStore } from "../stores/refundStore";
 import Tag from "primevue/tag";
+import Button from "primevue/button";
 import Logger from "../components/Logger.vue";
+import { useToast } from "primevue/usetoast";
+const toast = useToast();
 
 const isMenuOpen1 = ref(false);
 const isMenuOpen2 = ref(false);
-const RescheduleModal = ref(false);
-const calendar = ref(null);
-const date = ref(null);
 
 const bookingStore = useBookingStore();
+const publicStore = usePublicEntryStore();
+const refundStore = useRefundStore();
+
 const userStore = useUserStore();
 const packageStore = usePackageStore();
 const authStore = useAuthStore();
 
 const userBookings = ref([]);
-const bookingDone = ref([]);
+const historyBookings = ref([]);
 
 const openMenuBookingId = ref(null);
-const rescheduleBookingId = ref(null);
+const showAcknowledgement = ref(false);
+const pendingRefund = ref(null);
 
 onMounted(async () => {
   await packageStore.fetchAllPackages();
   await packageStore.fetchAllPromos();
   await bookingStore.fetchUserBookings();
+  await publicStore.fetchAllPublic();
+  await refundStore.fetchRefunds();
 
   try {
     const userId = authStore.user?.userId;
@@ -41,25 +50,76 @@ onMounted(async () => {
     }
 
     const fetchedUser = await userStore.getUserById(userId);
-    console.log("Fetched user:", fetchedUser);
 
     if (fetchedUser?.userId) {
       const id = fetchedUser.userId;
-      // Filter bookings for the user based on status
-      userBookings.value = bookingStore.bookings.filter(
+
+      const bookings = bookingStore.bookings.filter(
         (booking) =>
           booking.userId === id &&
-          ["pending", "reserved", "rescheduled"].includes(booking.bookStatus)
+          [
+            "pending",
+            "reserved",
+            "rescheduled",
+            "pending-cancellation",
+          ].includes(booking.bookStatus)
+      );
+      const publics = publicStore.public.filter(
+        (publics) =>
+          publics.userId === id &&
+          [
+            "pending",
+            "reserved",
+            "rescheduled",
+            "pending-cancellation",
+          ].includes(publics.status)
       );
 
-      bookingDone.value = bookingStore.bookings.filter(
+      userBookings.value = [...bookings, ...publics];
+
+      const bookingDone = bookingStore.bookings.filter(
         (booking) =>
           booking.userId === id &&
           ["cancelled", "completed"].includes(booking.bookStatus)
       );
+      const publicDone = publicStore.public.filter((publics) => {
+        publics.userId === id &&
+          ["cancelled", "completed"].includes(publics.status);
+      });
 
-      console.log("User bookings:", userBookings.value);
-      console.log("Booking done:", bookingDone.value);
+      historyBookings.value = [...bookingDone, ...publicDone];
+
+      const allUserBookings = bookingStore.bookings.filter(
+        (booking) => booking.userId === id
+      );
+      const allUserPublics = publicStore.public.filter(
+        (publics) => publics.userId === id
+      );
+
+      const pending = refundStore.refunds.find((refund) => {
+        const linkedEntry =
+          allUserBookings.find(
+            (entry) => entry.bookingId && entry.bookingId === refund.bookingId
+          ) ||
+          allUserPublics.find(
+            (entry) =>
+              entry.publicEntryId &&
+              entry.publicEntryId === refund.publicEntryId
+          );
+        return (
+          linkedEntry &&
+          refund.refundMethod === "gcash" &&
+          refund.refundStatus === "completed" &&
+          (refund.acknowledge === null ||
+            refund.acknowledge === "" ||
+            refund.acknowledge === undefined)
+        );
+      });
+
+      if (pending) {
+        pendingRefund.value = pending;
+        showAcknowledgement.value = true;
+      }
     } else {
       console.error("User ID not found in fetched data.");
     }
@@ -74,6 +134,40 @@ const rescheduleHandler = async (updatedDate) => {
 
 const cancelHandler = async (cancelStatus) => {
   await bookingStore.updateBookingStatus(cancelStatus);
+  // await refundStore.updateRefund(cancelStatus);
+};
+
+const refundHandler = async (acknowledgeValue) => {
+  try {
+    if (!pendingRefund.value) {
+      throw new Error("No pending refund to acknowledge.");
+    }
+    const updatedRefund = {
+      ...pendingRefund.value,
+      acknowledge: acknowledgeValue,
+    };
+
+    await refundStore.updateRefund(updatedRefund);
+    await refundStore.fetchRefunds();
+
+    toast.add({
+      severity: "success",
+      summary: "Acknowledged",
+      detail: `You selected: ${acknowledgeValue}`,
+      life: 3000,
+    });
+
+    showAcknowledgement.value = false;
+    pendingRefund.value = null;
+  } catch (error) {
+    toast.add({
+      severity: "error",
+      summary: "Error",
+      detail: "Failed to update acknowledgement.",
+      life: 3000,
+    });
+    console.error(error);
+  }
 };
 
 const getPackageName = (packageId) => {
@@ -81,6 +175,44 @@ const getPackageName = (packageId) => {
     packageStore.packages.find((p) => p.packageId === packageId) ||
     packageStore.promos.find((p) => p.packageId === packageId);
   return pkg ? pkg.name : "Unknown Package";
+};
+
+const getPackageData = (packageId) => {
+  return (
+    packageStore.packages.find((p) => p.packageId === packageId) ||
+    packageStore.promos.find((p) => p.packageId === packageId) ||
+    null
+  );
+};
+
+const showAction = ref(false);
+
+const handleLoggerClick = (booking) => {
+  if (booking.bookStatus === "pending") {
+    if (toast) {
+      toast.add({
+        severity: "warn",
+        summary: "Not Allowed",
+        detail: "You cannot open actions while booking is pending.",
+        life: 3000,
+      });
+    } else {
+      alert("You cannot open actions while booking is pending.");
+    }
+    showAction.value = false;
+    openMenuBookingId.value = null;
+  } else {
+    showAction.value = true;
+    openMenuBookingId.value = booking.bookingId;
+  }
+};
+
+const selected = ref(null);
+const details = ref(false);
+
+const openDetails = (receipt) => {
+  selected.value = receipt;
+  details.value = true;
 };
 
 const getStatusSeverity = (status) => {
@@ -98,6 +230,15 @@ const getStatusSeverity = (status) => {
     default:
       return "secondary";
   }
+};
+
+const getRefundRemarks = (booking) => {
+  const refund = refundStore.refunds.find(
+    (r) =>
+      (r.bookingId && r.bookingId === booking.bookingId) ||
+      (r.publicEntryId && r.publicEntryId === booking.publicEntryId)
+  );
+  return refund?.remarks || null;
 };
 </script>
 
@@ -127,32 +268,49 @@ const getStatusSeverity = (status) => {
       class="logsBox"
       v-for="booking in userBookings"
       :key="booking.bookingId"
+      @click="openDetails(booking)"
     >
-      <div class="w-full mt-10 text-right">
+      <div class="w-full mt-10 text-right" @click.stop>
         <Logger
           :booking="booking"
+          :refund="booking"
+          :showAction="showAction && openMenuBookingId === booking.bookingId"
+          @click="handleLoggerClick(booking)"
           @rescheduleBooking="rescheduleHandler"
           @cancelBooking="cancelHandler"
         />
       </div>
 
       <div class="information">
-        <p>Package Name: {{ getPackageName(booking.packageId) }}</p>
-
         <p>
-          Date: {{ formatDates(booking.checkInDate) }} to
-          {{ formatDates(booking.checkOutDate) }}
+          <Tag
+            severity="info"
+            :value="booking.bookingId ? 'PRIVATE' : 'PUBLIC'"
+          />
         </p>
         <p>
           Personal Information: {{ booking.firstName }}
           {{ booking.lastName }}
         </p>
+
+        <template v-if="booking.bookingId">
+          <p>
+            Date: {{ formatDates(booking.checkInDate) }} to
+            {{ formatDates(booking.checkOutDate) }}
+          </p></template
+        >
+        <template v-else>
+          <p>Date: {{ formatDates(booking.entryDate) }}</p>
+        </template>
+        <p>Total Amount: {{ formatPeso(booking.totalAmount) }}</p>
       </div>
       <div class="flex justify-end mb-10" style="position: relative">
         <Tag
           class="mb"
-          :severity="getStatusSeverity(booking.bookStatus)"
-          :value="booking.bookStatus"
+          :severity="getStatusSeverity(booking.bookStatus || booking.status)"
+          :value="
+            getRefundRemarks(booking) || booking.bookStatus || booking.status
+          "
         />
       </div>
     </div>
@@ -163,15 +321,16 @@ const getStatusSeverity = (status) => {
   </div>
 
   <div class="w-[70%] m-auto justify-center">
-    <div v-if="userBookings.length > 0"></div>
+    <div v-if="historyBookings.length > 0"></div>
     <div v-else>
       <p class="flex justify-center m-auto">No bookings found for this user.</p>
     </div>
 
     <div
       class="logsBox"
-      v-for="booking in bookingDone"
+      v-for="booking in historyBookings"
       :key="booking.bookingId"
+      @click="openDetails(booking)"
     >
       <div class="w-full mt-10 text-right">
         <!-- <Logger
@@ -182,27 +341,226 @@ const getStatusSeverity = (status) => {
       </div>
 
       <div class="information">
-        c
-        <p>Package Name: {{ getPakageName(booking.packageId) }}</p>
-
         <p>
-          Date: {{ formatDates(booking.checkInDate) }} to
-          {{ formatDates(booking.checkOutDate) }}
+          <Tag
+            severity="info"
+            :value="booking.bookingId ? 'PRIVATE' : 'PUBLIC'"
+          />
         </p>
         <p>
           Personal Information: {{ booking.firstName }}
           {{ booking.lastName }}
         </p>
+
+        <template v-if="booking.bookingId">
+          <p>
+            Date: {{ formatDates(booking.checkInDate) }} to
+            {{ formatDates(booking.checkOutDate) }}
+          </p></template
+        >
+        <template v-else>
+          <p>Date: {{ formatDates(booking.entryDate) }}</p>
+        </template>
+        <p>Total Amount: {{ formatPeso(booking.totalAmount) }}</p>
       </div>
       <div class="flex justify-end mb-10" style="position: relative">
         <Tag
           class="mb"
-          :severity="getStatusSeverity(booking.bookStatus)"
-          :value="booking.bookStatus"
+          :severity="getStatusSeverity(booking.bookStatus || booking.status)"
+          :value="
+            getRefundRemarks(booking) || booking.bookStatus || booking.status
+          "
         />
       </div>
     </div>
   </div>
+
+  <Dialog v-model:visible="details">
+    <div
+      class="flex-col flex justify-center items-center font-medium h-auto w-[100%] mt-5"
+    >
+      <div class="p-5 rounded-lg w-[70rem] h-auto mt-10 mb-10 gap-20">
+        <div class="flex">
+          <div>
+            <img src="../Admin/assets/drevslogo.png" alt="" class="w-40 h-40" />
+          </div>
+
+          <div class="flex flex-col justify-center m-auto text-2xl">
+            <h1
+              class="font-black text-5xl flex align-center justify-center"
+              style="font-style: 'Times New Roman'"
+            >
+              Danayas Resort Events Venue
+            </h1>
+            <h2>#27 Jones St. Extension, Dulong Bayan 2, San Mateo Rizal</h2>
+            <h2 class="text-center">09912166870</h2>
+          </div>
+        </div>
+
+        <div class="flex gap-130 relative">
+          <div class="mb-2 p-2 rounded-sm">
+            <div>
+              <h1 class="font-bold font-[Poppins] mt-[2rem]">BILLED TO:</h1>
+            </div>
+            <div class="">
+              <p>{{ selected?.firstName }} {{ selected?.lastName }}</p>
+            </div>
+            <div class="">
+              <p>
+                {{ selected?.address }}
+              </p>
+            </div>
+          </div>
+          <div class="mb-2 p-2 rounded-sm">
+            <div>
+              <h1 class="font-bold font-[Poppins] mt-[2rem]">INVOICE NO.:</h1>
+            </div>
+            <div class="">
+              <p>DATE:</p>
+            </div>
+          </div>
+        </div>
+
+        <Divider />
+
+        <div class="flex gap-100 relative">
+          <div class="mb-2 p-2 rounded-sm">
+            <div>
+              <h1 class="font-bold font-[Poppins] mt-[2rem]">
+                Guest Information:
+              </h1>
+            </div>
+            <div class="">
+              <p>Name: {{ selected?.firstName }} {{ selected?.lastName }}</p>
+            </div>
+            <div class="">
+              <p>Contact No.: {{ selected?.contactNo }}</p>
+            </div>
+            <div class="">
+              <p>Email Address: {{ selected?.email }}</p>
+            </div>
+            <div class="">
+              <p>Address: {{ selected?.address }}</p>
+            </div>
+          </div>
+          <div class="mb-2 p-2 rounded-sm">
+            <div class="flex gap-2">
+              <p>
+                Date: {{ formatDates(selected?.checkInDate) }} to
+                {{ formatDates(selected?.checkOutDate) }}
+              </p>
+            </div>
+            <div class="flex gap-2">
+              <p>Check-in: {{ formatDates(selected?.checkInDate) }}</p>
+            </div>
+            <div class="flex gap-2">
+              <p>Check-out: {{ formatDates(selected?.checkOutDate) }}</p>
+              <button class=""></button>
+            </div>
+            <div class="">
+              <p>Mode: {{ selected?.mode }}</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex flex-col">
+          <table>
+            <thead>
+              <tr class="">
+                <th>Item</th>
+                <th>REF ID</th>
+                <th>Unit Price</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="">{{ getPackageName(selected?.packageId) }}</td>
+                <td class="text-center">
+                  {{ selected?.packageId }}
+                </td>
+                <td class="text-center">
+                  {{ formatPeso(getPackageData(selected?.packageId)?.price) }}
+                </td>
+                <td class="text-center">
+                  {{ formatPeso(getPackageData(selected?.packageId)?.price) }}
+                </td>
+              </tr>
+            </tbody>
+            <tbody>
+              <tr>
+                <td class="">{{ getPackageName(selected?.packageId) }}</td>
+                <td class="text-center">
+                  {{ selected?.bookingAddOns }}
+                </td>
+                <td class="text-center">
+                  {{ formatPeso(getPackageData(selected?.packageId)?.price) }}
+                </td>
+                <td class="text-center">
+                  {{ formatPeso(getPackageData(selected?.packageId)?.price) }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="w-full justify-items-end">
+            <div class="mt-5 text-right w-[30%] mr-5">
+              <h1>
+                SubTotal:
+                {{ formatPeso(getPackageData(selected?.packageId)?.price) }}
+              </h1>
+              <h1 class="mt-10">TAX(0%) : 0</h1>
+              <Divider />
+              <h1>
+                <strong>Payment Status: </strong
+                >{{
+                  selected?.bookingPaymentStatus ||
+                  selected?.publicPaymentStatus
+                }}
+              </h1>
+              <h1><strong>TOTAL: </strong>{{ formatPeso(selected?.price) }}</h1>
+            </div>
+          </div>
+          <div class="">
+            <h1 class="mb-1 font-12 font-bold">Payment Information</h1>
+            <h2>Account Name: Jason Isaac Mendoza</h2>
+            <h2>Account No.: 09565187842</h2>
+          </div>
+        </div>
+      </div>
+    </div>
+  </Dialog>
+
+  <Dialog
+    v-model:visible="showAcknowledgement"
+    modal
+    header="Acknowledge Refund"
+    :closable="false"
+    :style="{ width: '30vw' }"
+  >
+    <div class="text-center space-y-4">
+      <p>
+        Do you acknowledge that you received the refund with Danaya’s Resort and
+        Events Venue?
+      </p>
+
+      <div class="flex justify-center gap-4">
+        <Button
+          label="Yes"
+          icon="pi pi-check"
+          @click="refundHandler('yes')"
+          severity="success"
+        />
+        <Button
+          label="No"
+          icon="pi pi-times"
+          @click="refundHandler('no')"
+          severity="danger"
+        />
+      </div>
+    </div>
+  </Dialog>
+
   <Footer />
 </template>
 
@@ -273,11 +631,7 @@ textarea {
   align-items: center;
   justify-content: center;
 }
-img {
-  width: 30px;
-  height: 30px;
-  position: static;
-}
+
 .information {
   font-weight: 600;
 
@@ -288,7 +642,7 @@ img {
 .logsBox {
   display: flex;
   flex-direction: column;
-  height: 10rem;
+  height: 13rem;
   justify-content: center;
   margin: auto;
   padding: 2rem;
