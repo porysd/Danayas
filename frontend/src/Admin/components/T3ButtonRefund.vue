@@ -10,6 +10,7 @@ import { formatPeso } from "../../utility/pesoFormat";
 const toast = useToast();
 const showMenu = ref(false);
 const showCompletedModal = ref(false);
+const showRemarksModal = ref(false);
 const showFailedModal = ref(false);
 const formData = ref({});
 
@@ -34,10 +35,15 @@ const openFailedModal = () => {
 const closeModals = () => {
   showCompletedModal.value = false;
   showFailedModal.value = false;
+  showRemarksModal.value = false;
 };
 
 const confirmCompleted = () => {
-  const status = { ...formData.value, refundStatus: "completed" };
+  const status = {
+    ...formData.value,
+    refundStatus: "completed",
+    // remarks: formData.value.remarks || "Refund Completed",
+  };
   emit("completedRefund", status);
   toast.add({
     severity: "success",
@@ -48,15 +54,33 @@ const confirmCompleted = () => {
   closeModals();
 };
 
+const openRemarksModal = () => {
+  formData.value = { ...prop.refund };
+  showRemarksModal.value = true;
+  showMenu.value = false;
+};
+
+const confirmRemarks = () => {
+  const remarks = { ...formData.value, remarks: formData.value.remarks };
+  emit("completedRefund", remarks);
+  toast.add({
+    severity: "success",
+    summary: "Remark sent",
+    detail: "Remarks is sent to the customer.",
+    life: 3000,
+  });
+  closeModals();
+};
+
 const confirmFailed = () => {
   const status = {
     ...formData.value,
     refundStatus: "failed",
-    remarks: formData.value.remarks || "Not applicable",
+    // remarks: formData.value.remarks || "Not applicable",
   };
   emit("failedRefund", status);
   toast.add({
-    severity: "danger",
+    severity: "warn",
     summary: "Refund Failed",
     detail: "The refund has been failed successfully.",
     life: 3000,
@@ -102,6 +126,12 @@ onUnmounted(() => {
         >
           Failed
         </li>
+        <li
+          class="hover:bg-gray-100 dark:hover:bg-gray-700"
+          @click="openRemarksModal"
+        >
+          Remarks
+        </li>
       </ul>
     </div>
   </div>
@@ -126,7 +156,7 @@ onUnmounted(() => {
       <div class="text-left text-base space-y-2">
         <p>
           <strong>Name:</strong>
-          {{ bookingName(refund.bookingId) }}
+          {{ bookingName(refund) }}
         </p>
         <p>
           <strong>Refund Amount: </strong>{{ formatPeso(refund.refundAmount) }}
@@ -186,6 +216,48 @@ onUnmounted(() => {
     </div>
   </Dialog>
 
+  <Dialog v-model:visible="showRemarksModal" modal :style="{ width: '30rem' }">
+    <template #header>
+      <div class="flex flex-col items-center justify-center w-full">
+        <h2 class="text-xl font-bold font-[Poppins]">Refund Payment</h2>
+      </div>
+    </template>
+
+    <div class="space-y-4 font-[Poppins] px-4">
+      <p class="text-center text-lg">
+        Add
+        <strong class="text-red-600">remarks</strong> to this refund payment?
+      </p>
+
+      <div class="text-left text-base space-y-2">
+        <p>
+          <strong>Name:</strong>
+          {{ bookingName(refund) }}
+        </p>
+
+        <label>Remarks:</label>
+        <input class="w-full" v-model="formData.remarks" />
+      </div>
+    </div>
+
+    <div class="flex justify-center gap-2 font-[Poppins] mt-5">
+      <Button
+        type="button"
+        label="Cancel"
+        severity="secondary"
+        @click="closeModals"
+        class="font-bold w-full"
+      />
+      <Button
+        type="button"
+        label="Refund"
+        severity="success"
+        @click="confirmRemarks"
+        class="font-bold w-full"
+      />
+    </div>
+  </Dialog>
+
   <Dialog v-model:visible="showFailedModal" modal :style="{ width: '30rem' }">
     <template #header>
       <div class="flex flex-col items-center justify-center w-full">
@@ -200,6 +272,18 @@ onUnmounted(() => {
       <span class="font-black font-[Poppins]">{{ refund.refundId }}</span
       >?
     </span>
+
+    <div class="space-y-4 font-[Poppins] px-4">
+      <p class="text-center text-lg">
+        Are you sure you want to
+        <strong class="text-green-600">complete</strong> this refund payment?
+      </p>
+
+      <div class="text-left text-base space-y-2">
+        <label>Remarks:</label>
+        <input class="w-full" v-model="formData.remarks" />
+      </div>
+    </div>
 
     <div class="flex justify-center gap-2 font-[Poppins]">
       <Button

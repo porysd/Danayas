@@ -106,6 +106,13 @@ watch(
   }
 );
 
+const onFileSelect = (event) => {
+  const file = event.files[0]; // Get the first selected file
+  if (file) {
+    paymentDetails.value.imageUrl = file; // Update the imageUrl in paymentDetails
+  }
+};
+
 const minDate = new Date();
 
 const disabledDates = computed(() => {

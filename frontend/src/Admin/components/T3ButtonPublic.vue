@@ -13,6 +13,7 @@ import Toast from "primevue/toast";
 import { useToast } from "primevue/usetoast";
 import DatePicker from "primevue/datepicker";
 import Checkbox from "primevue/checkbox";
+import Textarea from "primevue/textarea";
 import { formatPeso } from "../../utility/pesoFormat.js";
 
 const toast = useToast();
@@ -57,29 +58,32 @@ const closeModals = () => {
 };
 
 const confirmStatusUpdate = () => {
-  if (formData.value.status === "cancelled") {
-    if (!formData.value.cancelCategory) {
+  if (
+    formData.value.status === "cancelled" ||
+    formData.value.status === "pending-cancellation"
+  ) {
+    if (!formData.value.cancelCategory || !formData.value.cancelReason) {
       toast.add({
         severity: "error",
         summary: "Error",
-        detail: "Cancel Category is required",
+        detail: "Cancel Category and Cancel Reason is required",
         life: 3000,
       });
       return;
     }
 
-    if (
-      formData.value.cancelCategory === "others" &&
-      !formData.value.cancelReason
-    ) {
-      toast.add({
-        severity: "error",
-        summary: "Error",
-        detail: 'Cancel Reason is required for "Others" category',
-        life: 3000,
-      });
-      return;
-    }
+    // if (
+    //   formData.value.cancelCategory === "others" &&
+    //   !formData.value.cancelReason
+    // ) {
+    //   toast.add({
+    //     severity: "error",
+    //     summary: "Error",
+    //     detail: 'Cancel Reason is required for "Others" category',
+    //     life: 3000,
+    //   });
+    //   return;
+    // }
   }
   console.log("Payload:", formData.value);
   emit("updateStatus", formData.value);
@@ -350,10 +354,16 @@ onUnmounted(() => {
       <label class="block text-lg font-semibold mb-2">Booking Status</label>
       <select v-model="formData.status" class="border p-2 rounded w-full">
         <option value="completed">Completed</option>
+        <option value="pending-cancellation">Pending Cancellation</option>
         <option value="cancelled">Cancelled</option>
       </select>
       <div>
-        <template v-if="formData.status === 'cancelled'">
+        <template
+          v-if="
+            formData.status === 'cancelled' ||
+            formData.status === 'pending-cancellation'
+          "
+        >
           <label>Cancel Category:</label>
           <select
             v-model="formData.cancelCategory"
@@ -363,10 +373,15 @@ onUnmounted(() => {
             <option value="natural-disaster">Natural Disaster</option>
             <option value="others">Others:</option>
           </select>
-          <template v-if="formData.cancelCategory === 'others'">
-            <label>Reason for Cancellation:</label>
-            <input class="w-full" v-model="formData.cancelReason" />
-          </template>
+          <label>Reason for Cancellation:</label>
+          <Textarea
+            class="w-full"
+            v-model="formData.cancelReason"
+            autoResize
+            rows="3"
+            cols="30"
+            placeholder="Please provide a message or link(if natural disaster)"
+          />
         </template>
       </div>
     </div>
