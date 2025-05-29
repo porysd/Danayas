@@ -7,7 +7,7 @@ import {
   UpdateBookingDTO,
 } from "../dto/bookingDTO";
 import { DiscountsTable } from "../schemas/Discounts";
-import { and, eq, ne, sql } from "drizzle-orm";
+import { and, eq, inArray, ne, sql } from "drizzle-orm";
 import { processBookingData } from "../utils/dateHelpers";
 import { PackagesTable } from "../schemas/Packages";
 import { PaymentsTable } from "../schemas/Payment";
@@ -26,6 +26,7 @@ import type { AuthContext } from "../types";
 import { RefundsTable } from "../schemas/Refund";
 import { RefundPaymentsTable } from "../schemas/RefundPayment";
 import { AuditLogsTable } from "../schemas/AuditLog";
+import { BookingAddOnsTable, CatalogAddOnsTable } from "../schemas/schema";
 
 const bookingRoutes = new OpenAPIHono<AuthContext>();
 
@@ -272,7 +273,21 @@ bookingRoutes.openapi(
         }
       }
 
-      const { discountId, packageId } = body;
+      const { discountId, packageId, catalogAddOnIds = [] } = body;
+
+      if (!body.catalogAddOnIds || !Array.isArray(body.catalogAddOnIds)) {
+        throw new BadRequestError("catalogAddOnIds must be a valid array.");
+      }
+
+      const selectedAddOns = await db.query.CatalogAddOnsTable.findMany({
+        where: inArray(CatalogAddOnsTable.catalogAddOnId, body.catalogAddOnIds),
+      });
+
+      const addOnsTotal = selectedAddOns.reduce(
+        (sum, addOn) => sum + addOn.price,
+        0
+      );
+
       // Getting Package Price
       const selectedPackage = await db.query.PackagesTable.findFirst({
         where: eq(PackagesTable.packageId, packageId),
@@ -311,10 +326,9 @@ bookingRoutes.openapi(
         discountPercent = SelectedDiscount.percentage ?? 0;
       }
 
-      const totalAmount =
-        selectedPackage.price -
-        selectedPackage.price * (discountPercent / 100) +
-        additionalGuestFee;
+      const baseAmount = selectedPackage.price + addOnsTotal;
+      const discountAmount = baseAmount * (discountPercent / 100);
+      const totalAmount = baseAmount - discountAmount + additionalGuestFee;
 
       const processedBody = {
         ...processBookingData(body),
@@ -351,6 +365,14 @@ bookingRoutes.openapi(
             .execute()
         )[0];
 
+        for (const addOn of selectedAddOns) {
+          await tx.insert(BookingAddOnsTable).values({
+            bookingId: insertedBooking.bookingId,
+            catalogAddOnId: addOn.catalogAddOnId,
+            price: addOn.price,
+          });
+        }
+
         await tx
           .insert(AuditLogsTable)
           .values({
@@ -358,7 +380,7 @@ bookingRoutes.openapi(
             action: "create",
             tableName: "BOOKING",
             recordId: insertedBooking.bookingId,
-            data: JSON.stringify(BookingDTO.parse(insertedBooking)),
+            data: JSON.stringify(insertedBooking),
             remarks: "Booking created",
             createdAt: new Date().toISOString(),
           })
@@ -446,7 +468,7 @@ bookingRoutes.openapi(
       }
 
       if (
-        booking.bookStatus !== "reserved" 
+        booking.bookStatus !== "reserved"
         // &&
         // booking.bookStatus !== "rescheduled"
       ) {
@@ -496,7 +518,7 @@ bookingRoutes.openapi(
         const selectedPackage = await db.query.PackagesTable.findFirst({
           where: eq(PackagesTable.packageId, booking.packageId),
         });
-  
+
         if (!selectedPackage) {
           throw new BadRequestError("Invalid package ID");
         }
@@ -655,7 +677,7 @@ bookingRoutes.openapi(
         ["cancelled", "pending-cancellation", "completed"].includes(
           bookStatus
         ) &&
-        booking.bookStatus !== "reserved" 
+        booking.bookStatus !== "reserved"
         // &&
         // booking.bookStatus !== "rescheduled"
       ) {
