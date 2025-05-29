@@ -38,12 +38,6 @@ bookingRoutes.openapi(
     method: "get",
     path: "/",
     request: {
-      headers: z.object({
-        Authorization: z.string().openapi({
-          description: "Bearer access token",
-          example: "Bearer <token>",
-        }),
-      }),
       query: z.object({
         limit: z.coerce.number().nonnegative().min(1).default(20).openapi({
           example: 50,
@@ -77,13 +71,6 @@ bookingRoutes.openapi(
   }),
   async (c) => {
     try {
-      const userId = c.get("userId");
-      const hasPermission = await verifyPermission(userId, "BOOKING", "read");
-
-      if (!hasPermission) {
-        throw new ForbiddenError("No permission to get bookings.");
-      }
-
       const { limit, page } = c.req.valid("query");
 
       if (limit < 1 || page < 1) {
@@ -663,6 +650,7 @@ bookingRoutes.openapi(
                 refundMethod: refundMethod,
                 receiveName: receiveName,
                 refundStatus: "pending",
+                refundType: "cancellation",
                 refundReason:
                   cancelCategory.toUpperCase() + ": " + cancelReason,
               })

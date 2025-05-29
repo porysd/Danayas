@@ -19,8 +19,8 @@ export const useBookingStore = defineStore("booking", {
   actions: {
     // Fetch All BOOKINGS
     async fetchUserBookings() {
-      const auth = useAuthStore();
-      if (!auth.isLoggedIn) return;
+      // const auth = useAuthStore();
+      // if (!auth.isLoggedIn) return;
 
       this.bookings = [];
       this.bookingPending = [];
@@ -39,7 +39,7 @@ export const useBookingStore = defineStore("booking", {
           {
             headers: {
               "Content-Type": "application/json",
-              Authorization: `Bearer ${auth.accessToken}`,
+              // Authorization: `Bearer ${auth.accessToken}`,
             },
           }
         );

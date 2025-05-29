@@ -11,6 +11,7 @@ import {
   UsersTable,
   PublicEntryTable,
   AuditLogsTable,
+  RefundsTable,
 } from "../schemas/schema";
 import { desc, and, ne, eq, like, or } from "drizzle-orm";
 import {
@@ -695,7 +696,6 @@ paymentRoutes.openapi(
 
       const updatedPayment = await db.transaction(async (tx) => {
         if (paymentStatus === "valid" && payment.paymentStatus !== "valid") {
-          // TODO: Add process for refunding below 2k on installment and refunding exceeding amount when paid with gcash
           // Process Status in Private Booking
           if (payment.publicEntryId == null) {
             if (payment.bookingId == null) {
@@ -714,15 +714,88 @@ paymentRoutes.openapi(
             const remainingBalance =
               booking.remainingBalance - payment.netPaidAmount;
             const bookingPaymentStatus =
-              remainingBalance === 0 ? "paid" : "partially-paid";
+              Math.max(remainingBalance, 0) === 0 ? "paid" : "partially-paid";
+
+            const isLowAmountRefund =
+              payment.netPaidAmount < 2000 &&
+              booking.amountPaid === 0 &&
+              booking.paymentTerms === "installment";
+
+            if (isLowAmountRefund) {
+              const refund = await tx
+                .insert(RefundsTable)
+                .values({
+                  bookingId: booking.bookingId,
+                  publicEntryId: null,
+                  refundAmount: payment.netPaidAmount,
+                  refundStatus: "pending",
+                  refundReason: "Net paid amount below ₱2000",
+                  refundType: "low-amount",
+                  verifiedBy: userId,
+                  refundMethod: "gcash",
+                  remarks: "Auto refund for low amount",
+                  createdAt: new Date().toISOString(),
+                })
+                .returning()
+                .execute();
+
+              await tx
+                .insert(AuditLogsTable)
+                .values({
+                  userId,
+                  action: "create",
+                  tableName: "REFUND",
+                  recordId: refund[0].refundId,
+                  data: JSON.stringify(refund[0]),
+                  remarks: "Auto refund (netPaidAmount < ₱2000)",
+                  createdAt: new Date().toISOString(),
+                })
+                .execute();
+            }
+
+            if (
+              payment.netPaidAmount > booking.remainingBalance &&
+              !isLowAmountRefund
+            ) {
+              const excess = payment.netPaidAmount - booking.remainingBalance;
+              const refund = await tx
+                .insert(RefundsTable)
+                .values({
+                  bookingId: booking.bookingId,
+                  publicEntryId: null,
+                  refundAmount: excess,
+                  refundStatus: "pending",
+                  refundReason: "Excess netPaidAmount",
+                  refundType: "overpayment",
+                  verifiedBy: userId,
+                  refundMethod: "gcash",
+                  remarks: "Auto refund for overpayment",
+                  createdAt: new Date().toISOString(),
+                })
+                .returning()
+                .execute();
+
+              await tx
+                .insert(AuditLogsTable)
+                .values({
+                  userId,
+                  action: "create",
+                  tableName: "REFUND",
+                  recordId: refund[0].refundId,
+                  data: JSON.stringify(refund[0]),
+                  remarks: "Refund due to overpayment",
+                  createdAt: new Date().toISOString(),
+                })
+                .execute();
+            }
 
             const updatedBooking = await tx
               .update(BookingsTable)
               .set({
                 amountPaid: amountPaid,
-                remainingBalance: remainingBalance,
+                remainingBalance: Math.max(remainingBalance, 0),
                 bookingPaymentStatus: bookingPaymentStatus,
-                bookStatus: "reserved",
+                bookStatus: isLowAmountRefund ? "pending" : "reserved",
               })
               .where(eq(BookingsTable.bookingId, payment.bookingId))
               .returning()
@@ -737,17 +810,15 @@ paymentRoutes.openapi(
                 recordId: payment.bookingId,
                 data: JSON.stringify({
                   amountPaid: amountPaid,
-                  remainingBalance: remainingBalance,
+                  remainingBalance: Math.max(remainingBalance, 0),
                   bookingPaymentStatus: bookingPaymentStatus,
-                  bookStatus: "reserved",
+                  bookStatus: isLowAmountRefund ? "pending" : "reserved",
                 }),
                 remarks: "Updated booking due to payment verification",
                 createdAt: new Date().toISOString(),
               })
               .execute();
           }
-
-          // TODO: Add process for refunding below 2k on installment and refunding exceeding amount when paid with gcash
           // Process Status in Public Entry
           if (payment.bookingId == null) {
             if (payment.publicEntryId == null) {
@@ -766,17 +837,88 @@ paymentRoutes.openapi(
               publics.remainingBalance - payment.netPaidAmount;
 
             const publicPaymentStatus =
-              remainingBalance === 0 ? "paid" : "partially-paid";
+              Math.max(remainingBalance, 0) === 0 ? "paid" : "partially-paid";
 
-            const updatePublic = await tx
+            const isLowAmountRefund =
+              payment.netPaidAmount < 2000 &&
+              publics.amountPaid === 0 &&
+              publics.paymentTerms === "installment";
+
+            if (isLowAmountRefund) {
+              const refund = await tx
+                .insert(RefundsTable)
+                .values({
+                  bookingId: null,
+                  publicEntryId: publics.publicEntryId,
+                  refundAmount: payment.netPaidAmount,
+                  refundStatus: "pending",
+                  refundReason: "Net paid amount below ₱2000",
+                  refundType: "low-amount",
+                  refundMethod: "gcash",
+                  remarks: "Auto refund for low amount",
+                  createdAt: new Date().toISOString(),
+                })
+                .returning()
+                .execute();
+
+              await tx
+                .insert(AuditLogsTable)
+                .values({
+                  userId,
+                  action: "create",
+                  tableName: "REFUND",
+                  recordId: refund[0].refundId,
+                  data: JSON.stringify(refund[0]),
+                  remarks: "Auto refund (netPaidAmount < ₱2000)",
+                  createdAt: new Date().toISOString(),
+                })
+                .execute();
+            }
+
+            if (
+              payment.netPaidAmount > publics.remainingBalance &&
+              !isLowAmountRefund
+            ) {
+              const excess = payment.netPaidAmount - publics.remainingBalance;
+              const refund = await tx
+                .insert(RefundsTable)
+                .values({
+                  bookingId: null,
+                  publicEntryId: publics.publicEntryId,
+                  refundAmount: excess,
+                  refundStatus: "pending",
+                  refundReason: "Excess netPaidAmount",
+                  refundType: "overpayment",
+                  refundMethod: "gcash",
+                  remarks: "Auto refund for overpayment",
+                  createdAt: new Date().toISOString(),
+                })
+                .returning()
+                .execute();
+
+              await tx
+                .insert(AuditLogsTable)
+                .values({
+                  userId,
+                  action: "create",
+                  tableName: "REFUND",
+                  recordId: refund[0].refundId,
+                  data: JSON.stringify(refund[0]),
+                  remarks: "Refund due to overpayment",
+                  createdAt: new Date().toISOString(),
+                })
+                .execute();
+            }
+
+            const updatedPublic = await tx
               .update(PublicEntryTable)
               .set({
                 amountPaid: amountPaid,
-                remainingBalance: remainingBalance,
+                remainingBalance: Math.max(remainingBalance, 0),
                 publicPaymentStatus: publicPaymentStatus,
-                status: "reserved",
+                status: isLowAmountRefund ? "pending" : "reserved",
               })
-              .where(eq(PublicEntryTable.publicEntryId, payment.publicEntryId))
+              .where(eq(PublicEntryTable.publicEntryId, publics.publicEntryId))
               .returning()
               .execute();
 
@@ -789,9 +931,9 @@ paymentRoutes.openapi(
                 recordId: payment.publicEntryId,
                 data: JSON.stringify({
                   amountPaid: amountPaid,
-                  remainingBalance: remainingBalance,
+                  remainingBalance: Math.max(remainingBalance, 0),
                   publicPaymentStatus: publicPaymentStatus,
-                  status: "reserved",
+                  status: isLowAmountRefund ? "pending" : "reserved",
                 }),
                 remarks: "Updated public entry due to payment verification",
                 createdAt: new Date().toISOString(),
@@ -1054,9 +1196,7 @@ paymentRoutes.openapi(
       );
 
       if (!hasPermission) {
-        throw new ForbiddenError(
-          `Not authorized to override tendered amount.`
-        );
+        throw new ForbiddenError(`Not authorized to override tendered amount.`);
       }
 
       const paymentId = Number(c.req.param("id"));
@@ -1099,17 +1239,16 @@ paymentRoutes.openapi(
           "Associated booking or public entry not found."
         );
       }
-      const changeAmount =  Math.max(tenderedAmount - contextData.remainingBalance, 0)
 
       const updated = await db.transaction(async (tx) => {
         const updatedPayment = (
           await tx
             .update(PaymentsTable)
-            .set({ tenderedAmount: tenderedAmount,
+            .set({
+              tenderedAmount: tenderedAmount,
               remarks: remarks,
-              changeAmount: changeAmount,
-              netPaidAmount: tenderedAmount - changeAmount
-             })
+              netPaidAmount: tenderedAmount,
+            })
             .where(eq(PaymentsTable.paymentId, paymentId))
             .returning()
             .execute()
