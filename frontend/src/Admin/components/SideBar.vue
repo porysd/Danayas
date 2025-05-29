@@ -1,7 +1,10 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import { useRouter, useRoute } from "vue-router";
+import { useAuthStore } from "../../stores/authStore";
 
+const authStore = useAuthStore();
+const role = computed(() => authStore.user?.role || "guest");
 const isContentOpen = ref(false);
 const isBookingOpen = ref(false);
 const route = useRoute();
@@ -11,6 +14,7 @@ const bookingRoutes = [
   "/admin/private-booking",
   // "/admin/walk-in-booking",
   "/admin/public-booking",
+  "/admin/blocked-dates",
 ];
 
 const currentBookingRoute = computed(() => bookingRoutes.includes(route.path));
@@ -144,6 +148,7 @@ const toggleContentMenu = () => {
         Refund Management</router-link
       >
       <router-link
+        v-if="role !== 'staff'"
         to="/admin/reports"
         class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
         active-class="active-route"
@@ -161,6 +166,7 @@ const toggleContentMenu = () => {
       > -->
 
       <router-link
+        v-if="role !== 'staff'"
         to="/admin/customer-management"
         class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
         active-class="active-route"
@@ -169,6 +175,7 @@ const toggleContentMenu = () => {
         Customer Management</router-link
       >
       <router-link
+        v-if="role !== 'staff'"
         to="/admin/employee-management"
         class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
         active-class="active-route"
@@ -177,6 +184,7 @@ const toggleContentMenu = () => {
         Employee Management</router-link
       >
       <router-link
+        v-if="role !== 'staff'"
         to="/admin/packages-and-promos"
         class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
         active-class="active-route"
@@ -185,6 +193,7 @@ const toggleContentMenu = () => {
         Packages and Promos</router-link
       >
       <router-link
+        v-if="role !== 'staff'"
         to="/admin/public-rates"
         class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
         active-class="active-route"
@@ -193,6 +202,7 @@ const toggleContentMenu = () => {
         Public Rates</router-link
       >
       <router-link
+        v-if="role !== 'staff'"
         to="/admin/discount-and-add-ons"
         class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
         active-class="active-route"
@@ -202,6 +212,7 @@ const toggleContentMenu = () => {
       >
 
       <button
+        v-if="role !== 'staff'"
         class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
         @click="toggleContentMenu"
       >
@@ -214,7 +225,11 @@ const toggleContentMenu = () => {
         ></span>
       </button>
 
-      <div v-show="isContentOpen" class="flex flex-col space-y-2 w-full pl-6">
+      <div
+        v-if="role !== 'staff'"
+        v-show="isContentOpen"
+        class="flex flex-col space-y-2 w-full pl-6"
+      >
         <router-link
           to="/admin/homepage"
           class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
@@ -274,12 +289,13 @@ const toggleContentMenu = () => {
       </div>
 
       <router-link
+        v-if="role !== 'staff'"
         to="/admin/audit-logs"
         class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
         active-class="active-route"
       >
         <i class="pi pi-clipboard mr-2"></i>
-        Audit Logs</router-link
+        Logs</router-link
       >
 
       <!--<router-link

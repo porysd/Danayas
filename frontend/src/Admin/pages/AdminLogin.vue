@@ -40,7 +40,16 @@ const login = async () => {
     console.log("Login response data:", data);
     if (response.ok) {
       const { accessToken, refreshToken, user } = data;
-      // TODO: add roles
+
+      if (user.role === "customer") {
+        loginStatus.value = "error";
+        errorMessage.value = "Access Denied: Customers cannot log in here.";
+        setTimeout(() => {
+          showModal.value = false;
+        }, 1500);
+        return;
+      }
+
       authStore.setUser(user);
       console.log("User data:", authStore.user);
       authStore.setAccessToken(accessToken);
