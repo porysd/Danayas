@@ -215,12 +215,12 @@ export const useBookingStore = defineStore("booking", {
       }
 
       const updatedBooking = await res.json();
+      const bookingData = updatedBooking.updatedBooking || updatedBooking;
       const index = this.bookings.findIndex(
-        (b) => b.bookingId === updatedBooking.bookingId
+        (b) => b.bookingId === bookingData.bookingId
       );
       if (index !== -1) {
-        this.bookings[index].checkInDate = updatedBooking.checkInDate;
-        this.bookings[index].checkOutDate = updatedBooking.checkOutDate;
+        this.bookings[index] = { ...this.bookings[index], ...bookingData };
       }
       await this.fetchUserBookings();
     },
