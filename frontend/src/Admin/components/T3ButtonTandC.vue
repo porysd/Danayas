@@ -12,53 +12,46 @@ const toast = useToast();
 const showMenu = ref(false);
 const showEditModal = ref(false);
 const showDeleteModal = ref(false);
-// const showDisableModal = ref(false);
 const formData = ref({});
 
-const props = defineProps(["packageT"]);
-const emit = defineEmits(["updatePromo", "deletePackage"]);
+const props = defineProps(["faq"]);
+const emit = defineEmits(["updateFAQ", "deleteFAQ"]);
 
 const openEditModal = () => {
-  formData.value = { ...props.packageT };
+  formData.value = { ...props.faq };
   showEditModal.value = true;
   showMenu.value = false;
 };
 
 const openDeleteModal = () => {
-  formData.value = { ...props.packageT };
+  formData.value = { ...props.faq };
   showDeleteModal.value = true;
   showMenu.value = false;
 };
 
-// const openDisableModal = () => {
-//   formData.value = { ...props.packageT };
-//   showDisableModal.value = true;
-//   showMenu.value = false;
-// };
-
 const closeModals = () => {
   showEditModal.value = false;
   showDeleteModal.value = false;
-  // showDisableModal.value = false;
 };
 
-const confirmEditPackage = () => {
-  emit("updatePromo", formData.value);
+const confirmEditFAQs = () => {
+  console.log("Updated FAQ Data:", formData.value);
+  emit("updateFAQ", formData.value);
   toast.add({
     severity: "success",
-    summary: "Updated Package",
-    detail: "Successfully Updated Package",
+    summary: "Updated T&C",
+    detail: "Successfully Updated T&C",
     life: 3000,
   });
   closeModals();
 };
 
-const confirmDeletePackage = () => {
-  emit("deletePackage", formData.value);
+const confirmDeleteFAQs = () => {
+  emit("deleteFAQ", formData.value);
   toast.add({
     severity: "success",
-    summary: "Deleted Package",
-    detail: "Successfully Deleted Package",
+    summary: "Deleted T&C",
+    detail: "Successfully Deleted T&C",
     life: 3000,
   });
   closeModals();
@@ -104,74 +97,26 @@ onUnmounted(() => {
         </li>
       </ul>
     </div>
+
     <Dialog v-model:visible="showEditModal" modal :style="{ width: '25rem' }">
       <template #header>
         <div class="flex flex-col items-center justify-center w-full">
-          <h2 class="text-2xl font-bold font-[Poppins]">EDIT PROMO:</h2>
+          <h2 class="text-2xl font-bold font-[Poppins]">
+            EDIT TERMS AND CONDITION:
+          </h2>
         </div>
       </template>
 
       <div class="packageDetails">
         <div class="addPack flex flex-col justify-center m-auto content-center">
           <div class="addPackInput">
-            <label>Name:</label>
-            <input v-model="formData.name" placeholder="Package Name" />
-          </div>
-          <div class="addPackInput">
-            <label>Price:</label>
-            <input v-model="formData.price" placeholder="Price" />
-          </div>
-          <div class="addPackInput">
-            <label>Description:</label>
+            <label>Content:</label>
             <Textarea
-              v-model="formData.inclusion"
+              v-model="formData.content"
               autoResize
-              rows="3"
+              rows="5"
               cols="30"
-              placeholder="Inclusion"
             />
-          </div>
-          <div class="addPackInput">
-            <label>Max Pax:</label>
-            <input
-              v-model.number="formData.maxPax"
-              placeholder="Price"
-              type="number"
-            />
-          </div>
-          <div class="addPackInput">
-            <label>Status:</label>
-            <select v-model="formData.status" class="border p-2 rounded w-full">
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </select>
-          </div>
-          <div class="addPackInput">
-            <label>Mode:</label>
-            <select v-model="formData.mode" class="border p-2 rounded w-full">
-              <option value="day-time">Day Time</option>
-              <option value="night-time">Night Time</option>
-              <option value="whole-day">Whole Day</option>
-            </select>
-          </div>
-          <div class="addPackInput">
-            <label>Image URL:</label>
-            <FileUpload
-              ref="fileupload"
-              mode="basic"
-              name="demo[]"
-              url="/api/upload"
-              accept="image/*"
-              :maxFileSize="1000000"
-            />
-          </div>
-          <div class="addPackInput">
-            <label>Promo Start:</label>
-            <input v-model="formData.promoStart" placeholder="Start" />
-          </div>
-          <div class="addPackInput">
-            <label>Promo End:</label>
-            <input v-model="formData.promoEnd" placeholder="End" />
           </div>
         </div>
       </div>
@@ -188,7 +133,7 @@ onUnmounted(() => {
           type="button"
           label="Save"
           severity="primary"
-          @click="confirmEditPackage"
+          @click="confirmEditFAQs"
           class="font-bold w-full"
         />
       </div>
@@ -197,7 +142,7 @@ onUnmounted(() => {
     <Dialog v-model:visible="showDeleteModal" modal :style="{ width: '30rem' }">
       <template #header>
         <div class="flex flex-col items-center justify-center w-full">
-          <h2 class="text-xl font-bold font-[Poppins]">Delete Package</h2>
+          <h2 class="text-xl font-bold font-[Poppins]">Delete FAQs</h2>
         </div>
       </template>
 
@@ -205,8 +150,8 @@ onUnmounted(() => {
         class="text-lg text-surface-700 dark:text-surface-400 block mb-8 text-center font-[Poppins]"
       >
         Are you sure you want to
-        <strong class="text-red-500">DELETE</strong> this Package:
-        <span class="font-black font-[Poppins]">{{ packageT.name }}</span
+        <strong class="text-red-500">DELETE</strong> this FAQs:
+        <span class="font-black font-[Poppins]"> {{ faq.question }}</span
         >?
       </span>
 
@@ -222,7 +167,7 @@ onUnmounted(() => {
           type="button"
           label="Delete"
           severity="danger"
-          @click="confirmDeletePackage"
+          @click="confirmDeleteFAQs"
           class="font-bold w-full"
         />
       </div>

@@ -1,8 +1,8 @@
 <script setup>
 import { ref, onMounted, computed } from "vue";
 import SearchBar from "../components/SearchBar.vue";
-import T3ButtonEmployee from "../components/T3ButtonEmployee.vue";
-import AddButtonEmployee from "../components/AddButtonEmployee.vue";
+import T3ButtonTandC from "../components/T3ButtonTandC.vue";
+import AddButtonTandC from "../components/AddButtonTandC.vue";
 import SideBar from "../components/SideBar.vue";
 import Tag from "primevue/tag";
 import Notification from "../components/Notification.vue";
@@ -20,6 +20,18 @@ onMounted(() => {
 });
 
 const totalTerms = computed(() => filteredTerms.length);
+
+const addFAQsHandler = async (termsData) => {
+  await termsStore.addTerms(termsData);
+};
+
+const updateFAQHandler = async (termsData) => {
+  await termsStore.updateTerms(termsData); // Call the store's update method
+};
+
+const deleteFAQHandler = async (termsData) => {
+  await termsStore.deleteTerms(termsData);
+};
 
 //FAQs Details
 const selectedTerm = ref(null);
@@ -81,7 +93,11 @@ const filteredTerms = computed(() => {
       <div class="searchB">
         <SearchBar class="sBar" v-model="searchQuery" />
         <div class="empBtns">
-          <AddButtonEmployee class="addBtn" data="Terms and Conditions" />
+          <AddButtonTandC
+            class="addBtn"
+            data="Terms and Conditions"
+            @addFAQs="addFAQsHandler"
+          />
         </div>
       </div>
 
@@ -108,7 +124,11 @@ const filteredTerms = computed(() => {
               </td>
               <td class="w-[5%]">{{ formatDates(term.createdAt) }}</td>
               <td class="w-[3%]" @click.stop>
-                <T3ButtonEmployee :employee="employee" />
+                <T3ButtonTandC
+                  :faq="term"
+                  @updateFAQ="updateFAQHandler"
+                  @deleteFAQ="deleteFAQHandler"
+                />
               </td>
             </tr>
           </tbody>

@@ -86,7 +86,8 @@ const packageDetails = ref({
   status: "",
   mode: "",
   imageUrl: "null",
-  isPromo: true,
+  maxPax: "",
+  isPromo: false,
   promoStart: "",
   promoEnd: "",
 });
@@ -147,6 +148,14 @@ const onFileSelect = (event) => {
               rows="3"
               cols="30"
               placeholder="Inclusion"
+            />
+          </div>
+          <div class="addPackInput">
+            <label>Max Pax:</label>
+            <input
+              v-model.number="formData.maxPax"
+              placeholder="Price"
+              type="number"
             />
           </div>
           <div class="addPackInput">

@@ -250,12 +250,12 @@ const addBookingHandler = async (newBooking, paymentDetails) => {
 const stepOneBtn = (activateCallback) => {
   console.log("isLoggedIn", authStore.isLoggedIn);
   const { checkInDate, checkOutDate, mode } = newBooking.value;
-  // if (!checkInDate || !checkOutDate || !mode || !authStore.isLoggedIn) {
-  //   alert("Please fill up all fields or Login or SignUp first");
-  // } else {
-  //   activateCallback("2");
-  // }
-  activateCallback("2");
+  if (!checkInDate || !checkOutDate || !mode || !authStore.isLoggedIn) {
+    alert("Please fill up all fields or Login or SignUp first");
+  } else {
+    activateCallback("2");
+  }
+  // activateCallback("2");
 };
 
 watch(
@@ -431,7 +431,7 @@ const stepTwoBtn = (activateCallback) => {
   } else {
     activateCallback("3");
   }
-  activateCallback("3");
+  //activateCallback("3");
 };
 
 //STEP 3

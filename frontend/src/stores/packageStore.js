@@ -131,6 +131,41 @@ export const usePackageStore = defineStore("package", {
         console.error("Error adding package:", error);
       }
     },
+
+    async updatePackage(updatedPromo) {
+      const auth = useAuthStore();
+      if (!auth.isLoggedIn) return;
+
+      const updatePackage = {
+        ...updatedPromo,
+        isPromo: false,
+        price: updatedPromo.price ? Number(updatedPromo.price) : null,
+        maxPax: updatedPromo.maxPax ? Number(updatedPromo.maxPax) : null,
+      };
+
+      try {
+        const response = await fetch(
+          `http://localhost:3000/packages/${updatedPromo.packageId}`,
+          {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${auth.accessToken}`,
+            },
+            body: JSON.stringify(updatePackage),
+          }
+        );
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Failed to edit package: ${errorText}`);
+        }
+
+        await this.fetchAllPackages();
+      } catch (error) {
+        console.error("Error editing package:", error);
+      }
+    },
     // Update a PROMO
     async updatePromo(updatedPromo) {
       const auth = useAuthStore();
@@ -140,6 +175,7 @@ export const usePackageStore = defineStore("package", {
         ...updatedPromo,
         isPromo: true,
         price: updatedPromo.price ? Number(updatedPromo.price) : null,
+        maxPax: updatedPromo.maxPax ? Number(updatedPromo.maxPax) : null,
       };
 
       try {
