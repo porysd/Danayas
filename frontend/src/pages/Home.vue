@@ -12,6 +12,8 @@ import Reviews from "../components/Reviews.vue";
 import NavBar from "../components/NavBar.vue";
 import Footer from "../components/Footer.vue";
 import { useBookingStore } from "../stores/bookingStore";
+import { usePublicEntryStore } from "../stores/publicEntryStore.js";
+import { useBlockedStore } from "../stores/blockedDateStore.js";
 import FullCalendar from "@fullcalendar/vue3";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
@@ -21,10 +23,14 @@ import Tag from "primevue/tag";
 import "animate.css";
 
 const bookingStore = useBookingStore();
+const publicStore = usePublicEntryStore();
+const blockStore = useBlockedStore();
 const router = useRouter();
 
 onMounted(() => {
   bookingStore.fetchUserBookings();
+  publicStore.fetchAllPublic();
+  blockStore.fetchAllBlocked();
 });
 
 // Image and Text on first section
@@ -70,46 +76,181 @@ const handleCheckAvailability = () => {
   }
 };
 
-// Process booking days
-const mapBookingsToEvents = (bookings) => {
-  return bookings
-    .filter((b) => b.bookStatus === "reserved")
-    .map((b) => {
-      let backgroundColor;
-      let textColor = "white";
-      let title;
+const minDate = new Date();
 
-      switch (b.mode) {
-        case "day-time": // if someone booked day status it will give Night Available
-          backgroundColor = "#6A5ACD";
-          textColor = "white";
-          title = "Night Available";
-          break;
-        case "night-time": // if someone booked night status it will give Day Available
-          backgroundColor = "#FFD580";
-          textColor = "black";
-          title = "Day Available";
-          break;
-        case "whole-day": // if someone booked day and night status and whole day status it will give Fully Booked
-          backgroundColor = "#FF6B6B";
-          title = "Fully Booked";
-          break;
-        default:
-          backgroundColor = "#90EE94";
-          textColor = "#15803D";
-      }
+const disabledDates = computed(() => {
+  const disabled = [];
 
-      return {
-        id: b.bookingId,
-        title: title,
-        start: b.checkInDate,
-        // end: b.checkOutDate,
-        backgroundColor: backgroundColor,
-        textColor: textColor,
-        allDay: true,
-      };
-    });
+  // Blocked dates
+  blockStore.blocked.forEach((bd) => {
+    if (bd.blockedDates) {
+      disabled.push(new Date(bd.blockedDates));
+    }
+  });
+
+  // Fully booked dates (whole-day or both day-time and night-time)
+  const bookingsByDate = {};
+  bookingStore.bookings.forEach((b) => {
+    if (b.checkInDate) {
+      const date = b.checkInDate;
+      if (!bookingsByDate[date]) bookingsByDate[date] = new Set();
+      bookingsByDate[date].add(b.mode);
+    }
+  });
+  publicStore.public.forEach((p) => {
+    if (p.entryDate) {
+      const date = p.entryDate;
+      if (!bookingsByDate[date]) bookingsByDate[date] = new Set();
+      bookingsByDate[date].add(p.mode);
+    }
+  });
+
+  Object.entries(bookingsByDate).forEach(([date, modes]) => {
+    if (
+      modes.has("whole-day") ||
+      (modes.has("day-time") && modes.has("night-time"))
+    ) {
+      disabled.push(new Date(date));
+    }
+  });
+
+  return disabled;
+});
+
+const getBookingStyle = (slotDate) => {
+  const formattedDate = `${slotDate.year}-${String(slotDate.month + 1).padStart(
+    2,
+    "0"
+  )}-${String(slotDate.day).padStart(2, "0")}`;
+
+  // Collect all booking/public modes for the date
+  const mode = new Set();
+  let isBlocked = false;
+
+  bookingStore.bookings.forEach((b) => {
+    if (b.checkInDate === formattedDate) {
+      mode.add(b.mode);
+    }
+  });
+
+  publicStore.public.forEach((p) => {
+    if (p.entryDate === formattedDate) {
+      mode.add(p.mode);
+    }
+  });
+
+  if (blockStore.blocked.some((bd) => bd.blockedDates === formattedDate)) {
+    isBlocked = true;
+  }
+
+  let backgroundColor, color;
+
+  if (isBlocked) {
+    backgroundColor = "grey";
+    color = "white";
+  } else if (
+    mode.has("whole-day") ||
+    (mode.has("day-time") && mode.has("night-time"))
+  ) {
+    backgroundColor = "#FF6B6B"; // Fully Booked
+    color = "white";
+  } else if (mode.has("day-time")) {
+    backgroundColor = "#6A5ACD"; // Night Available
+    color = "white";
+  } else if (mode.has("night-time")) {
+    backgroundColor = "#FFD580"; // Day Available
+    color = "black";
+  } else {
+  }
+
+  return {
+    backgroundColor,
+    color,
+    width: "40px",
+    height: "40px",
+    display: "inline-flex",
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: "10rem",
+    fontSize: "17px",
+  };
 };
+
+// FOR CALENDAR
+const mapBookingsToEvents = (
+  bookings = [],
+  publics = [],
+  blockedDates = []
+) => {
+  const eventByDate = {};
+
+  bookings.forEach((b) => {
+    const date = b.checkInDate;
+    if (!eventByDate[date])
+      eventByDate[date] = { modes: new Set(), blocked: null };
+    eventByDate[date].modes.add(b.mode);
+  });
+
+  publics.forEach((p) => {
+    const date = p.entryDate;
+    if (!eventByDate[date])
+      eventByDate[date] = { modes: new Set(), blocked: null };
+    eventByDate[date].modes.add(p.mode);
+  });
+
+  blockedDates.forEach((bd) => {
+    const date = bd.blockedDates;
+    if (!eventByDate[date])
+      eventByDate[date] = { modes: new Set(), blocked: null };
+    eventByDate[date].blocked = bd;
+  });
+
+  return Object.entries(eventByDate).map(([date, { modes, blocked }]) => {
+    let backgroundColor, textColor, title;
+
+    if (blocked) {
+      backgroundColor = "grey";
+      textColor = "white";
+      title = "Not Available";
+    } else if (
+      modes.has("whole-day") ||
+      (modes.has("day-time") && modes.has("night-time"))
+    ) {
+      backgroundColor = "#FF6B6B";
+      textColor = "white";
+      title = "Fully Booked";
+    } else if (modes.has("day-time")) {
+      backgroundColor = "#6A5ACD";
+      textColor = "white";
+      title = "Night Available";
+    } else if (modes.has("night-time")) {
+      backgroundColor = "#FFD580";
+      textColor = "black";
+      title = "Day Available";
+    } else {
+      backgroundColor = "#90EE90";
+      textColor = "#15803D";
+      title = "Available";
+    }
+
+    return {
+      id: `summary-${date}`,
+      title,
+      start: date,
+      backgroundColor,
+      textColor,
+      allDay: true,
+    };
+  });
+};
+
+const calendarEvents = computed(() => {
+  return mapBookingsToEvents(
+    bookingStore.bookings,
+    publicStore.public,
+    blockStore.blocked
+  );
+});
 
 const calendarOptions = ref({
   plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin],
@@ -124,7 +265,7 @@ const calendarOptions = ref({
   selectMirror: false,
   dayMaxEvents: false,
   weekends: true,
-  events: computed(() => mapBookingsToEvents(bookingStore.bookings)),
+  events: calendarEvents,
 });
 
 // MAp Dialog
@@ -181,7 +322,20 @@ function addAnimation() {
               iconDisplay="input"
               class="custom-date-picker"
               style="width: 20rem; height: 3rem; border: none"
-            />
+              :minDate="minDate"
+              :disabledDates="disabledDates"
+            >
+              <template #date="slotProps">
+                <span>
+                  <strong
+                    :style="getBookingStyle(slotProps.date)"
+                    class="date-box"
+                  >
+                    {{ slotProps.date.day }}
+                  </strong>
+                </span>
+              </template></DatePicker
+            >
             <label for="checkIn">CHECK-IN</label>
           </FloatLabel>
         </div>
@@ -196,7 +350,20 @@ function addAnimation() {
               iconDisplay="input"
               class="custom-date-picker"
               style="width: 20rem; height: 3rem; border: none"
-            />
+              :minDate="minDate"
+              :disabledDates="disabledDates"
+            >
+              <template #date="slotProps">
+                <span>
+                  <strong
+                    :style="getBookingStyle(slotProps.date)"
+                    class="date-box"
+                  >
+                    {{ slotProps.date.day }}
+                  </strong>
+                </span>
+              </template></DatePicker
+            >
             <label for="checkOut">CHECKOUT</label>
           </FloatLabel>
         </div>
