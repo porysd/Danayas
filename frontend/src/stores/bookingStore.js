@@ -32,6 +32,7 @@ export const useBookingStore = defineStore("booking", {
       const limit = 50;
       let page = 1;
       let hasMoreData = true;
+      let allBookings = [];
 
       while (hasMoreData) {
         const res = await fetch(
@@ -52,30 +53,8 @@ export const useBookingStore = defineStore("booking", {
         const bookingData = await res.json();
 
         if (bookingData.items && bookingData.items.length > 0) {
-          this.bookings = bookingData.items;
-
-          this.bookingPending = bookingData.items.filter(
-            (booking) => booking.bookStatus === "pending"
-          );
-          this.bookingCancelled = bookingData.items.filter(
-            (booking) => booking.bookStatus === "cancelled"
-          );
-          this.bookingReserved = bookingData.items.filter(
-            (booking) => booking.bookStatus === "reserved"
-          );
-          this.bookingCancellation = bookingData.items.filter(
-            (booking) => booking.bookStatus === "pending-cancellation"
-          );
-          this.bookingCompleted = bookingData.items.filter(
-            (booking) => booking.bookStatus === "completed"
-          );
-          this.bookingRescheduled = bookingData.items.filter(
-            (booking) => booking.bookStatus === "rescheduled"
-          );
-
-          this.bookings = bookingData.items.reverse();
-
-          if (bookingData.length === 0) {
+          allBookings = allBookings.concat(bookingData.items);
+          if (bookingData.items.length < limit) {
             hasMoreData = false;
           } else {
             page++;
@@ -84,6 +63,27 @@ export const useBookingStore = defineStore("booking", {
           hasMoreData = false;
         }
       }
+
+      // After the loop, update all arrays ONCE
+      this.bookings = allBookings.reverse();
+      this.bookingPending = allBookings.filter(
+        (b) => b.bookStatus === "pending"
+      );
+      this.bookingReserved = allBookings.filter(
+        (b) => b.bookStatus === "reserved"
+      );
+      this.bookingRescheduled = allBookings.filter(
+        (b) => b.bookStatus === "rescheduled"
+      );
+      this.bookingCancellation = allBookings.filter(
+        (b) => b.bookStatus === "pending-cancellation"
+      );
+      this.bookingCancelled = allBookings.filter(
+        (b) => b.bookStatus === "cancelled"
+      );
+      this.bookingCompleted = allBookings.filter(
+        (b) => b.bookStatus === "completed"
+      );
     },
 
     // Add BOOKING
@@ -143,14 +143,20 @@ export const useBookingStore = defineStore("booking", {
       const auth = useAuthStore();
       if (!auth.isLoggedIn) return;
 
-      const body = { bookStatus: booking.bookStatus };
+      const body = {
+        bookStatus: booking.bookStatus,
+        cancelCategory: booking.cancelCategory,
+        cancelReason: booking.cancelReason,
+        refundMethod: booking.refundMethod,
+        receiveName: booking.receiveName,
+      };
 
-      if (booking.bookStatus === "cancelled") {
-        body.cancelCategory = booking.cancelCategory;
-        if (booking.cancelCategory === "others") {
-          body.cancelReason = booking.cancelReason;
-        }
-      }
+      // if (booking.bookStatus === "cancelled") {
+      //   body.cancelCategory = booking.cancelCategory;
+      //   if (booking.cancelCategory === "others") {
+      //     body.cancelReason = booking.cancelReason;
+      //   }
+      // }
 
       const res = await fetch(
         `http://localhost:3000/bookings/${booking.bookingId}/status`,

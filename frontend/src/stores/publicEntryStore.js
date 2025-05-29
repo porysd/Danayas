@@ -17,8 +17,8 @@ export const usePublicEntryStore = defineStore("publicEntry", {
     // Fetch all Public Entries
     async fetchAllPublic() {
       try {
-        const auth = useAuthStore();
-        if (!auth.isLoggedIn) return;
+        // const auth = useAuthStore();
+        // if (!auth.isLoggedIn) return;
 
         this.public = [];
         this.pending = [];
@@ -30,6 +30,7 @@ export const usePublicEntryStore = defineStore("publicEntry", {
         const limit = 50;
         let page = 1;
         let hasMoreData = true;
+        let allPublics = [];
 
         while (hasMoreData) {
           const res = await fetch(
@@ -37,7 +38,7 @@ export const usePublicEntryStore = defineStore("publicEntry", {
             {
               headers: {
                 "Content-Type": "application/json",
-                Authorization: `Bearer ${auth.accessToken}`,
+                //Authorization: `Bearer ${auth.accessToken}`,
               },
             }
           );
@@ -50,28 +51,8 @@ export const usePublicEntryStore = defineStore("publicEntry", {
           const publicData = await res.json();
 
           if (publicData.items && publicData.items.length > 0) {
-            this.public = publicData.items;
-
-            this.pending = publicData.items.filter(
-              (publics) => publics.status === "pending"
-            );
-            this.reserved = publicData.items.filter(
-              (publics) => publics.status === "reserved"
-            );
-            this.rescheduled = publicData.items.filter(
-              (publics) => publics.status === "rescheduled"
-            );
-            this.pendingCancellation = publicData.items.filter(
-              (publics) => publics.status === "pending-cancellation "
-            );
-            this.cancelled = publicData.items.filter(
-              (publics) => publics.status === "cancelled"
-            );
-            this.completed = publicData.items.filter(
-              (publics) => publics.status === "completed"
-            );
-
-            if (publicData.length === 0) {
+            allPublics = allPublics.concat(publicData.items);
+            if (publicData.items.length < limit) {
               hasMoreData = false;
             } else {
               page++;
@@ -80,6 +61,17 @@ export const usePublicEntryStore = defineStore("publicEntry", {
             hasMoreData = false;
           }
         }
+
+        // After the loop, update all arrays ONCE
+        this.public = allPublics.reverse();
+        this.pending = allPublics.filter((p) => p.status === "pending");
+        this.reserved = allPublics.filter((p) => p.status === "reserved");
+        this.rescheduled = allPublics.filter((p) => p.status === "rescheduled");
+        this.pendingCancellation = allPublics.filter(
+          (p) => p.status === "pending-cancellation"
+        );
+        this.cancelled = allPublics.filter((p) => p.status === "cancelled");
+        this.completed = allPublics.filter((p) => p.status === "completed");
       } catch (e) {
         console.error("Error fetching public entries", e);
       }
@@ -173,14 +165,18 @@ export const usePublicEntryStore = defineStore("publicEntry", {
       const auth = useAuthStore();
       if (!auth.isLoggedIn) return;
 
-      const body = { status: publics.status };
+      const body = {
+        status: publics.status,
+        cancelCategory: publics.cancelCategory,
+        cancelreason: publics.cancelReason,
+      };
 
-      if (publics.status === "cancelled") {
-        body.cancelCategory = publics.cancelCategory;
-        if (publics.cancelCategory === "others") {
-          body.cancelReason = publics.cancelReason;
-        }
-      }
+      // if (publics.status === "cancelled") {
+      //   body.cancelCategory = publics.cancelCategory;
+      //   if (publics.cancelCategory === "others") {
+      //     body.cancelReason = publics.cancelReason;
+      //   }
+      // }
 
       const res = await fetch(
         `http://localhost:3000/publicentry/${publics.publicEntryId}/status`,
