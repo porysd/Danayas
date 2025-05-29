@@ -1,11 +1,18 @@
 <script setup>
-import { onMounted, defineEmits } from "vue";
+import { onMounted, defineEmits, ref } from "vue";
 import { usePackageStore } from "../stores/packageStore.js";
-import router from "../router/index.js";
 import { formatPeso } from "../utility/pesoFormat.js";
-import { PackagesTable } from "../../../backend/src/schemas/Packages.js";
+import Message from "primevue/message";
+import { useAuthStore } from "../stores/authStore.js";
+import { useRouter } from "vue-router";
+import booking from "../pages/booking.vue";
 
 const packageStore = usePackageStore();
+const authStore = useAuthStore();
+const router = useRouter();
+
+const packageSelected = ref(null);
+
 onMounted(() => {
   packageStore.fetchAllPackages();
   packageStore.fetchAllPromos();
@@ -14,6 +21,18 @@ const emit = defineEmits(["availPackage"]);
 
 const avail = (pkg) => {
   emit("availPackage", pkg);
+};
+
+const packageAvail = (pkg) => {
+  console.log("isLoggedIn", authStore.isLoggedIn);
+  if (authStore.isLoggedIn) {
+    router.push({
+      path: "/booking",
+      query: { packageId: pkg.packageId },
+    });
+  } else {
+    alert("Please SignUp or Login First");
+  }
 };
 </script>
 
@@ -46,7 +65,7 @@ const avail = (pkg) => {
       </ul>
 
       <div class="detailsBtn">
-        <button id="detailsBtn" @click="avail(pkg)">AVAIL</button>
+        <button id="detailsBtn" @click="packageAvail(pkg)">AVAIL</button>
       </div>
     </div>
   </div>
@@ -78,7 +97,7 @@ const avail = (pkg) => {
       </div>
 
       <div class="detailsBtn">
-        <button id="detailsBtn">AVAIL</button>
+        <button id="detailsBtn" @click="packageAvail(pkg)">AVAIL</button>
       </div>
     </div>
   </div>
