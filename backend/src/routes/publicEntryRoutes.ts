@@ -679,6 +679,7 @@ publicEntryRoutes.openapi(
                 refundMethod: refundMethod,
                 receiveName: receiveName,
                 refundStatus: "pending",
+                refundType: "cancellation",
                 refundReason:
                   cancelCategory.toUpperCase() + ": " + cancelReason,
               })

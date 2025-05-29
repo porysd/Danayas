@@ -35,6 +35,10 @@ export const RefundDTO = z.object({
     description: "Reason for the refund",
     example: "Booking cancelled",
   }),
+  refundType: z.enum(["low-amount", "overpayment", "cancellation"]).openapi({
+    description: "Type of refund",
+    example: "cancellation",
+  }),
   senderName: z.string().nullable().optional().openapi({
     description: "Name of the sender for the refund",
     example: "John Doe",
@@ -74,6 +78,7 @@ export const CreateRefundDTO = RefundDTO.pick({
   verifiedBy: true,
   refundMethod: true,
   refundReason: true,
+  refundType: true,
   senderName: true,
   reference: true,
   imageUrl: true,
