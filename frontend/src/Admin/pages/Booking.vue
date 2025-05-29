@@ -53,11 +53,6 @@ const addBookingHandler = async (booking, paymentDetails) => {
     console.log("Full payment details being sent:", fullPaymentDetails);
     await paymentStore.addPayment(fullPaymentDetails);
 
-    if (booking.bookingAddOns?.length > 0) {
-      for (const catalogAddOnId of booking.bookingAddOns) {
-        await addOnStore.addAddOn({ bookingId, catalogAddOnId });
-      }
-    }
 
     toast.add({
       severity: "success",

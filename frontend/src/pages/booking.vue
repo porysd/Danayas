@@ -97,7 +97,7 @@ onMounted(async () => {
       selectedmode.value = pkg.mode;
       newBooking.value.packageId = pkg.packageId;
       newBooking.value.mode = pkg.mode;
-      newBooking.value.bookingAddOns = pkg.bookingAddOns;
+      newBooking.value.catalogAddOnIds = pkg.catalogAddOnIds;
 
       // if (newBooking.value.mode !== pkg.mode) {
       //   toast.add({
@@ -141,7 +141,7 @@ const newBooking = ref({
   catering: "" || null,
   numberOfGuest: "" || null,
   discountId: "" || null,
-  bookingAddOns: [] || null,
+  catalogAddOnIds: [] || null,
   paymentTerms: "",
 });
 
@@ -174,8 +174,8 @@ const selectedDiscount = computed(() => {
 });
 
 const addOnsTotal = computed(() => {
-  if (!newBooking.value.bookingAddOns || !catalogStore.catalog) return 0;
-  return newBooking.value.bookingAddOns.reduce((sum, addOnId) => {
+  if (!newBooking.value.catalogAddOnIds || !catalogStore.catalog) return 0;
+  return newBooking.value.catalogAddOnIds.reduce((sum, addOnId) => {
     const addOn = catalogStore.catalog.find(
       (c) => c.catalogAddOnId === addOnId
     );
@@ -227,8 +227,8 @@ const addBookingHandler = async (newBooking, paymentDetails) => {
     };
     await paymentStore.addPayment(formatPayment);
 
-    if (newBooking.bookingAddOns?.length > 0) {
-      for (const catalogAddOnId of booking.bookingAddOns) {
+    if (newBooking.catalogAddOnIds?.length > 0) {
+      for (const catalogAddOnId of newBooking.catalogAddOnIds) {
         await addOnStore.addAddOn({ bookingId, catalogAddOnId });
       }
     }
@@ -279,7 +279,7 @@ watch(
 watch(
   [
     selectedPackage,
-    () => newBooking.value.bookingAddOns,
+    () => newBooking.value.catalogAddOnIds,
     () => catalogStore.catalog,
   ],
   ([pkg, addOns, catalog]) => {
@@ -933,13 +933,13 @@ const calendarOptions = ref({
                         <span
                           v-if="
                             catalogStore.catalog.length &&
-                            newBooking.bookingAddOns &&
-                            newBooking.bookingAddOns.length
+                            newBooking.catalogAddOnIds &&
+                            newBooking.catalogAddOnIds.length
                           "
                         >
                           <ul>
                             <li
-                              v-for="addOnId in newBooking.bookingAddOns"
+                              v-for="addOnId in newBooking.catalogAddOnIds"
                               :key="addOnId"
                             >
                               {{
@@ -1086,7 +1086,7 @@ const calendarOptions = ref({
                       <div class="">
                         <label>Add Ons:</label>
                         <MultiSelect
-                          v-model="newBooking.bookingAddOns"
+                          v-model="newBooking.catalogAddOnIds"
                           :options="catalogStore.catalog"
                           optionLabel="itemName"
                           optionValue="catalogAddOnId"
@@ -1210,13 +1210,13 @@ const calendarOptions = ref({
                         <span
                           v-if="
                             catalogStore.catalog.length &&
-                            newBooking.bookingAddOns &&
-                            newBooking.bookingAddOns.length
+                            newBooking.catalogAddOnIds &&
+                            newBooking.catalogAddOnIds.length
                           "
                         >
                           <ul>
                             <li
-                              v-for="addOnId in newBooking.bookingAddOns"
+                              v-for="addOnId in newBooking.catalogAddOnIds"
                               :key="addOnId"
                             >
                               {{
@@ -1372,7 +1372,7 @@ const calendarOptions = ref({
                     <Divider />
 
                     <h1
-                      class="font-bold font-[16px] font-[Poppins] mt-[2rem] text-center"
+                      class="font-bold text-[16px] font-[Poppins] mt-[2rem] text-center"
                     >
                       Booking Summary
                     </h1>
@@ -1426,7 +1426,7 @@ const calendarOptions = ref({
                         <p>Mode: {{ newBooking.mode }}</p>
                       </div>
 
-                      <p>
+                      <!-- <p>
                         Add Ons:
                         <span
                           v-if="
@@ -1460,7 +1460,7 @@ const calendarOptions = ref({
                           </ul>
                         </span>
                         <span v-else> None </span>
-                      </p>
+                      </p> -->
                     </div>
                   </div>
                 </div>

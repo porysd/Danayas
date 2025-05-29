@@ -455,6 +455,7 @@ const calendarOptions = ref({
         placeholder="Please provide a message or link(if natural disaster)"
       />
 
+      <label>Refund Method:</label>
       <select
         v-model="cancelData.refundMethod"
         class="border p-2 rounded w-full"

@@ -16,6 +16,7 @@
     "@fullcalendar/vue3": "^6.1.17",
     "@primeuix/themes": "^1.0.0",
     "@tailwindcss/vite": "^4.0.15",
+    "animate.css": "^4.1.1",
     "axios": "^1.7.9",
     "chart.js": "^4.4.8",
     "jspdf": "^3.0.1",

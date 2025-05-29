@@ -8,7 +8,7 @@ import Button from "primevue/button";
 
 const authStore = useAuthStore();
 const router = useRouter();
-const emit = defineEmits(["sign-up-success"]);
+const emit = defineEmits(["sign-up-success", "showLogin"]);
 
 const newUser = ref({
   username: "",
@@ -71,7 +71,9 @@ const SignUp = async () => {
 };
 
 const addNewUser = async (userData) => {
-  const { confirmPass, ...signUpUser } = userData;
+  const { confirmPass, ...data } = userData;
+
+  console.log("Sign up payload:", data);
 
   showModal.value = true;
   loading.value = true;
@@ -81,7 +83,7 @@ const addNewUser = async (userData) => {
     const response = await fetch("http://localhost:3000/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(signUpUser),
+      body: JSON.stringify(data),
     });
 
     const result = await response.json();
@@ -90,12 +92,6 @@ const addNewUser = async (userData) => {
       throw new Error(result?.message || "Failed to sign up");
     }
 
-    const { accessToken, refreshToken } = result;
-
-    authStore.setAccessToken(accessToken);
-    authStore.setRefreshToken(refreshToken);
-
-    localStorage.setItem("token", accessToken);
     signUpStatus.value = "success";
 
     emit("sign-up-success");
@@ -103,7 +99,7 @@ const addNewUser = async (userData) => {
     setTimeout(() => {
       showModal.value = false;
       showSignUpModal.value = false;
-      router.replace("/");
+      emit("showLogin");
     }, 1500);
   } catch (err) {
     console.error("Sign-up error:", err);
@@ -252,7 +248,7 @@ const CloseSignUpModal = () => {
                 <InputText
                   type="password"
                   class="packEvents"
-                  v-model="newUser.password"
+                  v-model="newUser.confirmPass"
                   placeholder="Password"
                 />
               </div>

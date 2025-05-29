@@ -22,12 +22,22 @@ const isLoggedIn = computed(() => authStore.isLoggedIn);
 const showMenu = ref(false);
 const hideMenu = ref(null);
 
+const showLoginModal = ref(false);
+const showSignUpModal = ref(false);
+
 function handleSignUpSuccess() {
-  isLoggedIn.value = true; // User is logged in after sign up
+  showSignUpModal.value = false;
+  showLoginModal.value = true;
 }
 
 function handleLoginSuccess() {
-  isLoggedIn.value = true; // User is logged in after login
+  showSignUpModal.value = true;
+  showLoginModal.value = false;
+}
+
+function openLoginModal() {
+  showLoginModal.value = true;
+  showSignUpModal.value = false;
 }
 
 const logout = () => {

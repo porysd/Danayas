@@ -15,6 +15,9 @@ import Tag from "primevue/tag";
 import Button from "primevue/button";
 import Logger from "../components/Logger.vue";
 import { useToast } from "primevue/usetoast";
+import { useCatalogStore } from "../stores/catalogStore";
+const catalogStore = useCatalogStore();
+
 const toast = useToast();
 
 const isMenuOpen1 = ref(false);
@@ -41,6 +44,7 @@ onMounted(async () => {
   await bookingStore.fetchUserBookings();
   await publicStore.fetchAllPublic();
   await refundStore.fetchRefunds();
+  await catalogStore.fetchAllCatalogs();
 
   try {
     const userId = authStore.user?.userId;
@@ -127,6 +131,19 @@ onMounted(async () => {
     console.error("Error fetching data:", error);
   }
 });
+
+const getAddOns = (booking) => {
+  // Try both possible property names
+  const addOnIds = booking.catalogAddOnIds || booking.bookingAddOns || [];
+  if (!Array.isArray(addOnIds) || !addOnIds.length) return [];
+  return addOnIds
+    .map((id) =>
+      catalogStore.catalog.find(
+        (addOn) => String(addOn.catalogAddOnId) === String(id)
+      )
+    )
+    .filter(Boolean);
+};
 
 const rescheduleHandler = async (updatedDate) => {
   await bookingStore.updateBookingDates(updatedDate);
@@ -487,18 +504,15 @@ const getRefundRemarks = (booking) => {
                 </td>
               </tr>
             </tbody>
-            <tbody>
-              <tr>
-                <td class="">{{ getPackageName(selected?.packageId) }}</td>
-                <td class="text-center">
-                  {{ selected?.bookingAddOns }}
-                </td>
-                <td class="text-center">
-                  {{ formatPeso(getPackageData(selected?.packageId)?.price) }}
-                </td>
-                <td class="text-center">
-                  {{ formatPeso(getPackageData(selected?.packageId)?.price) }}
-                </td>
+            <tbody v-if="getAddOns(selected).length">
+              <tr
+                v-for="addOn in getAddOns(selected)"
+                :key="addOn.catalogAddOnId"
+              >
+                <td>{{ addOn.itemName }}</td>
+                <td class="text-center">{{ addOn.catalogAddOnId }}</td>
+                <td class="text-center">{{ formatPeso(addOn.price) }}</td>
+                <td class="text-center">{{ formatPeso(addOn.price) }}</td>
               </tr>
             </tbody>
           </table>
@@ -507,7 +521,7 @@ const getRefundRemarks = (booking) => {
             <div class="mt-5 text-right w-[30%] mr-5">
               <h1>
                 SubTotal:
-                {{ formatPeso(getPackageData(selected?.packageId)?.price) }}
+                {{ formatPeso(selected?.totalAmount) }}
               </h1>
               <h1 class="mt-10">TAX(0%) : 0</h1>
               <Divider />
@@ -518,7 +532,9 @@ const getRefundRemarks = (booking) => {
                   selected?.publicPaymentStatus
                 }}
               </h1>
-              <h1><strong>TOTAL: </strong>{{ formatPeso(selected?.price) }}</h1>
+              <h1>
+                <strong>TOTAL: </strong>{{ formatPeso(selected?.totalAmount) }}
+              </h1>
             </div>
           </div>
           <div class="">

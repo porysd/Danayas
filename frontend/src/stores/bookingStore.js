@@ -192,8 +192,11 @@ export const useBookingStore = defineStore("booking", {
       const auth = useAuthStore();
       if (!auth.isLoggedIn) return;
 
-      const formattedCheckInDate = formatDate(booking.checkInDate);
-      const formattedCheckOutDate = formatDate(booking.checkOutDate);
+      const body = {
+        checkInDate: formatDate(booking.checkInDate),
+        checkOutDate: formatDate(booking.checkOutDate),
+        numberOfGuest: Number(booking.numberOfGuest),
+      };
 
       const res = await fetch(
         `http://localhost:3000/bookings/${booking.bookingId}`,
@@ -203,10 +206,7 @@ export const useBookingStore = defineStore("booking", {
             "Content-Type": "application/json",
             Authorization: `Bearer ${auth.accessToken}`,
           },
-          body: JSON.stringify({
-            checkInDate: formattedCheckInDate,
-            checkOutDate: formattedCheckOutDate,
-          }),
+          body: JSON.stringify(body),
         }
       );
 
