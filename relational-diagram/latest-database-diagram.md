@@ -1,4 +1,5 @@
 ```mermaid
+
 erDiagram
 
     ROLE {
@@ -46,7 +47,7 @@ erDiagram
         double totalRate "Auto-computed"
         string adultGuestNames "JSON"
         string kidGuestNames "JSON"
-        string status "enum: [active, completed]"
+        string status "enum: [pending, reserved, rescheduled, pending-cancellation, cancelled, completed]"
         timestamp createdAt
     }
 
@@ -100,7 +101,6 @@ erDiagram
         int paymentId PK
         int bookingId FK
         int publicEntryId FK
-        string category "enum: [booking, public-entry]"
         string paymentMethod "enum: [gcash, cash]"
         double tenderedAmount
         double changeAmount
@@ -177,12 +177,24 @@ erDiagram
         timestamp createdAt
     }
 
+        AUDIT_LOGS {
+        int auditLogId PK
+        int userId FK
+        string action "enum: [create, read, update, delete, login, logout, status-change, refund-issued, payment-verified]"
+        string tableName
+        int recordId
+        string data
+        string remarks
+        timestamp createdAt
+    }
+
     %% Fixed relationships
 
     ROLE ||--o{ USER : has
     USER ||--o{ BOOKING : makes
     USER ||--o{ BLOCKED_DATES : creates
     USER ||--o{ PUBLIC_ENTRY : encodes
+    USER ||--o{ AUDIT_LOGS : performs
 
     PUBLIC_ENTRY ||--o{ PUBLIC_ENTRY_ADD_ONS : has
     PUBLIC_ENTRY_ADD_ONS }o--|| CATALOG_ADD_ON : references
