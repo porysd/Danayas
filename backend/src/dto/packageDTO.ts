@@ -48,6 +48,10 @@ export const PackageDTO = z.object({
     }
     return false; // default
   }, z.boolean()),
+  maxPax: z.number().int().openapi({
+    description: "The maximum number of people allowed for the package",
+    example: 50,
+  }),
   promoStart: z.string().nullable().openapi({
     description: "The start date of the promo",
     example: "2025-04-01T00:00:00Z",

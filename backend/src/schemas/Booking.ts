@@ -31,7 +31,7 @@ export const BookingsTable = sqliteTable("BOOKING", {
       "pending-cancellation",
     ],
   }).default("pending"),
-  hasRescheduled: integer("hasRescheduled").default(0),
+  // hasRescheduled: integer("hasRescheduled").default(0),
   // BOOKING DETAILS
   checkInDate: text("checkInDate").notNull(),
   checkOutDate: text("checkOutDate").notNull(),
