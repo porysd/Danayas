@@ -625,22 +625,79 @@ export default async function seed() {
     }
   }
 
-  for (let i = 0; i < 10; i++) {
+  const realAddOns = [
+    {
+      itemName: "Tables Set 1",
+      price: 400,
+      status: "active",
+      createdAt: faker.date.recent().toISOString(),
+    },
+    {
+      itemName: "Tables Set 2",
+      price: 400,
+      status: "active",
+      createdAt: faker.date.recent().toISOString(),
+    },
+    {
+      itemName: "Nipa Hut",
+      price: 1000,
+      status: "active",
+      createdAt: faker.date.recent().toISOString(),
+    },
+    {
+      itemName: "AC Room 1",
+      price: 1500,
+      status: "active",
+      createdAt: faker.date.recent().toISOString(),
+    },
+    {
+      itemName: "AC Room 2",
+      price: 1500,
+      status: "active",
+      createdAt: faker.date.recent().toISOString(),
+    },
+    {
+      itemName: "Karaoke",
+      price: 700,
+      status: "active",
+      createdAt: faker.date.recent().toISOString(),
+    },
+    {
+      itemName: "Mineral Water",
+      price: 50,
+      status: "active",
+      createdAt: faker.date.recent().toISOString(),
+    },
+  ] as const;
+
+  for (const catalogData of realAddOns) {
     try {
       const row = await db
         .insert(CatalogAddOnsTable)
-        .values({
-          itemName: faker.commerce.productName(),
-          price: faker.helpers.rangeToNumber({ min: 100, max: 500 }),
-          status: faker.helpers.arrayElement(["active", "inactive"]),
-          createdAt: faker.date.recent().toISOString(),
-        })
+        .values(catalogData)
+        .returning()
         .execute();
-    } catch (e) {
-      console.error(e);
+    } catch (err) {
       continue;
     }
   }
+
+  // for (let i = 0; i < 10; i++) {
+  //   try {
+  //     const row = await db
+  //       .insert(CatalogAddOnsTable)
+  //       .values({
+  //         itemName: faker.commerce.productName(),
+  //         price: faker.helpers.rangeToNumber({ min: 100, max: 500 }),
+  //         status: faker.helpers.arrayElement(["active", "inactive"]),
+  //         createdAt: faker.date.recent().toISOString(),
+  //       })
+  //       .execute();
+  //   } catch (e) {
+  //     console.error(e);
+  //     continue;
+  //   }
+  // }
 
   const catalogAddOn = (await db.query.CatalogAddOnsTable.findMany()).map(
     (val) => val.catalogAddOnId

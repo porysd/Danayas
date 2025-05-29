@@ -79,7 +79,17 @@ export default new OpenAPIHono<AuthContext>()
           return createUser;
         });
 
-        return c.redirect("/auth/login", 302);
+        return c.json(
+          {
+            message: "Registration successful. Please log in.",
+            user: {
+              userId: created.userId,
+              email: created.email,
+              role: created.role,
+            },
+          },
+          201
+        );
       } catch (err) {
         return errorHandler(err, c);
       }

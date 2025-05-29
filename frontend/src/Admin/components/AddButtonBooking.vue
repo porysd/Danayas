@@ -57,7 +57,7 @@ const newBooking = ref({
   catering: "" || null,
   numberOfGuest: "" || null,
   discountId: "" || null,
-  bookingAddOns: [] || null,
+  catalogAddOnIds: [] || null,
   paymentTerms: "",
 });
 
@@ -214,8 +214,8 @@ const selectedDiscount = computed(() => {
 });
 
 const addOnsTotal = computed(() => {
-  if (!newBooking.value.bookingAddOns || !catalogStore.catalog) return 0;
-  return newBooking.value.bookingAddOns.reduce((sum, addOnId) => {
+  if (!newBooking.value.catalogAddOnIds || !catalogStore.catalog) return 0;
+  return newBooking.value.catalogAddOnIds.reduce((sum, addOnId) => {
     const addOn = catalogStore.catalog.find(
       (c) => c.catalogAddOnId === addOnId
     );
@@ -268,7 +268,7 @@ const confirmBooking = async () => {
     ...newBooking.value,
     packageId: newBooking.value.packageName,
     discountId: discount?.discountId || null,
-    bookingAddOns: newBooking.value.bookingAddOns || [],
+    catalogAddOnIds: newBooking.value.catalogAddOnIds || [],
   };
 
   const paymentPayload = {
@@ -487,7 +487,7 @@ const confirmBooking = async () => {
           <div class="w-[40%]">
             <label>Add Ons:</label>
             <MultiSelect
-              v-model="newBooking.bookingAddOns"
+              v-model="newBooking.catalogAddOnIds"
               :options="catalogStore.catalog"
               optionLabel="itemName"
               optionValue="catalogAddOnId"

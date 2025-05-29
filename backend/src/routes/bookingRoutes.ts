@@ -468,9 +468,8 @@ bookingRoutes.openapi(
       }
 
       if (
-        booking.bookStatus !== "reserved"
-        // &&
-        // booking.bookStatus !== "rescheduled"
+        booking.bookStatus !== "reserved" &&
+        booking.bookStatus !== "rescheduled"
       ) {
         throw new BadRequestError("Only reserved bookings can be updated.");
       }
@@ -479,7 +478,14 @@ bookingRoutes.openapi(
 
       const dateChanged =
         processedData.checkInDate !== booking.checkInDate.split("T")[0];
+      const outDateChanged =
+        processedData.checkOutDate !== booking.checkOutDate.split("T")[0];
       const modeChanged = requestData.mode && requestData.mode !== booking.mode;
+
+      let newBookStatus = booking.bookStatus;
+      if (dateChanged || outDateChanged || modeChanged) {
+        newBookStatus = "rescheduled";
+      }
 
       if (dateChanged || modeChanged) {
         const mappedMode =
@@ -549,7 +555,7 @@ bookingRoutes.openapi(
                   ? "partially-paid"
                   : booking.bookingPaymentStatus,
               // hasRescheduled: hasRescheduled ? 1 : 0,
-              // bookStatus: hasRescheduled ? "rescheduled" : booking.bookStatus,
+              bookStatus: newBookStatus,
             })
             .where(eq(BookingsTable.bookingId, bookingId))
             .returning()
@@ -677,9 +683,8 @@ bookingRoutes.openapi(
         ["cancelled", "pending-cancellation", "completed"].includes(
           bookStatus
         ) &&
-        booking.bookStatus !== "reserved"
-        // &&
-        // booking.bookStatus !== "rescheduled"
+        booking.bookStatus !== "reserved" &&
+        booking.bookStatus !== "rescheduled"
       ) {
         throw new BadRequestError(
           "Only reserved bookings can be cancelled or completed."

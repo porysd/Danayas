@@ -336,12 +336,15 @@ paymentRoutes.openapi(
 
         if (
           isFullPayment &&
+          paymentMethod === "gcash" &&
           tenderedAmount !== undefined &&
           !(tenderedAmount - booking.totalAmount === 0) &&
           !latestPayment
         ) {
           return c.json(
-            { error: "Full payment must be equal to the total amount" },
+            {
+              error: `Full payment must be equal to the total amount ${booking.totalAmount}`,
+            },
             400
           );
         }
