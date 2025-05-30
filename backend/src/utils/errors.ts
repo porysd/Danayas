@@ -12,31 +12,31 @@ export class AppError extends Error {
 
 export class BadRequestError extends AppError {
   constructor(message: string) {
-    super('BadRequestError', message, StatusCodes.BAD_REQUEST);
+    super(message, 'BadRequestError', StatusCodes.BAD_REQUEST);
   }
 }
 
 export class UnauthorizedError extends AppError {
   constructor(message: string) {
-    super('UnauthorizedError', message, StatusCodes.UNAUTHORIZED);
+    super(message, 'UnauthorizedError', StatusCodes.UNAUTHORIZED);
   }
 }
 
 export class ForbiddenError extends AppError {
   constructor(message: string) {
-    super('ForbiddenError', message, StatusCodes.FORBIDDEN);
+    super(message, 'ForbiddenError', StatusCodes.FORBIDDEN);
   }
 }
 
 export class NotFoundError extends AppError {
   constructor(message: string) {
-    super('NotFoundError', message, StatusCodes.NOT_FOUND);
+    super(message, 'NotFoundError', StatusCodes.NOT_FOUND);
   }
 }
 
 export class ConflictError extends AppError {
   constructor(message: string) {
-    super('ConflictError', message, StatusCodes.CONFLICT);
+    super(message, 'ConflictError', StatusCodes.CONFLICT);
   }
 }
 

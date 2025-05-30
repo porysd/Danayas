@@ -16,135 +16,274 @@ import Footer from "../components/Footer.vue";
   </div>
 
   <div class="AboutSection">
-    <div class="mb-10 mt-10">
-      <h2
-        class="font-[Poppins] font-black text-center top-[-2 rem] font-bold relative text-5xl mb-3"
-      >
-        Vision & Mission
-      </h2>
-      <hr
-        class="line w-40 border-3 relative top-[-0rem] flex flex-auto m-auto justify-center content-center mb-4"
+    <div
+      class="flex gap-20 w-full max-w-6xl px-4 justify-center content-center align-center m-auto"
+      style="position: relative; bottom: -10rem; margin-bottom: 100px"
+    >
+      <img
+        v-animateonscroll="{
+          enterClass:
+            'animate-enter fade-in-10 slide-in-from-r-9 animate-duration-1000',
+          leaveClass: 'animate-leave fade-out-0',
+        }"
+        src="../assets/aboutUs1.jpg"
+        class="w-2/5 rounded-[20px] mb-4"
+        style="border-radius: 20px"
       />
-      <p class="m-auto text-center w-200 mt-10">
-        Established in the historic quarter, where cultural legacy meets the
-        sought-after culinary scene, Brook St. is the best kept secret of town,
-        just across the sea front. Its urban renaissance is infusing new vibes
-        and brings back creatives, trend setters and smart investors.
-      </p>
-    </div>
-    <div class="imgbr">
-      <img class="h-[383px] w-full" src="../assets/aboutbr.jpg" alt="" />
-    </div>
-    <div class="mb-20 mt-20">
-      <h2
-        class="font-[Poppins] font-black text-center top-[-2 rem] font-bold relative text-5xl mb-3"
+      <div
+        class="flex flex-col justify-center items-center text-center w-4/5"
+        v-animateonscroll="{
+          enterClass:
+            'animate-enter fade-in-10 slide-in-from-l-8 animate-duration-1000',
+          leaveClass: 'animate-leave fade-out-0',
+        }"
       >
+        <h2 class="font-[Poppins] font-black relative text-5xl mb-3">
+          Vision & Mission
+        </h2>
+
+        <hr class="w-40 border-2" />
+
+        <p class="mt-10 mb-20">
+          At Danayas Resorts, we strive to be the leading destination for
+          unforgettable events, renowned for our exceptional service, beautiful
+          settings, and seamless experiences. Our mission is to provide a
+          personalized and memorable venue where every gathering, from weddings
+          to corporate retreats, is executed with the highest standards of care
+          and attention. We are committed to creating lifelong memories for our
+          guests by offering innovative solutions, maintaining a focus on
+          customer satisfaction, and continuously improving our services. With
+          every event, we aim to exceed expectations and celebrate life’s most
+          cherished moments.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div
+    class="flex gap-20 w-full max-w-6xl px-4 content-center align-center justify-center m-auto bottom-[-10rem] relative"
+  >
+    <div
+      class="flex flex-col justify-center items-center text-center w-4/5"
+      v-animateonscroll="{
+        enterClass:
+          'animate-enter fade-in-10 slide-in-from-l-8 animate-duration-1000',
+        leaveClass: 'animate-leave fade-out-0',
+      }"
+    >
+      <h2 class="font-[Poppins] font-black relative text-5xl mb-3">
         Our Story
       </h2>
 
-      <hr
-        class="line w-40 border-4 relative top-[-0rem] flex flex-auto m-auto justify-center content-center mb-4"
-      />
+      <hr class="w-40 border-2 mb-4" />
 
-      <p class="text2 m-auto mt-10 text-center w-200">
-        Every website has a story, and your visitors want to hear yours. This
-        space is a great opportunity to give a full background on who you are,
-        what your team does, and what your site has to offer. Double click on
-        the text box to start editing your content and make sure to add all the
-        relevant details you want site visitors to know.  If you’re a business,
-        talk about how you started and share your professional journey. Explain
-        your core values, your commitment to customers, and how you stand out
-        from the crowd. Add a photo, gallery, or video for even more engagement.
+      <p class="mt-10 mb-10">
+        Danayas Resorts began as a small family-run retreat with a vision to
+        offer a unique place where people could celebrate life’s most
+        significant moments. Over the years, it grew into a leading events
+        venue, known for its commitment to exceptional service and unforgettable
+        experiences. Today, Danayas continues to provide personalized, seamless
+        events, from weddings to corporate retreats, ensuring every guest leaves
+        with lasting memories. With a dedicated team and a passion for
+        excellence, Danayas remains a trusted partner in celebrating life's
+        milestones.
       </p>
     </div>
-    <div class="location">
-      <article>
-        <div class="location-text">
-          <h1
-            style="
-              font-weight: bold;
-              font-size: 50px;
-              text-align: center;
-              position: relative;
-            "
-          >
-            Location
-          </h1>
-          <p>
-            Established in the historic quarter, where cultural legacy meets the
-            sought-after culinary scene, Brook St. is the best kept secret of
-            town, just across the sea front. Its urban renaissance is infusing
-            new vibes and brings back creatives, trend setters and smart
-            investors.
-          </p>
-        </div>
+    <img
+      v-animateonscroll="{
+        enterClass:
+          'animate-enter fade-in-10 slide-in-from-r-9 animate-duration-1000',
+        leaveClass: 'animate-leave fade-out-0',
+      }"
+      src="../assets/aboutUs1.jpg"
+      class="w-2/5 rounded-[20px] mb-4"
+      style="border-radius: 20px"
+    />
+  </div>
 
-        <div id="Gmap">
-          <iframe
-            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d1929.608118783353!2d121
-            .12431473799222!3d14.7003600939651!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3397bb19868e1b37%3A0x429ae5ae7c94d0f2!2s7%20Jones%20Dulong%20Bayan
-            %202%2C%20San%20Mateo%2C%20Rizal%20Philippines!5e0!3m2!1sen!2sph!4v1741699299438!5m2!1sen!2sph"
-            width="1108"
-            height="607"
-            style="border: 0; border-radius: 10px; margin-top: 40px"
-            allowfullscreen=""
-            loading="lazy"
-            referrerpolicy="no-referrer-when-downgrade"
-          ></iframe>
-        </div>
-      </article>
+  <div
+    class="staffData gap-20 w-full max-w-6xl px-4 justify-center m-auto flex flex-col items-center"
+  >
+    <div class="flex flex-col justify-center items-center text-center w-full">
+      <h2 class="font-[Poppins] font-black text-5xl mb-3">Meet The Team</h2>
+      <hr class="w-40 border-2" />
     </div>
-    <div class="staffData">
-      <h1
-        style="
-          margin-top: 10rem;
-          font-weight: bold;
-          font-size: 50px;
-          text-align: center;
-          position: relative;
-        "
+
+    <!-- Ensure this container stays in a row -->
+    <div class="staff-image flex justify-center gap-10">
+      <div
+        class="staff-card"
+        v-animateonscroll="{
+          enterClass:
+            'animate-enter fade-in-10 zoom-in-50 slide-in-from-t-20 animate-duration-1000',
+        }"
       >
-        Meet The Team
-      </h1>
-      <hr
-        class="line w-40 border-4 relative top-[-0rem] mb-[5rem] flex flex-auto m-auto justify-center content-center"
-      />
-      <div class="staff-container">
-        <div class="staff-box">
-          <img class="img" src="../assets/staff.jpg" alt="staff" />
-          <div class="img-container">
-            <h4><b>Shaian May Tendenilla</b></h4>
-            <p>Position: Manager</p>
-          </div>
+        <img src="../assets/staff.jpg" alt="Shaina" />
+        <div class="staff-overlay">
+          <h3>Shaina May Tendenilla</h3>
+          <a
+            href="https://www.facebook.com/profile.php?id=61552657702549"
+            target="_blank"
+          >
+            <img
+              src="../assets/facebookneon.jpg"
+              alt="Facebook"
+              style="
+                border-radius: 50%;
+                object-fit: cover;
+                margin: auto;
+                margin-top: 5px;
+                width: 40px;
+                height: 40px;
+              "
+            />
+          </a>
         </div>
-        <div class="staff-box">
-          <img class="img" src="../assets/staff1.jpg" alt="staff1" />
-          <div class="img-container">
-            <h4><b>Shaian May Tendenilla</b></h4>
-            <p>Position: Manager</p>
-          </div>
+      </div>
+
+      <div
+        class="staff-card"
+        v-animateonscroll="{
+          enterClass:
+            'animate-enter fade-in-10 zoom-in-50 slide-in-from-t-20 animate-duration-1000',
+        }"
+      >
+        <img src="../assets/staff.jpg" alt="Shaina" />
+        <div class="staff-overlay">
+          <h3>Shaina May Tendenilla</h3>
+          <a
+            href="https://www.facebook.com/profile.php?id=61552657702549"
+            target="_blank"
+          >
+            <img
+              src="../assets/facebookneon.jpg"
+              alt="Facebook"
+              style="
+                border-radius: 50%;
+                object-fit: cover;
+                margin: auto;
+                margin-top: 5px;
+                width: 40px;
+                height: 40px;
+              "
+            />
+          </a>
         </div>
-        <div class="staff-box">
-          <img class="img" src="../assets/staff.jpg" alt="staff" />
-          <div class="img-container">
-            <h4><b>Shaian May Tendenilla</b></h4>
-            <p>Position: Manager</p>
-          </div>
+      </div>
+
+      <div
+        class="staff-card"
+        v-animateonscroll="{
+          enterClass:
+            'animate-enter fade-in-10 zoom-in-50 slide-in-from-t-20 animate-duration-1000',
+        }"
+      >
+        <img src="../assets/staff.jpg" alt="Shaina" />
+        <div class="staff-overlay">
+          <h3>Shaina May Tendenilla</h3>
+          <a
+            href="https://www.facebook.com/profile.php?id=61552657702549"
+            target="_blank"
+          >
+            <img
+              src="../assets/facebookneon.jpg"
+              alt="Facebook"
+              style="
+                border-radius: 50%;
+                object-fit: cover;
+                margin: auto;
+                margin-top: 5px;
+                width: 40px;
+                height: 40px;
+              "
+            />
+          </a>
         </div>
-        <div class="staff-box">
-          <img class="img" src="../assets/staff1.jpg" alt="staff1" />
-          <div class="img-container">
-            <h4><b>Shaian May Tendenilla</b></h4>
-            <p>Position: Manager</p>
-          </div>
+      </div>
+
+      <div
+        class="staff-card"
+        v-animateonscroll="{
+          enterClass:
+            'animate-enter fade-in-10 zoom-in-50 slide-in-from-t-20 animate-duration-1000',
+        }"
+      >
+        <img src="../assets/staff.jpg" alt="Shaina" />
+        <div class="staff-overlay">
+          <h3>Shaina May Tendenilla</h3>
+          <a
+            href="https://www.facebook.com/profile.php?id=61552657702549"
+            target="_blank"
+          >
+            <img
+              src="../assets/facebookneon.jpg"
+              alt="Facebook"
+              style="
+                border-radius: 50%;
+                object-fit: cover;
+                margin: auto;
+                margin-top: 5px;
+                width: 40px;
+                height: 40px;
+              "
+            />
+          </a>
         </div>
       </div>
     </div>
   </div>
+
   <Footer />
 </template>
 
 <style scoped>
+h3 {
+  margin-top: 21rem;
+  margin-left: 10px;
+  font-size: 25px;
+  font-weight: 600;
+}
+.staff-card {
+  position: relative;
+  width: 280px;
+  height: 500px;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease;
+}
+
+.staff-card img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.staff-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+
+  filter: blur(10px 10px 4px);
+  width: 100%;
+  height: 100%;
+  background-color: rgba(10, 124, 66, 0.6); /* Black with opacity */
+  display: flex;
+  flex-direction: column;
+  color: white;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+a {
+  position: relative;
+  left: -4rem;
+}
+
+.staff-card:hover .staff-overlay {
+  opacity: 1;
+}
+
 .ContainerAbout {
   position: relative;
   width: 85rem;
@@ -174,69 +313,20 @@ import Footer from "../components/Footer.vue";
   text-align: center;
 }
 
-#Gmap {
-  display: flex;
-  margin: 0;
-  margin-left: 45rem;
-  box-shadow: 1px 10px 10px #7bab81;
-  border-radius: 20px;
-  width: 40%;
-  justify-content: center;
-  align-items: center;
-
-  top: -6rem;
-  position: relative;
-  transition: 0.3s;
-}
-#Gmap:hover {
-  box-shadow: 0 8px 16px 0 rgba(14, 180, 47, 0.2);
-}
-.location-text {
-  display: inline-block;
-  bottom: -20rem;
-  width: 30pc;
-  position: relative;
-  margin-left: 40px;
-}
-.location {
-  margin-top: -2rem;
-  margin-bottom: 5rem;
-  width: fit-content; /* Ensures the width matches content */
-  margin-left: auto;
-  margin-right: auto;
-  display: flex; /* Ensures content inside stays centered */
-  justify-content: center;
-  align-items: center;
-}
-.staff-box {
-  box-shadow: 0 4px 10px 0 rgba(0, 0, 0, 0.2);
-  transition: 0.3s;
-  width: 25%;
-  padding: 30px;
-  margin-bottom: 20px;
-  display: inline-block;
-  gap: 20rem;
-  margin-left: 170px;
-  border-radius: 20px;
-}
 .staffData {
   position: relative;
-  margin: auto;
   justify-content: center;
   align-items: center;
-  top: -5rem;
+  align-content: center;
+  margin: auto;
+  margin-top: 17rem;
 }
-.staff-box:hover {
-  box-shadow: 0 8px 16px 0 rgba(0, 0, 0, 0.2);
-}
+
 .img {
   position: relative;
   height: 50vh;
   width: 100%;
   display: inline-block;
   border-radius: 8px;
-}
-.staff-container {
-  margin-left: 9rem;
 }
 </style>

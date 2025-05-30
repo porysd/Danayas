@@ -1,18 +1,66 @@
 <script setup>
 import SideBar from "../components/SideBar.vue";
-import { ref, onMounted } from "vue";
+import { ref, onMounted, computed } from "vue";
+import { useAuthStore } from "../../stores/authStore";
+import { useUserStore } from "../../stores/userStore";
 
-const users = ref([]);
+const authStore = useAuthStore();
+const userStore = useUserStore();
 
-// Get user by ID
-const allUsers = async (user) => {
-  const response = await fetch(`http://localhost:3000/users/${user.userId}`);
+const userData = ref({
+  username: "",
+  firstName: "",
+  lastName: "",
+  contactNo: "",
+  email: "",
+  address: "",
+});
 
-  if (!response.ok) throw new Error("Failed to fetch users");
-  const users = await response.json();
+onMounted(async () => {
+  console.log("Auth initialized:", authStore.user, authStore.role);
+
+  const userId = authStore.user?.userId;
+
+  if (!userId) {
+    console.error("No userId found in authStore.user");
+    return;
+  }
+
+  console.log("Fetching user details for userId:", userId);
+  const fetchedUser = await userStore.getUserById(userId);
+
+  console.log("Fetched user:", fetchedUser);
+
+  userData.value = {
+    username: fetchedUser.username,
+    firstName: fetchedUser.firstName,
+    lastName: fetchedUser.lastName,
+    contactNo: fetchedUser.contactNo,
+    email: fetchedUser.email,
+    address: fetchedUser.address,
+  };
+
+  console.log("Populated userData:", userData.value);
+});
+
+const isEditing = ref(false);
+const isLoading = ref(false);
+
+const toggleEdit = async () => {
+  isEditing.value = !isEditing.value;
+
+  if (!isEditing.value) {
+    isLoading.value = true;
+    try {
+      const userUpdate = await userStore.updateUser(userData.value);
+      console.log("Saved:", userUpdate);
+    } catch (error) {
+      console.error("Error saving user data:", error);
+    } finally {
+      isLoading.value = false;
+    }
+  }
 };
-
-onMounted(() => allUsers());
 </script>
 
 <template>
@@ -22,30 +70,52 @@ onMounted(() => allUsers());
       <div class="profilePage">
         <div>
           <label>Username:</label>
-          <input type="text" placeholder="Enter your username" />
-        </div>
-        <div>
-          <label>Email Address:</label>
-          <input type="email" placeholder="Enter your email" />
+          <input
+            type="text"
+            v-model="userData.username"
+            :disabled="!isEditing"
+          />
         </div>
         <div>
           <label>First Name:</label>
-          <input type="text" placeholder="Enter your first name" />
+          <input
+            type="text"
+            v-model="userData.firstName"
+            :disabled="!isEditing"
+          />
         </div>
         <div>
           <label>Last Name:</label>
-          <input type="text" placeholder="Enter your last name" />
+          <input
+            type="text"
+            v-model="userData.lastName"
+            :disabled="!isEditing"
+          />
         </div>
         <div>
           <label>Contact Number:</label>
-          <input type="tel" placeholder="Enter your contact number" />
+          <input
+            type="tel"
+            v-model="userData.contactNo"
+            :disabled="!isEditing"
+          />
+        </div>
+        <div>
+          <label>Email Address:</label>
+          <input type="email" v-model="userData.email" :disabled="!isEditing" />
         </div>
         <div>
           <label>Address:</label>
-          <input type="text" placeholder="Enter your address" />
+          <input
+            type="text"
+            v-model="userData.address"
+            :disabled="!isEditing"
+          />
         </div>
 
-        <button class="modifyBtn">Modify</button>
+        <button class="modifyBtn" @click="toggleEdit" :disabled="isLoading">
+          {{ isEditing ? (isLoading ? "Saving..." : "Save") : "Modify" }}
+        </button>
       </div>
       <div class="profilePage">
         <div>

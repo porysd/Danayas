@@ -1,16 +1,60 @@
 <script setup>
-import { ref, onMounted, onUnmounted } from "vue";
-import { useRouter } from "vue-router";
-import Avatar from "primevue/avatar";
-import Divider from "primevue/divider";
+import { ref, computed, onMounted } from "vue";
+import { useRouter, useRoute } from "vue-router";
+import { useAuthStore } from "../../stores/authStore";
 
+const authStore = useAuthStore();
+const role = computed(() => authStore.user?.role || "guest");
 const isContentOpen = ref(false);
+const isBookingOpen = ref(false);
+const route = useRoute();
 
-const toggleContentMenu = () => {
-  isContentOpen.value = true;
+// List of routes under "Booking"
+const bookingRoutes = [
+  "/admin/private-booking",
+  // "/admin/walk-in-booking",
+  "/admin/public-booking",
+  "/admin/blocked-dates",
+];
+
+const currentBookingRoute = computed(() => bookingRoutes.includes(route.path));
+
+onMounted(() => {
+  isBookingOpen.value = currentBookingRoute.value;
+});
+
+const toggleBookingMenu = () => {
+  if (currentBookingRoute.value) {
+    isBookingOpen.value = !isBookingOpen.value;
+  } else {
+    isBookingOpen.value = true;
+  }
 };
 
-// 194D1D
+// List of routes under "Content Management"
+const cmsRoute = [
+  "/admin/homepage",
+  "/admin/reviews",
+  "/admin/gallery",
+  "/admin/faqs",
+  "/admin/about-us",
+  "/admin/footer",
+  "/admin/terms-and-condition",
+];
+
+const currentCMSRoute = computed(() => cmsRoute.includes(route.path));
+
+onMounted(() => {
+  isContentOpen.value = currentCMSRoute.value;
+});
+
+const toggleContentMenu = () => {
+  if (currentCMSRoute.value) {
+    isContentOpen.value = !isContentOpen.value;
+  } else {
+    isContentOpen.value = true;
+  }
+};
 </script>
 
 <template>
@@ -21,9 +65,9 @@ const toggleContentMenu = () => {
       <img
         src="../assets/drevslogo.png"
         alt="DREVS Logo"
-        class="drevsLogo w-20 h-20 mr-3"
+        class="drevsLogo w-17 h-17 mr-5"
       />
-      <h1 class="text-h1 font-bold text-3xl text-[#FCFCFC] dark:text-[#FCFCFC]">
+      <h1 class="text-h1 font-bold text-2xl text-[#FCFCFC] dark:text-[#FCFCFC]">
         DREVS
       </h1>
     </div>
@@ -36,86 +80,162 @@ const toggleContentMenu = () => {
         class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
         active-class="active-route"
       >
-        <i class="pi pi-chart-bar"></i>
+        <i class="pi pi-chart-bar mr-2"></i>
         Dashboard</router-link
       >
-      <router-link
-        to="/admin/employee-management"
-        class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
-        active-class="active-route"
-      >
-        <i class="pi pi-user"></i>
-        Employee Management</router-link
-      >
-      <router-link
-        to="/admin/booking"
-        class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
-        active-class="active-route"
-      >
-        <i class="pi pi-book"></i>
-        Booking</router-link
-      >
-      <router-link
-        to="/admin/transaction"
-        class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
-        active-class="active-route"
-      >
-        <i class="pi pi-credit-card"></i>
-        Transaction</router-link
-      >
-      <router-link
-        to="/admin/reports"
-        class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
-        active-class="active-route"
-      >
-        <i class="pi pi-file-excel"></i>
-        Reports</router-link
-      >
-      <router-link
-        to="/admin/packages-amd-promos"
-        class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
-        active-class="active-route"
-      >
-        <i class="pi pi-box"></i>
-        Packages and Promos</router-link
-      >
-      <router-link
-        to="/admin/discount-and-add-ons"
-        class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
-        active-class="active-route"
-      >
-        <i class="pi pi-percentage"></i>
-        Discount and Add Ons</router-link
-      >
-      <router-link
-        to="/admin/customer-management"
-        class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
-        active-class="active-route"
-      >
-        <i class="pi pi-users"></i>
-        Customer Management</router-link
-      >
-
       <button
         class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
-        @click="toggleContentMenu"
+        @click="toggleBookingMenu"
       >
-        <i class="pi pi-wrench"></i>
-        Content Management
+        <i class="pi pi-book mr-2"></i>
+        Bookings
         <span
-          :class="{ 'rotate-180': isContentOpen }"
-          class="dropdown-arrow pi pi-angle-down ml-10"
+          :class="{ 'rotate-180': isBookingOpen }"
+          class="dropdown-arrow pi pi-angle-down ml-26.5"
           style="font-size: 12px"
         ></span>
       </button>
 
-      <div v-show="isContentOpen" class="flex flex-col space-y-2 w-full pl-6">
+      <div v-show="isBookingOpen" class="flex flex-col space-y-2 w-full pl-6">
+        <router-link
+          to="/admin/private-booking"
+          class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
+          active-class="active-route"
+        >
+          <i class="pi pi-calendar-plus mr-2"></i>
+          Private Entries Booking</router-link
+        >
+        <!--<router-link
+          to="/admin/walk-in-booking"
+          class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
+          active-class="active-route"
+        >
+          <i class="pi pi-book mr-2"></i>
+          Walk-In Booking</router-link
+        >-->
+        <router-link
+          to="/admin/public-booking"
+          class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
+          active-class="active-route"
+        >
+          <i class="pi pi-calendar-plus mr-2"></i>
+          Public Entries Booking</router-link
+        >
+        <router-link
+          to="/admin/blocked-dates"
+          class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
+          active-class="active-route"
+        >
+          <i class="pi pi-calendar-times mr-2"></i>
+          Blocked Dates</router-link
+        >
+      </div>
+
+      <router-link
+        to="/admin/payment"
+        class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
+        active-class="active-route"
+      >
+        <i class="pi pi-credit-card mr-2"></i>
+        Payment Management</router-link
+      >
+      <router-link
+        to="/admin/refund"
+        class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
+        active-class="active-route"
+      >
+        <i class="pi pi-receipt mr-2"></i>
+        Refund Management</router-link
+      >
+      <router-link
+        v-if="role !== 'staff'"
+        to="/admin/reports"
+        class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
+        active-class="active-route"
+      >
+        <i class="pi pi-file-excel mr-2"></i>
+        Reports</router-link
+      >
+      <!-- <router-link
+        to="/admin/transaction"
+        class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
+        active-class="active-route"
+      >
+        <i class="pi pi-receipt mr-2"></i>
+        Transaction Records</router-link
+      > -->
+
+      <router-link
+        v-if="role !== 'staff'"
+        to="/admin/customer-management"
+        class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
+        active-class="active-route"
+      >
+        <i class="pi pi-users mr-2"></i>
+        Customer Management</router-link
+      >
+      <router-link
+        v-if="role !== 'staff'"
+        to="/admin/employee-management"
+        class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
+        active-class="active-route"
+      >
+        <i class="pi pi-user mr-2"></i>
+        Employee Management</router-link
+      >
+      <router-link
+        v-if="role !== 'staff'"
+        to="/admin/packages-and-promos"
+        class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
+        active-class="active-route"
+      >
+        <i class="pi pi-box mr-2"></i>
+        Packages and Promos</router-link
+      >
+      <router-link
+        v-if="role !== 'staff'"
+        to="/admin/public-rates"
+        class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
+        active-class="active-route"
+      >
+        <i class="pi pi-box mr-2"></i>
+        Public Rates</router-link
+      >
+      <router-link
+        v-if="role !== 'staff'"
+        to="/admin/discount-and-add-ons"
+        class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
+        active-class="active-route"
+      >
+        <i class="pi pi-percentage mr-2"></i>
+        Discount and Add Ons</router-link
+      >
+
+      <button
+        v-if="role !== 'staff'"
+        class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
+        @click="toggleContentMenu"
+      >
+        <i class="pi pi-wrench mr-2"></i>
+        Content Management
+        <span
+          :class="{ 'rotate-180': isContentOpen }"
+          class="dropdown-arrow pi pi-angle-down ml-8.5"
+          style="font-size: 12px"
+        ></span>
+      </button>
+
+      <div
+        v-if="role !== 'staff'"
+        v-show="isContentOpen"
+        class="flex flex-col space-y-2 w-full pl-6"
+      >
         <router-link
           to="/admin/homepage"
           class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
           active-class="active-route"
         >
-          <i class="pi pi-home"></i>
+          <i class="pi pi-home mr-2"></i>
           Homepage</router-link
         >
         <router-link
@@ -123,7 +243,7 @@ const toggleContentMenu = () => {
           class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
           active-class="active-route"
         >
-          <i class="pi pi-check-circle"></i>
+          <i class="pi pi-check-circle mr-2"></i>
           Reviews</router-link
         >
         <router-link
@@ -131,7 +251,7 @@ const toggleContentMenu = () => {
           class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
           active-class="active-route"
         >
-          <i class="pi pi-image"></i>
+          <i class="pi pi-image mr-2"></i>
           Gallery</router-link
         >
         <router-link
@@ -139,7 +259,7 @@ const toggleContentMenu = () => {
           class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
           active-class="active-route"
         >
-          <i class="pi pi-question-circle"></i>
+          <i class="pi pi-question-circle mr-2"></i>
           FAQs</router-link
         >
         <router-link
@@ -147,7 +267,7 @@ const toggleContentMenu = () => {
           class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
           active-class="active-route"
         >
-          <i class="pi pi-users"></i>
+          <i class="pi pi-users mr-2"></i>
           About Us</router-link
         >
         <router-link
@@ -155,7 +275,7 @@ const toggleContentMenu = () => {
           class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
           active-class="active-route"
         >
-          <i class="pi pi-file"></i>
+          <i class="pi pi-file mr-2"></i>
           Footer</router-link
         >
         <router-link
@@ -163,19 +283,29 @@ const toggleContentMenu = () => {
           class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
           active-class="active-route"
         >
-          <i class="pi pi-clipboard"></i>
+          <i class="pi pi-clipboard mr-2"></i>
           Terms and Conditions</router-link
         >
       </div>
 
       <router-link
+        v-if="role !== 'staff'"
+        to="/admin/audit-logs"
+        class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
+        active-class="active-route"
+      >
+        <i class="pi pi-clipboard mr-2"></i>
+        Logs</router-link
+      >
+
+      <!--<router-link
         to="/admin/archived"
         class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
         active-class="active-route"
       >
         <i class="pi pi-history"></i>
         Archived</router-link
-      >
+      >-->
     </nav>
   </div>
 
@@ -185,6 +315,9 @@ const toggleContentMenu = () => {
 <style scoped>
 .drevsBar::-webkit-scrollbar {
   display: none;
+}
+
+.drevsBar {
 }
 
 .drevsLogo {

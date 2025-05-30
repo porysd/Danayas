@@ -1,11 +1,16 @@
 <script setup>
-import { ref, onMounted, onUnmounted } from "vue";
-import { useRouter } from "vue-router";
+import { ref, onMounted, onUnmounted, computed } from "vue";
 import Avatar from "primevue/avatar";
+import { useAuthStore } from "../../stores/authStore";
+import { useUserStore } from "../../stores/userStore";
+import { useRouter } from "vue-router";
+
+const authStore = useAuthStore();
+const userStore = useUserStore();
 const router = useRouter();
 
 const logout = () => {
-  localStorage.removeItem("isLoggedIn");
+  authStore.logout();
   router.replace("/admin/admin-login");
 };
 
@@ -26,11 +31,35 @@ onMounted(() => {
 onUnmounted(() => {
   document.addEventListener("click", closeMenu);
 });
-</script>
 
+const userData = ref({
+  firstName: "",
+  lastName: "",
+});
+onMounted(async () => {
+  const userId = authStore.user?.userId;
+
+  if (!userId) {
+    console.error("No userId found in authStore.user");
+    return;
+  }
+
+  const fetchedUser = await userStore.getUserById(userId);
+
+  userData.value = {
+    firstName: fetchedUser.firstName,
+    lastName: fetchedUser.lastName,
+  };
+});
+const userInitials = computed(() => {
+  const firstName = userData.value.firstName || "";
+  const lastName = userData.value.lastName || "";
+  return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
+});
+</script>
 <template>
   <Avatar
-    icon="pi pi-user"
+    :label="userInitials"
     class="mr-2 mb-2 cursor-pointer"
     size="large"
     shape="circle"
@@ -38,8 +67,12 @@ onUnmounted(() => {
   />
   <div v-if="showMenu" ref="hideMenu" class="dropdown-menu">
     <ul>
-      <li><router-link to="/admin/profile">My Profile</router-link></li>
-      <li @click="logout">Log Out</li>
+      <li class="hover:bg-gray-100 dark:hover:bg-gray-700">
+        <router-link to="/admin/profile">My Profile</router-link>
+      </li>
+      <li class="hover:bg-gray-100 dark:hover:bg-gray-700" @click="logout">
+        Log Out
+      </li>
     </ul>
   </div>
 </template>
@@ -48,7 +81,7 @@ onUnmounted(() => {
 .dropdown-menu {
   position: absolute;
   top: 3.5rem;
-  background: #fcf5f5;
+  background: #fcfcfc;
   color: #333;
   border-radius: 5px;
   padding: 5px;
@@ -69,10 +102,5 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 5px;
-}
-
-.dropdown-menu li:hover {
-  background: #555;
-  color: #fcf5f5;
 }
 </style>

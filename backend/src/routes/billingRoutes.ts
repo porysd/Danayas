@@ -1,3 +1,0 @@
-//     .post('/', generateBilling)
-//     .get('/', getBillings);
-

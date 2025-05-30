@@ -1,21 +1,39 @@
 <script setup>
-import { ref, defineProps, defineEmits } from "vue";
+import { ref, defineProps, defineEmits, onMounted, onUnmounted } from "vue";
 import Button from "primevue/button";
 import Dialog from "primevue/dialog";
 import Toast from "primevue/toast";
+import Checkbox from "primevue/checkbox";
 import { useToast } from "primevue/usetoast";
+import { formatPeso } from "../../utility/pesoFormat";
+import InputOtp from "primevue/inputotp";
+import { usePinStore } from "../../stores/pinStore";
 
 const toast = useToast();
 const showMenu = ref(false);
 const showVoidModal = ref(false);
+const showValidModal = ref(false);
+const showInvalidModal = ref(false);
+const showPayModal = ref(false);
+const showRefractorModal = ref(false);
 const formData = ref({});
 
-// const showArchiveModal = ref(false);
-// const showUpdateModal = ref(false);
+const pinStore = usePinStore();
 
-const prop = defineProps(["payment"]);
-const emit = defineEmits(["voidPayment"]);
-let previousStatus = null;
+const prop = defineProps({
+  payment: Object,
+  bookingName: {
+    type: String,
+    default: "Unknown",
+  },
+  showAction: true,
+});
+const emit = defineEmits([
+  "voidPayment",
+  "validPayment",
+  "invalidPayment",
+  "refractorPayment",
+]);
 
 const openVoidModal = () => {
   formData.value = { ...prop.payment };
@@ -24,16 +42,124 @@ const openVoidModal = () => {
   showMenu.value = false;
 };
 
-const closeModals = () => {
-  //   showArchiveModal.value = false;
-  showVoidModal.value = false;
-  // showUpdateModal.value = false;
+const openValidModal = () => {
+  formData.value = { ...prop.payment };
+  showValidModal.value = true;
+  showMenu.value = false;
 };
-const confirmVoid = () => {
-  formData.value.paymentStatus = "failed";
-  emit("voidPayment", formData.value);
+
+const openInvalidModal = () => {
+  formData.value = { ...prop.payment };
+  showInvalidModal.value = true;
+  showMenu.value = false;
+};
+
+const showOtp = ref(false);
+const value = ref("");
+
+const openOtp = () => {
+  showOtp.value = true;
+  showMenu.value = false;
+};
+
+const verifyOtp = async () => {
+  formData.value = { ...prop.payment };
+  if (!/^\d{6}$/.test(value.value)) {
+    toast.add({
+      severity: "error",
+      summary: "Invalid PIN",
+      detail: "PIN must be 6 digits.",
+      life: 3000,
+    });
+    return;
+  }
+  try {
+    const result = await pinStore.verifyPin(value.value);
+    if (result) {
+      showRefractorModal.value = true;
+      showOtp.value = false;
+    } else {
+      toast.add({
+        severity: "error",
+        summary: "Invalid PIN",
+        detail: "The PIN you entered is incorrect.",
+        life: 3000,
+      });
+    }
+  } catch (err) {
+    toast.add({
+      severity: "error",
+      summary: "PIN Verification Failed",
+      detail: err.message,
+      life: 3000,
+    });
+  }
+};
+
+const confirmOverride = () => {
+  emit("refractorPayment", formData.value);
+  toast.add({
+    severity: "success",
+    summary: "Refractored Amount",
+    detail: "The tendered amount has been refractor successfully.",
+    life: 3000,
+  });
+  closeModals();
+};
+
+const closeModals = () => {
+  showVoidModal.value = false;
+  showValidModal.value = false;
+  showInvalidModal.value = false;
+  showRefractorModal.value = false;
+  showOtp.value = false;
+};
+
+const confirmPay = () => {
+  emit("payPayment", formData.value);
+  closeModals();
+};
+
+const confirmValid = () => {
+  const status = {
+    ...formData.value,
+    paymentStatus: "valid",
+  };
+  emit("validPayment", status);
+  toast.add({
+    severity: "success",
+    summary: "Payment Valid",
+    detail: "The payment has been valid successfully.",
+    life: 3000,
+  });
+  closeModals();
+};
+
+const confirmInvalid = () => {
+  const status = {
+    ...formData.value,
+    paymentStatus: "invalid",
+    remarks: formData.value.remarks || "Marked as invalid",
+  };
+  emit("invalidPayment", status);
   toast.add({
     severity: "warn",
+    summary: "Payment Invalid",
+    detail: "The payment has been invalid successfully.",
+    life: 3000,
+  });
+  closeModals();
+};
+
+const confirmVoid = () => {
+  const status = {
+    ...formData.value,
+    paymentStatus: "voided",
+    remarks: formData.value.remarks || "Marked are void",
+  };
+  emit("voidPayment", status);
+  toast.add({
+    severity: "danger",
     summary: "Payment Voided",
     detail: "The payment has been voided successfully.",
     life: 3000,
@@ -41,50 +167,21 @@ const confirmVoid = () => {
   closeModals();
 };
 
-const revertPayment = () => {
-  formData.value.paymentStatus = previousStatus;
-  emit("voidPayment", formData.value);
-  toast.add({
-    severity: "success",
-    summary: "Payment Reverted",
-    detail: "The payment has been reverted.",
-    life: 3000,
-  });
-  showMenu.value = false;
+const hideMenu = ref(false);
+
+const closeMenu = (event) => {
+  if (hideMenu.value && !hideMenu.value.contains(event.target)) {
+    showMenu.value = false;
+  }
 };
 
-// const openArchiveModal = () => {
-//   formData.value = { ...prop.customer };
-//   showArchiveModal.value = true;
-//   showMenu.value = false;
-// };
+onMounted(() => {
+  document.addEventListener("click", closeMenu);
+});
 
-// const openUpdateModal = () => {
-//   formData.value = { ...prop.payment };
-//   showUpdateModal.value = true;
-//   showMenu.value = false;
-// }
-
-// const archiveCustomer = () => {
-//   emit('archiveCustomer', formData.value);
-//   closeModals();
-// };
-
-// const confirmUpdate = () => {
-//   emit("updatePayment", formData.value);
-//   console.log(formData.value);
-//   closeModals();
-// };
-
-// const confirmUpdate = () => {
-//   const index = payment.value.findIndex(p => p.paymentId === formData.value.paymentId);
-//   if (index !== -1) {
-//     payment.value[index] = { ...formData.value };
-//   }
-//   console.log('After Update:', payment.value);
-//   emit('updatePayment', formData.value);
-//   closeModals();
-// };
+onUnmounted(() => {
+  document.addEventListener("click", closeMenu);
+});
 </script>
 
 <template>
@@ -94,15 +191,109 @@ const revertPayment = () => {
       class="adminButton pi pi-ellipsis-v"
     ></button>
 
-    <div v-if="showMenu" class="dropdown-menu">
+    <div v-if="showMenu" ref="hideMenu" class="dropdown-menu">
       <ul>
-        <li v-if="payment.paymentStatus !== 'failed'" @click="openVoidModal">
+        <li
+          class="hover:bg-gray-100 dark:hover:bg-gray-700"
+          @click="openValidModal"
+        >
+          Valid
+        </li>
+        <li
+          class="hover:bg-gray-100 dark:hover:bg-gray-700"
+          @click="openInvalidModal"
+        >
+          Invalid
+        </li>
+        <li
+          @click="openVoidModal"
+          class="hover:bg-gray-100 dark:hover:bg-gray-700"
+        >
           Void
         </li>
-        <li v-else @click="revertPayment">Revert</li>
+        <li
+          v-if="showAction"
+          class="hover:bg-gray-100 dark:hover:bg-gray-700"
+          @click="openOtp"
+        >
+          Refractor
+        </li>
+        <!-- <li
+          v-else
+          @click="revertPayment"
+          class="hover:bg-gray-100 dark:hover:bg-gray-700"
+        >
+          Revert
+        </li> -->
       </ul>
     </div>
   </div>
+
+  <Dialog v-model:visible="showValidModal" modal :style="{ width: '30rem' }">
+    <template #header>
+      <div class="flex flex-col items-center justify-center w-full">
+        <h2 class="text-xl font-bold font-[Poppins]">Valid Payment</h2>
+      </div>
+    </template>
+    <span
+      class="text-lg text-surface-700 dark:text-surface-400 block mb-8 text-center font-[Poppins]"
+    >
+      Are you sure you want to
+      <strong class="text-green-500">VALID</strong> this payment:
+      <span class="font-black font-[Poppins]">{{ payment.paymentId }}</span
+      >?
+    </span>
+
+    <div class="flex justify-center gap-2 font-[Poppins]">
+      <Button
+        type="button"
+        label="Cancel"
+        severity="secondary"
+        @click="closeModals"
+        class="font-bold w-full"
+      />
+      <Button
+        type="button"
+        label="Valid"
+        severity="success"
+        @click="confirmValid"
+        class="font-bold w-full"
+      />
+    </div>
+  </Dialog>
+
+  <Dialog v-model:visible="showInvalidModal" modal :style="{ width: '30rem' }">
+    <template #header>
+      <div class="flex flex-col items-center justify-center w-full">
+        <h2 class="text-xl font-bold font-[Poppins]">Invalid Payment</h2>
+      </div>
+    </template>
+    <span
+      class="text-lg text-surface-700 dark:text-surface-400 block mb-8 text-center font-[Poppins]"
+    >
+      Are you sure you want to
+      <strong class="text-orange-500">INVALID</strong> this payment:
+      <span class="font-black font-[Poppins]">{{ payment.paymentId }}</span
+      >?
+    </span>
+
+    <div class="flex justify-center gap-2 font-[Poppins]">
+      <Button
+        type="button"
+        label="Cancel"
+        severity="secondary"
+        @click="closeModals"
+        class="font-bold w-full"
+      />
+      <Button
+        type="button"
+        label="Invalid"
+        severity="warn"
+        @click="confirmInvalid"
+        class="font-bold w-full"
+      />
+    </div>
+  </Dialog>
 
   <Dialog v-model:visible="showVoidModal" modal :style="{ width: '30rem' }">
     <template #header>
@@ -132,6 +323,103 @@ const revertPayment = () => {
         label="Void"
         severity="danger"
         @click="confirmVoid"
+        class="font-bold w-full"
+      />
+    </div>
+  </Dialog>
+
+  <Dialog
+    v-model:visible="showOtp"
+    modal
+    :style="{ width: '30rem' }"
+    class="rounded-xl shadow-md"
+  >
+    <template #header>
+      <div class="flex flex-col items-center justify-center w-full">
+        <h2
+          class="text-2xl font-bold font-[Poppins] text-gray-800 dark:text-white"
+        >
+          Enter PIN
+        </h2>
+      </div>
+    </template>
+
+    <p
+      class="text-lg text-center text-surface-700 dark:text-surface-300 mb-6 font-[Poppins] px-4"
+    >
+      Please confirm if you want to
+      <strong class="text-green-500">validate</strong> this payment.
+    </p>
+
+    <div class="flex justify-center mb-6">
+      <InputOtp v-model="value" :length="6" mask />
+    </div>
+
+    <div class="flex justify-center gap-4 px-4">
+      <Button
+        type="button"
+        label="Cancel"
+        severity="secondary"
+        @click="closeModals"
+        class="font-bold w-full font-[Poppins]"
+      />
+      <Button
+        type="button"
+        label="Submit"
+        severity="success"
+        @click="verifyOtp"
+        class="font-bold w-full font-[Poppins]"
+      />
+    </div>
+  </Dialog>
+
+  <Dialog
+    v-model:visible="showRefractorModal"
+    modal
+    :style="{ width: '30rem' }"
+  >
+    <template #header>
+      <div class="flex flex-col items-center justify-center w-full">
+        <h2 class="text-xl font-bold font-[Poppins]">
+          Refractor Tendered Amount
+        </h2>
+      </div>
+    </template>
+
+    <div class="space-y-4 font-[Poppins] px-4">
+      <p class="text-center text-lg">
+        Please enter new
+        <strong class="text-green-600">tendered amount</strong> for this
+        payment?
+      </p>
+
+      <div class="text-left text-base space-y-2">
+        <div class="flex flex-col">
+          <div class="w-[100%]">
+            <label>Tendered Amount:</label>
+            <input class="w-full" v-model.number="formData.tenderedAmount" />
+          </div>
+          <div class="w-[100%]">
+            <label>Remarks:</label>
+            <input class="w-full" v-model.number="formData.remarks" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="flex justify-center gap-2 mt-6 font-[Poppins] px-4">
+      <Button
+        type="button"
+        label="Cancel"
+        severity="secondary"
+        @click="closeModals"
+        class="font-bold w-full"
+      />
+      <Button
+        type="button"
+        label="Next"
+        severity="success"
+        @click="confirmOverride"
         class="font-bold w-full"
       />
     </div>
@@ -188,7 +476,7 @@ const revertPayment = () => {
   position: absolute;
   right: 0;
   top: 100%;
-  background: #fcf5f5;
+  background: #fcfcfc;
   color: #333;
   border-radius: 5px;
   padding: 5px;
@@ -209,11 +497,6 @@ const revertPayment = () => {
   display: flex;
   align-items: center;
   gap: 5px;
-}
-
-.dropdown-menu li:hover {
-  background: #555;
-  color: #fcf5f5;
 }
 
 .modal-overlay {
@@ -297,5 +580,21 @@ const revertPayment = () => {
   border-radius: 5px;
   cursor: pointer;
   margin-left: 10px;
+}
+
+label {
+  display: block;
+  text-align: left;
+  font-size: 16px;
+  font-weight: 400;
+  margin-bottom: 10px;
+  margin-top: 10px;
+}
+
+input {
+  padding: 8px;
+  border: 1px solid #e2e8f0;
+  background-color: #ffffff;
+  border-radius: 5px;
 }
 </style>

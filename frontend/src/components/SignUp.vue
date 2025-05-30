@@ -2,8 +2,13 @@
 import { ref } from "vue";
 import { useRouter } from "vue-router";
 import ProgressSpinner from "primevue/progressspinner";
+import { useAuthStore } from "../stores/authStore";
+import InputText from "primevue/inputtext";
+import Button from "primevue/button";
 
+const authStore = useAuthStore();
 const router = useRouter();
+const emit = defineEmits(["sign-up-success", "showLogin"]);
 
 const newUser = ref({
   username: "",
@@ -22,8 +27,9 @@ const loading = ref(false);
 const showModal = ref(false);
 const signUpStatus = ref(null);
 const showSignUpModal = ref(false);
+const termsAccepted = ref(false);
 
-const SignUp = () => {
+const SignUp = async () => {
   errorMessage.value = "";
 
   const {
@@ -38,67 +44,74 @@ const SignUp = () => {
   } = newUser.value;
 
   if (
+    !username ||
     !firstName ||
     !lastName ||
     !contactNo ||
     !email ||
     !address ||
-    !password
+    !password ||
+    !confirmPass
   ) {
     alert("Please fill up all fields.");
     return;
   }
 
-  // if (password !== confirmPass) {
-  //   alert("Passwords do not match.");
-  //   return;
-  // }
+  if (password !== confirmPass) {
+    alert("Passwords do not match.");
+    return;
+  }
 
-  addNewUser({ ...newUser.value });
+  if (!termsAccepted.value) {
+    alert("Please accept the terms and conditions.");
+    return;
+  }
+
+  await addNewUser({ ...newUser.value });
 };
 
 const addNewUser = async (userData) => {
-  const { confirmPass, ...signUpUser } = userData;
+  const { confirmPass, ...data } = userData;
+
+  console.log("Sign up payload:", data);
 
   showModal.value = true;
   loading.value = true;
   signUpStatus.value = null;
 
   try {
-    const response = await fetch("http://localhost:3000/users", {
+    const response = await fetch("http://localhost:3000/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(signUpUser),
+      body: JSON.stringify(data),
     });
 
+    const result = await response.json();
+
     if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(errorText || "Failed to sign up");
+      throw new Error(result?.message || "Failed to sign up");
     }
 
+    signUpStatus.value = "success";
+
+    emit("sign-up-success");
+
     setTimeout(() => {
-      if (response.ok) {
-        signUpStatus.value = "success";
-        setTimeout(() => {
-          showModal.value = false;
-          router.replace("/home");
-        }, 1500);
-      } else {
-        signUpStatus.value = "error";
-        errorMessage.value = "Invalid username or password.";
-        setTimeout(() => {
-          showModal.value = false;
-        }, 1500);
-      }
-      loading.value = false;
-    }, 2000);
-  } catch (error) {
-    console.error("Error", err);
-    errorMessage.value = "Something went wrong. Try again later.";
-    showModal.value = false;
+      showModal.value = false;
+      showSignUpModal.value = false;
+      emit("showLogin");
+    }, 1500);
+  } catch (err) {
+    console.error("Sign-up error:", err);
+    signUpStatus.value = "error";
+    errorMessage.value =
+      err.message || "Something went wrong. Try again later.";
+    setTimeout(() => {
+      showModal.value = false;
+    }, 1500);
+  } finally {
     loading.value = false;
   }
-  showSignUpModal.value = false;
 };
 
 const OpenSignUpModal = () => {
@@ -114,7 +127,7 @@ const CloseSignUpModal = () => {
   <button class="SignUp-btn" @click="OpenSignUpModal">Sign Up</button>
 
   <div v-if="showSignUpModal" class="modal">
-    <div class="SignUpBox">
+    <div class="SignUpBox bg-white/30 backdrop-blur-md shadow-2xl">
       <div class="signup">
         <i
           class="pi pi-times"
@@ -122,107 +135,134 @@ const CloseSignUpModal = () => {
           style="
             color: green;
             align-self: flex-end;
-            margin-left: 49rem;
-            font-size: 1.5rem;
+            font-size: 1.3rem;
             cursor: pointer;
-            margin-right: 10px;
+            margin-right: 20px;
+            margin-top: 20px;
+            margin-bottom: 10px;
+            margin-left: 50rem;
+            font-weight: bold;
           "
         ></i>
+
         <div class="SignCred">
-          <h1 class="signUp text-5xl" style="text-align: center">SIGN UP</h1>
-          <p
-            style="
-              text-align: center;
-              color: green;
-              margin-top: -30px;
-              margin-bottom: 10px;
-            "
+          <h1
+            class="Login text-center mb-4 mt-1 text-4xl font-bold text-gray-800"
+            style="letter-spacing: 5px"
           >
+            SIGN UP
+          </h1>
+          <h6 class="text-gray-600 font-bold text-sm mb-4 text-center">
             Create an account to enjoy all the features of our website.
-            <br />
-          </p>
+          </h6>
         </div>
 
         <form @submit.prevent="SignUp">
           <div class="SignCred">
             <div class="bookAddress">
               <div>
-                <label>Username:</label>
-                <input
+                <label for="usename" class="text-sm text-gray-600 font-bold"
+                  >Username:</label
+                >
+                <InputText
+                  type="text"
                   class="packEvents"
                   v-model="newUser.username"
-                  placeholder="Username"
                 />
               </div>
             </div>
+
             <div class="packEvent">
               <div>
-                <label>First Name:</label>
-                <input
+                <label for="firstname" class="text-sm text-gray-600 font-bold"
+                  >Firstname:</label
+                >
+                <InputText
+                  type="text"
                   class="packEvents"
                   v-model="newUser.firstName"
-                  placeholder="First Name"
                 />
               </div>
               <div>
-                <label>Last Name:</label>
-                <input
+                <label for="lastname" class="text-sm text-gray-600 font-bold"
+                  >Lastname:</label
+                >
+                <InputText
+                  type="text"
                   class="packEvents"
                   v-model="newUser.lastName"
-                  placeholder="Last Name"
                 />
               </div>
               <div>
-                <label>Contact No.:</label>
-                <input
+                <label for="contactNo" class="text-sm text-gray-600 font-bold"
+                  >Contact No:</label
+                >
+                <InputText
+                  type="tel"
                   class="packEvents"
                   v-model="newUser.contactNo"
-                  placeholder="Contact No"
                 />
               </div>
+
               <div>
-                <label>Email Address</label>
-                <input
+                <label for="email" class="text-sm text-gray-600 font-bold"
+                  >Email:</label
+                >
+                <InputText
+                  type="text"
                   class="packEvents"
                   v-model="newUser.email"
-                  placeholder="Email Address"
                 />
               </div>
             </div>
 
             <div class="bookAddress">
               <div>
-                <label>Address:</label>
-                <input
+                <label for="address" class="text-sm text-gray-600 font-bold"
+                  >Address:</label
+                >
+                <InputText
+                  type="text"
                   class="packEvents"
                   v-model="newUser.address"
-                  placeholder="Address"
                 />
               </div>
             </div>
 
             <div class="packEvent">
               <div>
-                <label>Password:</label>
-                <input
+                <label for="password" class="text-sm text-gray-600 font-bold"
+                  >Password:</label
+                >
+                <InputText
+                  type="password"
                   class="packEvents"
                   v-model="newUser.password"
                   placeholder="Password"
                 />
               </div>
               <div>
-                <label>Confirm Password:</label>
-                <input class="packEvents" placeholder="Confirm Password" />
+                <label for="password" class="text-sm text-gray-600 font-bold"
+                  >Confirm password:</label
+                >
+                <InputText
+                  type="password"
+                  class="packEvents"
+                  v-model="newUser.confirmPass"
+                  placeholder="Password"
+                />
               </div>
             </div>
 
             <div class="checkbox">
-              <input type="checkbox" id="signupCheck" />
+              <input type="checkbox" id="signupCheck" v-model="termsAccepted" />
               <label for="signupCheck">I accept all terms & conditions</label>
             </div>
 
             <div class="modal-actions">
-              <button class="submitBtn" type="submit">Sign Up</button>
+              <Button class="submitBtn" type="submit" value="Login"
+                >Sign Up</Button
+              >
             </div>
           </div>
         </form>
@@ -235,7 +275,7 @@ const CloseSignUpModal = () => {
     class="loadModal fixed top-0 left-0 w-full h-full bg-opacity-50 flex justify-center items-center"
   >
     <div
-      class="bg-white p-6 rounded-lg text-center w-80 h-80 justify-center flex flex-col m-auto"
+      class="bg-white p-6 rounded-lg text-center w-80 h-80 flex flex-col justify-center items-center m-auto"
     >
       <ProgressSpinner v-if="loading" style="width: 80px; height: 80px" />
       <i
@@ -248,6 +288,7 @@ const CloseSignUpModal = () => {
         class="pi pi-times-circle text-red-600"
         style="font-size: 4rem"
       ></i>
+
       <p
         v-if="signUpStatus === 'success'"
         class="text-green-600 font-bold text-xl"
@@ -255,13 +296,14 @@ const CloseSignUpModal = () => {
         Sign Up Successful! Welcome to Danayas Resorts Events Venue
       </p>
       <p v-if="signUpStatus === 'error'" class="text-red-600 font-bold text-xl">
-        Invalid Credentials
+        {{ errorMessage }}
       </p>
     </div>
   </div>
 </template>
 
 <style scoped>
+/* Your full CSS from the original remains here */
 .checkbox input[type="checkbox"] {
   height: 16px;
   width: 16px;
@@ -282,7 +324,6 @@ const CloseSignUpModal = () => {
   margin-bottom: 3rem;
   text-shadow: 0px 1px, 1px 0px, 1px 1px;
 }
-
 .SignUp-btn {
   padding: 10px 20px;
   border: none;
@@ -290,16 +331,13 @@ const CloseSignUpModal = () => {
   cursor: pointer;
   font-weight: bold;
   background-color: #41ab5d;
-
   color: white;
 }
 .SignUp-btn:hover {
   background-color: #194d1d;
   color: white;
-
   transition: all 0.3s ease-in-out;
 }
-
 .modal {
   z-index: 9999;
   position: fixed;
@@ -312,63 +350,9 @@ const CloseSignUpModal = () => {
   align-items: center;
   justify-content: center;
 }
-
 .SignUpBox {
-  padding: 20px;
-  filter: drop-shadow(0px 0px 10px rgba(97, 95, 95, 0.5));
   background: #eef9eb;
-  box-shadow: 0px 0px 10px rgba(28, 216, 34, 0.5);
-  border: 1px solid #38dc87;
   border-radius: 10px;
-}
-
-#username {
-  width: 587px;
-}
-
-#firstname,
-#lastname {
-  width: 290px;
-  display: inline-flex;
-}
-
-#lastname {
-  margin-left: 10px;
-}
-
-#contactNo,
-#Address {
-  width: 290px;
-  display: inline-flex;
-  position: relative;
-}
-
-#Address {
-  margin-left: 10px;
-}
-
-#password,
-#confirmPass {
-  width: 290px;
-  display: inline-flex;
-  position: relative;
-}
-
-#confirmPass {
-  margin-left: 10px;
-}
-
-.SignCred {
-  padding: 0px;
-  width: 100%;
-  justify-content: center;
-  border-radius: 10px;
-  filter: drop-shadow(0px 4px 4px rgba(97, 95, 95, 0.5));
-}
-label {
-  display: block;
-  text-align: left;
-  color: green;
 }
 input {
   width: 100%;
@@ -376,9 +360,7 @@ input {
   background-color: #f0f0f0;
   border-radius: 5px;
   margin-top: 5px;
-  border: 1px solid #38dc87;
 }
-
 .modal-actions {
   display: flex;
   justify-content: center;
@@ -386,24 +368,11 @@ input {
   gap: 30px;
   margin-bottom: 20px;
 }
-
-.cancelBtn {
-  width: 200px;
-  padding: 10px;
-  background: #ccc;
-  border: none;
-
-  border-radius: 5px;
-  cursor: pointer;
-}
-
 .submitBtn {
   width: 15rem;
   height: auto;
-  padding: 15px;
   font-size: 1.2rem;
   font-family: "Poppins";
-  background: #194d1d;
   color: white;
   border: none;
   font-weight: bold;
@@ -411,7 +380,6 @@ input {
   cursor: pointer;
   margin-left: 10px;
 }
-
 .packEvent,
 .bookAddress {
   margin-top: 7px;
@@ -420,19 +388,16 @@ input {
   gap: 10px;
   justify-content: center;
 }
-
 .packEvent div {
   display: flex;
   flex-direction: column;
   width: 40%;
 }
-
 .bookAddress div {
   display: flex;
   flex-direction: column;
   width: 81%;
 }
-
 .loadModal {
   z-index: 999;
 }

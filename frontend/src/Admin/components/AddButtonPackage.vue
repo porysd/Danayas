@@ -11,9 +11,15 @@ const toast = useToast();
 const showAddPackageModal = ref(false);
 const newPackage = ref({
   name: "",
-  price: "",
-  description: "",
+  price: null,
+  inclusion: "",
   status: "",
+  mode: "",
+  imageUrl: null,
+  maxPax: "",
+  isPromo: false,
+  promoStart: null,
+  promoEnd: null,
 });
 
 defineProps(["data"]);
@@ -32,6 +38,14 @@ const addPackage = () => {
 
   closeAddPackageModal();
 };
+const onFileSelect = (event) => {
+  const file = event.files[0];
+  if (file) {
+    newPackage.value.imageUrl = file;
+  }
+};
+
+console.log("Sending new package:", newPackage.value);
 
 //name, price, description, status
 </script>
@@ -63,16 +77,26 @@ const addPackage = () => {
         </div>
         <div class="addPackInput">
           <label>Price:</label>
-          <input v-model="newPackage.price" placeholder="Price" />
+          <input v-model.number="newPackage.price" placeholder="Price" />
         </div>
         <div class="addPackInput">
-          <label>Description:</label>
+          <label>Inclusion:</label>
           <Textarea
-            v-model="newPackage.description"
+            v-model="newPackage.inclusion"
             autoResize
             rows="3"
             cols="30"
-            placeholder="Description"
+            placeholder="Inclusions:
+            - example
+            - example"
+          />
+        </div>
+        <div class="addPackInput">
+          <label>Max Pax:</label>
+          <input
+            v-model.number="newPackage.maxPax"
+            placeholder="Price"
+            type="number"
           />
         </div>
         <div class="addPackInput">
@@ -80,19 +104,27 @@ const addPackage = () => {
           <select v-model="newPackage.status" class="border p-2 rounded w-full">
             <option value="active">Active</option>
             <option value="inactive">Inactive</option>
-            <option value="coming-soon">Coming Soon</option>
-            <option value="sold-out">Sold Out</option>
+          </select>
+        </div>
+        <div class="addPackInput">
+          <label>Mode:</label>
+          <select v-model="newPackage.mode" class="border p-2 rounded w-full">
+            <option value="day-time">Day Time</option>
+            <option value="night-time">Night Time</option>
+            <option value="whole-day">Whole Day</option>
           </select>
         </div>
         <div class="addPackInput">
           <label>Image URL:</label>
           <FileUpload
             ref="fileupload"
+            v-model="newPackage.imageUrl"
             mode="basic"
-            name="demo[]"
+            name="imageUrl"
             url="/api/upload"
             accept="image/*"
             :maxFileSize="1000000"
+            @select="onFileSelect"
           />
         </div>
       </div>
@@ -135,10 +167,11 @@ const addPackage = () => {
   gap: 10px;
 }
 
-.addPack input {
+.addPack input,
+.addPack select {
   padding: 10px;
-  border: 1px solid #ccc;
-  background-color: #fcfcfc;
+  border: 1px solid #cbd5e1;
+  background-color: #ffffff;
   border-radius: 5px;
   height: 40px;
 }

@@ -1,27 +1,261 @@
 <script setup>
-import { ref } from "vue";
+import { ref, onMounted, onUnmounted, computed } from "vue";
 import NavBar from "../components/NavBar.vue";
 import Footer from "../components/Footer.vue";
+import Dialog from "primevue/dialog";
+import { useBookingStore } from "../stores/bookingStore";
+import { usePublicEntryStore } from "../stores/publicEntryStore";
+import { useUserStore } from "../stores/userStore";
+import { formatDates } from "../utility/dateFormat";
+import { formatPeso } from "../utility/pesoFormat";
+import { usePackageStore } from "../stores/packageStore";
+import { useAuthStore } from "../stores/authStore";
+import { useRefundStore } from "../stores/refundStore";
+import Tag from "primevue/tag";
+import Button from "primevue/button";
+import Logger from "../components/Logger.vue";
+import { useToast } from "primevue/usetoast";
+import { useCatalogStore } from "../stores/catalogStore";
+const catalogStore = useCatalogStore();
+
+const toast = useToast();
 
 const isMenuOpen1 = ref(false);
 const isMenuOpen2 = ref(false);
 
-const toggleMenu = () => {
-  isMenuOpen.value = !isMenuOpen.value;
+const bookingStore = useBookingStore();
+const publicStore = usePublicEntryStore();
+const refundStore = useRefundStore();
+
+const userStore = useUserStore();
+const packageStore = usePackageStore();
+const authStore = useAuthStore();
+
+const userBookings = ref([]);
+const historyBookings = ref([]);
+
+const openMenuBookingId = ref(null);
+const showAcknowledgement = ref(false);
+const pendingRefund = ref(null);
+
+onMounted(async () => {
+  await packageStore.fetchAllPackages();
+  await packageStore.fetchAllPromos();
+  await bookingStore.fetchUserBookings();
+  await publicStore.fetchAllPublic();
+  await refundStore.fetchRefunds();
+  await catalogStore.fetchAllCatalogs();
+
+  try {
+    const userId = authStore.user?.userId;
+    if (!userId) {
+      console.error("User ID not found in authStore");
+      return;
+    }
+
+    const fetchedUser = await userStore.getUserById(userId);
+
+    if (fetchedUser?.userId) {
+      const id = fetchedUser.userId;
+
+      const bookings = bookingStore.bookings.filter(
+        (booking) =>
+          booking.userId === id &&
+          [
+            "pending",
+            "reserved",
+            "rescheduled",
+            "pending-cancellation",
+          ].includes(booking.bookStatus)
+      );
+      const publics = publicStore.public.filter(
+        (publics) =>
+          publics.userId === id &&
+          [
+            "pending",
+            "reserved",
+            "rescheduled",
+            "pending-cancellation",
+          ].includes(publics.status)
+      );
+
+      userBookings.value = [...bookings, ...publics];
+
+      const bookingDone = bookingStore.bookings.filter(
+        (booking) =>
+          booking.userId === id &&
+          ["cancelled", "completed"].includes(booking.bookStatus)
+      );
+      const publicDone = publicStore.public.filter((publics) => {
+        publics.userId === id &&
+          ["cancelled", "completed"].includes(publics.status);
+      });
+
+      historyBookings.value = [...bookingDone, ...publicDone];
+
+      const allUserBookings = bookingStore.bookings.filter(
+        (booking) => booking.userId === id
+      );
+      const allUserPublics = publicStore.public.filter(
+        (publics) => publics.userId === id
+      );
+
+      const pending = refundStore.refunds.find((refund) => {
+        const linkedEntry =
+          allUserBookings.find(
+            (entry) => entry.bookingId && entry.bookingId === refund.bookingId
+          ) ||
+          allUserPublics.find(
+            (entry) =>
+              entry.publicEntryId &&
+              entry.publicEntryId === refund.publicEntryId
+          );
+        return (
+          linkedEntry &&
+          refund.refundMethod === "gcash" &&
+          refund.refundStatus === "completed" &&
+          (refund.acknowledge === null ||
+            refund.acknowledge === "" ||
+            refund.acknowledge === undefined)
+        );
+      });
+
+      if (pending) {
+        pendingRefund.value = pending;
+        showAcknowledgement.value = true;
+      }
+    } else {
+      console.error("User ID not found in fetched data.");
+    }
+  } catch (error) {
+    console.error("Error fetching data:", error);
+  }
+});
+
+const getAddOns = (booking) => {
+  // Try both possible property names
+  const addOnIds = booking.catalogAddOnIds || booking.bookingAddOns || [];
+  if (!Array.isArray(addOnIds) || !addOnIds.length) return [];
+  return addOnIds
+    .map((id) =>
+      catalogStore.catalog.find(
+        (addOn) => String(addOn.catalogAddOnId) === String(id)
+      )
+    )
+    .filter(Boolean);
 };
 
-const cancelModal = ref(false);
-const showpendingmodal = ref(false);
+const rescheduleHandler = async (updatedDate) => {
+  await bookingStore.updateBookingDates(updatedDate);
+};
 
-const showcancelModal = () => {
-  cancelModal.value = true;
+const cancelHandler = async (cancelStatus) => {
+  await bookingStore.updateBookingStatus(cancelStatus);
+  // await refundStore.updateRefund(cancelStatus);
 };
-const closemodal = () => {
-  cancelModal.value = false;
+
+const refundHandler = async (acknowledgeValue) => {
+  try {
+    if (!pendingRefund.value) {
+      throw new Error("No pending refund to acknowledge.");
+    }
+    const updatedRefund = {
+      ...pendingRefund.value,
+      acknowledge: acknowledgeValue,
+    };
+
+    await refundStore.updateRefund(updatedRefund);
+    await refundStore.fetchRefunds();
+
+    toast.add({
+      severity: "success",
+      summary: "Acknowledged",
+      detail: `You selected: ${acknowledgeValue}`,
+      life: 3000,
+    });
+
+    showAcknowledgement.value = false;
+    pendingRefund.value = null;
+  } catch (error) {
+    toast.add({
+      severity: "error",
+      summary: "Error",
+      detail: "Failed to update acknowledgement.",
+      life: 3000,
+    });
+    console.error(error);
+  }
 };
-const OpenPendingModal = () => {
-  cancelModal.value = false;
-  showpendingmodal.value = true;
+
+const getPackageName = (packageId) => {
+  const pkg =
+    packageStore.packages.find((p) => p.packageId === packageId) ||
+    packageStore.promos.find((p) => p.packageId === packageId);
+  return pkg ? pkg.name : "Unknown Package";
+};
+
+const getPackageData = (packageId) => {
+  return (
+    packageStore.packages.find((p) => p.packageId === packageId) ||
+    packageStore.promos.find((p) => p.packageId === packageId) ||
+    null
+  );
+};
+
+const showAction = ref(false);
+
+const handleLoggerClick = (booking) => {
+  if (booking.bookStatus === "pending") {
+    if (toast) {
+      toast.add({
+        severity: "warn",
+        summary: "Not Allowed",
+        detail: "You cannot open actions while booking is pending.",
+        life: 3000,
+      });
+    } else {
+      alert("You cannot open actions while booking is pending.");
+    }
+    showAction.value = false;
+    openMenuBookingId.value = null;
+  } else {
+    showAction.value = true;
+    openMenuBookingId.value = booking.bookingId;
+  }
+};
+
+const selected = ref(null);
+const details = ref(false);
+
+const openDetails = (receipt) => {
+  selected.value = receipt;
+  details.value = true;
+};
+
+const getStatusSeverity = (status) => {
+  switch (status) {
+    case "pending":
+      return "warn";
+    case "reserved":
+      return "info";
+    case "rescheduled":
+      return "secondary";
+    case "completed":
+      return "success";
+    case "cancelled":
+      return "danger";
+    default:
+      return "secondary";
+  }
+};
+
+const getRefundRemarks = (booking) => {
+  const refund = refundStore.refunds.find(
+    (r) =>
+      (r.bookingId && r.bookingId === booking.bookingId) ||
+      (r.publicEntryId && r.publicEntryId === booking.publicEntryId)
+  );
+  return refund?.remarks || null;
 };
 </script>
 
@@ -39,124 +273,329 @@ const OpenPendingModal = () => {
 
   <div class="Logs-Container">
     <hr class="Header" data-content=" On Going" />
-    <div class="logsBox">
-      <div class="w-full relative inline-block">
-        <div class="flex justify-end mr-3">
-          <button
-            @click.stop="isMenuOpen1 = !isMenuOpen1"
-            class="pi pi-ellipsis-v"
-            style="font-size: 1.5rem"
-          ></button>
+  </div>
 
-          <div
-            v-if="isMenuOpen1"
-            class="absolute right-2 mt-4 w-35 shadow-md z-50 bg-[#fcf5f5] p-4 rounded"
-          >
-            <button class="hover:bg-[#C1F2B0]">Reschedule</button>
-            <button class="hover:bg-[#C1F2B0]" @click="showcancelModal">
-              Cancel
-            </button>
+  <div class="w-[70%] m-auto justify-center">
+    <div v-if="userBookings.length > 0"></div>
+    <div v-else>
+      <p class="flex justify-center m-auto">No bookings found for this user.</p>
+    </div>
 
-            <div v-if="cancelModal" class="modal">
-              <div
-                class="DelBox p-10 bg-[#eef9eb]"
-                style="
-                  border: 1px solid #38dc87;
-                  border-radius: 10px;
-                  box-shadow: 0px 0px 10px rgba(28, 216, 34, 0.5);
-                  align-items: center;
-                  justify-content: center;
-                  text-align: center;
-                  font-weight: 600;
-                  font-size: large;
-                "
-              >
-                <h2>Are you sure you want to cancel your reservation?</h2>
-                <div class="Button">
-                  <button
-                    class="btn1 hover:bg-[#FF8080]"
-                    @click="OpenPendingModal"
-                  >
-                    YES
-                  </button>
-
-                  <button class="btn2 hover:bg-[#194d1d]" @click="closemodal">
-                    NO
-                  </button>
-                </div>
-              </div>
-            </div>
-            <div v-if="showpendingmodal" class="modal">
-              <div
-                class="pendingBox p-10 bg-[#eef9eb] w-120"
-                style="
-                  border: 1px solid #38dc87;
-                  border-radius: 10px;
-                  box-shadow: 0px 0px 10px rgba(28, 216, 34, 0.5);
-                  align-items: center;
-                  justify-content: center;
-                  text-align: center;
-                  font-weight: 600;
-                  font-size: large;
-                "
-              >
-                <h2 style="word-wrap: break-word">
-                  Your refund will be processed and sent to your email from 3 to
-                  5 working days.
-                </h2>
-                <div class="flex justify-center">
-                  <button
-                    class="btn1 hover:bg-[#41AB5D] mt-[2rem]"
-                    @click="showpendingmodal = false"
-                  >
-                    OK
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+    <div
+      class="logsBox"
+      v-for="booking in userBookings"
+      :key="booking.bookingId"
+      @click="openDetails(booking)"
+    >
+      <div class="w-full mt-10 text-right" @click.stop>
+        <Logger
+          :booking="booking"
+          :refund="booking"
+          :showAction="showAction && openMenuBookingId === booking.bookingId"
+          @click="handleLoggerClick(booking)"
+          @rescheduleBooking="rescheduleHandler"
+          @cancelBooking="cancelHandler"
+        />
       </div>
 
       <div class="information">
-        <p>Package name:</p>
-        <p>Date:</p>
-        <p>Personal Information:</p>
+        <p>
+          <Tag
+            severity="info"
+            :value="booking.bookingId ? 'PRIVATE' : 'PUBLIC'"
+          />
+        </p>
+        <p>
+          Personal Information: {{ booking.firstName }}
+          {{ booking.lastName }}
+        </p>
+
+        <template v-if="booking.bookingId">
+          <p>
+            Date: {{ formatDates(booking.checkInDate) }} to
+            {{ formatDates(booking.checkOutDate) }}
+          </p></template
+        >
+        <template v-else>
+          <p>Date: {{ formatDates(booking.entryDate) }}</p>
+        </template>
+        <p>Total Amount: {{ formatPeso(booking.totalAmount) }}</p>
+      </div>
+      <div class="flex justify-end mb-10" style="position: relative">
+        <Tag
+          class="mb"
+          :severity="getStatusSeverity(booking.bookStatus || booking.status)"
+          :value="
+            getRefundRemarks(booking) || booking.bookStatus || booking.status
+          "
+        />
       </div>
     </div>
   </div>
 
   <div class="Logs-Container">
-    <hr class="Header" data-content="History" />
-    <div class="logsBox">
-      <div class="w-full relative inline-block">
-        <div class="flex justify-end mr-3">
-          <button
-            @click.stop="isMenuOpen2 = !isMenuOpen2"
-            class="pi pi-ellipsis-v"
-            style="font-size: 1.5rem"
-          ></button>
+    <hr class="Header" data-content=" History " />
+  </div>
 
-          <div
-            v-if="isMenuOpen2"
-            class="absolute right-2 mt-4 w-35 shadow-md z-50 bg-[#fcf5f5] p-4 rounded"
-          >
-            <button class="hover:bg-[#FF8080]">Delete</button>
-          </div>
-        </div>
+  <div class="w-[70%] m-auto justify-center">
+    <div v-if="historyBookings.length > 0"></div>
+    <div v-else>
+      <p class="flex justify-center m-auto">No bookings found for this user.</p>
+    </div>
+
+    <div
+      class="logsBox"
+      v-for="booking in historyBookings"
+      :key="booking.bookingId"
+      @click="openDetails(booking)"
+    >
+      <div class="w-full mt-10 text-right">
+        <!-- <Logger
+          :booking="booking"
+          @rescheduleBooking="rescheduleHandler"
+          @cancelBooking="cancelHandler"
+        /> -->
       </div>
 
       <div class="information">
-        <p>Package name:</p>
-        <p>Date:</p>
-        <p>Personal Information:</p>
+        <p>
+          <Tag
+            severity="info"
+            :value="booking.bookingId ? 'PRIVATE' : 'PUBLIC'"
+          />
+        </p>
+        <p>
+          Personal Information: {{ booking.firstName }}
+          {{ booking.lastName }}
+        </p>
+
+        <template v-if="booking.bookingId">
+          <p>
+            Date: {{ formatDates(booking.checkInDate) }} to
+            {{ formatDates(booking.checkOutDate) }}
+          </p></template
+        >
+        <template v-else>
+          <p>Date: {{ formatDates(booking.entryDate) }}</p>
+        </template>
+        <p>Total Amount: {{ formatPeso(booking.totalAmount) }}</p>
+      </div>
+      <div class="flex justify-end mb-10" style="position: relative">
+        <Tag
+          class="mb"
+          :severity="getStatusSeverity(booking.bookStatus || booking.status)"
+          :value="
+            getRefundRemarks(booking) || booking.bookStatus || booking.status
+          "
+        />
       </div>
     </div>
   </div>
+
+  <Dialog v-model:visible="details">
+    <div
+      class="flex-col flex justify-center items-center font-medium h-auto w-[100%] mt-5"
+    >
+      <div class="p-5 rounded-lg w-[70rem] h-auto mt-10 mb-10 gap-20">
+        <div class="flex">
+          <div>
+            <img src="../Admin/assets/drevslogo.png" alt="" class="w-40 h-40" />
+          </div>
+
+          <div class="flex flex-col justify-center m-auto text-2xl">
+            <h1
+              class="font-black text-5xl flex align-center justify-center"
+              style="font-style: 'Times New Roman'"
+            >
+              Danayas Resort Events Venue
+            </h1>
+            <h2>#27 Jones St. Extension, Dulong Bayan 2, San Mateo Rizal</h2>
+            <h2 class="text-center">09912166870</h2>
+          </div>
+        </div>
+
+        <div class="flex gap-130 relative">
+          <div class="mb-2 p-2 rounded-sm">
+            <div>
+              <h1 class="font-bold font-[Poppins] mt-[2rem]">BILLED TO:</h1>
+            </div>
+            <div class="">
+              <p>{{ selected?.firstName }} {{ selected?.lastName }}</p>
+            </div>
+            <div class="">
+              <p>
+                {{ selected?.address }}
+              </p>
+            </div>
+          </div>
+          <div class="mb-2 p-2 rounded-sm">
+            <div>
+              <h1 class="font-bold font-[Poppins] mt-[2rem]">INVOICE NO.:</h1>
+            </div>
+            <div class="">
+              <p>DATE:</p>
+            </div>
+          </div>
+        </div>
+
+        <Divider />
+
+        <div class="flex gap-100 relative">
+          <div class="mb-2 p-2 rounded-sm">
+            <div>
+              <h1 class="font-bold font-[Poppins] mt-[2rem]">
+                Guest Information:
+              </h1>
+            </div>
+            <div class="">
+              <p>Name: {{ selected?.firstName }} {{ selected?.lastName }}</p>
+            </div>
+            <div class="">
+              <p>Contact No.: {{ selected?.contactNo }}</p>
+            </div>
+            <div class="">
+              <p>Email Address: {{ selected?.email }}</p>
+            </div>
+            <div class="">
+              <p>Address: {{ selected?.address }}</p>
+            </div>
+          </div>
+          <div class="mb-2 p-2 rounded-sm">
+            <div class="flex gap-2">
+              <p>
+                Date: {{ formatDates(selected?.checkInDate) }} to
+                {{ formatDates(selected?.checkOutDate) }}
+              </p>
+            </div>
+            <div class="flex gap-2">
+              <p>Check-in: {{ formatDates(selected?.checkInDate) }}</p>
+            </div>
+            <div class="flex gap-2">
+              <p>Check-out: {{ formatDates(selected?.checkOutDate) }}</p>
+              <button class=""></button>
+            </div>
+            <div class="">
+              <p>Mode: {{ selected?.mode }}</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex flex-col">
+          <table>
+            <thead>
+              <tr class="">
+                <th>Item</th>
+                <th>REF ID</th>
+                <th>Unit Price</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="">{{ getPackageName(selected?.packageId) }}</td>
+                <td class="text-center">
+                  {{ selected?.packageId }}
+                </td>
+                <td class="text-center">
+                  {{ formatPeso(getPackageData(selected?.packageId)?.price) }}
+                </td>
+                <td class="text-center">
+                  {{ formatPeso(getPackageData(selected?.packageId)?.price) }}
+                </td>
+              </tr>
+            </tbody>
+            <tbody v-if="getAddOns(selected).length">
+              <tr
+                v-for="addOn in getAddOns(selected)"
+                :key="addOn.catalogAddOnId"
+              >
+                <td>{{ addOn.itemName }}</td>
+                <td class="text-center">{{ addOn.catalogAddOnId }}</td>
+                <td class="text-center">{{ formatPeso(addOn.price) }}</td>
+                <td class="text-center">{{ formatPeso(addOn.price) }}</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="w-full justify-items-end">
+            <div class="mt-5 text-right w-[30%] mr-5">
+              <h1>
+                SubTotal:
+                {{ formatPeso(selected?.totalAmount) }}
+              </h1>
+              <h1 class="mt-10">TAX(0%) : 0</h1>
+              <Divider />
+              <h1>
+                <strong>Payment Status: </strong
+                >{{
+                  selected?.bookingPaymentStatus ||
+                  selected?.publicPaymentStatus
+                }}
+              </h1>
+              <h1>
+                <strong>TOTAL: </strong>{{ formatPeso(selected?.totalAmount) }}
+              </h1>
+            </div>
+          </div>
+          <div class="">
+            <h1 class="mb-1 font-12 font-bold">Payment Information</h1>
+            <h2>Account Name: Jason Isaac Mendoza</h2>
+            <h2>Account No.: 09565187842</h2>
+          </div>
+        </div>
+      </div>
+    </div>
+  </Dialog>
+
+  <Dialog
+    v-model:visible="showAcknowledgement"
+    modal
+    header="Acknowledge Refund"
+    :closable="false"
+    :style="{ width: '30vw' }"
+  >
+    <div class="text-center space-y-4">
+      <p>
+        Do you acknowledge that you received the refund with Danaya’s Resort and
+        Events Venue?
+      </p>
+
+      <div class="flex justify-center gap-4">
+        <Button
+          label="Yes"
+          icon="pi pi-check"
+          @click="refundHandler('yes')"
+          severity="success"
+        />
+        <Button
+          label="No"
+          icon="pi pi-times"
+          @click="refundHandler('no')"
+          severity="danger"
+        />
+      </div>
+    </div>
+  </Dialog>
+
   <Footer />
 </template>
 
 <style scoped>
+calendar-range {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+}
+textarea {
+  background-color: #f7f0f0;
+  border: 1px solid green;
+  padding: 2px;
+  height: 10vh;
+  width: 100%;
+  break-inside: auto;
+  object-fit: cover;
+  display: flex;
+}
 .Logs-Container {
   margin-top: 5rem;
   margin-bottom: 2rem;
@@ -173,6 +612,18 @@ const OpenPendingModal = () => {
 }
 .btn2:hover {
   background: lightgreen;
+}
+
+.DelBox {
+  border: 1px solid #38dc87;
+  border-radius: 10px;
+  box-shadow: 0px 0px 10px rgba(28, 216, 34, 0.5);
+  align-items: center;
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+  font-weight: 600;
+  font-size: large;
 }
 
 .Button {
@@ -196,37 +647,26 @@ const OpenPendingModal = () => {
   align-items: center;
   justify-content: center;
 }
-img {
-  width: 30px;
-  height: 30px;
-  position: static;
-}
+
 .information {
-  position: relative;
-  display: inline-block;
-  width: full;
-  font-size: 1.2rem;
-  align-items: center;
-  justify-content: center;
-  width: 15rem;
-  display: flex;
-  flex-direction: column;
-  justify-content: start;
-  margin-right: 70rem;
+  font-weight: 600;
+
+  width: 100%;
+  line-height: 1.9rem;
 }
 
 .logsBox {
-  position: relative;
   display: flex;
   flex-direction: column;
-  height: 10rem;
+  height: 13rem;
   justify-content: center;
-  align-items: center;
   margin: auto;
+  padding: 2rem;
   border-radius: 10px;
-  width: 90%;
+  width: auto;
   background: transparent;
   border: 1px solid #41ab5d;
+  margin-bottom: 2rem;
 }
 
 .Header {
@@ -237,23 +677,25 @@ img {
   font-weight: bolder;
   font-size: 1.3rem;
   margin-top: 20px;
-  margin-bottom: 5px;
+  margin-bottom: 2rem;
   color: rgb(2, 2, 2);
   text-align: center;
   height: 1.5rem;
-  margin-bottom: 2rem;
 }
 
 .Header::before {
   content: "";
   position: absolute;
-  background: #000000;
-  left: 0;
-  margin-left: 10rem;
-  font-weight: bolder;
   top: 50%;
-  width: 70rem;
+  left: 50%;
+  transform: translate(
+    -50%,
+    -50%
+  ); /* Center the line horizontally and vertically */
+  background: #000000;
+  width: 50%; /* or a percentage like 80% if you want shorter lines */
   height: 1.2px;
+  z-index: -1; /* Optional: keeps the line behind the text */
 }
 
 .Header::after {

@@ -3,13 +3,16 @@ import db from "../config/database";
 import { RegisterDTO, LoginDTO } from "../dto/authDTO";
 import { UsersTable } from "../schemas/User";
 import { eq } from "drizzle-orm";
-import { sign, verify } from 'hono/jwt'
+import { sign, verify } from "hono/jwt";
 import { AccessTokenDTO } from "../dto/authDTO";
 import { ErrorSchema } from "../utils/ErrorSchema";
 import { UnauthorizedError, ConflictError } from "../utils/errors";
 import { errorHandler } from "../middlewares/errorHandler";
+import type { AuthContext } from "../types";
+import { AuditLogsTable } from "../schemas/AuditLog";
+import { GetUserDTO } from "../dto/userDTO";
 
-export default new OpenAPIHono()
+export default new OpenAPIHono<AuthContext>()
   .openapi(
     createRoute({
       tags: ["Authentication"],
@@ -30,34 +33,64 @@ export default new OpenAPIHono()
         },
         409: {
           description: "User already exists",
-          content:{
-            "application/json": { schema: ErrorSchema}
-          }
-        }
+          content: {
+            "application/json": { schema: ErrorSchema },
+          },
+        },
       },
     }),
     async (c) => {
-      try{
+      try {
         const body = c.req.valid("json");
 
         const existingUser = await db.query.UsersTable.findFirst({
           where: eq(UsersTable.email, body.email),
         }).execute();
-  
-        if(existingUser) {
+
+        if (existingUser) {
           throw new ConflictError("User already exists");
         }
-  
-        await db
-          .insert(UsersTable)
-          .values({
-            ...body,
-            password: await Bun.password.hash(body.password),
-          })
-          .execute();
-  
-        return c.redirect("/auth/login", 302);
-      } catch(err){
+
+        const created = await db.transaction(async (tx) => {
+          const createUser = (
+            await tx
+              .insert(UsersTable)
+              .values({
+                ...body,
+                password: await Bun.password.hash(body.password),
+              })
+              .returning()
+              .execute()
+          )[0];
+
+          await tx
+            .insert(AuditLogsTable)
+            .values({
+              userId: createUser.userId,
+              action: "create",
+              tableName: "USER",
+              recordId: createUser.userId,
+              data: JSON.stringify(GetUserDTO.parse(createUser)),
+              remarks: "User registration",
+              createdAt: new Date().toISOString(),
+            })
+            .execute();
+
+          return createUser;
+        });
+
+        return c.json(
+          {
+            message: "Registration successful. Please log in.",
+            user: {
+              userId: created.userId,
+              email: created.email,
+              role: created.role,
+            },
+          },
+          201
+        );
+      } catch (err) {
         return errorHandler(err, c);
       }
     }
@@ -84,55 +117,77 @@ export default new OpenAPIHono()
           description: "Invalid credentials",
           content: {
             "application/json": { schema: ErrorSchema },
-          }
-        }
+          },
+        },
       },
     }),
     async (c) => {
-      try{
+      try {
         const body = c.req.valid("json");
         const dbUser = await db.query.UsersTable.findFirst({
-          where: eq(UsersTable.email, body.email)
+          where: eq(UsersTable.email, body.email),
         }).execute();
-  
+
         if (!dbUser) {
           throw new UnauthorizedError("Invalid email or password");
         }
-        if(!await Bun.password.verify(body.password, dbUser.password)) {
+        if (dbUser.status === "disable") {
+          throw new UnauthorizedError(
+            "Your account has been disabled. Please contact support."
+          );
+        }
+        if (!(await Bun.password.verify(body.password, dbUser.password))) {
           throw new UnauthorizedError("Invalid email or password");
         }
-  
+
+        await db
+          .insert(AuditLogsTable)
+          .values({
+            userId: dbUser.userId,
+            action: "login",
+            tableName: "USER",
+            recordId: dbUser.userId,
+            data: JSON.stringify(GetUserDTO.parse(dbUser)),
+            remarks: "User logged in",
+            createdAt: new Date().toISOString(),
+          })
+          .execute();
+
         const payload = {
           sub: dbUser.userId,
           role: dbUser.role,
           iss: Bun.env.JWT_ISSUER || "",
           aud: Bun.env.JWT_AUDIENCE || "",
-          exp: Math.floor(Date.now() / 1000) + (60 * 60),
+          exp: Math.floor(Date.now() / 1000) + 60 * 60,
           nbf: Math.floor(Date.now() / 1000) - 3,
           iat: Math.floor(Date.now() / 1000),
           jti: crypto.randomUUID(),
         };
-  
-        const accessToken = await sign(
-          payload,
-          Bun.env.JWT_ACCESS_SECRET!,
-        );
-  
+
+        const accessToken = await sign(payload, Bun.env.JWT_ACCESS_SECRET!);
+
         const refreshToken = await sign(
-          { ...payload, exp: Math.floor(Date.now() / 1000) + (60 * 60 * 24) },
-          Bun.env.JWT_REFRESH_SECRET!,
+          { ...payload, exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 },
+          Bun.env.JWT_REFRESH_SECRET!
         );
-        
-        return c.json({
-          accessToken,
-          refreshToken,
-          tokenType: "Bearer",
-          exp: 3600,
-        }, 200);
-      } catch(err){
+
+        return c.json(
+          {
+            user: {
+              userId: dbUser.userId,
+              role: dbUser.role,
+            },
+            accessToken,
+            refreshToken,
+            tokenType: "Bearer",
+            exp: 3600,
+          },
+          200
+        );
+      } catch (err) {
         return errorHandler(err, c);
       }
-    },
+    }
   )
   .openapi(
     createRoute({
@@ -171,7 +226,7 @@ export default new OpenAPIHono()
 
         const token = await verify(
           body.refreshToken,
-          Bun.env.JWT_REFRESH_SECRET!,
+          Bun.env.JWT_REFRESH_SECRET!
         );
 
         const payload = {
@@ -179,32 +234,36 @@ export default new OpenAPIHono()
           role: token.role,
           iss: Bun.env.JWT_ISSUER || "",
           aud: Bun.env.JWT_AUDIENCE || "",
-          exp: Math.floor(Date.now() / 1000) + (60 * 60),
+          exp: Math.floor(Date.now() / 1000) + 60 * 60,
           nbf: Math.floor(Date.now() / 1000) - 3,
           iat: Math.floor(Date.now() / 1000),
           jti: crypto.randomUUID(),
         };
 
-        const accessToken = await sign(
-          payload,
-          Bun.env.JWT_ACCESS_SECRET!,
-        );
+        const accessToken = await sign(payload, Bun.env.JWT_ACCESS_SECRET!);
 
         const refreshToken = await sign(
-          { ...payload, jti: crypto.randomUUID(), exp: Math.floor(Date.now() / 1000) + (60 * 60 * 24) },
-          Bun.env.JWT_REFRESH_SECRET!,
+          {
+            ...payload,
+            jti: crypto.randomUUID(),
+            exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24,
+          },
+          Bun.env.JWT_REFRESH_SECRET!
         );
 
-        return c.json({
-          accessToken,
-          refreshToken,
-          tokenType: "Bearer",
-          exp: 3600,
-        }, 201);
+        return c.json(
+          {
+            accessToken,
+            refreshToken,
+            tokenType: "Bearer",
+            exp: 3600,
+          },
+          201
+        );
       } catch (err) {
         return errorHandler(err, c);
       }
-    },
+    }
   )
   .post("/logout", async (c) => {
     return c.text("Logout");

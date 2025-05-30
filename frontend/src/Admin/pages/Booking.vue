@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, computed } from "vue";
+import { ref, onMounted, onUnmounted, computed } from "vue";
 import SearchBar from "../components/SearchBar.vue";
 import T3ButtonBooking from "../components/T3ButtonBooking.vue";
 import AddButtonBooking from "../components/AddButtonBooking.vue";
@@ -11,98 +11,57 @@ import DarkModeButton from "../components/DarkModeButton.vue";
 import Divider from "primevue/divider";
 import ProfileAvatar from "../components/ProfileAvatar.vue";
 import Paginator from "primevue/paginator";
+import Tabs from "primevue/tabs";
+import TabList from "primevue/tablist";
+import Tab from "primevue/tab";
+import TabPanels from "primevue/tabpanels";
+import TabPanel from "primevue/tabpanel";
+import Checkbox from "primevue/checkbox";
+import { useBookingStore } from "../../stores/bookingStore.js";
+import { usePackageStore } from "../../stores/packageStore.js";
+import { usePaymentStore } from "../../stores/paymentStore.js";
+import { useTransactionStore } from "../../stores/transactionStore.js";
+import { formatPeso } from "../../utility/pesoFormat";
+import { formatDates } from "../../utility/dateFormat";
+import { useAddOnsStore } from "../../stores/addOnsStore";
 
-const bookings = ref([]);
-const packages = ref([]);
+const bookingStore = useBookingStore();
+const packageStore = usePackageStore();
+const paymentStore = usePaymentStore();
+const addOnStore = useAddOnsStore();
 
-// Get All Booking with pagination
-const getAllBooking = async () => {
-  bookings.value = [];
-  const limit = 50;
-  let page = 1;
-  let hasMoreData = true;
+onMounted(() => {
+  bookingStore.fetchUserBookings();
+  packageStore.fetchAllPackages();
+  packageStore.fetchAllPromos();
+});
 
-  while (hasMoreData) {
-    const bResponse = await fetch(
-      `http://localhost:3000/bookings?limit=${limit}&page=${page}`
-    );
-    if (!bResponse.ok) throw new Error("Failed to fetch bookings");
-    const bookingData = await bResponse.json();
+const showAction = ref(false);
 
-    if (bookingData.items.length === 0) {
-      hasMoreData = false;
-    } else {
-      bookings.value.push(...bookingData.items);
-      page++;
-    }
-  }
-
-  const pResponse = await fetch(
-    `http://localhost:3000/packages?limit=${limit}`
-  );
-  if (!pResponse.ok) throw new Error("Failed to fetch packages");
-
-  const packagesData = await pResponse.json();
-
-  packages.value = packagesData.items;
-};
-
-onMounted(() => getAllBooking());
-
-const totalBookings = computed(() => filteredBooking.value.length);
-
-// Delete Booking by ID
-const deleteBookingHandler = async (booking) => {
+const addBookingHandler = async (booking, paymentDetails) => {
   try {
-    const response = await fetch(
-      `http://localhost:3000/bookings/${booking.bookingId}`,
-      {
-        method: "delete",
-      }
-    );
-    if (!response.ok) throw new Error("Failed to delete booking");
-    bookings.value = bookings.value.filter(
-      (c) => c.bookingId !== booking.bookingId
-    );
-    getAllBooking();
-  } catch (error) {
-    console.error("Error deleting booking", error);
-  }
-};
+    // 1: Get Booking
+    const newBooking = await bookingStore.addBooking(booking);
+    const bookingId = newBooking.bookingId;
 
-const addBookingHandler = async (booking) => {
-  const formattedBooking = {
-    ...booking,
-    userId: booking.userId ? Number(booking.userId) : null,
-    createdBy: booking.createdBy ? Number(booking.createdBy) : null,
-    packageId: Number(booking.packageId),
-    numberOfGuest: Number(booking.numberOfGuest),
-    discountPromoId: Number(booking.discountPromoId),
-    totalAmountDue: booking.totalAmountDue ? Number(booking.totalAmountDue) : 0,
-    catering:
-      booking.catering === "true"
-        ? true
-        : booking.catering === "false"
-        ? false
-        : Boolean(booking.catering),
-  };
+    // 32: Create Payment with booking id
+    const fullPaymentDetails = {
+      ...paymentDetails,
+      bookingId,
+    };
 
-  try {
-    const response = await fetch("http://localhost:3000/bookings", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(formattedBooking),
+    console.log("Full payment details being sent:", fullPaymentDetails);
+    await paymentStore.addPayment(fullPaymentDetails);
+
+
+    toast.add({
+      severity: "success",
+      summary: "Success",
+      detail: "Booking and Payment successfully created!",
+      life: 3000,
     });
 
-    const text = await response.text();
-    console.log("Raw response:", text);
-
-    const data = JSON.parse(text);
-
-    if (!response.ok)
-      throw new Error(`Failed to add booking: ${JSON.stringify(data)}`);
-    console.log("Booking added successfully:", data);
-    getAllBooking();
+    await bookingStore.fetchUserBookings();
   } catch (error) {
     console.error("Error adding booking:", error);
   }
@@ -110,34 +69,39 @@ const addBookingHandler = async (booking) => {
 
 // Upadte Booking Status by ID
 const updateBookingHandler = async (booking) => {
+  await bookingStore.updateBookingStatus(booking);
+};
+
+const updateBookingDateHandler = async (booking) => {
+  await bookingStore.updateBookingDates(booking);
+};
+
+const secondPaymentHandler = async (payment) => {
   try {
-    const response = await fetch(
-      `http://localhost:3000/bookings/${booking.bookingId}/status`,
-      {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ bookStatus: booking.bookStatus }),
-      }
-    );
+    const paymentData = await paymentStore.addPayment(payment);
 
-    if (!response.ok) throw new Error("Failed to update booking");
-
-    const updatedBooking = await response.json();
-    const index = bookings.value.findIndex(
-      (b) => b.bookingId === booking.bookingId
-    );
-    if (index !== -1) {
-      bookings.value[index].bookStatus = booking.bookStatus;
-    }
-    getAllBooking();
+    console.log("Payment successfully processed", paymentData);
+    await paymentStore.fetchPayments();
   } catch (error) {
-    console.error("Error updating booking:", error);
+    console.error("Payment failed:", error.message);
   }
 };
 
+const totalBookings = computed(() => filteredBooking.value.length);
+const totalPendings = computed(() => filteredPendings.value.length);
+const totalReserved = computed(() => filteredReserved.value.length);
+const totalRescheduled = computed(() => filteredRescheduled.value.length);
+const totalCancellation = computed(
+  () => filteredPendingCancellation.value.legth
+);
+const totalCancelled = computed(() => filteredCancelled.value.length);
+const totalCompleted = computed(() => filteredCompleted.value.length);
+
 // Get Package Name using packageId
 const getPackageName = (packageId) => {
-  const pkg = packages.value.find((p) => p.packageId === packageId);
+  const pkg =
+    packageStore.packages.find((p) => p.packageId === packageId) ||
+    packageStore.promos.find((p) => p.packageId === packageId);
   return pkg ? pkg.name : "Unknown Package";
 };
 
@@ -154,20 +118,15 @@ const closeModal = () => {
   bookingDetails.value = false;
 };
 
-//Fix Date Format
-function formatDate(dateString) {
-  const date = new Date(dateString);
-  const options = { year: "numeric", month: "short", day: "numeric" };
-  return date.toLocaleDateString("en-US", options);
-}
-
 // Checks Severity of Status of the Booking
 const getStatusSeverity = (status) => {
   switch (status) {
     case "pending":
       return "warn";
-    case "confirmed":
+    case "reserved":
       return "info";
+    case "rescheduled":
+      return "secondary";
     case "completed":
       return "success";
     case "cancelled":
@@ -177,16 +136,55 @@ const getStatusSeverity = (status) => {
   }
 };
 
+const getPaymentStatusSeverity = (status) => {
+  switch (status) {
+    case "unpaid":
+      return "danger";
+    case "paid":
+      return "success";
+    case "partially-paid":
+      return "info";
+    default:
+      return "secondary";
+  }
+};
+
 // Paginator or pagination of the tables
 const first = ref(0);
+const firstPending = ref(0);
+const firstReserved = ref(0);
+const firstPendingCancellation = ref(0);
+const firstCancelled = ref(0);
+const firstRescheduled = ref(0);
+const firstCompleted = ref(0);
 const rows = ref(10);
-
-const paginatedBookings = computed(() => {
-  return filteredBooking.value.slice(first.value, first.value + rows.value);
-});
 
 const onPageChange = (event) => {
   first.value = event.first;
+  rows.value = event.rows;
+};
+const onPageChangePending = (event) => {
+  firstPending.value = event.first;
+  rows.value = event.rows;
+};
+const onPageChangeReserved = (event) => {
+  firstReserved.value = event.first;
+  rows.value = event.rows;
+};
+const onPageChangeRescheduled = (event) => {
+  firstRescheduled.value = event.first;
+  rows.value = event.rows;
+};
+const onPageChangeCancellation = (event) => {
+  firstPendingCancellation.value = event.first;
+  rows.value = event.rows;
+};
+const onPageChangeCancelled = (event) => {
+  firstCancelled.value = event.first;
+  rows.value = event.rows;
+};
+const onPageChangeCompleted = (event) => {
+  firstCompleted.value = event.first;
   rows.value = event.rows;
 };
 
@@ -214,7 +212,7 @@ const filterReservationType = ref({
   "walk-in": false,
 });
 const filteredBooking = computed(() => {
-  let result = bookings.value;
+  let result = bookingStore.bookings;
 
   if (searchQuery.value !== "") {
     result = result.filter((booking) =>
@@ -257,10 +255,172 @@ const filteredBooking = computed(() => {
     );
   }
 
+  // Sort booking
+  result = [...result].sort((a, b) => {
+    const statusOrder = {
+      pending: 1,
+      reserved: 2,
+      rescheduled: 3,
+      pending_cancellation: 4,
+      cancelled: 5,
+      completed: 6,
+    };
+    return statusOrder[a.bookStatus] - statusOrder[b.bookStatus];
+  });
+
+  result = [...result].sort((a, b) => {
+    const statusOrder = {
+      unpaid: 1,
+      "partially-paid": 2,
+      paid: 3,
+    };
+    return (
+      statusOrder[a.bookingPaymentStatus] - statusOrder[b.bookingPaymentStatus]
+    );
+  });
+
   return result;
 });
 
-//             <h2 class="text-xl font-medium">Total bookings: {{ totalBookings }}</h2>
+const filteredPendings = computed(() => {
+  let result = bookingStore.bookingPending;
+
+  if (searchQuery.value !== "") {
+    result = result.filter((booking) =>
+      Object.values(booking).some((val) =>
+        String(val).toLowerCase().includes(searchQuery.value.toLowerCase())
+      )
+    );
+  }
+  return result;
+});
+
+const filteredReserved = computed(() => {
+  let result = bookingStore.bookingReserved;
+
+  if (searchQuery.value !== "") {
+    result = result.filter((booking) =>
+      Object.values(booking).some((val) =>
+        String(val).toLowerCase().includes(searchQuery.value.toLowerCase())
+      )
+    );
+  }
+  return result;
+});
+
+const filteredPendingCancellation = computed(() => {
+  let result = bookingStore.bookingCancellation;
+
+  if (searchQuery.value !== "") {
+    result = result.filter((booking) =>
+      Object.values(booking).some((val) =>
+        String(val).toLowerCase().includes(searchQuery.value.toLowerCase())
+      )
+    );
+  }
+  return result;
+});
+
+const filteredCancelled = computed(() => {
+  let result = bookingStore.bookingCancelled;
+
+  if (searchQuery.value !== "") {
+    result = result.filter((booking) =>
+      Object.values(booking).some((val) =>
+        String(val).toLowerCase().includes(searchQuery.value.toLowerCase())
+      )
+    );
+  }
+  return result;
+});
+
+const filteredCompleted = computed(() => {
+  let result = bookingStore.bookingCompleted;
+
+  if (searchQuery.value !== "") {
+    result = result.filter((booking) =>
+      Object.values(booking).some((val) =>
+        String(val).toLowerCase().includes(searchQuery.value.toLowerCase())
+      )
+    );
+  }
+  return result;
+});
+
+const filteredRescheduled = computed(() => {
+  let result = bookingStore.bookingRescheduled;
+
+  if (searchQuery.value !== "") {
+    result = result.filter((booking) =>
+      Object.values(booking).some((val) =>
+        String(val).toLowerCase().includes(searchQuery.value.toLowerCase())
+      )
+    );
+  }
+  return result;
+});
+
+const paginatedBookings = computed(() => {
+  return filteredBooking.value.slice(first.value, first.value + rows.value);
+});
+
+const paginatedPendings = computed(() => {
+  return filteredPendings.value.slice(
+    firstPending.value,
+    firstPending.value + rows.value
+  );
+});
+
+const paginatedReserved = computed(() => {
+  return filteredReserved.value.slice(
+    firstReserved.value,
+    firstReserved.value + rows.value
+  );
+});
+
+const paginatedCancellation = computed(() => {
+  return filteredPendingCancellation.value.slice(
+    firstPendingCancellation.value,
+    firstPendingCancellation.value + rows.value
+  );
+});
+
+const paginatedCancelled = computed(() => {
+  return filteredCancelled.value.slice(
+    firstCancelled.value,
+    firstCancelled.value + rows.value
+  );
+});
+
+const paginatedCompleted = computed(() => {
+  return filteredCompleted.value.slice(
+    firstCompleted.value,
+    firstCompleted.value + rows.value
+  );
+});
+
+const paginatedRescheduled = computed(() => {
+  return filteredRescheduled.value.slice(
+    firstRescheduled.value,
+    firstRescheduled.value + rows.value
+  );
+});
+
+const hideMenu = ref(false);
+
+const closeMenu = (event) => {
+  if (hideMenu.value && !hideMenu.value.contains(event.target)) {
+    showMenu.value = false;
+  }
+};
+
+onMounted(() => {
+  document.addEventListener("click", closeMenu);
+});
+
+onUnmounted(() => {
+  document.removeEventListener("click", closeMenu);
+});
 </script>
 
 <template>
@@ -268,7 +428,7 @@ const filteredBooking = computed(() => {
     <SideBar />
     <div class="container">
       <div class="headers">
-        <h1 class="text-5xl font-black">Booking</h1>
+        <h1 class="text-5xl font-black">Private Booking</h1>
         <div class="flex items-center gap-5">
           <DarkModeButton />
           <Notification />
@@ -283,63 +443,114 @@ const filteredBooking = computed(() => {
 
             <div
               v-if="showMenu"
-              class="absolute -left-30 mt-2 w-[21rem] shadow-md z-50 bg-[#fcf5f5] p-4 rounded"
+              ref="hideMenu"
+              class="absolute -left-30 mt-2 w-[21rem] shadow-md z-50 bg-[#fcfcfc] dark:bg-stone-900 p-4 rounded-lg border-gray-200 dark:border-gray-700"
             >
               <div class="flex flex-row">
                 <div class="flex-1">
                   <h2 class="font-bold mb-1">Status</h2>
                   <ul>
-                    <li class="hover:bg-gray-100 flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        id="pending"
+                    <li
+                      class="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 p-1 rounded-md"
+                    >
+                      <Checkbox
                         v-model="filterStatuses.pending"
+                        binary
+                        inputId="pending"
                       />
-                      <label class="" for="pending">Pending</label>
+                      <label
+                        class="text-gray-600 dark:text-gray-300 text-sm"
+                        for="pending"
+                        >Pending</label
+                      >
                     </li>
-                    <li class="hover:bg-gray-100 flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        id="confirmed"
-                        v-model="filterStatuses.confirmed"
+                    <li
+                      class="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 p-1 rounded-md"
+                    >
+                      <Checkbox
+                        v-model="filterStatuses.reserved"
+                        binary
+                        inputId="reserved"
                       />
-                      <label for="confirmed">Confirmed</label>
+                      <label
+                        class="text-gray-600 dark:text-gray-300 text-sm"
+                        for="reserved"
+                        >Reserved</label
+                      >
                     </li>
-                    <li class="hover:bg-gray-100 flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        id="completed"
-                        v-model="filterStatuses.completed"
+                    <li
+                      class="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 p-1 rounded-md"
+                    >
+                      <Checkbox
+                        v-model="filterStatuses.rescheduled"
+                        binary
+                        inputId="rescheduled"
                       />
-                      <label for="completed">Completed</label>
+                      <label
+                        class="text-gray-600 dark:text-gray-300 text-sm"
+                        for="rescheduled"
+                        >Rescheduled</label
+                      >
                     </li>
-                    <li class="hover:bg-gray-100 flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        id="cancelled"
+                    <li
+                      class="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 p-1 rounded-md"
+                    >
+                      <Checkbox
                         v-model="filterStatuses.cancelled"
+                        binary
+                        inputId="cancelled"
                       />
-                      <label for="cancelled">Cancelled</label>
+                      <label
+                        class="text-gray-600 dark:text-gray-300 text-sm"
+                        for="cancelled"
+                        >Cancelled</label
+                      >
+                    </li>
+                    <li
+                      class="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 p-1 rounded-md"
+                    >
+                      <Checkbox
+                        v-model="filterStatuses.completed"
+                        binary
+                        inputId="completed"
+                      />
+                      <label
+                        class="text-gray-600 dark:text-gray-300 text-sm"
+                        for="completed"
+                        >Completed</label
+                      >
                     </li>
                   </ul>
                   <Divider />
                   <h2 class="font-bold mb-1">Payment Terms</h2>
                   <ul>
-                    <li class="hover:bg-gray-100 flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        id="installment"
+                    <li
+                      class="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 p-1 rounded-md"
+                    >
+                      <Checkbox
                         v-model="filterPaymentTerms.installment"
+                        binary
+                        inputId="installment"
                       />
-                      <label for="installment">Installment</label>
+                      <label
+                        class="text-gray-600 dark:text-gray-300 text-sm"
+                        for="installment"
+                        >Installment</label
+                      >
                     </li>
-                    <li class="hover:bg-gray-100 flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        id="fullpayment"
+                    <li
+                      class="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 p-1 rounded-md"
+                    >
+                      <Checkbox
                         v-model="filterPaymentTerms['full-payment']"
+                        binary
+                        inputId="fullpayment"
                       />
-                      <label for="fullpayment">Full Payment</label>
+                      <label
+                        class="text-gray-600 dark:text-gray-300 text-sm"
+                        for="fullpayment"
+                        >Full Payment</label
+                      >
                     </li>
                   </ul>
                 </div>
@@ -347,49 +558,79 @@ const filteredBooking = computed(() => {
                 <div class="flex-1">
                   <h2 class="font-bold mb-1">Mode</h2>
                   <ul>
-                    <li class="hover:bg-gray-100 flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        id="night"
+                    <li
+                      class="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 p-1 rounded-md"
+                    >
+                      <Checkbox
                         v-model="filterMode['day-time']"
+                        binary
+                        inputId="day"
                       />
-                      <label for="night">Day</label>
+                      <label
+                        class="text-gray-600 dark:text-gray-300 text-sm"
+                        for="day"
+                        >Day</label
+                      >
                     </li>
-                    <li class="hover:bg-gray-100 flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        id="night"
+                    <li
+                      class="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 p-1 rounded-md"
+                    >
+                      <Checkbox
                         v-model="filterMode['night-time']"
+                        binary
+                        inputId="night"
                       />
-                      <label for="night">Night</label>
+                      <label
+                        class="text-gray-600 dark:text-gray-300 text-sm"
+                        for="night"
+                        >Night</label
+                      >
                     </li>
-                    <li class="hover:bg-gray-100 flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        id="whole-day"
+                    <li
+                      class="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 p-1 rounded-md"
+                    >
+                      <Checkbox
                         v-model="filterMode['whole-day']"
+                        binary
+                        inputId="whole-day"
                       />
-                      <label for="whole-day">Whole Day</label>
+                      <label
+                        class="text-gray-600 dark:text-gray-300 text-sm"
+                        for="whole-day"
+                        >Whole Day</label
+                      >
                     </li>
                   </ul>
                   <Divider />
                   <h2 class="font-bold mb-1">Reservation Type</h2>
                   <ul>
-                    <li class="hover:bg-gray-100 flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        id="online"
+                    <li
+                      class="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 p-1 rounded-md"
+                    >
+                      <Checkbox
                         v-model="filterReservationType.online"
+                        binary
+                        inputId="online"
                       />
-                      <label for="online">Online</label>
+                      <label
+                        class="text-gray-600 dark:text-gray-300 text-sm"
+                        for="online"
+                        >Online</label
+                      >
                     </li>
-                    <li class="hover:bg-gray-100 flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        id="walk-in"
+                    <li
+                      class="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 p-1 rounded-md"
+                    >
+                      <Checkbox
                         v-model="filterReservationType['walk-in']"
+                        binary
+                        inputId="walk-in"
                       />
-                      <label for="walk-in">Walk In</label>
+                      <label
+                        class="text-gray-600 dark:text-gray-300 text-sm"
+                        for="walk-in"
+                        >Walk In</label
+                      >
                     </li>
                   </ul>
                 </div>
@@ -404,72 +645,708 @@ const filteredBooking = computed(() => {
         </div>
       </div>
 
-      <div class="tableContainer">
-        <table class="dTable border-[#194D1D] dark:border-[#FCFCFC]">
-          <thead>
-            <tr
-              class="header-style bg-[#194D1D] dark:bg-[#18181b] border-[#194D1D] dark:border-[#18181b]"
-            >
-              <th>ID</th>
-              <th>NAME</th>
-              <th>PACKAGE</th>
-              <th>PAY TERMS</th>
-              <th>CHECK IN & CHECK OUT</th>
-              <th>AMOUNT</th>
-              <th>STATUS</th>
-              <th>DATE</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              class="bRow border-[#194D1D] dark:border-[#18181b]"
-              v-for="booking in paginatedBookings"
-              :key="booking.id"
-              @click="openBookingDetails(booking)"
-            >
-              <td class="w-[3%]">{{ booking.bookingId }}</td>
-              <td class="w-[17%]">
-                <strong>{{ booking.firstName }} {{ booking.lastName }}</strong>
-                <br />
-                {{ booking.contactNo }}
-              </td>
-              <td class="w-[15%]">
-                {{ getPackageName(booking.packageId) }} <br />
-                {{ booking.mode }}
-              </td>
-              <td class="w-[10%]">{{ booking.paymentTerms }}</td>
-              <td class="w-[18%]">
-                {{ formatDate(booking.checkInDate) }} to
-                {{ formatDate(booking.checkOutDate) }}
-              </td>
-              <td class="w-[8%]">{{ booking.totalAmount }}</td>
-              <td class="w-[10%]">
-                <Tag
-                  :severity="getStatusSeverity(booking.bookStatus)"
-                  :value="booking.bookStatus"
+      <div class="tabBookings">
+        <Tabs value="0">
+          <TabList>
+            <Tab value="0">PENDING</Tab>
+            <Tab value="1">RESERVED</Tab>
+            <Tab value="2">RESCHEDULED</Tab>
+            <Tab value="3">PENDING CANCELLATION</Tab>
+            <Tab value="4">CANCELLED</Tab>
+            <Tab value="5">COMPLETED</Tab>
+            <Tab value="6">OVERALL</Tab>
+          </TabList>
+          <TabPanels>
+            <TabPanel value="0">
+              <div class="tableContainer">
+                <table class="dTable border-[#194D1D] dark:border-[#FCFCFC]">
+                  <thead>
+                    <tr
+                      class="header-style bg-[#194D1D] dark:bg-[#18181b] border-[#194D1D] dark:border-[#18181b]"
+                    >
+                      <th>ID</th>
+                      <th>NAME</th>
+                      <th>PACKAGE</th>
+                      <th>STATUS</th>
+                      <th>CHECK IN & CHECK OUT</th>
+                      <th>PAY TERMS</th>
+                      <th>PAYMENT STATUS</th>
+                      <th>TOTAL</th>
+                      <th>PAID</th>
+                      <th>BALANCE</th>
+                      <th>DATE</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr
+                      class="bRow border-[#194D1D] dark:border-[#18181b]"
+                      v-for="booking in paginatedPendings"
+                      :key="booking.id"
+                      @click="openBookingDetails(booking)"
+                    >
+                      <td class="w-[3%]">{{ booking.bookingId }}</td>
+                      <td class="w-[13%]">
+                        <strong
+                          >{{ booking.firstName }}
+                          {{ booking.lastName }}</strong
+                        >
+                        <br />
+                        {{ booking.contactNo }}
+                      </td>
+                      <td class="w-[15%]">
+                        {{ getPackageName(booking.packageId) }} <br />
+                        {{ booking.mode }}
+                      </td>
+                      <td class="w-[8%]">
+                        <Tag
+                          :severity="getStatusSeverity(booking.bookStatus)"
+                          :value="booking.bookStatus"
+                        />
+                      </td>
+                      <td class="w-[16%]">
+                        {{ formatDates(booking.checkInDate) }} to
+                        {{ formatDates(booking.checkOutDate) }}
+                      </td>
+                      <td class="w-[7%]">{{ booking.paymentTerms }}</td>
+                      <td class="w-[7%]">
+                        <Tag
+                          :severity="
+                            getPaymentStatusSeverity(
+                              booking.bookingPaymentStatus
+                            )
+                          "
+                          :value="booking.bookingPaymentStatus"
+                        />
+                      </td>
+                      <td class="w-[7%]">
+                        {{ formatPeso(booking.totalAmount) }}
+                      </td>
+                      <td class="w-[7%]">
+                        {{ formatPeso(booking.amountPaid) }}
+                      </td>
+                      <td class="w-[7%]">
+                        {{ formatPeso(booking.remainingBalance) }}
+                      </td>
+                      <td class="w-[7%]">
+                        {{ formatDates(booking.createdAt) }}
+                      </td>
+                      <td class="w-[5%]" @click.stop>
+                        <T3ButtonBooking
+                          :booking="booking"
+                          :payment="booking"
+                          :showAction="!showAction"
+                          :packageName="getPackageName(booking.packageId)"
+                          @updateStatus="updateBookingHandler"
+                          @updateBooking="updateBookingDateHandler"
+                          @payPayment="secondPaymentHandler"
+                        />
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+                <Paginator
+                  :first="firstPending"
+                  :rows="rows"
+                  :totalRecords="totalPendings"
+                  :rowsPerPageOptions="[5, 10, 20, 30]"
+                  @page="onPageChangePending"
+                  class="rowPagination"
                 />
-              </td>
-              <td class="w-[12%]">{{ formatDate(booking.createdAt) }}</td>
-              <td class="w-[5%]" @click.stop>
-                <T3ButtonBooking
-                  :booking="booking"
-                  :packageName="getPackageName(booking.packageId)"
-                  @deleteBooking="deleteBookingHandler"
-                  @updateStatus="updateBookingHandler"
+              </div>
+            </TabPanel>
+
+            <TabPanel value="1">
+              <div class="tableContainer">
+                <table class="dTable border-[#194D1D] dark:border-[#FCFCFC]">
+                  <thead>
+                    <tr
+                      class="header-style bg-[#194D1D] dark:bg-[#18181b] border-[#194D1D] dark:border-[#18181b]"
+                    >
+                      <th>ID</th>
+                      <th>NAME</th>
+                      <th>PACKAGE</th>
+                      <th>STATUS</th>
+                      <th>CHECK IN & CHECK OUT</th>
+                      <th>PAY TERMS</th>
+                      <th>PAYMENT STATUS</th>
+                      <th>TOTAL</th>
+                      <th>PAID</th>
+                      <th>BALANCE</th>
+                      <th>DATE</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr
+                      class="bRow border-[#194D1D] dark:border-[#18181b]"
+                      v-for="booking in paginatedReserved"
+                      :key="booking.id"
+                      @click="openBookingDetails(booking)"
+                    >
+                      <td class="w-[3%]">{{ booking.bookingId }}</td>
+                      <td class="w-[13%]">
+                        <strong
+                          >{{ booking.firstName }}
+                          {{ booking.lastName }}</strong
+                        >
+                        <br />
+                        {{ booking.contactNo }}
+                      </td>
+                      <td class="w-[15%]">
+                        {{ getPackageName(booking.packageId) }} <br />
+                        {{ booking.mode }}
+                      </td>
+                      <td class="w-[8%]">
+                        <Tag
+                          :severity="getStatusSeverity(booking.bookStatus)"
+                          :value="booking.bookStatus"
+                        />
+                      </td>
+                      <td class="w-[16%]">
+                        {{ formatDates(booking.checkInDate) }} to
+                        {{ formatDates(booking.checkOutDate) }}
+                      </td>
+                      <td class="w-[7%]">{{ booking.paymentTerms }}</td>
+                      <td class="w-[7%]">
+                        <Tag
+                          :severity="
+                            getPaymentStatusSeverity(
+                              booking.bookingPaymentStatus
+                            )
+                          "
+                          :value="booking.bookingPaymentStatus"
+                        />
+                      </td>
+                      <td class="w-[7%]">
+                        {{ formatPeso(booking.totalAmount) }}
+                      </td>
+                      <td class="w-[7%]">
+                        {{ formatPeso(booking.amountPaid) }}
+                      </td>
+                      <td class="w-[7%]">
+                        {{ formatPeso(booking.remainingBalance) }}
+                      </td>
+                      <td class="w-[7%]">
+                        {{ formatDates(booking.createdAt) }}
+                      </td>
+                      <td class="w-[5%]" @click.stop>
+                        <T3ButtonBooking
+                          :booking="booking"
+                          :payment="booking"
+                          :packageName="getPackageName(booking.packageId)"
+                          @updateStatus="updateBookingHandler"
+                          @updateBooking="updateBookingDateHandler"
+                          @payPayment="secondPaymentHandler"
+                        />
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+                <Paginator
+                  :first="firstReserved"
+                  :rows="rows"
+                  :totalRecords="totalReserved"
+                  :rowsPerPageOptions="[5, 10, 20, 30]"
+                  @page="onPageChangeReserved"
+                  class="rowPagination"
                 />
-              </td>
-            </tr>
-          </tbody>
-        </table>
-        <Paginator
-          :first="first"
-          :rows="rows"
-          :totalRecords="totalBookings"
-          :rowsPerPageOptions="[5, 10, 20, 30]"
-          @page="onPageChange"
-          class="rowPagination"
-        />
+              </div>
+            </TabPanel>
+
+            <TabPanel value="2">
+              <div class="tableContainer">
+                <table class="dTable border-[#194D1D] dark:border-[#FCFCFC]">
+                  <thead>
+                    <tr
+                      class="header-style bg-[#194D1D] dark:bg-[#18181b] border-[#194D1D] dark:border-[#18181b]"
+                    >
+                      <th>ID</th>
+                      <th>NAME</th>
+                      <th>PACKAGE</th>
+                      <th>STATUS</th>
+                      <th>CHECK IN & CHECK OUT</th>
+                      <th>PAY TERMS</th>
+                      <th>PAYMENT STATUS</th>
+                      <th>TOTAL</th>
+                      <th>PAID</th>
+                      <th>BALANCE</th>
+                      <th>DATE</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr
+                      class="bRow border-[#194D1D] dark:border-[#18181b]"
+                      v-for="booking in paginatedRescheduled"
+                      :key="booking.id"
+                      @click="openBookingDetails(booking)"
+                    >
+                      <td class="w-[3%]">{{ booking.bookingId }}</td>
+                      <td class="w-[13%]">
+                        <strong
+                          >{{ booking.firstName }}
+                          {{ booking.lastName }}</strong
+                        >
+                        <br />
+                        {{ booking.contactNo }}
+                      </td>
+                      <td class="w-[15%]">
+                        {{ getPackageName(booking.packageId) }} <br />
+                        {{ booking.mode }}
+                      </td>
+                      <td class="w-[8%]">
+                        <Tag
+                          :severity="getStatusSeverity(booking.bookStatus)"
+                          :value="booking.bookStatus"
+                        />
+                      </td>
+                      <td class="w-[16%]">
+                        {{ formatDates(booking.checkInDate) }} to
+                        {{ formatDates(booking.checkOutDate) }}
+                      </td>
+                      <td class="w-[7%]">{{ booking.paymentTerms }}</td>
+                      <td class="w-[7%]">
+                        <Tag
+                          :severity="
+                            getPaymentStatusSeverity(
+                              booking.bookingPaymentStatus
+                            )
+                          "
+                          :value="booking.bookingPaymentStatus"
+                        />
+                      </td>
+                      <td class="w-[7%]">
+                        {{ formatPeso(booking.totalAmount) }}
+                      </td>
+                      <td class="w-[7%]">
+                        {{ formatPeso(booking.amountPaid) }}
+                      </td>
+                      <td class="w-[7%]">
+                        {{ formatPeso(booking.remainingBalance) }}
+                      </td>
+                      <td class="w-[7%]">
+                        {{ formatDates(booking.createdAt) }}
+                      </td>
+                      <td class="w-[5%]" @click.stop>
+                        <T3ButtonBooking
+                          :booking="booking"
+                          :payment="booking"
+                          :packageName="getPackageName(booking.packageId)"
+                          @updateStatus="updateBookingHandler"
+                          @updateBooking="updateBookingDateHandler"
+                          @payPayment="secondPaymentHandler"
+                        />
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+                <Paginator
+                  :first="firstRescheduled"
+                  :rows="rows"
+                  :totalRecords="totalRescheduled"
+                  :rowsPerPageOptions="[5, 10, 20, 30]"
+                  @page="onPageChangeRescheduled"
+                  class="rowPagination"
+                />
+              </div>
+            </TabPanel>
+
+            <TabPanel value="3">
+              <div class="tableContainer">
+                <table class="dTable border-[#194D1D] dark:border-[#FCFCFC]">
+                  <thead>
+                    <tr
+                      class="header-style bg-[#194D1D] dark:bg-[#18181b] border-[#194D1D] dark:border-[#18181b]"
+                    >
+                      <th>ID</th>
+                      <th>NAME</th>
+                      <th>PACKAGE</th>
+                      <th>STATUS</th>
+                      <th>CHECK IN & CHECK OUT</th>
+                      <th>PAY TERMS</th>
+                      <th>PAYMENT STATUS</th>
+                      <th>TOTAL</th>
+                      <th>PAID</th>
+                      <th>BALANCE</th>
+                      <th>DATE</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr
+                      class="bRow border-[#194D1D] dark:border-[#18181b]"
+                      v-for="booking in paginatedCancellation"
+                      :key="booking.id"
+                      @click="openBookingDetails(booking)"
+                    >
+                      <td class="w-[3%]">{{ booking.bookingId }}</td>
+                      <td class="w-[13%]">
+                        <strong
+                          >{{ booking.firstName }}
+                          {{ booking.lastName }}</strong
+                        >
+                        <br />
+                        {{ booking.contactNo }}
+                      </td>
+                      <td class="w-[15%]">
+                        {{ getPackageName(booking.packageId) }} <br />
+                        {{ booking.mode }}
+                      </td>
+                      <td class="w-[8%]">
+                        <Tag
+                          :severity="getStatusSeverity(booking.bookStatus)"
+                          :value="booking.bookStatus"
+                        />
+                      </td>
+                      <td class="w-[16%]">
+                        {{ formatDates(booking.checkInDate) }} to
+                        {{ formatDates(booking.checkOutDate) }}
+                      </td>
+                      <td class="w-[7%]">{{ booking.paymentTerms }}</td>
+                      <td class="w-[7%]">
+                        <Tag
+                          :severity="
+                            getPaymentStatusSeverity(
+                              booking.bookingPaymentStatus
+                            )
+                          "
+                          :value="booking.bookingPaymentStatus"
+                        />
+                      </td>
+                      <td class="w-[7%]">
+                        {{ formatPeso(booking.totalAmount) }}
+                      </td>
+                      <td class="w-[7%]">
+                        {{ formatPeso(booking.amountPaid) }}
+                      </td>
+                      <td class="w-[7%]">
+                        {{ formatPeso(booking.remainingBalance) }}
+                      </td>
+                      <td class="w-[7%]">
+                        {{ formatDates(booking.createdAt) }}
+                      </td>
+                      <td class="w-[5%]" @click.stop>
+                        <T3ButtonBooking
+                          :booking="booking"
+                          :payment="booking"
+                          :showAction="!showAction"
+                          :packageName="getPackageName(booking.packageId)"
+                          @updateStatus="updateBookingHandler"
+                          @updateBooking="updateBookingDateHandler"
+                          @payPayment="secondPaymentHandler"
+                        />
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+                <Paginator
+                  :first="firstPendingCancellation"
+                  :rows="rows"
+                  :totalRecords="totalCancellation"
+                  :rowsPerPageOptions="[5, 10, 20, 30]"
+                  @page="onPageChangeCancellation"
+                  class="rowPagination"
+                />
+              </div>
+            </TabPanel>
+
+            <TabPanel value="4">
+              <div class="tableContainer">
+                <table class="dTable border-[#194D1D] dark:border-[#FCFCFC]">
+                  <thead>
+                    <tr
+                      class="header-style bg-[#194D1D] dark:bg-[#18181b] border-[#194D1D] dark:border-[#18181b]"
+                    >
+                      <th>ID</th>
+                      <th>NAME</th>
+                      <th>PACKAGE</th>
+                      <th>STATUS</th>
+                      <th>CHECK IN & CHECK OUT</th>
+                      <th>PAY TERMS</th>
+                      <th>PAYMENT STATUS</th>
+                      <th>TOTAL</th>
+                      <th>PAID</th>
+                      <th>BALANCE</th>
+                      <th>DATE</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr
+                      class="bRow border-[#194D1D] dark:border-[#18181b]"
+                      v-for="booking in paginatedCancelled"
+                      :key="booking.id"
+                      @click="openBookingDetails(booking)"
+                    >
+                      <td class="w-[3%]">{{ booking.bookingId }}</td>
+                      <td class="w-[13%]">
+                        <strong
+                          >{{ booking.firstName }}
+                          {{ booking.lastName }}</strong
+                        >
+                        <br />
+                        {{ booking.contactNo }}
+                      </td>
+                      <td class="w-[15%]">
+                        {{ getPackageName(booking.packageId) }} <br />
+                        {{ booking.mode }}
+                      </td>
+                      <td class="w-[8%]">
+                        <Tag
+                          :severity="getStatusSeverity(booking.bookStatus)"
+                          :value="booking.bookStatus"
+                        />
+                      </td>
+                      <td class="w-[16%]">
+                        {{ formatDates(booking.checkInDate) }} to
+                        {{ formatDates(booking.checkOutDate) }}
+                      </td>
+                      <td class="w-[7%]">{{ booking.paymentTerms }}</td>
+                      <td class="w-[7%]">
+                        <Tag
+                          :severity="
+                            getPaymentStatusSeverity(
+                              booking.bookingPaymentStatus
+                            )
+                          "
+                          :value="booking.bookingPaymentStatus"
+                        />
+                      </td>
+                      <td class="w-[7%]">
+                        {{ formatPeso(booking.totalAmount) }}
+                      </td>
+                      <td class="w-[7%]">
+                        {{ formatPeso(booking.amountPaid) }}
+                      </td>
+                      <td class="w-[7%]">
+                        {{ formatPeso(booking.remainingBalance) }}
+                      </td>
+                      <td class="w-[7%]">
+                        {{ formatDates(booking.createdAt) }}
+                      </td>
+                      <td class="w-[5%]" @click.stop>
+                        <T3ButtonBooking
+                          :booking="booking"
+                          :payment="booking"
+                          :showAction="!showAction"
+                          :packageName="getPackageName(booking.packageId)"
+                          @updateStatus="updateBookingHandler"
+                          @updateBooking="updateBookingDateHandler"
+                          @payPayment="secondPaymentHandler"
+                        />
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+                <Paginator
+                  :first="firstCancelled"
+                  :rows="rows"
+                  :totalRecords="totalCancelled"
+                  :rowsPerPageOptions="[5, 10, 20, 30]"
+                  @page="onPageChangeCancelled"
+                  class="rowPagination"
+                />
+              </div>
+            </TabPanel>
+
+            <TabPanel value="5">
+              <div class="tableContainer">
+                <table class="dTable border-[#194D1D] dark:border-[#FCFCFC]">
+                  <thead>
+                    <tr
+                      class="header-style bg-[#194D1D] dark:bg-[#18181b] border-[#194D1D] dark:border-[#18181b]"
+                    >
+                      <th>ID</th>
+                      <th>NAME</th>
+                      <th>PACKAGE</th>
+                      <th>STATUS</th>
+                      <th>CHECK IN & CHECK OUT</th>
+                      <th>PAY TERMS</th>
+                      <th>PAYMENT STATUS</th>
+                      <th>TOTAL</th>
+                      <th>PAID</th>
+                      <th>BALANCE</th>
+                      <th>DATE</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr
+                      class="bRow border-[#194D1D] dark:border-[#18181b]"
+                      v-for="booking in paginatedCompleted"
+                      :key="booking.id"
+                      @click="openBookingDetails(booking)"
+                    >
+                      <td class="w-[3%]">{{ booking.bookingId }}</td>
+                      <td class="w-[13%]">
+                        <strong
+                          >{{ booking.firstName }}
+                          {{ booking.lastName }}</strong
+                        >
+                        <br />
+                        {{ booking.contactNo }}
+                      </td>
+                      <td class="w-[15%]">
+                        {{ getPackageName(booking.packageId) }} <br />
+                        {{ booking.mode }}
+                      </td>
+                      <td class="w-[8%]">
+                        <Tag
+                          :severity="getStatusSeverity(booking.bookStatus)"
+                          :value="booking.bookStatus"
+                        />
+                      </td>
+                      <td class="w-[16%]">
+                        {{ formatDates(booking.checkInDate) }} to
+                        {{ formatDates(booking.checkOutDate) }}
+                      </td>
+                      <td class="w-[7%]">{{ booking.paymentTerms }}</td>
+                      <td class="w-[7%]">
+                        <Tag
+                          :severity="
+                            getPaymentStatusSeverity(
+                              booking.bookingPaymentStatus
+                            )
+                          "
+                          :value="booking.bookingPaymentStatus"
+                        />
+                      </td>
+                      <td class="w-[7%]">
+                        {{ formatPeso(booking.totalAmount) }}
+                      </td>
+                      <td class="w-[7%]">
+                        {{ formatPeso(booking.amountPaid) }}
+                      </td>
+                      <td class="w-[7%]">
+                        {{ formatPeso(booking.remainingBalance) }}
+                      </td>
+                      <td class="w-[7%]">
+                        {{ formatDates(booking.createdAt) }}
+                      </td>
+                      <td class="w-[5%]" @click.stop>
+                        <T3ButtonBooking
+                          :booking="booking"
+                          :payment="booking"
+                          :packageName="getPackageName(booking.packageId)"
+                          @updateStatus="updateBookingHandler"
+                          @updateBooking="updateBookingDateHandler"
+                          @payPayment="secondPaymentHandler"
+                        />
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+                <Paginator
+                  :first="firstCompleted"
+                  :rows="rows"
+                  :totalRecords="totalCompleted"
+                  :rowsPerPageOptions="[5, 10, 20, 30]"
+                  @page="onPageChangeCompleted"
+                  class="rowPagination"
+                />
+              </div>
+            </TabPanel>
+
+            <TabPanel value="6">
+              <div class="tableContainer">
+                <table class="dTable border-[#194D1D] dark:border-[#FCFCFC]">
+                  <thead>
+                    <tr
+                      class="header-style bg-[#194D1D] dark:bg-[#18181b] border-[#194D1D] dark:border-[#18181b]"
+                    >
+                      <th>ID</th>
+                      <th>NAME</th>
+                      <th>PACKAGE</th>
+                      <th>STATUS</th>
+                      <th>CHECK IN & CHECK OUT</th>
+                      <th>PAY TERMS</th>
+                      <th>PAYMENT STATUS</th>
+                      <th>TOTAL</th>
+                      <th>PAID</th>
+                      <th>BALANCE</th>
+                      <th>DATE</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr
+                      class="bRow border-[#194D1D] dark:border-[#18181b]"
+                      v-for="booking in paginatedBookings"
+                      :key="booking.id"
+                      @click="openBookingDetails(booking)"
+                    >
+                      <td class="w-[3%]">{{ booking.bookingId }}</td>
+                      <td class="w-[13%]">
+                        <strong
+                          >{{ booking.firstName }}
+                          {{ booking.lastName }}</strong
+                        >
+                        <br />
+                        {{ booking.contactNo }}
+                      </td>
+                      <td class="w-[15%]">
+                        {{ getPackageName(booking.packageId) }} <br />
+                        {{ booking.mode }}
+                      </td>
+                      <td class="w-[8%]">
+                        <Tag
+                          :severity="getStatusSeverity(booking.bookStatus)"
+                          :value="booking.bookStatus"
+                        />
+                      </td>
+                      <td class="w-[16%]">
+                        {{ formatDates(booking.checkInDate) }} to
+                        {{ formatDates(booking.checkOutDate) }}
+                      </td>
+                      <td class="w-[7%]">{{ booking.paymentTerms }}</td>
+                      <td class="w-[7%]">
+                        <Tag
+                          :severity="
+                            getPaymentStatusSeverity(
+                              booking.bookingPaymentStatus
+                            )
+                          "
+                          :value="booking.bookingPaymentStatus"
+                        />
+                      </td>
+                      <td class="w-[7%]">
+                        {{ formatPeso(booking.totalAmount) }}
+                      </td>
+                      <td class="w-[7%]">
+                        {{ formatPeso(booking.amountPaid) }}
+                      </td>
+                      <td class="w-[7%]">
+                        {{ formatPeso(booking.remainingBalance) }}
+                      </td>
+                      <td class="w-[7%]">
+                        {{ formatDates(booking.createdAt) }}
+                      </td>
+                      <td class="w-[5%]" @click.stop>
+                        <T3ButtonBooking
+                          :booking="booking"
+                          :payment="booking"
+                          :packageName="getPackageName(booking.packageId)"
+                          @updateStatus="updateBookingHandler"
+                          @updateBooking="updateBookingDateHandler"
+                          @payPayment="secondPaymentHandler"
+                        />
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+                <Paginator
+                  :first="first"
+                  :rows="rows"
+                  :totalRecords="totalBookings"
+                  :rowsPerPageOptions="[5, 10, 20, 30]"
+                  @page="onPageChange"
+                  class="rowPagination"
+                />
+              </div>
+            </TabPanel>
+          </TabPanels>
+        </Tabs>
       </div>
     </div>
 
@@ -482,9 +1359,6 @@ const filteredBooking = computed(() => {
         <div>
           <p><strong>Booking ID:</strong> {{ selectedBooking?.bookingId }}</p>
           <p><strong>User ID:</strong> {{ selectedBooking?.userId }}</p>
-          <p>
-            <strong>Created By ID:</strong> {{ selectedBooking?.createdBy }}
-          </p>
           <p>
             <strong>Name:</strong> {{ selectedBooking?.firstName }}
             {{ selectedBooking?.lastName }}
@@ -510,15 +1384,13 @@ const filteredBooking = computed(() => {
             {{ selectedBooking?.numberOfGuest }}
           </p>
           <p><strong>Catering:</strong> {{ selectedBooking?.catering }}</p>
-          <p>
-            <strong>Discount:</strong> {{ selectedBooking?.discountPromoId }}
-          </p>
+          <p><strong>Discount:</strong> {{ selectedBooking?.discountId }}</p>
           <p>
             <strong>Payment Terms:</strong> {{ selectedBooking?.paymentTerms }}
           </p>
           <p>
             <strong>Total Amount Due:</strong>
-            {{ selectedBooking?.totalAmountDue }}
+            {{ selectedBooking?.totalAmount }}
           </p>
           <p>
             <strong>Booking Status:</strong> {{ selectedBooking?.bookStatus }}
@@ -559,6 +1431,7 @@ td {
   top: 0;
   left: 0;
   overflow: hidden;
+  max-width: 100%;
 }
 
 .searchB {
@@ -583,11 +1456,12 @@ td {
 
 .tableContainer {
   max-height: 75%;
-  overflow-y: auto;
+  overflow: visible;
   border-radius: 5px;
 }
 
-.tableContainer::-webkit-scrollbar {
+.tableContainer::-webkit-scrollbar,
+.tabBookings::-webkit-scrollbar {
   display: none;
 }
 
@@ -599,7 +1473,7 @@ td {
 
 .header-style {
   font-weight: bold;
-  font-size: 15px;
+  font-size: 13px;
   height: 40px;
   position: sticky;
   color: white;
@@ -610,10 +1484,10 @@ td {
 
 .bRow {
   width: 100%;
-  font-size: 15px;
-  height: auto;
+  font-size: 13px;
+  height: 50px;
+  min-height: auto;
   text-align: center;
-
   border-bottom: 1px solid #194d1d;
   cursor: pointer;
 }
@@ -646,7 +1520,7 @@ td {
   background: white;
   padding: 20px;
   border-radius: 5px;
-  width: auto;
+  width: 40rem;
 }
 
 .closeDetails {
@@ -664,6 +1538,7 @@ td {
 :deep(.rowPagination) {
   .p-paginator {
     background: transparent;
+    overflow: visible;
 
     border-radius: 0;
     height: 50px;
@@ -671,6 +1546,51 @@ td {
   }
   .p-paginator-rpp-dropdown {
     background: transparent;
+  }
+}
+:deep(.tabBookings) {
+  max-height: 75%;
+  overflow-y: auto;
+
+  .p-tabpanels {
+    background: transparent;
+    padding: 0;
+  }
+
+  .p-tablist {
+    --p-tabs-tablist-background: transparent;
+    display: flex;
+    gap: 8px;
+    padding-bottom: 4px;
+    border-bottom: 2px solid #e0e0e0;
+  }
+
+  .p-tab {
+    font-size: 15px;
+    font-weight: 600;
+    padding: 10px 16px;
+    border-radius: 12px 12px 0 0;
+    background-color: transparent;
+    color: #194d1d;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: none;
+    position: relative;
+  }
+
+  .p-tab.p-tab-active {
+    background: #194d1d;
+    color: #ffffff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  }
+
+  .p-tab:hover:not(.p-tab-active) {
+    background-color: #e8f5e9;
+    color: #194d1d;
+  }
+
+  .p-tablist-active-bar {
+    display: none;
   }
 }
 </style>

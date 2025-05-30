@@ -1,34 +1,76 @@
-import { sqliteTable, text, integer, check, real } from 'drizzle-orm/sqlite-core';
-import { sql } from 'drizzle-orm';
-import { UsersTable } from './User';
-import { PackagesTable } from './Packages';
-import { DiscountsTable } from './Discounts';
+import {
+  sqliteTable,
+  text,
+  integer,
+  check,
+  real,
+} from "drizzle-orm/sqlite-core";
+import { sql } from "drizzle-orm";
+import { UsersTable } from "./User";
+import { PackagesTable } from "./Packages";
+import { DiscountsTable } from "./Discounts";
 
-
-export const BookingsTable = sqliteTable('BOOKING', {
-  bookingId: integer('bookingId').primaryKey({ autoIncrement: true}),
-  userId: integer('userId').references(() => UsersTable.userId).notNull(), // Admin, Staff, and Customer
-  createdBy: integer('createdBy').references(() => UsersTable.userId).notNull(), // Admin or Staff
-  checkInDate: text('checkInDate').notNull(),
-  checkOutDate: text('checkOutDate').notNull(),
-  mode: text('mode', {enum: ['day-time', 'night-time', 'whole-day']}).notNull(),
-  packageId: integer('packageId').references(() => PackagesTable.packageId).notNull(),
-  firstName: text('firstName'), // Nullable for Online (Customer)
-  lastName: text('lastName'), // Nullable for Online (Customer)
-  arrivalTime: text('arrivalTime').notNull(),
-  eventType: text('eventType').notNull(),
-  numberOfGuest: integer('numberOfGuest').notNull(),
-  catering: integer('catering').notNull(),
-  contactNo: text('contactNo'), // Nullable for Online (Customer)
-  emailAddress: text('emailAddress'), // Nullable for Online (Customer)
-  address: text('address'), // Nullable for Online (Customer)
-  discountId: integer('discountId').references(() => DiscountsTable.discountId), // Nullable if no discount applied
-  paymentTerms: text('paymentTerms', {enum: ['installment', 'full-payment']}).notNull(),
-  totalAmount: real('totalAmountDue').notNull(),
-  bookStatus: text('bookStatus', {enum: ['pending', 'confirmed', 'cancelled', 'completed', 'rescheduled']}).notNull(),
-  reservationType: text('reservationType', {enum: ['online', 'walk-in']}).notNull(), // Online or Walk-in
-  createdAt: text('createdAt').notNull().default(sql`(current_timestamp)`),
-},
-);
-
-
+export const BookingsTable = sqliteTable("BOOKING", {
+  // PRIMARY & FOREIGN KEYS
+  bookingId: integer("bookingId").primaryKey({ autoIncrement: true }),
+  userId: integer("userId")
+    .references(() => UsersTable.userId)
+    .notNull(), // Admin, Staff, and Customer
+  packageId: integer("packageId")
+    .references(() => PackagesTable.packageId)
+    .notNull(),
+  discountId: integer("discountId").references(() => DiscountsTable.discountId), // Nullable if no discount applied
+  // BOOK STATUS
+  bookStatus: text("bookStatus", {
+    enum: [
+      "pending",
+      "reserved",
+      "cancelled",
+      "completed",
+      "rescheduled",
+      "pending-cancellation",
+    ],
+  }).default("pending"),
+  // hasRescheduled: integer("hasRescheduled").default(0),
+  // BOOKING DETAILS
+  checkInDate: text("checkInDate").notNull(),
+  checkOutDate: text("checkOutDate").notNull(),
+  mode: text("mode", {
+    enum: ["day-time", "night-time", "whole-day"],
+  }).notNull(),
+  reservationType: text("reservationType", {
+    enum: ["online", "walk-in"],
+  }).notNull(),
+  eventType: text("eventType"),
+  numberOfGuest: integer("numberOfGuest"),
+  arrivalTime: text("arrivalTime"),
+  catering: integer("catering"),
+  // PAYMENT INFO
+  paymentTerms: text("paymentTerms", {
+    enum: ["installment", "full-payment"],
+  }).notNull(),
+  bookingPaymentStatus: text("bookingPaymentStatus", {
+    enum: ["paid", "partially-paid", "unpaid"],
+  })
+    .notNull()
+    .default("unpaid"),
+  totalAmount: real("totalAmount").notNull(),
+  amountPaid: real("amountPaid").notNull(),
+  remainingBalance: real("remainingBalance").notNull(),
+  // CANCELLATION INFO (nullable if not cancelled)
+  cancelCategory: text("cancelCategory", {
+    enum: ["natural-disaster", "others"],
+  }),
+  cancelReason: text("cancelReason"),
+  // CUSTOMER INFORMATION (nullable for online)
+  firstName: text("firstName"),
+  lastName: text("lastName"),
+  contactNo: text("contactNo"),
+  emailAddress: text("emailAddress"),
+  address: text("address"),
+  // SYSTEM METADATA
+  createdAt: text("createdAt")
+    .notNull()
+    .default(sql`(current_timestamp)`),
+  forfeited: integer("forfeited").default(0).notNull(),
+});

@@ -7,33 +7,61 @@ import {
   UpdatePackageDTO,
   CreatePackageDTO,
 } from "../dto/packageDTO";
+import {
+  BadRequestError,
+  ConflictError,
+  ForbiddenError,
+  NotFoundError,
+} from "../utils/errors";
+import { errorHandler } from "../middlewares/errorHandler";
+import { authMiddleware } from "../middlewares/authMiddleware";
+import type { AuthContext } from "../types";
+import { verifyPermission } from "../utils/permissionUtils";
+import { AuditLogsTable } from "../schemas/schema";
+import fs from "fs/promises";
+import path from "path";
 
-export default new OpenAPIHono()
-  .openapi(
-    createRoute({
-      tags: ["Packages"],
-      summary: "Get all packages",
-      method: "get",
-      path: "/",
-      request: {
-        query: z.object({
-          limit: z.coerce.number().nonnegative().openapi({
-            example: 50,
-            description: "Limit that the server will give",
-          }),
-          page: z.coerce.number().nonnegative().min(1).default(1).openapi({
-            example: 0,
-            description: "Page to get starts from 1",
-          }),
+const packageRoutes = new OpenAPIHono<AuthContext>();
+
+packageRoutes.openapi(
+  createRoute({
+    tags: ["Packages"],
+    summary: "Get all packages",
+    method: "get",
+    path: "/",
+    request: {
+      query: z.object({
+        limit: z.coerce.number().nonnegative().min(1).default(20).openapi({
+          example: 50,
+          description: "Limit that the server will give",
         }),
+        page: z.coerce.number().nonnegative().min(1).default(1).openapi({
+          example: 0,
+          description: "Page to get starts from 1",
+        }),
+      }),
+    },
+    responses: {
+      200: {
+        description: "Retrieves all packages successfully",
       },
-      responses: {
-        200: {
-          description: "Successful registration, redirecting to /login",
-        },
+      404: {
+        description: "No packages found",
       },
-    }),
-    async (c) => {
+      500: {
+        description: "Internal server error",
+      },
+    },
+  }),
+  async (c) => {
+    try {
+      // const userId = c.get("userId");
+      // const hasPermission = await verifyPermission(userId, "PACKAGES", "read");
+
+      // if (!hasPermission) {
+      //   throw new ForbiddenError("No permission to get all packages.");
+      // }
+
       const { limit, page } = c.req.valid("query");
 
       const packages = await db.query.PackagesTable.findMany({
@@ -45,189 +73,491 @@ export default new OpenAPIHono()
         total: packages.length,
         items: packages,
       });
+    } catch (err) {
+      return errorHandler(err, c);
     }
-  )
-  .openapi(
-    createRoute({
-      tags: ["Packages"],
-      summary: "Search packages",
-      method: "get",
-      path: "/search",
-      request: {
-        query: z.object({
-          limit: z.coerce.number().nonnegative().openapi({
-            example: 50,
-            description: "Limit that the server will give",
-          }),
-          query: z.string().openapi({
-            example: "Cruz Package",
-            description: "Search query",
-          }),
+  }
+);
+
+packageRoutes.use("/*", authMiddleware);
+
+packageRoutes.openapi(
+  createRoute({
+    tags: ["Packages"],
+    summary: "Search packages",
+    method: "get",
+    path: "/search",
+    request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
         }),
+      }),
+      query: z.object({
+        limit: z.coerce.number().nonnegative().openapi({
+          example: 50,
+          description: "Limit that the server will give",
+        }),
+        query: z.string().openapi({
+          example: "Cruz Package",
+          description: "Search query",
+        }),
+      }),
+    },
+    responses: {
+      200: {
+        description: "Packages found successfully",
       },
-      responses: {
-        200: {
-          description: "Successful registration, redirecting to /login",
-        },
+      400: {
+        description: "Invalid limit value or missing query",
       },
-    }),
-    async (c) => {
+      404: {
+        description: "No packages found",
+      },
+      500: {
+        description: "Internal server error",
+      },
+    },
+  }),
+  async (c) => {
+    try {
+      const userId = c.get("userId");
+      const hasPermission = await verifyPermission(userId, "PACKAGES", "read");
+
+      if (!hasPermission) {
+        throw new ForbiddenError("No permission to search packages.");
+      }
+
       const { limit, query } = c.req.valid("query");
 
+      if (limit < 1) {
+        throw new BadRequestError("Limit must be greater than 0.");
+      }
+
+      if (!query) {
+        throw new BadRequestError("Query is required.");
+      }
+
       const packages = await db.query.PackagesTable.findMany({
-        limit,
         where: like(PackagesTable.name, `%${query}%`),
+        limit,
+      });
+
+      if (!packages || packages.length === 0) {
+        throw new NotFoundError("No packages found.");
+      }
+
+      const allPackages = packages.map((packages) => {
+        try {
+          return PackageDTO.parse(packages);
+        } catch (err) {
+          throw new BadRequestError("Invalid package data.");
+        }
       });
 
       return c.json({
         total: packages.length,
-        items: packages,
+        items: allPackages,
       });
+    } catch (err) {
+      return errorHandler(err, c);
     }
-  )
+  }
+);
 
-  .openapi(
-    createRoute({
-      tags: ["Packages"],
-      summary: "Get specific package",
-      method: "get",
-      path: "/:id",
-      request: {
-        params: z.object({
-          id: z.coerce.number().openapi({ description: "Id to find" }),
+packageRoutes.openapi(
+  createRoute({
+    tags: ["Packages"],
+    summary: "Get specific package",
+    method: "get",
+    path: "/:id",
+    request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
         }),
+      }),
+      params: z.object({
+        id: z.coerce.number().openapi({ description: "Id to find" }),
+      }),
+    },
+    responses: {
+      200: {
+        description: "Successful package retrieval",
       },
-      responses: {
-        200: {
-          description: "Successful package retrieval",
-        },
-      },
-    }),
-    async (c) => {
+    },
+    404: {
+      description: "Package not found",
+    },
+    500: {
+      description: "Internal server error",
+    },
+  }),
+  async (c) => {
+    try {
+      const userId = c.get("userId");
+      const hasPermission = await verifyPermission(userId, "PACKAGES", "read");
+
+      if (!hasPermission) {
+        throw new ForbiddenError("No permission to get package.");
+      }
+
       const { id } = c.req.valid("param");
 
       const dbPackage = await db.query.PackagesTable.findFirst({
         where: eq(PackagesTable.packageId, id),
       });
 
-      if (!dbPackage) return c.json({ error: "Package not found" }, 404);
+      if (!dbPackage) {
+        throw new NotFoundError("Package not found");
+      }
 
-      return c.json(dbPackage);
+      return c.json(PackageDTO.parse(dbPackage));
+    } catch (err) {
+      return errorHandler(err, c);
     }
-  )
-  .openapi(
-    createRoute({
-      tags: ["Packages"],
-      summary: "Update Package",
-      method: "patch",
-      path: "/:id",
-      request: {
-        params: z.object({
-          id: z.coerce.number().openapi({ description: "Id to find" }),
+  }
+);
+
+packageRoutes.openapi(
+  createRoute({
+    tags: ["Packages"],
+    summary: "Update Package",
+    method: "patch",
+    path: "/:id",
+    request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
         }),
-        body: {
-          content: {
-            "application/json": {
-              schema: UpdatePackageDTO,
-            },
+      }),
+      params: z.object({
+        id: z.coerce.number().openapi({ description: "Id to find" }),
+      }),
+      body: {
+        content: {
+          "application/json": {
+            schema: UpdatePackageDTO,
           },
         },
       },
-      responses: {
-        200: {
-          description: "Successful registration, redirecting to /login",
-        },
-        404: {
-          description: "Successful registration, redirecting to /login",
-        },
+    },
+    responses: {
+      200: {
+        description: "Package updated successfully",
       },
-    }),
-    async (c) => {
+      400: {
+        description: "Invalid input data for update",
+      },
+      404: {
+        description: "Package not found",
+      },
+      500: {
+        description: "Internal server error",
+      },
+    },
+  }),
+  async (c) => {
+    try {
+      const userId = c.get("userId");
+      const hasPermission = await verifyPermission(
+        userId,
+        "PACKAGES",
+        "update"
+      );
+
+      if (!hasPermission) {
+        throw new ForbiddenError("No permission to update package.");
+      }
+
       const { id } = c.req.valid("param");
       const body = c.req.valid("json");
+
       const updatedBody = {
         ...body,
         updatedAt: new Date().toISOString().slice(0, 19).replace("T", " "),
       };
 
-      const dbPackage = (
-        await db
-          .update(PackagesTable)
-          .set(updatedBody)
-          .where(eq(PackagesTable.packageId, id))
-          .returning()
-          .execute()
-      )[0];
+      const updated = await db.transaction(async (tx) => {
+        const dbPackage = (
+          await tx
+            .update(PackagesTable)
+            .set(updatedBody)
+            .where(eq(PackagesTable.packageId, id))
+            .returning()
+            .execute()
+        )[0];
 
-      return c.json(dbPackage);
+        if (!dbPackage) {
+          throw new NotFoundError("Package not found");
+        }
+
+        await tx
+          .insert(AuditLogsTable)
+          .values({
+            userId: userId,
+            action: "update",
+            tableName: "PACKAGES",
+            recordId: dbPackage.packageId,
+            data: JSON.stringify(dbPackage),
+            remarks: "Package updated",
+            createdAt: new Date().toISOString(),
+          })
+          .execute();
+
+        return dbPackage;
+      });
+
+      return c.json({
+        ...updated,
+        imageUrl: updated.imageUrl || "",
+      });
+    } catch (err) {
+      return errorHandler(err, c);
     }
-  )
-  .openapi(
-    createRoute({
-      tags: ["Packages"],
-      summary: "Delete Package",
-      method: "delete",
-      path: "/:id",
-      request: {
-        params: z.object({
-          id: z.coerce.number().openapi({ description: "Id to find" }),
+  }
+);
+
+packageRoutes.openapi(
+  createRoute({
+    tags: ["Packages"],
+    summary: "Delete Package",
+    method: "delete",
+    path: "/:id",
+    request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
         }),
+      }),
+      params: z.object({
+        id: z.coerce.number().openapi({ description: "ID to delete" }),
+      }),
+    },
+    responses: {
+      200: {
+        description: "Package deleted successfully",
       },
-      responses: {
-        200: {
-          description: "Successful registration, redirecting to /login",
-        },
-        404: {
-          description: "Successful registration, redirecting to /login",
-        },
+      404: {
+        description: "Package not found",
       },
-    }),
-    async (c) => {
+      500: {
+        description: "Internal server error",
+      },
+    },
+  }),
+  async (c) => {
+    try {
+      const userId = c.get("userId");
+      const hasPermission = await verifyPermission(
+        userId,
+        "PACKAGES",
+        "delete"
+      );
+
+      if (!hasPermission) {
+        throw new ForbiddenError("No permission to delete package.");
+      }
+
       const { id } = c.req.valid("param");
 
-      await db
-        .delete(PackagesTable)
-        .where(eq(PackagesTable.packageId, id))
-        .execute();
+      const dbPackage = await db.query.PackagesTable.findFirst({
+        where: eq(PackagesTable.packageId, id),
+      });
+
+      if (!dbPackage) {
+        throw new NotFoundError("Package not found");
+      }
+
+      await db.transaction(async (tx) => {
+        const deletePackage = (
+          await tx
+            .delete(PackagesTable)
+            .where(eq(PackagesTable.packageId, id))
+            .returning()
+            .execute()
+        )[0];
+
+        await tx
+          .insert(AuditLogsTable)
+          .values({
+            userId: userId,
+            action: "delete",
+            tableName: "PACKAGES",
+            recordId: deletePackage.packageId,
+            data: JSON.stringify(deletePackage),
+            remarks: "Package deleted",
+            createdAt: new Date().toISOString(),
+          })
+          .execute();
+      });
 
       return c.json({
         message: "Package deleted successfully",
       });
+    } catch (err) {
+      return errorHandler(err, c);
     }
-  )
-  .openapi(
-    createRoute({
-      tags: ["Packages"],
-      summary: "Create Package",
-      method: "post",
-      path: "/",
-      request: {
-        body: {
-          content: {
-            "application/json": {
-              schema: CreatePackageDTO,
-            },
+  }
+);
+
+packageRoutes.openapi(
+  createRoute({
+    tags: ["Packages"],
+    summary: "Create Package",
+    method: "post",
+    path: "/",
+    request: {
+      headers: z.object({
+        Authorization: z.string().openapi({
+          description: "Bearer access token",
+          example: "Bearer <token>",
+        }),
+      }),
+      body: {
+        content: {
+          "multipart/form-data": {
+            schema: CreatePackageDTO,
           },
         },
       },
-      responses: {
-        200: {
-          content: {
-            "application/json": {
-              schema: PackageDTO,
-            },
+    },
+    responses: {
+      201: {
+        content: {
+          "application/json": {
+            schema: PackageDTO,
           },
-          description: "Successful registration, redirecting to /login",
         },
+        description: "Package Created",
       },
-    }),
-    async (c) => {
-      const body = c.req.valid("json");
+      400: {
+        description: "Invalid package data",
+      },
+      500: {
+        description: "Internal server error",
+      },
+    },
+  }),
+  async (c) => {
+    try {
+      const userId = c.get("userId");
+      const hasPermission = await verifyPermission(
+        userId,
+        "PACKAGES",
+        "create"
+      );
+      const formData = new FormData();
+      const allowedStatuses = ["active", "inactive"];
 
-      const dbPackage = (
-        await db.insert(PackagesTable).values(body).returning().execute()
-      )[0];
+      if (!hasPermission) {
+        throw new ForbiddenError("No permission to create package.");
+      }
 
-      return c.json(dbPackage);
+      const body = await c.req.parseBody();
+      const file = body["imageUrl"] as File;
+
+      for (const key in body) {
+        if (key === "imageUrl") {
+          formData.append("imageUrl", body[key]);
+        } else {
+          formData.append(key, body[key]);
+        }
+      }
+
+      if (!file) {
+        throw new BadRequestError("No file uploaded");
+      }
+
+      const allowedMimeTypes = [
+        "image/jpeg",
+        "image/png",
+        "image/jpg",
+        "image/jfif",
+      ];
+
+      if (!allowedMimeTypes.includes(file.type)) {
+        throw new BadRequestError(
+          "Invalid file type, Only Jpeg, Png, and Jpg are allowed"
+        );
+      }
+
+      const uploadDir = path.join(process.cwd(), "public", "PackageImages");
+      await fs.mkdir(uploadDir, { recursive: true });
+
+      const uniqueFileName = `${Date.now()}-${file.name}`;
+      const filePath = path.join(uploadDir, uniqueFileName);
+
+      const fileBuffer = await file.arrayBuffer();
+      await fs.writeFile(filePath, Buffer.from(fileBuffer));
+
+      console.log("Save to:", filePath);
+      const imageUrl = `/PackageImages/${uniqueFileName}`;
+
+      body.imageUrl = file;
+
+      const existingPackage = await db.query.PackagesTable.findFirst({
+        where: eq(PackagesTable.name, String(body.name)),
+      });
+
+      if (existingPackage) {
+        throw new ConflictError("Package already exists.");
+      }
+
+      const parsed = CreatePackageDTO.parse(body);
+
+      const status = allowedStatuses.includes(parsed.status as any)
+        ? (parsed.status as "active" | "inactive")
+        : "inactive";
+
+      const updatedBody = {
+        ...parsed,
+        status,
+        imageUrl,
+      };
+      console.log("updatedBody.isPromo:", updatedBody.isPromo);
+      console.log("FINAL isPromo going into DB:", updatedBody.isPromo);
+
+      const created = await db.transaction(async (tx) => {
+        const dbPackage = (
+          await tx
+            .insert(PackagesTable)
+            .values(updatedBody)
+            .returning()
+            .execute()
+        )[0];
+
+        await tx
+          .insert(AuditLogsTable)
+          .values({
+            userId: userId,
+            action: "create",
+            tableName: "PACKAGES",
+            recordId: dbPackage.packageId,
+            data: JSON.stringify(dbPackage),
+            remarks: "Package created",
+            createdAt: new Date().toISOString(),
+          })
+          .execute();
+
+        return dbPackage;
+      });
+
+      return c.json(
+        {
+          ...created,
+          imageUrl: created.imageUrl || "",
+        },
+        201
+      );
+    } catch (err) {
+      return errorHandler(err, c);
     }
-  );
+  }
+);
+
+export default packageRoutes;

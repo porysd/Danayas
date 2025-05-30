@@ -1,43 +1,72 @@
 <script setup>
-import { ref, defineProps, defineEmits } from "vue";
+import { ref, defineProps, defineEmits, onMounted, watch, computed } from "vue";
 import Button from "primevue/button";
 import Dialog from "primevue/dialog";
 import Toast from "primevue/toast";
 import { useToast } from "primevue/usetoast";
 import DatePicker from "primevue/datepicker";
+import MultiSelect from "primevue/multiselect";
+import FileUpload from "primevue/fileupload";
+import { formatDate } from "../../utility/dateFormat";
+import { formatPeso } from "../../utility/pesoFormat.js";
+import Select from "primevue/select";
+// import { getBookingStyle } from "../../composables/calendarStyle.js";
+import { useCatalogStore } from "../../stores/catalogStore.js";
+import { useDiscountStore } from "../../stores/discountStore.js";
+import { useBookingStore } from "../../stores/bookingStore.js";
+import { usePublicEntryStore } from "../../stores/publicEntryStore.js";
+import { useBlockedStore } from "../../stores/blockedDateStore.js";
+import { usePackageStore } from "../../stores/packageStore.js";
 
+const bookingStore = useBookingStore();
+const publicStore = usePublicEntryStore();
+const blockStore = useBlockedStore();
+
+const catalogStore = useCatalogStore();
+const discountStore = useDiscountStore();
+const packageStore = usePackageStore();
+
+onMounted(() => {
+  catalogStore.fetchAllCatalogs();
+  discountStore.fetchAllDiscounts();
+  packageStore.fetchAllPackages();
+  packageStore.fetchAllPromos();
+  bookingStore.fetchUserBookings();
+  publicStore.fetchAllPublic();
+  blockStore.fetchAllBlocked();
+});
 const toast = useToast();
-defineProps(["data"]);
+defineProps(["data", "packageName"]);
 
 const showAddBookingModal = ref(false);
 const showPaymentModal = ref(false);
 
 const newBooking = ref({
-  userId: "",
-  createdBy: "",
-  firstName: "",
-  lastName: "",
-  contactNo: "",
-  emailAddress: "",
-  address: "",
+  firstName: "" || null,
+  lastName: "" || null,
+  contactNo: "" || null,
+  emailAddress: "" || null,
+  address: "" || null,
   packageId: "",
-  eventType: "",
+  eventType: "" || null,
   checkInDate: "",
   checkOutDate: "",
   mode: "",
-  arrivalTime: "",
-  catering: "",
-  numberOfGuest: "",
-  discountPromoId: "",
-  bookingAddOns: "",
+  arrivalTime: "" || null,
+  amountPaid: "" || null,
+  catering: "" || null,
+  numberOfGuest: "" || null,
+  discountId: "" || null,
+  catalogAddOnIds: [] || null,
+  paymentTerms: "",
 });
 
 const paymentDetails = ref({
-  paymentTerms: "",
-  totalPaid: "",
-  totalAmount: "",
-  bookStatus: "",
-  reservationType: "",
+  paymentMethod: "",
+  reference: null,
+  imageUrl: null,
+  senderName: "" || null,
+  tenderedAmount: "" || null,
 });
 
 const emit = defineEmits(["addBooking"]);
@@ -61,54 +90,201 @@ const backToBooking = () => {
   showPaymentModal.value = false;
 };
 
-const formatDate = (date) => {
-  if (!date) return "";
-  const d = new Date(date);
-  const month = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  const year = d.getFullYear();
-  return `${month}-${day}-${year}`;
+const minDate = new Date();
+
+const disabledDates = computed(() => {
+  const disabled = [];
+
+  // Blocked dates
+  blockStore.blocked.forEach((bd) => {
+    if (bd.blockedDates) {
+      disabled.push(new Date(bd.blockedDates));
+    }
+  });
+
+  // Fully booked dates (whole-day or both day-time and night-time)
+  const bookingsByDate = {};
+  bookingStore.bookings.forEach((b) => {
+    if (b.checkInDate) {
+      const date = b.checkInDate;
+      if (!bookingsByDate[date]) bookingsByDate[date] = new Set();
+      bookingsByDate[date].add(b.mode);
+    }
+  });
+  publicStore.public.forEach((p) => {
+    if (p.entryDate) {
+      const date = p.entryDate;
+      if (!bookingsByDate[date]) bookingsByDate[date] = new Set();
+      bookingsByDate[date].add(p.mode);
+    }
+  });
+
+  Object.entries(bookingsByDate).forEach(([date, modes]) => {
+    if (
+      modes.has("whole-day") ||
+      (modes.has("day-time") && modes.has("night-time"))
+    ) {
+      disabled.push(new Date(date));
+    }
+  });
+
+  return disabled;
+});
+
+const getBookingStyle = (slotDate) => {
+  const formattedDate = `${slotDate.year}-${String(slotDate.month + 1).padStart(
+    2,
+    "0"
+  )}-${String(slotDate.day).padStart(2, "0")}`;
+
+  // Collect all booking/public modes for the date
+  const mode = new Set();
+  let isBlocked = false;
+
+  bookingStore.bookings.forEach((b) => {
+    if (b.checkInDate === formattedDate) {
+      mode.add(b.mode);
+    }
+  });
+
+  publicStore.public.forEach((p) => {
+    if (p.entryDate === formattedDate) {
+      mode.add(p.mode);
+    }
+  });
+
+  if (blockStore.blocked.some((bd) => bd.blockedDates === formattedDate)) {
+    isBlocked = true;
+  }
+
+  let backgroundColor, color;
+
+  if (isBlocked) {
+    backgroundColor = "grey";
+    color = "white";
+  } else if (
+    mode.has("whole-day") ||
+    (mode.has("day-time") && mode.has("night-time"))
+  ) {
+    backgroundColor = "#FF6B6B"; // Fully Booked
+    color = "white";
+  } else if (mode.has("day-time")) {
+    backgroundColor = "#6A5ACD"; // Night Available
+    color = "white";
+  } else if (mode.has("night-time")) {
+    backgroundColor = "#FFD580"; // Day Available
+    color = "black";
+  } else {
+  }
+
+  return {
+    backgroundColor,
+    color,
+    width: "40px",
+    height: "40px",
+    display: "inline-flex",
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: "10rem",
+    fontSize: "17px",
+  };
 };
 
-const confirmBooking = () => {
+const onFileSelect = (event) => {
+  const file = event.files[0];
+  if (file) {
+    paymentDetails.value.imageUrl = file;
+  }
+};
+
+const selectedPackage = computed(() => {
+  const allPackages = [
+    ...(packageStore.packages || []),
+    ...(packageStore.promos || []),
+  ];
+  return allPackages.find(
+    (pkg) => pkg.packageId === newBooking.value.packageName
+  );
+});
+
+const selectedDiscount = computed(() => {
+  return discountStore.discounts.find(
+    (d) => d.discountId === newBooking.value.discountId
+  );
+});
+
+const addOnsTotal = computed(() => {
+  if (!newBooking.value.catalogAddOnIds || !catalogStore.catalog) return 0;
+  return newBooking.value.catalogAddOnIds.reduce((sum, addOnId) => {
+    const addOn = catalogStore.catalog.find(
+      (c) => c.catalogAddOnId === addOnId
+    );
+    return sum + (addOn?.price || 0);
+  }, 0);
+});
+
+const totalAmount = computed(() => {
+  const pkgPrice = selectedPackage.value?.price || 0;
+  const discount = selectedDiscount.value?.percentage || 0;
+  const discounted = pkgPrice - pkgPrice * (discount / 100);
+  return Math.max(discounted + addOnsTotal.value, 0);
+  // return discounted;
+});
+
+watch(
+  () => [newBooking.value.checkInDate, newBooking.value.mode],
+  ([checkInDate, mode]) => {
+    if (!checkInDate) {
+      newBooking.value.checkOutDate = "";
+      return;
+    }
+    const date = new Date(checkInDate);
+    if (mode === "night-time" || mode === "whole-day") {
+      date.setDate(date.getDate() + 1);
+      newBooking.value.checkOutDate = formatDate(date);
+    } else {
+      newBooking.value.checkOutDate = checkInDate;
+    }
+  }
+);
+
+const confirmBooking = async () => {
   if (
-    !newBooking.value.firstName ||
-    !newBooking.value.lastName ||
-    !newBooking.value.contactNo
+    !newBooking.value.packageName ||
+    !newBooking.value.checkInDate ||
+    !newBooking.value.checkOutDate ||
+    !newBooking.value.mode ||
+    !newBooking.value.paymentTerms
   ) {
     alert("Please fill in all required fields.");
     return;
   }
+  // Find the discount by ID or name
+  const discount = discountStore.discounts.find(
+    (d) => d.discountId === newBooking.value.discountId
+  );
 
   const bookingData = {
     ...newBooking.value,
-    checkInDate: formatDate(newBooking.value.checkInDate),
-    checkOutDate: formatDate(newBooking.value.checkOutDate),
+    packageId: newBooking.value.packageName,
+    discountId: discount?.discountId || null,
+    catalogAddOnIds: newBooking.value.catalogAddOnIds || [],
   };
 
-  emit("addBooking", { ...bookingData, ...paymentDetails.value });
+  const paymentPayload = {
+    paymentMethod: paymentDetails.value.paymentMethod,
+    senderName: paymentDetails.value.senderName,
+    tenderedAmount: paymentDetails.value.tenderedAmount,
+  };
+  if (paymentDetails.value.paymentMethod === "gcash") {
+    paymentPayload.reference = paymentDetails.value.reference;
+    paymentPayload.imageUrl = paymentDetails.value.imageUrl;
+  }
 
-  // newBooking.value = {
-  //     userId: '', createdBy: '', firstName: '', lastName: '', contactNo: '',
-  //     emailAddress: '', address: '', packageId: '', eventType: '',
-  //     checkInDate: '', checkOutDate: '', mode: '', arrivalTime: '',
-  //     catering: '', numberOfGuest: '', discountPromoId: '', bookingAddOns: ''
-  // };
+  emit("addBooking", bookingData, paymentPayload);
 
-  // paymentDetails.value = {
-  //     paymentTerms: '', totalPaid: '', totalAmountDue: '',
-  //     bookStatus: '', reservationType: ''
-  // };
-  toast.add({
-    severity: "success",
-    summary: "Success",
-    detail: "Successfully Addedd Booking",
-    life: 3000,
-  });
   closeAddBookingModal();
 };
-
-console.log("Booking Data:", newBooking.value, paymentDetails.value);
 </script>
 
 <template>
@@ -177,21 +353,29 @@ console.log("Booking Data:", newBooking.value, paymentDetails.value);
           </div>
         </div>
 
-        <div class="packEvent">
-          <div>
-            <label>Package Name:</label>
-            <input
-              class="packEvents"
-              v-model="newBooking.packageId"
-              placeholder="Package Name"
+        <div class="flex justify-center gap-3">
+          <div class="w-full md:w-[40%]">
+            <label for="packages">Package Name:</label>
+            <Select
+              id="packages"
+              v-model="newBooking.packageName"
+              :options="[
+                ...(packageStore.packages || []),
+                ...(packageStore.promos || []),
+              ]"
+              optionLabel="name"
+              optionValue="packageId"
+              placeholder="Select a Package or Promos"
+              class="w-full"
             />
           </div>
-          <div>
+          <div class="w-[40%]">
             <label>Event Type:</label>
             <input
               class="packEvents"
               v-model="newBooking.eventType"
               placeholder="Event Type"
+              style="width: 100%"
             />
           </div>
         </div>
@@ -206,7 +390,20 @@ console.log("Booking Data:", newBooking.value, paymentDetails.value);
               fluid
               iconDisplay="input"
               dateFormat="mm-dd-yy"
-            />
+              :minDate="minDate"
+              :disabledDates="disabledDates"
+            >
+              <template #date="slotProps">
+                <span>
+                  <strong
+                    :style="getBookingStyle(slotProps.date)"
+                    class="date-box"
+                  >
+                    {{ slotProps.date.day }}
+                  </strong>
+                </span>
+              </template></DatePicker
+            >
           </div>
           <div>
             <label>Check-Out Date:</label>
@@ -218,7 +415,20 @@ console.log("Booking Data:", newBooking.value, paymentDetails.value);
               fluid
               iconDisplay="input"
               dateFormat="mm-dd-yy"
-            />
+              :minDate="minDate"
+              :disabledDates="disabledDates"
+            >
+              <template #date="slotProps">
+                <span>
+                  <strong
+                    :style="getBookingStyle(slotProps.date)"
+                    class="date-box"
+                  >
+                    {{ slotProps.date.day }}
+                  </strong>
+                </span>
+              </template></DatePicker
+            >
           </div>
           <div>
             <label>Mode:</label>
@@ -261,27 +471,28 @@ console.log("Booking Data:", newBooking.value, paymentDetails.value);
           </div>
         </div>
 
-        <div class="dAdd">
-          <div>
-            <label>Discount:</label>
-            <input
-              class="dAdds"
-              v-model="newBooking.discountPromoId"
-              placeholder="Discount"
+        <div class="flex justify-center gap-3">
+          <div class="w-full md:w-[40%]">
+            <label for="discount">Discount ID or Name:</label>
+            <Select
+              id="discount"
+              v-model="newBooking.discountId"
+              :options="discountStore.discounts"
+              optionLabel="name"
+              optionValue="discountId"
+              placeholder="Select a Discount"
+              class="w-full"
             />
           </div>
-          <div>
+          <div class="w-[40%]">
             <label>Add Ons:</label>
-            <select
-              v-model="newBooking.bookingAddOns"
-              class="border p-2 rounded w-full"
-            >
-              <option value="karaoke">Karaoke</option>
-              <option value="nipahut">Nipa Hut</option>
-              <option value="chairs">Chairs</option>
-              <option value="table">Table</option>
-              <option value="karaoke">Karaoke</option>
-            </select>
+            <MultiSelect
+              v-model="newBooking.catalogAddOnIds"
+              :options="catalogStore.catalog"
+              optionLabel="itemName"
+              optionValue="catalogAddOnId"
+              style="width: 100%"
+            />
           </div>
         </div>
       </div>
@@ -307,7 +518,7 @@ console.log("Booking Data:", newBooking.value, paymentDetails.value);
     <Dialog
       v-model:visible="showPaymentModal"
       modal
-      :style="{ width: '50rem', minHeight: '30rem' }"
+      :style="{ width: '50rem', minHeight: '20rem' }"
     >
       <template #header>
         <div class="flex flex-col items-center justify-center w-full">
@@ -320,7 +531,7 @@ console.log("Booking Data:", newBooking.value, paymentDetails.value);
           <div>
             <label>Payment Terms:</label>
             <select
-              v-model="paymentDetails.paymentTerms"
+              v-model="newBooking.paymentTerms"
               placeholder="Payment Terms"
               class="border p-2 rounded w-full"
             >
@@ -329,38 +540,68 @@ console.log("Booking Data:", newBooking.value, paymentDetails.value);
             </select>
           </div>
           <div>
-            <label>Total Amount Paid:</label>
+            <label>Sender Name</label>
             <input
-              v-model="paymentDetails.totalPaid"
-              placeholder="Total Amount Paid"
+              v-model="paymentDetails.senderName"
+              placeholder="Name of the sender"
             />
           </div>
         </div>
         <div class="packEvent">
           <div>
-            <label>Total Amount Due:</label>
-            <input
-              v-model="paymentDetails.totalAmount"
-              placeholder="Total Amount Due"
-            />
-          </div>
-          <div>
-            <label>Book Status:</label>
+            <label>Mode of Payment:</label>
 
             <select
-              v-model="paymentDetails.bookStatus"
+              v-model="paymentDetails.paymentMethod"
               placeholder="Book Status"
               class="border p-2 rounded w-full"
             >
-              <option value="pending">Pending</option>
-              <option value="confirmed">Confirmed</option>
-              <option value="cancelled">Cancelled</option>
-              <option value="completed">Completed</option>
+              <option value="gcash">Gcash</option>
+              <option value="cash">Cash</option>
             </select>
+          </div>
+          <div>
+            <label>Tendered Amount:</label>
+            <input
+              v-model.number="paymentDetails.tenderedAmount"
+              placeholder="Total Amount"
+            />
           </div>
         </div>
 
         <div class="packEvent">
+          <template v-if="paymentDetails.paymentMethod === 'gcash'">
+            <div>
+              <label>Reference No:</label>
+              <input
+                v-model="paymentDetails.reference"
+                placeholder="Reference No"
+              />
+            </div>
+
+            <div>
+              <label>Proof of Payment:</label>
+              <FileUpload
+                ref="fileupload"
+                v-model="paymentDetails.imageUrl"
+                mode="basic"
+                name="imageUrl"
+                url="/api/upload"
+                accept="image/*"
+                :maxFileSize="1000000"
+                @select="onFileSelect"
+              />
+            </div>
+          </template>
+        </div>
+
+        <div class="packEvent">
+          <div>
+            <label>Total Amount: {{ formatPeso(totalAmount) }}</label>
+          </div>
+        </div>
+
+        <!--<div class="packEvent">
           <div>
             <label>Reservation Type:</label>
             <select
@@ -383,13 +624,13 @@ console.log("Booking Data:", newBooking.value, paymentDetails.value);
             <label>createdBy:</label>
             <input v-model="paymentDetails.createdBy" placeholder="createdby" />
           </div>
-        </div>
+        </div>-->
       </div>
 
       <div class="flex justify-center gap-2 font-[Poppins] mt-10">
         <Button
           type="button"
-          label="Cancel"
+          label="Back"
           severity="secondary"
           @click="backToBooking"
           class="font-bold w-full"
@@ -470,5 +711,19 @@ console.log("Booking Data:", newBooking.value, paymentDetails.value);
 .modal select {
   border: 1px solid #e2e8f0;
   background-color: #ffffff;
+}
+
+:deep(.gcashUpload) {
+  .p-fileupload {
+    margin: auto;
+    justify-content: start;
+  }
+  .p-fileupload-choose-button {
+    background: #41ab5d;
+  }
+}
+
+.p-multiselect {
+  width: 10rem;
 }
 </style>

@@ -1,7 +1,7 @@
 export const processBookingData = (bookingData: any) => {
   const toISODate = (dateStr: string) => {
     const [month, day, year] = dateStr.split("-").map(Number);
-    return new Date(Date.UTC(year, month - 1, day, 0, 0, 0)).toISOString();
+    return new Date(Date.UTC(year, month - 1, day)).toISOString().split("T")[0]; //"2025-05-14"
   };
 
   const toISODateTime = (dateStr: string, timeStr: string) => {
@@ -12,15 +12,29 @@ export const processBookingData = (bookingData: any) => {
     if (modifier === "PM" && hours !== 12) hours += 12;
     if (modifier === "AM" && hours === 12) hours = 0;
 
-    return new Date(Date.UTC(year, month - 1, day, hours, minutes)).toISOString();
+    return new Date(
+      Date.UTC(year, month - 1, day, hours, minutes)
+    ).toISOString();
   };
 
   return {
     ...bookingData,
-    checkInDate: bookingData.checkInDate ? toISODate(bookingData.checkInDate) : undefined,
-    checkOutDate: bookingData.checkOutDate ? toISODate(bookingData.checkOutDate) : undefined,
-    arrivalTime: bookingData.arrivalTime ? toISODateTime(bookingData.checkInDate, bookingData.arrivalTime) : undefined,
+    checkInDate: bookingData.checkInDate
+      ? toISODate(bookingData.checkInDate)
+      : undefined,
+    checkOutDate: bookingData.checkOutDate
+      ? toISODate(bookingData.checkOutDate)
+      : undefined,
+    arrivalTime: bookingData.arrivalTime
+      ? toISODateTime(bookingData.checkInDate, bookingData.arrivalTime)
+      : undefined,
     createdAt: new Date().toISOString(),
-    catering: bookingData.catering === 1 ? 1 : 0,
+    catering: bookingData.catering ? 1 : 0,
+    entryDate: bookingData.entryDate
+      ? toISODate(bookingData.entryDate)
+      : undefined,
+    blockedDates: bookingData.blockedDates
+      ? toISODate(bookingData.blockedDates)
+      : undefined,
   };
 };

@@ -1,5 +1,5 @@
 <script setup>
-import { ref, defineProps, defineEmits } from "vue";
+import { ref, defineProps, defineEmits, onMounted, onUnmounted } from "vue";
 import Button from "primevue/button";
 import Dialog from "primevue/dialog";
 import Toast from "primevue/toast";
@@ -12,11 +12,11 @@ const toast = useToast();
 const showMenu = ref(false);
 const showEditModal = ref(false);
 const showDeleteModal = ref(false);
-const showDisableModal = ref(false);
+// const showDisableModal = ref(false);
 const formData = ref({});
 
 const props = defineProps(["packageT"]);
-const emit = defineEmits(["updatePackage", "deletePackage", "disablePackage"]);
+const emit = defineEmits(["updatePromo", "deletePackage"]);
 
 const openEditModal = () => {
   formData.value = { ...props.packageT };
@@ -30,20 +30,20 @@ const openDeleteModal = () => {
   showMenu.value = false;
 };
 
-const openDisableModal = () => {
-  formData.value = { ...props.packageT };
-  showDisableModal.value = true;
-  showMenu.value = false;
-};
+// const openDisableModal = () => {
+//   formData.value = { ...props.packageT };
+//   showDisableModal.value = true;
+//   showMenu.value = false;
+// };
 
 const closeModals = () => {
   showEditModal.value = false;
   showDeleteModal.value = false;
-  showDisableModal.value = false;
+  // showDisableModal.value = false;
 };
 
 const confirmEditPackage = () => {
-  emit("updatePackage", formData.value);
+  emit("updatePromo", formData.value);
   toast.add({
     severity: "success",
     summary: "Updated Package",
@@ -64,16 +64,21 @@ const confirmDeletePackage = () => {
   closeModals();
 };
 
-const confirmDisablePackage = () => {
-  emit("disablePackage", formData.value);
-  toast.add({
-    severity: "success",
-    summary: "Updated Package",
-    detail: "Successfully Updated Package",
-    life: 3000,
-  });
-  closeModals();
+const hideMenu = ref(false);
+
+const closeMenu = (event) => {
+  if (hideMenu.value && !hideMenu.value.contains(event.target)) {
+    showMenu.value = false;
+  }
 };
+
+onMounted(() => {
+  document.addEventListener("click", closeMenu);
+});
+
+onUnmounted(() => {
+  document.addEventListener("click", closeMenu);
+});
 </script>
 
 <template>
@@ -83,17 +88,26 @@ const confirmDisablePackage = () => {
       class="adminButton pi pi-ellipsis-v"
     ></button>
 
-    <div v-if="showMenu" class="dropdown-menu">
+    <div v-if="showMenu" ref="hideMenu" class="dropdown-menu">
       <ul>
-        <li @click="openEditModal">Update</li>
-        <li @click="openDeleteModal">Delete</li>
-        <li @click="openDisableModal">Disable</li>
+        <li
+          class="hover:bg-gray-100 dark:hover:bg-gray-700"
+          @click="openEditModal"
+        >
+          Update
+        </li>
+        <li
+          class="hover:bg-gray-100 dark:hover:bg-gray-700"
+          @click="openDeleteModal"
+        >
+          Delete
+        </li>
       </ul>
     </div>
     <Dialog v-model:visible="showEditModal" modal :style="{ width: '25rem' }">
       <template #header>
         <div class="flex flex-col items-center justify-center w-full">
-          <h2 class="text-2xl font-bold font-[Poppins]">ADD PACKAGE:</h2>
+          <h2 class="text-2xl font-bold font-[Poppins]">EDIT PROMO:</h2>
         </div>
       </template>
 
@@ -110,11 +124,19 @@ const confirmDisablePackage = () => {
           <div class="addPackInput">
             <label>Description:</label>
             <Textarea
-              v-model="formData.description"
+              v-model="formData.inclusion"
               autoResize
               rows="3"
               cols="30"
-              placeholder="Description"
+              placeholder="Inclusion"
+            />
+          </div>
+          <div class="addPackInput">
+            <label>Max Pax:</label>
+            <input
+              v-model.number="formData.maxPax"
+              placeholder="Price"
+              type="number"
             />
           </div>
           <div class="addPackInput">
@@ -122,8 +144,14 @@ const confirmDisablePackage = () => {
             <select v-model="formData.status" class="border p-2 rounded w-full">
               <option value="active">Active</option>
               <option value="inactive">Inactive</option>
-              <option value="coming-soon">Coming Soon</option>
-              <option value="sold-out">Sold Out</option>
+            </select>
+          </div>
+          <div class="addPackInput">
+            <label>Mode:</label>
+            <select v-model="formData.mode" class="border p-2 rounded w-full">
+              <option value="day-time">Day Time</option>
+              <option value="night-time">Night Time</option>
+              <option value="whole-day">Whole Day</option>
             </select>
           </div>
           <div class="addPackInput">
@@ -136,6 +164,14 @@ const confirmDisablePackage = () => {
               accept="image/*"
               :maxFileSize="1000000"
             />
+          </div>
+          <div class="addPackInput">
+            <label>Promo Start:</label>
+            <input v-model="formData.promoStart" placeholder="Start" />
+          </div>
+          <div class="addPackInput">
+            <label>Promo End:</label>
+            <input v-model="formData.promoEnd" placeholder="End" />
           </div>
         </div>
       </div>
@@ -161,7 +197,7 @@ const confirmDisablePackage = () => {
     <Dialog v-model:visible="showDeleteModal" modal :style="{ width: '30rem' }">
       <template #header>
         <div class="flex flex-col items-center justify-center w-full">
-          <h2 class="text-xl font-bold font-[Poppins]">Archive User</h2>
+          <h2 class="text-xl font-bold font-[Poppins]">Delete Package</h2>
         </div>
       </template>
 
@@ -191,6 +227,7 @@ const confirmDisablePackage = () => {
         />
       </div>
     </Dialog>
+    <Toast />
   </div>
 </template>
 
@@ -199,7 +236,7 @@ const confirmDisablePackage = () => {
   position: absolute;
   right: 0;
   top: 100%;
-  background: #fcf5f5;
+  background: #fcfcfc;
   color: #333;
   border-radius: 5px;
   padding: 5px;
@@ -222,10 +259,6 @@ const confirmDisablePackage = () => {
   gap: 5px;
 }
 
-.dropdown-menu li:hover {
-  background: #555;
-  color: #fcf5f5;
-}
 .addPack {
   gap: 10px;
 }

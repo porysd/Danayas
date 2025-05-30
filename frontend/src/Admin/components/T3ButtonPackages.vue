@@ -1,5 +1,5 @@
 <script setup>
-import { ref, defineProps, defineEmits } from "vue";
+import { ref, defineProps, defineEmits, onMounted, onUnmounted } from "vue";
 import Button from "primevue/button";
 import Dialog from "primevue/dialog";
 import Toast from "primevue/toast";
@@ -12,11 +12,11 @@ const toast = useToast();
 const showMenu = ref(false);
 const showEditModal = ref(false);
 const showDeleteModal = ref(false);
-const showDisableModal = ref(false);
+// const showDisableModal = ref(false);
 const formData = ref({});
 
 const props = defineProps(["packageT"]);
-const emit = defineEmits(["updatePackage", "deletePackage", "disablePackage"]);
+const emit = defineEmits(["updatePackage", "deletePackage"]);
 
 const openEditModal = () => {
   formData.value = { ...props.packageT };
@@ -30,16 +30,16 @@ const openDeleteModal = () => {
   showMenu.value = false;
 };
 
-const openDisableModal = () => {
-  formData.value = { ...props.packageT };
-  showDisableModal.value = true;
-  showMenu.value = false;
-};
+// const openDisableModal = () => {
+//   formData.value = { ...props.packageT };
+//   showDisableModal.value = true;
+//   showMenu.value = false;
+// };
 
 const closeModals = () => {
   showEditModal.value = false;
   showDeleteModal.value = false;
-  showDisableModal.value = false;
+  // showDisableModal.value = false;
 };
 
 const confirmEditPackage = () => {
@@ -64,15 +64,39 @@ const confirmDeletePackage = () => {
   closeModals();
 };
 
-const confirmDisablePackage = () => {
-  emit("disablePackage", formData.value);
-  toast.add({
-    severity: "success",
-    summary: "Disable Package",
-    detail: "Successfully Disable Package",
-    life: 3000,
-  });
-  closeModals();
+const hideMenu = ref(false);
+
+const closeMenu = (event) => {
+  if (hideMenu.value && !hideMenu.value.contains(event.target)) {
+    showMenu.value = false;
+  }
+};
+
+onMounted(() => {
+  document.addEventListener("click", closeMenu);
+});
+
+onUnmounted(() => {
+  document.addEventListener("click", closeMenu);
+});
+const packageDetails = ref({
+  name: "",
+  price: "",
+  inclusion: "",
+  status: "",
+  mode: "",
+  imageUrl: "null",
+  maxPax: "",
+  isPromo: false,
+  promoStart: "",
+  promoEnd: "",
+});
+
+const onFileSelect = (event) => {
+  const file = event.file[0];
+  if (file) {
+    packageDetails.value.imageUrl = file;
+  }
 };
 </script>
 
@@ -83,11 +107,20 @@ const confirmDisablePackage = () => {
       class="adminButton pi pi-ellipsis-v"
     ></button>
 
-    <div v-if="showMenu" class="dropdown-menu">
+    <div v-if="showMenu" ref="hideMenu" class="dropdown-menu">
       <ul>
-        <li @click="openEditModal">Update</li>
-        <li @click="openDeleteModal">Delete</li>
-        <li @click="openDisableModal">Disable</li>
+        <li
+          class="hover:bg-gray-100 dark:hover:bg-gray-700"
+          @click="openEditModal"
+        >
+          Update
+        </li>
+        <li
+          class="hover:bg-gray-100 dark:hover:bg-gray-700"
+          @click="openDeleteModal"
+        >
+          Delete
+        </li>
       </ul>
     </div>
     <Dialog v-model:visible="showEditModal" modal :style="{ width: '25rem' }">
@@ -110,11 +143,19 @@ const confirmDisablePackage = () => {
           <div class="addPackInput">
             <label>Description:</label>
             <Textarea
-              v-model="formData.description"
+              v-model="formData.inclusion"
               autoResize
               rows="3"
               cols="30"
-              placeholder="Description"
+              placeholder="Inclusion"
+            />
+          </div>
+          <div class="addPackInput">
+            <label>Max Pax:</label>
+            <input
+              v-model.number="formData.maxPax"
+              placeholder="Price"
+              type="number"
             />
           </div>
           <div class="addPackInput">
@@ -122,19 +163,27 @@ const confirmDisablePackage = () => {
             <select v-model="formData.status" class="border p-2 rounded w-full">
               <option value="active">Active</option>
               <option value="inactive">Inactive</option>
-              <option value="coming-soon">Coming Soon</option>
-              <option value="sold-out">Sold Out</option>
+            </select>
+          </div>
+          <div class="addPackInput">
+            <label>Mode:</label>
+            <select v-model="formData.mode" class="border p-2 rounded w-full">
+              <option value="day-time">Day Time</option>
+              <option value="night-time">Night Time</option>
+              <option value="whole-day">Whole Day</option>
             </select>
           </div>
           <div class="addPackInput">
             <label>Image URL:</label>
             <FileUpload
               ref="fileupload"
+              v-model="packageDetails.imageUrl"
               mode="basic"
-              name="demo[]"
+              name="imageUrl"
               url="/api/upload"
               accept="image/*"
               :maxFileSize="1000000"
+              @select="onFileSelect"
             />
           </div>
         </div>
@@ -200,7 +249,7 @@ const confirmDisablePackage = () => {
   position: absolute;
   right: 0;
   top: 100%;
-  background: #fcf5f5;
+  background: #fcfcfc;
   color: #333;
   border-radius: 5px;
   padding: 5px;
@@ -223,10 +272,6 @@ const confirmDisablePackage = () => {
   gap: 5px;
 }
 
-.dropdown-menu li:hover {
-  background: #555;
-  color: #fcf5f5;
-}
 .addPack {
   gap: 10px;
 }
