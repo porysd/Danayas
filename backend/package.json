@@ -8,7 +8,10 @@
     "tsx": "^4.19.2"
   },
   "scripts": {
-    "dev": "bun --hot src/server.ts"
+    "dev": "bun --hot src/server.ts",
+    "db:generate": "drizzle-kit generate --config ./drizzle.config.ts",
+    "db:migrate": "drizzle-kit migrate --config ./drizzle.config.ts",
+    "db:studio": "drizzle-kit studio --config ./drizzle.config.ts"
   },
   "peerDependencies": {
     "typescript": "^5.7.3"
@@ -25,6 +28,7 @@
     "form-data": "^4.0.2",
     "hono": "^4.7.0",
     "http-status-codes": "^2.3.0",
+    "node-cron": "^4.0.7",
     "sqlite": "^5.1.1",
     "sqlite3": "^5.1.7",
     "vitest": "^3.1.2",
