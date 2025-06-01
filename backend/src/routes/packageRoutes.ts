@@ -469,44 +469,42 @@ packageRoutes.openapi(
         }
       }
 
-      if (!file) {
-        throw new BadRequestError("No file uploaded");
+      let imageUrl = "";
+
+      if (file && file.size > 0) {
+        const allowedMimeTypes = [
+          "image/jpeg",
+          "image/png",
+          "image/jpg",
+          "image/jfif",
+        ];
+
+        if (!allowedMimeTypes.includes(file.type)) {
+          throw new BadRequestError(
+            "Invalid file type, Only Jpeg, Png, and Jpg are allowed"
+          );
+        }
+
+        const uploadDir = path.join(process.cwd(), "public", "PackageImages");
+        await fs.mkdir(uploadDir, { recursive: true });
+
+        const uniqueFileName = `${Date.now()}-${file.name}`;
+        const filePath = path.join(uploadDir, uniqueFileName);
+
+        const fileBuffer = await file.arrayBuffer();
+        await fs.writeFile(filePath, Buffer.from(fileBuffer));
+
+        console.log("Save to:", filePath);
+        imageUrl = `/PackageImages/${uniqueFileName}`;
       }
 
-      const allowedMimeTypes = [
-        "image/jpeg",
-        "image/png",
-        "image/jpg",
-        "image/jfif",
-      ];
+      // const existingPackage = await db.query.PackagesTable.findFirst({
+      //   where: eq(PackagesTable.name, String(body.name)),
+      // });
 
-      if (!allowedMimeTypes.includes(file.type)) {
-        throw new BadRequestError(
-          "Invalid file type, Only Jpeg, Png, and Jpg are allowed"
-        );
-      }
-
-      const uploadDir = path.join(process.cwd(), "public", "PackageImages");
-      await fs.mkdir(uploadDir, { recursive: true });
-
-      const uniqueFileName = `${Date.now()}-${file.name}`;
-      const filePath = path.join(uploadDir, uniqueFileName);
-
-      const fileBuffer = await file.arrayBuffer();
-      await fs.writeFile(filePath, Buffer.from(fileBuffer));
-
-      console.log("Save to:", filePath);
-      const imageUrl = `/PackageImages/${uniqueFileName}`;
-
-      body.imageUrl = file;
-
-      const existingPackage = await db.query.PackagesTable.findFirst({
-        where: eq(PackagesTable.name, String(body.name)),
-      });
-
-      if (existingPackage) {
-        throw new ConflictError("Package already exists.");
-      }
+      // if (existingPackage) {
+      //   throw new ConflictError("Package already exists.");
+      // }
 
       const parsed = CreatePackageDTO.parse(body);
 

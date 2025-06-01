@@ -246,18 +246,20 @@ publicEntryRateRoutes.openapi(
               .execute()
           )[0];
 
-          await tx
-            .insert(AuditLogsTable)
-            .values({
-              userId: userId,
-              action: "update",
-              tableName: "PUBLIC_ENTRY_RATE",
-              recordId: updatePublicEntryRate.rateId,
-              data: JSON.stringify(updatePublicEntryRate),
-              remarks: "Deactivated previous active rate",
-              createdAt: new Date().toISOString(),
-            })
-            .execute();
+          if (updatePublicEntryRate) {
+            await tx
+              .insert(AuditLogsTable)
+              .values({
+                userId: userId,
+                action: "update",
+                tableName: "PUBLIC_ENTRY_RATE",
+                recordId: updatePublicEntryRate.rateId,
+                data: JSON.stringify(updatePublicEntryRate),
+                remarks: "Deactivated previous active rate",
+                createdAt: new Date().toISOString(),
+              })
+              .execute();
+          }
         });
       }
 

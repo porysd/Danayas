@@ -19,7 +19,7 @@ onMounted(() => {
   termsStore.fetchAlltermAndCondition();
 });
 
-const totalTerms = computed(() => filteredTerms.length);
+const totalTerms = computed(() => filteredTerms.value.length);
 
 const addFAQsHandler = async (termsData) => {
   await termsStore.addTerms(termsData);

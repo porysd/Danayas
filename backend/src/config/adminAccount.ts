@@ -6,11 +6,11 @@ async function createAdminAccount() {
   try {
     const adminData = {
       username: "admin",
-      firstName: "Admin",
-      lastName: "User",
-      contactNo: faker.phone.number(),
-      address: faker.location.streetAddress(),
-      email: "admin@example.com",
+      firstName: "Danayas",
+      lastName: "Resorts",
+      contactNo: "+63 991 216 6870",
+      address: "#27 Daang Tubo, San Mateo, 1850 Rizal",
+      email: "admin@gmail.com",
       password: await Bun.password.hash("admin123"),
       role: "admin" as const,
       pin: await Bun.password.hash("123456"),
