@@ -51,13 +51,13 @@ const addFAQs = () => {
     <div class="packageDetails">
       <div class="addPack flex flex-col justify-center m-auto content-center">
         <div class="addPackInput">
-          <label>Terms and Condition:</label>
+          <label>Content:</label>
           <Textarea
             v-model="newFAQs.content"
             autoResize
             rows="5"
             cols="30"
-            placeholder="Question"
+            placeholder="Content"
           />
         </div>
       </div>

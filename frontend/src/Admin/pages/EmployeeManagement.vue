@@ -137,6 +137,23 @@ const getStatusSeverity = (status) => {
       return null;
   }
 };
+
+const formatPhoneNumber = (raw) => {
+  if (!raw) return "";
+
+  const digits = raw.replace(/\D/g, "");
+
+  if (digits.startsWith("0")) {
+    return digits.replace(/^0(\d{3})(\d{3})(\d{4})$/, "+63 $1 $2 $3");
+  } else if (digits.startsWith("63")) {
+    return digits.replace(/^63(\d{3})(\d{3})(\d{4})$/, "+63 $1 $2 $3");
+  } else if (digits.startsWith("9") && digits.length === 10) {
+    return digits.replace(/^(\d{3})(\d{3})(\d{4})$/, "+63 $1 $2 $3");
+  } else {
+    return raw;
+  }
+};
+
 const hideMenu = ref(false);
 
 const closeMenu = (event) => {
@@ -299,7 +316,9 @@ onUnmounted(() => {
                 ><br />
                 {{ employee.email }}
               </td>
-              <td class="w-[15%]">{{ employee.contactNo }}</td>
+              <td class="w-[15%]">
+                {{ formatPhoneNumber(employee.contactNo) }}
+              </td>
               <td class="w-[10%]">{{ employee.role }}</td>
               <td class="w-[10%]">
                 <Tag
@@ -344,7 +363,10 @@ onUnmounted(() => {
             <strong>Name:</strong> {{ selectedEmployee?.firstName }}
             {{ selectedEmployee?.lastName }}
           </p>
-          <p><strong>Contact No.:</strong> {{ selectedEmployee?.contactNo }}</p>
+          <p>
+            <strong>Contact No.:</strong>
+            {{ formatPhoneNumber(selectedEmployee?.contactNo) }}
+          </p>
           <p><strong>Email Address:</strong> {{ selectedEmployee?.email }}</p>
           <p><strong>Address:</strong> {{ selectedEmployee?.address }}</p>
           <p>

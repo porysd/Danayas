@@ -16,6 +16,7 @@ const newEmployee = ref({
   contactNo: "",
   address: "",
   password: "",
+  confirmPass: "",
   role: "",
 });
 
@@ -31,6 +32,8 @@ const closeAddEmployeeModal = () => {
 };
 
 const addEmployee = () => {
+  const contactRegex =
+    /^(?:\+63\d{10}|\+63 \d{3} \d{3} \d{4}|09\d{9}|09\d{2} \d{3} \d{4})$/;
   if (
     !newEmployee.value.username ||
     !newEmployee.value.firstName ||
@@ -42,8 +45,23 @@ const addEmployee = () => {
     alert("Please fill in all required fields.");
     return;
   }
-  console.log("Sending Employee Data:", newEmployee.value);
-  emit("addEmployee", { ...newEmployee.value });
+
+  if (!contactRegex.test(newEmployee.value.contactNo)) {
+    alert(
+      "Invalid contact number format. Use +639171234567, +63 917 123 4567, 09171234567, or 0917 123 4567."
+    );
+    return;
+  }
+
+  if (newEmployee.value.password !== newEmployee.value.confirmPass) {
+    alert("Passwords do not match");
+    return;
+  }
+
+  const { confirmPass, ...employeePayload } = newEmployee.value;
+
+  console.log("Sending Employee Data:", employeePayload);
+  emit("addEmployee", employeePayload);
 
   toast.add({
     severity: "success",
@@ -142,7 +160,7 @@ const addEmployee = () => {
         <div class="addEmpInput">
           <label>Confirm Password:</label>
           <input
-            v-model="newEmployee.password"
+            v-model="newEmployee.confirmPass"
             id="confirmPassword"
             type="password"
             placeholder="Confirm Password"
