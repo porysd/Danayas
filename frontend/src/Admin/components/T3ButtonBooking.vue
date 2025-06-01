@@ -162,7 +162,7 @@ const saveChanges = () => {
 
 const addExcess = () => {
   try {
-    formData.value.bookStatus = props.booking.bookStatus;
+    formData.value.bookStatus = "reserved";
     formData.value.bookingPaymentStatus = "partially-paid";
     console.log("Emitting updateBooking with:", formData.value); // Add this
     emit("updateBooking", formData.value);

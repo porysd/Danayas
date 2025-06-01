@@ -18,6 +18,7 @@ import FileUpload from "primevue/fileupload";
 import Dialog from "primevue/dialog";
 import Divider from "primevue/divider";
 import MultiSelect from "primevue/multiselect";
+import Select from "primevue/select";
 import TreeTable from "primevue/treetable";
 import Column from "primevue/column";
 import TermsAndCondition from "../Admin/pages/TermsAndCondition.vue";
@@ -208,6 +209,9 @@ watch(
 
 const addBookingHandler = async (newBooking, paymentDetails) => {
   try {
+    const discount = discountStore.discounts.find(
+      (d) => d.discountId === newBooking.value.discountId
+    );
     // 1: Create Booking
     const formatBooking = {
       ...newBooking.value,
@@ -1052,7 +1056,7 @@ const calendarOptions = ref({
                       </div>
                     </div>
 
-                    <div class="guestInfo border">
+                    <div class="guestInfo">
                       <div>
                         <label>Arrival Time:</label>
                         <input class="packEvents" placeholder="Arrival Time" />
@@ -1082,6 +1086,23 @@ const calendarOptions = ref({
                       <div>
                         <label>Discount Code:</label>
                         <input class="packEvents" placeholder="" />
+                        <Select
+                          id="discount"
+                          v-model="newBooking.discountId"
+                          :options="discountStore.discounts"
+                          optionLabel="name"
+                          optionValue="discountId"
+                          placeholder="Select a Discount"
+                          class="w-full"
+                          style="
+                            width: 100%;
+                            border: 1px solid #41ab5d;
+                            background-color: #fcfcfc;
+                            border-radius: 10px;
+                            height: 40px;
+                            margin-top: 5px;
+                          "
+                        />
                       </div>
                       <div class="">
                         <label>Add Ons:</label>
