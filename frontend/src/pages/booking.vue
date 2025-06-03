@@ -2,6 +2,8 @@
 <script setup>
 import { onMounted, ref, computed, watch } from "vue";
 import { useRouter } from "vue-router";
+import { useRoute } from "vue-router";
+
 import Stepper from "primevue/stepper";
 import StepList from "primevue/steplist";
 import StepPanels from "primevue/steppanels";
@@ -13,44 +15,47 @@ import DatePicker from "primevue/datepicker";
 import FloatLabel from "primevue/floatlabel";
 import RadioButton from "primevue/radiobutton";
 import BookPackage from "../components/BookPackage.vue";
-import Package from "../components/Packages.vue";
 import FileUpload from "primevue/fileupload";
 import Dialog from "primevue/dialog";
 import Divider from "primevue/divider";
-import MultiSelect from "primevue/multiselect";
-import Select from "primevue/select";
 import TreeTable from "primevue/treetable";
 import Column from "primevue/column";
-import TermsAndCondition from "../Admin/pages/TermsAndCondition.vue";
+import Message from "primevue/message";
+import Toast from "primevue/toast";
+import InputNumber from "primevue/inputnumber";
+import { useToast } from "primevue/usetoast";
+
 import NavBar from "../components/NavBar.vue";
 import Footer from "../components/Footer.vue";
+
 import { useBookingStore } from "../stores/bookingStore";
 import { usePaymentStore } from "../stores/paymentStore";
-import { useToast } from "primevue/usetoast";
 import { useDiscountStore } from "../stores/discountStore";
+import { usePublicEntryStore } from "../stores/publicEntryStore.js";
+import { useBlockedStore } from "../stores/blockedDateStore.js";
+import { usePackageStore } from "../stores/packageStore.js";
+import { useAuthStore } from "../stores/authStore";
+import { useUserStore } from "../stores/userStore";
+import { useCatalogStore } from "../stores/catalogStore";
+import { useAddOnsStore } from "../stores/addOnsStore";
+
 import { formatPeso } from "../utility/pesoFormat";
-import { formatDate } from "../utility/dateFormat";
-import { formatDates } from "../utility/dateFormat";
-import Message from "primevue/message";
+import { formatDate, formatDateISO, formatDates } from "../utility/dateFormat";
+import {
+  getBookingStyle,
+  disabledDates,
+  fullCalendarEvents,
+} from "../composables/calendarStyle";
+
+import TermsCondition from "../components/TermsCondition.vue";
+
 import FullCalendar from "@fullcalendar/vue3";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
-import { useAuthStore } from "../stores/authStore";
-import { useUserStore } from "../stores/userStore";
-import TermsCondition from "../components/TermsCondition.vue";
-import { usePublicEntryStore } from "../stores/publicEntryStore.js";
-import { useBlockedStore } from "../stores/blockedDateStore.js";
-import { usePackageStore } from "../stores/packageStore.js";
-import { useRoute } from "vue-router";
-import Toast from "primevue/toast";
-import InputNumber from "primevue/inputnumber";
-import { useCatalogStore } from "../stores/catalogStore";
-import { useAddOnsStore } from "../stores/addOnsStore";
 
 const toast = useToast();
 const router = useRouter();
-
 const bookingStore = useBookingStore();
 const paymentStore = usePaymentStore();
 const discountStore = useDiscountStore();
@@ -59,23 +64,10 @@ const blockStore = useBlockedStore();
 const packageStore = usePackageStore();
 const addOnStore = useAddOnsStore();
 const catalogStore = useCatalogStore();
-
 const route = useRoute();
 const selectedPackage = ref(null);
 const selectedmode = ref("");
-const selectedAddOns = ref("");
-
-const nodes = ref([
-  {
-    key: 1,
-    data: {
-      description: "No package selected",
-      price: selectedPackage.value
-        ? formatPeso(selectedPackage.value.price)
-        : "₱0",
-    },
-  },
-]);
+const { calendarEvents, calendarOptions } = fullCalendarEvents();
 
 onMounted(async () => {
   bookingStore.fetchUserBookings();
@@ -114,7 +106,7 @@ onMounted(async () => {
 
 const availPackageHandler = (pkg) => {
   selectedPackage.value = pkg;
-  selectedmode.value = pkg.mode; // <-- Fix here
+  selectedmode.value = pkg.mode;
   newBooking.value.packageId = pkg.packageId;
   newBooking.value.mode = pkg.mode;
 };
@@ -149,46 +141,22 @@ const newBooking = ref({
 const paymentDetails = ref({
   paymentMethod: "gcash",
   reference: "",
-  imageUrl: null,
+  imageUrl: "" || null,
   senderName: "",
   tenderedAmount: "",
 });
 
-const onFileSelect = (event) => {
-  const file = event.files[0]; // Get the first selected file
-  if (file) {
-    paymentDetails.value.imageUrl = file; // Update the imageUrl in paymentDetails
+// STEP 1
+const stepOneBtn = (activateCallback) => {
+  console.log("isLoggedIn", authStore.isLoggedIn);
+  const { checkInDate, checkOutDate, mode } = newBooking.value;
+  if (!checkInDate || !checkOutDate || !mode || !authStore.isLoggedIn) {
+    alert("Please fill up all fields or Login or SignUp first");
+  } else {
+    activateCallback("2");
   }
+  // activateCallback("2");
 };
-
-// Find the discount by ID or name
-const discount = discountStore.discounts.find(
-  (d) =>
-    d.id === newBooking.value.discountId ||
-    d.name.toLowerCase() === newBooking.value.discountId?.toLowerCase()
-);
-
-const selectedDiscount = computed(() => {
-  return discountStore.discounts.find(
-    (d) => d.discountId === newBooking.value.discountId
-  );
-});
-
-const addOnsTotal = computed(() => {
-  if (!newBooking.value.catalogAddOnIds || !catalogStore.catalog) return 0;
-  return newBooking.value.catalogAddOnIds.reduce((sum, addOnId) => {
-    const addOn = catalogStore.catalog.find(
-      (c) => c.catalogAddOnId === addOnId
-    );
-    return sum + (addOn?.price || 0);
-  }, 0);
-});
-const totalAmount = computed(() => {
-  const pkgPrice = selectedPackage.value?.price || 0;
-  const discount = selectedDiscount.value?.percentage || 0;
-  const discounted = pkgPrice - pkgPrice * (discount / 100);
-  return Math.max(discounted + addOnsTotal.value, 0);
-});
 
 watch(
   () => [newBooking.value.checkInDate, newBooking.value.mode],
@@ -200,67 +168,19 @@ watch(
     const date = new Date(checkInDate);
     if (mode === "night-time" || mode === "whole-day") {
       date.setDate(date.getDate() + 1);
-      newBooking.value.checkOutDate = formatDate(date);
+      newBooking.value.checkOutDate = date;
     } else {
       newBooking.value.checkOutDate = checkInDate;
     }
   }
 );
 
-const addBookingHandler = async (newBooking, paymentDetails) => {
-  try {
-    const discount = discountStore.discounts.find(
-      (d) => d.discountId === newBooking.value.discountId
-    );
-    // 1: Create Booking
-    const formatBooking = {
-      ...newBooking.value,
-      checkInDate: formatDate(newBooking.value.checkInDate),
-      checkOutDate: formatDate(newBooking.value.checkOutDate),
-      discountId: discount?.discountId || null,
-    };
-    const createdBooking = await bookingStore.addBooking(formatBooking);
-    const bookingId = createdBooking.bookingId;
-
-    // 2: Get Transaction ID and create Data
-
-    // 3: Connect Transaction to Payment
-    const formatPayment = {
-      ...paymentDetails.value,
-      bookingId,
-    };
-    await paymentStore.addPayment(formatPayment);
-
-    if (newBooking.catalogAddOnIds?.length > 0) {
-      for (const catalogAddOnId of newBooking.catalogAddOnIds) {
-        await addOnStore.addAddOn({ bookingId, catalogAddOnId });
-      }
-    }
-
-    toast.add({
-      severity: "success",
-      summary: "Success",
-      detail: "Booking and Payment successfully created!",
-      life: 3000,
-    });
-
-    await bookingStore.fetchUserBookings();
-  } catch (err) {
-    console.error("Error adding booking", err);
+watch(
+  () => newBooking.value.checkInDate,
+  () => {
+    newBooking.value.mode = "";
   }
-};
-
-//STEP: 1
-const stepOneBtn = (activateCallback) => {
-  console.log("isLoggedIn", authStore.isLoggedIn);
-  const { checkInDate, checkOutDate, mode } = newBooking.value;
-  if (!checkInDate || !checkOutDate || !mode || !authStore.isLoggedIn) {
-    alert("Please fill up all fields or Login or SignUp first");
-  } else {
-    activateCallback("2");
-  }
-  // activateCallback("2");
-};
+);
 
 watch(
   () => newBooking.value.mode,
@@ -280,6 +200,7 @@ watch(
     }
   }
 );
+
 watch(
   [
     selectedPackage,
@@ -327,106 +248,81 @@ watch(
 
 const minDate = new Date();
 
-const disabledDates = computed(() => {
-  const disabled = [];
-
-  // Blocked dates
-  blockStore.blocked.forEach((bd) => {
-    if (bd.blockedDates) {
-      disabled.push(new Date(bd.blockedDates));
-    }
-  });
-
-  // Fully booked dates (whole-day or both day-time and night-time)
-  const bookingsByDate = {};
-  bookingStore.bookings.forEach((b) => {
-    if (b.checkInDate) {
-      const date = b.checkInDate;
-      if (!bookingsByDate[date]) bookingsByDate[date] = new Set();
-      bookingsByDate[date].add(b.mode);
-    }
-  });
-  publicStore.public.forEach((p) => {
-    if (p.entryDate) {
-      const date = p.entryDate;
-      if (!bookingsByDate[date]) bookingsByDate[date] = new Set();
-      bookingsByDate[date].add(p.mode);
-    }
-  });
-
-  Object.entries(bookingsByDate).forEach(([date, modes]) => {
-    if (
-      modes.has("whole-day") ||
-      (modes.has("day-time") && modes.has("night-time"))
-    ) {
-      disabled.push(new Date(date));
-    }
-  });
-
-  return disabled;
+const checkOutMinDate = computed(() => {
+  if (!newBooking.value.checkInDate) return minDate;
+  const checkIn = new Date(newBooking.value.checkInDate);
+  if (
+    newBooking.value.mode === "night-time" ||
+    newBooking.value.mode === "whole-day"
+  ) {
+    const nextDay = new Date(checkIn);
+    nextDay.setDate(checkIn.getDate() + 1);
+    return nextDay;
+  }
+  return checkIn;
 });
 
-const getBookingStyle = (slotDate) => {
-  const formattedDate = `${slotDate.year}-${String(slotDate.month + 1).padStart(
-    2,
-    "0"
-  )}-${String(slotDate.day).padStart(2, "0")}`;
-
-  // Collect all booking/public modes for the date
-  const mode = new Set();
-  let isBlocked = false;
-
-  bookingStore.bookings.forEach((b) => {
-    if (b.checkInDate === formattedDate) {
-      mode.add(b.mode);
-    }
-  });
-
-  publicStore.public.forEach((p) => {
-    if (p.entryDate === formattedDate) {
-      mode.add(p.mode);
-    }
-  });
-
-  if (blockStore.blocked.some((bd) => bd.blockedDates === formattedDate)) {
-    isBlocked = true;
-  }
-
-  let backgroundColor, color;
-
-  if (isBlocked) {
-    backgroundColor = "grey";
-    color = "white";
-  } else if (
-    mode.has("whole-day") ||
-    (mode.has("day-time") && mode.has("night-time"))
+const maxDate = computed(() => {
+  if (!newBooking.value.checkInDate) return null;
+  const checkIn = new Date(newBooking.value.checkInDate);
+  if (
+    newBooking.value.mode === "night-time" ||
+    newBooking.value.mode === "whole-day"
   ) {
-    backgroundColor = "#FF6B6B"; // Fully Booked
-    color = "white";
-  } else if (mode.has("day-time")) {
-    backgroundColor = "#6A5ACD"; // Night Available
-    color = "white";
-  } else if (mode.has("night-time")) {
-    backgroundColor = "#FFD580"; // Day Available
-    color = "black";
-  } else {
+    const nextDay = new Date(checkIn);
+    nextDay.setDate(checkIn.getDate() + 1);
+    return nextDay;
   }
+  return checkIn;
+});
 
-  return {
-    backgroundColor,
-    color,
-    width: "40px",
-    height: "40px",
-    display: "inline-flex",
-    justifyContent: "center",
-    alignItems: "center",
-    borderRadius: "10rem",
-    fontSize: "17px",
-  };
-};
+const allowedStatus = ["reserved", "pending", "rescheduled"];
 
-//STEP 2
+const unavailableModes = computed(() => {
+  const date = newBooking.value.checkInDate;
+  if (!date) return new Set();
 
+  const formattedDate = formatDateISO(date);
+
+  const modes = new Set();
+
+  bookingStore.bookings
+    .filter((b) => allowedStatus.includes(b.bookStatus))
+    .forEach((b) => {
+      if (b.checkInDate) {
+        const bookingDate =
+          typeof b.checkInDate === "string"
+            ? b.checkInDate.slice(0, 10)
+            : new Date(b.checkInDate).toISOString().split("T")[0];
+
+        if (bookingDate === formattedDate) {
+          modes.add(b.mode);
+        }
+      }
+    });
+
+  publicStore.public
+    .filter((p) => allowedStatus.includes(p.status))
+    .forEach((p) => {
+      if (p.entryDate) {
+        const entryDate =
+          typeof p.entryDate === "string"
+            ? p.entryDate.slice(0, 10)
+            : new Date(p.entryDate).toISOString().split("T")[0];
+
+        if (entryDate === formattedDate) {
+          modes.add(p.mode);
+        }
+      }
+    });
+
+  if (modes.has("whole-day")) {
+    return new Set(["day-time", "night-time", "whole-day"]);
+  }
+  return modes;
+});
+
+//STEP 2 SELECT PACKAGE & RATE
 // ref = reactive state
 // selectedPackage is a reactive state that will hold the selected package fromt child (BookPackage)
 const stepTwoBtn = (activateCallback) => {
@@ -438,13 +334,30 @@ const stepTwoBtn = (activateCallback) => {
   //activateCallback("3");
 };
 
-//STEP 3
+const nodes = ref([
+  {
+    key: 1,
+    data: {
+      description: "No package selected",
+      price: selectedPackage.value
+        ? formatPeso(selectedPackage.value.price)
+        : "₱0",
+    },
+  },
+]);
+
+// STEP 3 CONTACT INFORMATION
 const stepThreeBtn = (activateCallback) => {
   const paymentTerms = newBooking.value.paymentTerms;
   const tenderedAmount = paymentDetails.value.tenderedAmount;
   const pkg = selectedPackage.value;
 
-  if (!paymentTerms || !paymentDetails.value.reference || !tenderedAmount) {
+  if (
+    !paymentTerms ||
+    !paymentDetails.value.reference ||
+    !tenderedAmount ||
+    !paymentDetails.value.imageUrl
+  ) {
     alert("Please fill in all payment fields.");
     return;
   }
@@ -510,6 +423,22 @@ onMounted(async () => {
   };
 });
 
+const allowedMimeTypes = ["image/jpeg", "image/png", "image/jpg", "image/jfif"];
+
+const onFileSelect = (event) => {
+  const file = event.files[0]; // Get the first selected file
+  if (file) {
+    if (!allowedMimeTypes.includes(file.type)) {
+      fileError.value =
+        "Invalid file type. Only JPEG, PNG, JPG, and JFIF are allowed.";
+      paymentDetails.value.imageUrl = null;
+      return;
+    }
+
+    paymentDetails.value.imageUrl = file;
+  }
+};
+
 let visible = ref(false);
 let visible1 = ref(false);
 const termsVisible = ref(false);
@@ -524,13 +453,102 @@ const showMessage1 = () => {
   visible.value = false;
 };
 
-//STEP 4
+// STEP 4 BOOKING CONFIRMATION
 const isChecked = ref(false);
 const showTermsAndCondition = ref(false);
 const showContinueModal = ref(false);
 
 const openTermsAndCondition = () => {
   showTermsAndCondition.value = true;
+};
+
+// Find the discount by ID or name
+const discount = discountStore.discounts.find(
+  (d) =>
+    d.id === newBooking.value.discountId ||
+    d.name.toLowerCase() === newBooking.value.discountId?.toLowerCase()
+);
+
+const selectedDiscount = computed(() => {
+  return discountStore.discounts.find(
+    (d) => d.discountId === newBooking.value.discountId
+  );
+});
+
+const addOnsTotal = computed(() => {
+  if (!newBooking.value.catalogAddOnIds || !catalogStore.catalog) return 0;
+  return newBooking.value.catalogAddOnIds.reduce((sum, addOnId) => {
+    const addOn = catalogStore.catalog.find(
+      (c) => c.catalogAddOnId === addOnId
+    );
+    return sum + (addOn?.price || 0);
+  }, 0);
+});
+const totalAmount = computed(() => {
+  const pkgPrice = selectedPackage.value?.price || 0;
+  const discount = selectedDiscount.value?.percentage || 0;
+  const discounted = pkgPrice - pkgPrice * (discount / 100);
+  return Math.max(discounted + addOnsTotal.value, 0);
+});
+
+const addBookingHandler = async (newBooking, paymentDetails) => {
+  try {
+    const discount = discountStore.discounts.find(
+      (d) => d.discountId === newBooking.value.discountId
+    );
+    // 1: Create Booking
+    const formatBooking = {
+      ...newBooking.value,
+      checkInDate: formatDate(newBooking.value.checkInDate),
+      checkOutDate: formatDate(newBooking.value.checkOutDate),
+      discountId: null,
+    };
+    const createdBooking = await bookingStore.addBooking(formatBooking);
+    const bookingId = createdBooking.bookingId;
+
+    // 2: Connect Booking to Payment
+    const formatPayment = {
+      ...paymentDetails.value,
+      bookingId,
+    };
+
+    try {
+      await paymentStore.addPayment(formatPayment);
+    } catch (err) {
+      await bookingStore.deleteBooking(bookingId);
+      toast.add({
+        severity: "error",
+        summary: "Payment Failed",
+        detail: "Payment was not successfull. Booking was not completed",
+        life: 4000,
+      });
+
+      return;
+    }
+
+    if (newBooking.catalogAddOnIds?.length > 0) {
+      for (const catalogAddOnId of newBooking.catalogAddOnIds) {
+        await addOnStore.addAddOn({ bookingId, catalogAddOnId });
+      }
+    }
+
+    toast.add({
+      severity: "success",
+      summary: "Success",
+      detail: "Booking and Payment successfully created!",
+      life: 3000,
+    });
+
+    await bookingStore.fetchUserBookings();
+  } catch (err) {
+    console.error("Error adding booking", err);
+    toast.add({
+      severity: "error",
+      summary: "Booking Failed",
+      detail: "An error occurred while creating the booking.",
+      life: 4000,
+    });
+  }
 };
 
 const OpenContinueModal = async () => {
@@ -557,98 +575,6 @@ const prevBtn = () => {
     currentStep.value--;
   }
 };
-
-// FOR CALENDAR
-const mapBookingsToEvents = (
-  bookings = [],
-  publics = [],
-  blockedDates = []
-) => {
-  const eventByDate = {};
-
-  bookings.forEach((b) => {
-    const date = b.checkInDate;
-    if (!eventByDate[date])
-      eventByDate[date] = { modes: new Set(), blocked: null };
-    eventByDate[date].modes.add(b.mode);
-  });
-
-  publics.forEach((p) => {
-    const date = p.entryDate;
-    if (!eventByDate[date])
-      eventByDate[date] = { modes: new Set(), blocked: null };
-    eventByDate[date].modes.add(p.mode);
-  });
-
-  blockedDates.forEach((bd) => {
-    const date = bd.blockedDates;
-    if (!eventByDate[date])
-      eventByDate[date] = { modes: new Set(), blocked: null };
-    eventByDate[date].blocked = bd;
-  });
-
-  return Object.entries(eventByDate).map(([date, { modes, blocked }]) => {
-    let backgroundColor, textColor, title;
-
-    if (blocked) {
-      backgroundColor = "grey";
-      textColor = "white";
-      title = "Not Available";
-    } else if (
-      modes.has("whole-day") ||
-      (modes.has("day-time") && modes.has("night-time"))
-    ) {
-      backgroundColor = "#FF6B6B";
-      textColor = "white";
-      title = "Fully Booked";
-    } else if (modes.has("day-time")) {
-      backgroundColor = "#6A5ACD";
-      textColor = "white";
-      title = "Night Available";
-    } else if (modes.has("night-time")) {
-      backgroundColor = "#FFD580";
-      textColor = "black";
-      title = "Day Available";
-    } else {
-      backgroundColor = "#90EE90";
-      textColor = "#15803D";
-      title = "Available";
-    }
-
-    return {
-      id: `summary-${date}`,
-      title,
-      start: date,
-      backgroundColor,
-      textColor,
-      allDay: true,
-    };
-  });
-};
-
-const calendarEvents = computed(() => {
-  return mapBookingsToEvents(
-    bookingStore.bookings,
-    publicStore.public,
-    blockStore.blocked
-  );
-});
-
-const calendarOptions = ref({
-  plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin],
-  headerToolbar: {
-    left: "prev,next today",
-    center: "title",
-    right: "dayGridMonth,timeGridWeek,timeGridDay",
-  },
-  initialView: "dayGridMonth",
-  editable: false,
-  selectable: false,
-  selectMirror: false,
-  dayMaxEvents: false,
-  weekends: true,
-  events: calendarEvents,
-});
 </script>
 
 <template>
@@ -749,7 +675,8 @@ const calendarOptions = ref({
                             inputId="on_label"
                             showIcon
                             iconDisplay="input"
-                            :minDate="minDate"
+                            :minDate="checkOutMinDate"
+                            :maxDate="maxDate"
                             :disabledDates="disabledDates"
                           >
                             <template #date="slotProps">
@@ -777,6 +704,7 @@ const calendarOptions = ref({
                             name="bookingMode"
                             value="day-time"
                             size="large"
+                            :disabled="unavailableModes.has('day-time')"
                           />
                           <label for="dayMode" class="text-xl font-[Poppins]"
                             >DAY TIME</label
@@ -788,6 +716,7 @@ const calendarOptions = ref({
                             name="bookingMode"
                             value="night-time"
                             size="large"
+                            :disabled="unavailableModes.has('night-time')"
                           />
                           <label for="nightMode" class="text-xl font-[Poppins]"
                             >NIGHT TIME</label
@@ -798,7 +727,7 @@ const calendarOptions = ref({
                             name="bookingMode"
                             value="whole-day"
                             size="large"
-                            :disabled="ismodeLocked"
+                            :disabled="unavailableModes.has('whole-day')"
                           />
                           <label for="wholeDay" class="text-xl font-[Poppins]"
                             >WHOLE DAY</label
@@ -1059,18 +988,16 @@ const calendarOptions = ref({
                     <div class="guestInfo">
                       <div>
                         <label>Arrival Time:</label>
-                        <input class="packEvents" placeholder="Arrival Time" />
-                      </div>
-                      <div>
-                        <label>Event Type:</label>
                         <input
+                          v-model="newBooking.arrivalTime"
                           class="packEvents"
-                          placeholder="ex. Birthday, Wedding, any celebration"
+                          placeholder="Arrival Time"
                         />
                       </div>
                       <div>
                         <label>Number of Guest:</label>
                         <input
+                          v-model="newBooking.numberOfGuest"
                           type="number"
                           class="packEvents"
                           placeholder="Number of Guest"
@@ -1078,48 +1005,14 @@ const calendarOptions = ref({
                       </div>
                       <div>
                         <label for="catering">Catering</label>
-                        <select name="catering" id="catering">
-                          <option value="yes">Yes</option>
-                          <option value="no">No</option>
+                        <select
+                          v-model="newBooking.catering"
+                          name="catering"
+                          id="catering"
+                        >
+                          <option :value="1">Yes</option>
+                          <option :value="0">No</option>
                         </select>
-                      </div>
-                      <div>
-                        <label>Discount Code:</label>
-                        <input class="packEvents" placeholder="" />
-                        <Select
-                          id="discount"
-                          v-model="newBooking.discountId"
-                          :options="discountStore.discounts"
-                          optionLabel="name"
-                          optionValue="discountId"
-                          placeholder="Select a Discount"
-                          class="w-full"
-                          style="
-                            width: 100%;
-                            border: 1px solid #41ab5d;
-                            background-color: #fcfcfc;
-                            border-radius: 10px;
-                            height: 40px;
-                            margin-top: 5px;
-                          "
-                        />
-                      </div>
-                      <div class="">
-                        <label>Add Ons:</label>
-                        <MultiSelect
-                          v-model="newBooking.catalogAddOnIds"
-                          :options="catalogStore.catalog"
-                          optionLabel="itemName"
-                          optionValue="catalogAddOnId"
-                          style="
-                            width: 100%;
-                            border: 1px solid #41ab5d;
-                            background-color: #fcfcfc;
-                            border-radius: 10px;
-                            height: 40px;
-                            margin-top: 5px;
-                          "
-                        />
                       </div>
                     </div>
                   </div>
@@ -1315,6 +1208,9 @@ const calendarOptions = ref({
                           :maxFileSize="1000000"
                           @select="onFileSelect"
                         />
+                        <span v-if="fileError" class="text-red-600 font-bold">
+                          {{ fileError }}
+                        </span>
                         <!--<div class="bg-[#fcfcfc] mb-2 p-1 rounded-sm">
                           <input
                             class="p-2"
@@ -1332,6 +1228,7 @@ const calendarOptions = ref({
                             <input
                               class="p-2 w-full"
                               placeholder="Juan Dela Cruz"
+                              v-model="paymentDetails.senderName"
                             />
                           </div>
                         </div>

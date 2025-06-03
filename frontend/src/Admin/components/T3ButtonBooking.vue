@@ -16,10 +16,18 @@ import DatePicker from "primevue/datepicker";
 import Checkbox from "primevue/checkbox";
 import Textarea from "primevue/textarea";
 import { formatPeso } from "../../utility/pesoFormat.js";
-import { formatDate } from "../../utility/dateFormat.js";
+import {
+  formatDate,
+  formatDates,
+  formatDateISO,
+} from "../../utility/dateFormat.js";
 import { useBookingStore } from "../../stores/bookingStore.js";
 import { usePublicEntryStore } from "../../stores/publicEntryStore.js";
 import { useBlockedStore } from "../../stores/blockedDateStore.js";
+import {
+  getBookingStyle,
+  disabledDates,
+} from "../../composables/calendarStyle";
 
 const toast = useToast();
 
@@ -27,6 +35,7 @@ const showMenu = ref(false);
 const showEditModal = ref(false);
 const showStatusModal = ref(false);
 const showPayModal = ref(false);
+const showCancelModal = ref(false);
 const showPaymentModal = ref(false);
 const showExcess = ref(false);
 
@@ -80,6 +89,7 @@ const closeModals = () => {
   showPayModal.value = false;
   showPaymentModal.value = false;
   showExcess.value = false;
+  showCancelModal.value = false;
 };
 
 const cancelData = ref({});
@@ -132,7 +142,7 @@ watch(
     const date = new Date(checkInDate);
     if (mode === "night-time" || mode === "whole-day") {
       date.setDate(date.getDate() + 1);
-      formData.value.checkOutDate = formatDate(date);
+      formData.value.checkOutDate = date;
     } else {
       formData.value.checkOutDate = checkInDate;
     }
@@ -214,6 +224,24 @@ watch(isExact, (e) => {
   }
 });
 
+const openCancelModal = () => {
+  formData.value = { ...props.booking };
+  showCancelModal.value = true;
+  showMenu.value = false;
+};
+
+const confirmCancel = () => {
+  formData.value.bookStatus = "cancelled";
+  emit("updateStatus", formData.value);
+  toast.add({
+    severity: "success",
+    summary: "Booking Cancelled",
+    detail: "Successfully Cancelled the Booking",
+    life: 3000,
+  });
+  closeModals();
+};
+
 const hideMenu = ref(false);
 
 const closeMenu = (event) => {
@@ -232,103 +260,91 @@ onUnmounted(() => {
 
 const minDate = new Date();
 
-const disabledDates = computed(() => {
-  const disabled = [];
-
-  // Blocked dates
-  blockStore.blocked.forEach((bd) => {
-    if (bd.blockedDates) {
-      disabled.push(new Date(bd.blockedDates));
-    }
-  });
-
-  // Fully booked dates (whole-day or both day-time and night-time)
-  const bookingsByDate = {};
-  bookingStore.bookings.forEach((b) => {
-    if (b.checkInDate) {
-      const date = b.checkInDate;
-      if (!bookingsByDate[date]) bookingsByDate[date] = new Set();
-      bookingsByDate[date].add(b.mode);
-    }
-  });
-  publicStore.public.forEach((p) => {
-    if (p.entryDate) {
-      const date = p.entryDate;
-      if (!bookingsByDate[date]) bookingsByDate[date] = new Set();
-      bookingsByDate[date].add(p.mode);
-    }
-  });
-
-  Object.entries(bookingsByDate).forEach(([date, modes]) => {
-    if (
-      modes.has("whole-day") ||
-      (modes.has("day-time") && modes.has("night-time"))
-    ) {
-      disabled.push(new Date(date));
-    }
-  });
-
-  return disabled;
+const checkOutMinDate = computed(() => {
+  if (!formData.value.checkInDate) return minDate;
+  const checkIn = new Date(formData.value.checkInDate);
+  if (
+    formData.value.mode === "night-time" ||
+    formData.value.mode === "whole-day"
+  ) {
+    const nextDay = new Date(checkIn);
+    nextDay.setDate(checkIn.getDate() + 1);
+    return nextDay;
+  }
+  return checkIn;
 });
 
-const getBookingStyle = (slotDate) => {
-  const formattedDate = `${slotDate.year}-${String(slotDate.month + 1).padStart(
-    2,
-    "0"
-  )}-${String(slotDate.day).padStart(2, "0")}`;
+const maxDate = computed(() => {
+  if (!formData.value.checkInDate) return null;
 
-  // Collect all booking/public modes for the date
-  const mode = new Set();
-  let isBlocked = false;
+  const checkIn = new Date(formData.value.checkInDate);
 
-  bookingStore.bookings.forEach((b) => {
-    if (b.checkInDate === formattedDate) {
-      mode.add(b.mode);
-    }
-  });
-
-  publicStore.public.forEach((p) => {
-    if (p.entryDate === formattedDate) {
-      mode.add(p.mode);
-    }
-  });
-
-  if (blockStore.blocked.some((bd) => bd.blockedDates === formattedDate)) {
-    isBlocked = true;
-  }
-
-  let backgroundColor, color;
-
-  if (isBlocked) {
-    backgroundColor = "grey";
-    color = "white";
-  } else if (
-    mode.has("whole-day") ||
-    (mode.has("day-time") && mode.has("night-time"))
+  if (
+    formData.value.mode === "night-time" ||
+    formData.value.mode === "whole-day"
   ) {
-    backgroundColor = "#FF6B6B"; // Fully Booked
-    color = "white";
-  } else if (mode.has("day-time")) {
-    backgroundColor = "#6A5ACD"; // Night Available
-    color = "white";
-  } else if (mode.has("night-time")) {
-    backgroundColor = "#FFD580"; // Day Available
-    color = "black";
-  } else {
+    const nextDay = new Date(checkIn);
+    nextDay.setDate(checkIn.getDate() + 1);
+    return nextDay;
   }
 
-  return {
-    backgroundColor,
-    color,
-    width: "40px",
-    height: "40px",
-    display: "inline-flex",
-    justifyContent: "center",
-    alignItems: "center",
-    borderRadius: "10rem",
-    fontSize: "17px",
-  };
-};
+  return checkIn;
+});
+
+const allowedStatus = ["reserved", "pending", "rescheduled"];
+
+const unavailableModes = computed(() => {
+  const date = formData.value.checkInDate;
+  if (!date) return new Set();
+
+  const formattedDate = formatDateISO(date);
+
+  const modes = new Set();
+
+  bookingStore.bookings
+    .filter((b) => allowedStatus.includes(b.bookStatus))
+    .forEach((b) => {
+      if (b.checkInDate) {
+        const bookingDate =
+          typeof b.checkInDate === "string"
+            ? b.checkInDate.slice(0, 10)
+            : new Date(b.checkInDate).toISOString().split("T")[0];
+
+        if (bookingDate === formattedDate) {
+          modes.add(b.mode);
+        }
+      }
+    });
+
+  publicStore.public
+    .filter((p) => allowedStatus.includes(p.status))
+    .forEach((p) => {
+      if (p.entryDate) {
+        const entryDate =
+          typeof p.entryDate === "string"
+            ? p.entryDate.slice(0, 10)
+            : new Date(p.entryDate).toISOString().split("T")[0];
+
+        if (entryDate === formattedDate) {
+          modes.add(p.mode);
+        }
+      }
+    });
+
+  if (modes.has("whole-day")) {
+    return new Set(["day-time", "night-time", "whole-day"]);
+  }
+  return modes;
+});
+
+const availableModes = computed(() => {
+  const allModes = [
+    { value: "day-time", label: "Day Time" },
+    { value: "night-time", label: "Night Time" },
+    { value: "whole-day", label: "Whole Day" },
+  ];
+  return allModes.filter((mode) => !unavailableModes.value.has(mode.value));
+});
 </script>
 
 <template>
@@ -338,31 +354,42 @@ const getBookingStyle = (slotDate) => {
       class="adminButton pi pi-ellipsis-v"
     ></button>
 
-    <div v-if="showMenu && !showAction" ref="hideMenu" class="dropdown-menu">
+    <div v-if="showMenu" ref="hideMenu" class="dropdown-menu">
       <ul>
         <li
+          v-if="!showAction"
           class="hover:bg-gray-100 dark:hover:bg-gray-700"
           @click="openPayModal"
         >
           Pay
         </li>
         <li
+          v-if="!showAction"
           class="hover:bg-gray-100 dark:hover:bg-gray-700"
           @click="openStatusModal"
         >
           Status
         </li>
         <li
+          v-if="!showAction"
           class="hover:bg-gray-100 dark:hover:bg-gray-700"
           @click="openEditModal"
         >
-          Update
+          Reschedule
         </li>
         <li
+          v-if="!showAction"
           class="hover:bg-gray-100 dark:hover:bg-gray-700"
           @click="openExcessModal"
         >
           Excess
+        </li>
+        <li
+          v-if="showAction"
+          class="hover:bg-gray-100 dark:hover:bg-gray-700"
+          @click="openCancelModal"
+        >
+          Cancel
         </li>
       </ul>
     </div>
@@ -610,7 +637,8 @@ const getBookingStyle = (slotDate) => {
     <template #header>
       <div class="flex flex-col items-center justify-center w-full">
         <h2 class="text-xl font-bold font-[Poppins]">
-          UPDATE BOOKING NO. {{ booking.bookingId }} by {{ booking.firstName }}
+          RESCHEDULE BOOKING NO. {{ booking.bookingId }} by
+          {{ booking.firstName }}
           {{ booking.lastName }}
         </h2>
       </div>
@@ -646,7 +674,7 @@ const getBookingStyle = (slotDate) => {
           showIcon
           fluid
           iconDisplay="input"
-          dateFormat="mm-dd-yy"
+          dateFormat="mm/dd/yy"
           :minDate="minDate"
           :disabledDates="disabledDates"
         >
@@ -667,8 +695,9 @@ const getBookingStyle = (slotDate) => {
           showIcon
           fluid
           iconDisplay="input"
-          dateFormat="mm-dd-yy"
-          :minDate="minDate"
+          dateFormat="mm/dd/yy"
+          :minDate="checkOutMinDate"
+          :maxDate="maxDate"
           :disabledDates="disabledDates"
         >
           <template #date="slotProps">
@@ -682,12 +711,16 @@ const getBookingStyle = (slotDate) => {
       </div>
       <div>
         <label>Mode:</label>
-        <input
-          class="cDates"
-          v-model="formData.mode"
-          placeholder="Mode"
-          disabled
-        />
+
+        <select v-model="formData.mode" class="border p-2 rounded w-full">
+          <option
+            v-for="mode in availableModes"
+            :key="mode.value"
+            :value="mode.value"
+          >
+            {{ mode.label }}
+          </option>
+        </select>
       </div>
     </div>
 
@@ -809,6 +842,64 @@ const getBookingStyle = (slotDate) => {
         label="Next"
         severity="success"
         @click="addExcess"
+        class="font-bold w-full"
+      />
+    </div>
+  </Dialog>
+
+  <Dialog v-model:visible="showCancelModal" modal :style="{ width: '30rem' }">
+    <template #header>
+      <div class="flex flex-col items-center justify-center w-full">
+        <h2 class="text-xl font-bold font-[Poppins]">Cancel Booking</h2>
+      </div>
+    </template>
+
+    <span
+      class="text-lg text-surface-700 dark:text-surface-400 block mb-8 text-center font-[Poppins]"
+    >
+      Are you sure you want to
+      <strong class="text-red-500">CANCEL</strong> this Booking by
+      <span class="font-black font-[Poppins]">
+        {{ booking.firstName }} {{ booking.lastName }}</span
+      >?
+    </span>
+
+    <div class="mb-4">
+      <div>
+        <label>Cancel Category:</label>
+        <select
+          v-model="formData.cancelCategory"
+          class="border p-2 rounded w-full"
+          required
+        >
+          <option value="natural-disaster">Natural Disaster</option>
+          <option value="others">Others:</option>
+        </select>
+        <label>Reason for Cancellation:</label>
+        <Textarea
+          class="w-full"
+          v-model="formData.cancelReason"
+          autoResize
+          rows="3"
+          cols="30"
+          placeholder="Please provide a message or link(if natural disaster)"
+        />
+      </div>
+    </div>
+
+    <div class="flex justify-center gap-2 font-[Poppins]">
+      <Button
+        type="button"
+        label="Cancel"
+        severity="secondary"
+        @click="closeModals"
+        class="font-bold w-full"
+      />
+      <Button
+        type="button"
+        label="Save"
+        severity="primary"
+        @click="confirmCancel"
         class="font-bold w-full"
       />
     </div>

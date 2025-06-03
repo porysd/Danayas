@@ -7,7 +7,11 @@ import { useToast } from "primevue/usetoast";
 import DatePicker from "primevue/datepicker";
 import MultiSelect from "primevue/multiselect";
 import FileUpload from "primevue/fileupload";
-import { formatDate } from "../../utility/dateFormat";
+import {
+  formatDates,
+  formatDate,
+  formatDateISO,
+} from "../../utility/dateFormat";
 import { formatPeso } from "../../utility/pesoFormat.js";
 import Select from "primevue/select";
 // import { getBookingStyle } from "../../composables/calendarStyle.js";
@@ -17,11 +21,15 @@ import { useBookingStore } from "../../stores/bookingStore.js";
 import { usePublicEntryStore } from "../../stores/publicEntryStore.js";
 import { useBlockedStore } from "../../stores/blockedDateStore.js";
 import { usePackageStore } from "../../stores/packageStore.js";
+import {
+  getBookingStyle,
+  disabledDates,
+} from "../../composables/calendarStyle";
 
+const toast = useToast();
 const bookingStore = useBookingStore();
 const publicStore = usePublicEntryStore();
 const blockStore = useBlockedStore();
-
 const catalogStore = useCatalogStore();
 const discountStore = useDiscountStore();
 const packageStore = usePackageStore();
@@ -35,17 +43,18 @@ onMounted(() => {
   publicStore.fetchAllPublic();
   blockStore.fetchAllBlocked();
 });
-const toast = useToast();
+
 defineProps(["data", "packageName"]);
 
 const showAddBookingModal = ref(false);
 const showPaymentModal = ref(false);
+const showBookingSummary = ref(false);
 
 const newBooking = ref({
   firstName: "" || null,
   lastName: "" || null,
   contactNo: "" || null,
-  emailAddress: "" || null,
+  email: "" || null,
   address: "" || null,
   packageId: "",
   eventType: "" || null,
@@ -85,110 +94,53 @@ const addBooking = () => {
   showPaymentModal.value = true;
 };
 
+const bookingSummary = () => {
+  showBookingSummary.value = true;
+  showPaymentModal.value = false;
+};
+
 const backToBooking = () => {
   showAddBookingModal.value = true;
   showPaymentModal.value = false;
 };
 
+const backToPayment = () => {
+  showPaymentModal.value = true;
+  showBookingSummary.value = false;
+};
+
 const minDate = new Date();
 
-const disabledDates = computed(() => {
-  const disabled = [];
-
-  // Blocked dates
-  blockStore.blocked.forEach((bd) => {
-    if (bd.blockedDates) {
-      disabled.push(new Date(bd.blockedDates));
-    }
-  });
-
-  // Fully booked dates (whole-day or both day-time and night-time)
-  const bookingsByDate = {};
-  bookingStore.bookings.forEach((b) => {
-    if (b.checkInDate) {
-      const date = b.checkInDate;
-      if (!bookingsByDate[date]) bookingsByDate[date] = new Set();
-      bookingsByDate[date].add(b.mode);
-    }
-  });
-  publicStore.public.forEach((p) => {
-    if (p.entryDate) {
-      const date = p.entryDate;
-      if (!bookingsByDate[date]) bookingsByDate[date] = new Set();
-      bookingsByDate[date].add(p.mode);
-    }
-  });
-
-  Object.entries(bookingsByDate).forEach(([date, modes]) => {
-    if (
-      modes.has("whole-day") ||
-      (modes.has("day-time") && modes.has("night-time"))
-    ) {
-      disabled.push(new Date(date));
-    }
-  });
-
-  return disabled;
+const checkOutMinDate = computed(() => {
+  if (!newBooking.value.checkInDate) return minDate;
+  const checkIn = new Date(newBooking.value.checkInDate);
+  if (
+    newBooking.value.mode === "night-time" ||
+    newBooking.value.mode === "whole-day"
+  ) {
+    const nextDay = new Date(checkIn);
+    nextDay.setDate(checkIn.getDate() + 1);
+    return nextDay;
+  }
+  return checkIn;
 });
 
-const getBookingStyle = (slotDate) => {
-  const formattedDate = `${slotDate.year}-${String(slotDate.month + 1).padStart(
-    2,
-    "0"
-  )}-${String(slotDate.day).padStart(2, "0")}`;
+const maxDate = computed(() => {
+  if (!newBooking.value.checkInDate) return null;
 
-  // Collect all booking/public modes for the date
-  const mode = new Set();
-  let isBlocked = false;
+  const checkIn = new Date(newBooking.value.checkInDate);
 
-  bookingStore.bookings.forEach((b) => {
-    if (b.checkInDate === formattedDate) {
-      mode.add(b.mode);
-    }
-  });
-
-  publicStore.public.forEach((p) => {
-    if (p.entryDate === formattedDate) {
-      mode.add(p.mode);
-    }
-  });
-
-  if (blockStore.blocked.some((bd) => bd.blockedDates === formattedDate)) {
-    isBlocked = true;
-  }
-
-  let backgroundColor, color;
-
-  if (isBlocked) {
-    backgroundColor = "grey";
-    color = "white";
-  } else if (
-    mode.has("whole-day") ||
-    (mode.has("day-time") && mode.has("night-time"))
+  if (
+    newBooking.value.mode === "night-time" ||
+    newBooking.value.mode === "whole-day"
   ) {
-    backgroundColor = "#FF6B6B"; // Fully Booked
-    color = "white";
-  } else if (mode.has("day-time")) {
-    backgroundColor = "#6A5ACD"; // Night Available
-    color = "white";
-  } else if (mode.has("night-time")) {
-    backgroundColor = "#FFD580"; // Day Available
-    color = "black";
-  } else {
+    const nextDay = new Date(checkIn);
+    nextDay.setDate(checkIn.getDate() + 1);
+    return nextDay;
   }
 
-  return {
-    backgroundColor,
-    color,
-    width: "40px",
-    height: "40px",
-    display: "inline-flex",
-    justifyContent: "center",
-    alignItems: "center",
-    borderRadius: "10rem",
-    fontSize: "17px",
-  };
-};
+  return checkIn;
+});
 
 const onFileSelect = (event) => {
   const file = event.files[0];
@@ -207,6 +159,9 @@ const selectedPackage = computed(() => {
   );
 });
 
+const pkgName = selectedPackage?.name;
+const pkgPrice = selectedPackage?.price;
+
 const selectedDiscount = computed(() => {
   return discountStore.discounts.find(
     (d) => d.discountId === newBooking.value.discountId
@@ -224,7 +179,7 @@ const addOnsTotal = computed(() => {
 });
 
 const totalAmount = computed(() => {
-  const pkgPrice = selectedPackage.value?.price || 0;
+  // const pkgPrice = selectedPackage.value?.price || 0;
   const discount = selectedDiscount.value?.percentage || 0;
   const discounted = pkgPrice - pkgPrice * (discount / 100);
   return Math.max(discounted + addOnsTotal.value, 0);
@@ -241,12 +196,67 @@ watch(
     const date = new Date(checkInDate);
     if (mode === "night-time" || mode === "whole-day") {
       date.setDate(date.getDate() + 1);
-      newBooking.value.checkOutDate = formatDate(date);
+      newBooking.value.checkOutDate = date;
     } else {
       newBooking.value.checkOutDate = checkInDate;
     }
   }
 );
+
+const allowedStatus = ["reserved", "pending", "rescheduled"];
+
+const unavailableModes = computed(() => {
+  const date = newBooking.value.checkInDate;
+  if (!date) return new Set();
+
+  const formattedDate = formatDateISO(date);
+
+  const modes = new Set();
+
+  bookingStore.bookings
+    .filter((b) => allowedStatus.includes(b.bookStatus))
+    .forEach((b) => {
+      if (b.checkInDate) {
+        const bookingDate =
+          typeof b.checkInDate === "string"
+            ? b.checkInDate.slice(0, 10)
+            : new Date(b.checkInDate).toISOString().split("T")[0];
+
+        if (bookingDate === formattedDate) {
+          modes.add(b.mode);
+        }
+      }
+    });
+
+  publicStore.public
+    .filter((p) => allowedStatus.includes(p.status))
+    .forEach((p) => {
+      if (p.entryDate) {
+        const entryDate =
+          typeof p.entryDate === "string"
+            ? p.entryDate.slice(0, 10)
+            : new Date(p.entryDate).toISOString().split("T")[0];
+
+        if (entryDate === formattedDate) {
+          modes.add(p.mode);
+        }
+      }
+    });
+
+  if (modes.has("whole-day")) {
+    return new Set(["day-time", "night-time", "whole-day"]);
+  }
+  return modes;
+});
+
+const availableModes = computed(() => {
+  const allModes = [
+    { value: "day-time", label: "Day Time" },
+    { value: "night-time", label: "Night Time" },
+    { value: "whole-day", label: "Whole Day" },
+  ];
+  return allModes.filter((mode) => !unavailableModes.value.has(mode.value));
+});
 
 const confirmBooking = async () => {
   if (
@@ -276,6 +286,7 @@ const confirmBooking = async () => {
     senderName: paymentDetails.value.senderName,
     tenderedAmount: paymentDetails.value.tenderedAmount,
   };
+
   if (paymentDetails.value.paymentMethod === "gcash") {
     paymentPayload.reference = paymentDetails.value.reference;
     paymentPayload.imageUrl = paymentDetails.value.imageUrl;
@@ -303,7 +314,7 @@ const confirmBooking = async () => {
     >
       <template #header>
         <div class="flex flex-col items-center justify-center w-full">
-          <h2 class="text-xl font-bold font-[Poppins]">Add Booking</h2>
+          <h2 class="text-xl font-bold font-[Poppins]">Booking Details</h2>
         </div>
       </template>
       <div class="modal">
@@ -336,7 +347,7 @@ const confirmBooking = async () => {
             <label>Email Address</label>
             <input
               class="packEvents"
-              v-model="newBooking.emailAddress"
+              v-model="newBooking.email"
               placeholder="Email Address"
             />
           </div>
@@ -370,6 +381,16 @@ const confirmBooking = async () => {
             />
           </div>
           <div class="w-[40%]">
+            <label>Catering:</label>
+            <select
+              v-model="newBooking.catering"
+              class="border p-2 rounded w-full"
+            >
+              <option value="true">Yes</option>
+              <option value="false">No</option>
+            </select>
+          </div>
+          <!-- <div class="w-[40%]">
             <label>Event Type:</label>
             <input
               class="packEvents"
@@ -377,7 +398,7 @@ const confirmBooking = async () => {
               placeholder="Event Type"
               style="width: 100%"
             />
-          </div>
+          </div> -->
         </div>
 
         <div class="cDate">
@@ -389,7 +410,6 @@ const confirmBooking = async () => {
               showIcon
               fluid
               iconDisplay="input"
-              dateFormat="mm-dd-yy"
               :minDate="minDate"
               :disabledDates="disabledDates"
             >
@@ -414,8 +434,8 @@ const confirmBooking = async () => {
               showIcon
               fluid
               iconDisplay="input"
-              dateFormat="mm-dd-yy"
-              :minDate="minDate"
+              :minDate="checkOutMinDate"
+              :maxDate="maxDate"
               :disabledDates="disabledDates"
             >
               <template #date="slotProps">
@@ -433,9 +453,13 @@ const confirmBooking = async () => {
           <div>
             <label>Mode:</label>
             <select v-model="newBooking.mode" class="border p-2 rounded w-full">
-              <option value="day-time">Day Time</option>
-              <option value="night-time">Night Time</option>
-              <option value="whole-day">Whole Day</option>
+              <option
+                v-for="mode in availableModes"
+                :key="mode.value"
+                :value="mode.value"
+              >
+                {{ mode.label }}
+              </option>
             </select>
           </div>
         </div>
@@ -449,9 +473,8 @@ const confirmBooking = async () => {
               placeholder="Arival Time"
             />
           </div>
-          <div>
+          <!-- <div>
             <label>Catering:</label>
-
             <select
               v-model="newBooking.catering"
               class="border p-2 rounded w-full"
@@ -459,7 +482,7 @@ const confirmBooking = async () => {
               <option value="true">Yes</option>
               <option value="false">No</option>
             </select>
-          </div>
+          </div> -->
           <div>
             <label>Number of Guest:</label>
             <input
@@ -470,7 +493,7 @@ const confirmBooking = async () => {
             />
           </div>
         </div>
-
+        <!-- 
         <div class="flex justify-center gap-3">
           <div class="w-full md:w-[40%]">
             <label for="discount">Discount ID or Name:</label>
@@ -494,7 +517,7 @@ const confirmBooking = async () => {
               style="width: 100%"
             />
           </div>
-        </div>
+        </div> -->
       </div>
 
       <div class="flex justify-center gap-2 font-[Poppins] mt-7">
@@ -639,6 +662,107 @@ const confirmBooking = async () => {
           type="button"
           label="Book"
           severity="primary"
+          @click="bookingSummary"
+          class="font-bold w-full"
+        />
+      </div>
+    </Dialog>
+
+    <Dialog
+      v-model:visible="showBookingSummary"
+      modal
+      :style="{ width: 'auto', maxWidth: 'auto' }"
+    >
+      <template #header
+        ><div class="flex flex-col items-center justify-center w-full">
+          <h2 class="text-xl font-bold font-[Poppins]">Booking Confirmation</h2>
+        </div></template
+      >
+
+      <div class="text-left text-base space-y-2">
+        <div class="flex flex-row w-auto">
+          <div class="w-[50%]">
+            <p>
+              <strong>Name: </strong>{{ newBooking.firstName }}
+              {{ newBooking.lastName }}
+            </p>
+            <p><strong>Contact No: </strong> {{ newBooking.contactNo }}</p>
+            <p><strong>Email Address: </strong>{{ newBooking.email }}</p>
+            <p><strong>Address: </strong> {{ newBooking.address }}</p>
+          </div>
+          <div class="w-[50%]">
+            <p>
+              <strong>Date: </strong>
+              {{ formatDates(newBooking.checkInDate) }} to
+              {{ formatDates(newBooking.checkOutDate) }}
+            </p>
+            <p>
+              <strong>Check-In Date: </strong
+              >{{ formatDates(newBooking.checkInDate) }}
+            </p>
+            <p>
+              <strong>Check-Out Date: </strong
+              >{{ formatDates(newBooking.checkOutDate) }}
+            </p>
+          </div>
+        </div>
+
+        <div class="mt-10">
+          <table class="w-full">
+            <thead>
+              <tr>
+                <th>Description:</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody class="">
+              <tr>
+                <td>{{ selectedPackage?.name }}</td>
+                <td>{{ formatPeso(selectedPackage?.price) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="mt-10">
+          <p><strong>Payment Terms: </strong> {{ newBooking.paymentTerms }}</p>
+          <p>
+            <strong>Payment Method: </strong> {{ paymentDetails.paymentMethod }}
+          </p>
+          <p>
+            <strong>Tendered Amount: </strong>
+            {{ paymentDetails.tenderedAmount }}
+          </p>
+          <p>
+            <strong>Change Amount: </strong>
+            {{
+              paymentDetails.tenderedAmount > totalAmount
+                ? formatPeso(paymentDetails.tenderedAmount - totalAmount)
+                : "₱0.00"
+            }}
+          </p>
+        </div>
+
+        <div class="mt-10">
+          <div class="justify-items-end">
+            <h2>Sub Total: {{ formatPeso(totalAmount) }}</h2>
+            <h1 class="font-black">TOTAL: {{ formatPeso(totalAmount) }}</h1>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex justify-center gap-2 font-[Poppins] mt-10">
+        <Button
+          type="button"
+          label="Back"
+          severity="secondary"
+          @click="backToPayment"
+          class="font-bold w-full"
+        />
+        <Button
+          type="button"
+          label="Book"
+          severity="primary"
           @click="confirmBooking"
           class="font-bold w-full"
         />
@@ -688,9 +812,12 @@ const confirmBooking = async () => {
   width: 81%;
 }
 
-.cDate div,
-.atcng div {
+.cDate div {
   width: 26.3%;
+}
+
+.atcng div {
+  width: 40%;
 }
 
 .modal label {

@@ -32,32 +32,30 @@ const termsAccepted = ref(false);
 const SignUp = async () => {
   errorMessage.value = "";
 
-  const {
-    username,
-    firstName,
-    lastName,
-    contactNo,
-    email,
-    address,
-    password,
-    confirmPass,
-  } = newUser.value;
+  const contactRegex =
+    /^(?:\+63\d{10}|\+63 \d{3} \d{3} \d{4}|09\d{9}|09\d{2} \d{3} \d{4})$/;
 
   if (
-    !username ||
-    !firstName ||
-    !lastName ||
-    !contactNo ||
-    !email ||
-    !address ||
-    !password ||
-    !confirmPass
+    !newUser.value.username ||
+    !newUser.value.firstName ||
+    !newUser.value.lastName ||
+    !newUser.value.contactNo ||
+    !newUser.value.email ||
+    !newUser.value.address ||
+    !newUser.value.password
   ) {
     alert("Please fill up all fields.");
     return;
   }
 
-  if (password !== confirmPass) {
+  if (!contactRegex.test(newUser.value.contactNo)) {
+    alert(
+      "Invalid contact number format. Use +639171234567, +63 917 123 4567, 09171234567, or 0917 123 4567."
+    );
+    return;
+  }
+
+  if (newUser.value.password !== newUser.value.confirmPass) {
     alert("Passwords do not match.");
     return;
   }

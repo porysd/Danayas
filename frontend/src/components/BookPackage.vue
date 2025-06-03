@@ -43,6 +43,8 @@ const filteredPromos = computed(() =>
         <p class="text-left ml-8 whitespace-pre-wrap">
           {{ pkg.inclusion }}
         </p>
+        <p>Pax:</p>
+        <p class="text-left ml-8">{{ pkg.maxPax }} pax</p>
         <p>Mode:</p>
         <p class="text-left ml-8">{{ pkg.mode }}</p>
       </div>
@@ -68,6 +70,8 @@ const filteredPromos = computed(() =>
         <p class="text-left ml-8 whitespace-pre-wrap">
           {{ pkg.inclusion }}
         </p>
+        <p>Pax:</p>
+        <p class="text-left ml-8">{{ pkg.maxPax }} pax</p>
         <p>Mode:</p>
         <p class="text-left ml-8">{{ pkg.mode }}</p>
       </div>

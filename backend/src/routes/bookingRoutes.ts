@@ -342,7 +342,9 @@ bookingRoutes.openapi(
         address: body.address || userDetails?.address || null,
         amountPaid: 0,
         remainingBalance: totalAmount,
+        discountId: discountId && discountId !== 0 ? discountId : null,
       };
+      console.log("Booking data to insert:", processedBody);
 
       const mappedMode =
         body.mode === "day-time"
@@ -680,9 +682,7 @@ bookingRoutes.openapi(
         throw new NotFoundError("Booking not found");
       }
       if (
-        ["cancelled", "pending-cancellation", "completed"].includes(
-          bookStatus
-        ) &&
+        ["pending-cancellation", "completed"].includes(bookStatus) &&
         booking.bookStatus !== "reserved" &&
         booking.bookStatus !== "rescheduled"
       ) {
