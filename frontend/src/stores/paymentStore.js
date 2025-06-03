@@ -25,6 +25,7 @@ export const usePaymentStore = defineStore("payment", {
         const limit = 50;
         let page = 1;
         let hasMoreData = true;
+        let allPayments = [];
 
         while (hasMoreData) {
           const response = await fetch(
@@ -39,26 +40,8 @@ export const usePaymentStore = defineStore("payment", {
           const paymentData = await response.json();
 
           if (paymentData.items && paymentData.items.length > 0) {
-            this.payments = paymentData.items;
-
-            this.pending = paymentData.items.filter(
-              (p) => p.paymentStatus === "pending"
-            );
-
-            this.valid = paymentData.items.filter(
-              (p) => p.paymentStatus === "valid"
-            );
-
-            this.invalid = paymentData.items.filter(
-              (p) => p.paymentStatus === "invalid"
-            );
-
-            this.voided = paymentData.items.filter(
-              (p) => p.paymentStatus === "voided"
-            );
-
-            this.payments.unshift(...paymentData.items.reverse());
-            if (paymentData.length === 0) {
+            allPayments = allPayments.concat(paymentData.items);
+            if (paymentData.items.length < limit) {
               hasMoreData = false;
             } else {
               page++;
@@ -67,6 +50,12 @@ export const usePaymentStore = defineStore("payment", {
             hasMoreData = false;
           }
         }
+
+        this.payments = allPayments.reverse();
+        this.pending = allPayments.filter((p) => p.paymentStatus === "pending");
+        this.valid = allPayments.filter((p) => p.paymentStatus === "valid");
+        this.invalid = allPayments.filter((p) => p.paymentStatus === "invalid");
+        this.voided = allPayments.filter((p) => p.paymentStatus === "voided");
       } catch (error) {
         console.error("Error fetching payments:", error);
       }
