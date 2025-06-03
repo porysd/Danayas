@@ -390,6 +390,7 @@ paymentRoutes.openapi(
             bookingId: parsed.bookingId,
             paymentMethod: parsed.paymentMethod,
             senderName: parsed.senderName,
+            reference: parsed.reference,
             tenderedAmount,
             changeAmount,
             netPaidAmount,
@@ -546,6 +547,7 @@ paymentRoutes.openapi(
             publicEntryId: parsed.publicEntryId,
             paymentMethod: parsed.paymentMethod,
             senderName: parsed.senderName,
+            reference: parsed.reference,
             tenderedAmount,
             changeAmount,
             netPaidAmount,
@@ -1107,6 +1109,7 @@ paymentRoutes.openapi(
               tenderedAmount: tenderedAmount,
               remarks: remarks,
               netPaidAmount: tenderedAmount,
+              verifiedBy: userId,
               paymentStatus: "valid",
             })
             .where(eq(PaymentsTable.paymentId, paymentId))
