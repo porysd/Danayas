@@ -125,6 +125,22 @@ const getStatusSeverity = (status) => {
   }
 };
 
+const formatPhoneNumber = (raw) => {
+  if (!raw) return "";
+
+  const digits = raw.replace(/\D/g, "");
+
+  if (digits.startsWith("0")) {
+    return digits.replace(/^0(\d{3})(\d{3})(\d{4})$/, "+63 $1 $2 $3");
+  } else if (digits.startsWith("63")) {
+    return digits.replace(/^63(\d{3})(\d{3})(\d{4})$/, "+63 $1 $2 $3");
+  } else if (digits.startsWith("9") && digits.length === 10) {
+    return digits.replace(/^(\d{3})(\d{3})(\d{4})$/, "+63 $1 $2 $3");
+  } else {
+    return raw;
+  }
+};
+
 const hideMenu = ref(false);
 
 const closeMenu = (event) => {
@@ -250,7 +266,9 @@ onUnmounted(() => {
                 ><br />
                 {{ customer.email }}
               </td>
-              <td class="w-[15%]">{{ customer.contactNo }}</td>
+              <td class="w-[15%]">
+                {{ formatPhoneNumber(customer.contactNo) }}
+              </td>
               <td class="w-[10%]">
                 <Tag
                   style="font-size: 12px"
