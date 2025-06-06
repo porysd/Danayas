@@ -21,6 +21,7 @@ const router = useRouter();
 const isLoggedIn = computed(() => authStore.isLoggedIn);
 const showMenu = ref(false);
 const hideMenu = ref(null);
+const menuActive = ref(false);
 
 const showLoginModal = ref(false);
 const showSignUpModal = ref(false);
@@ -38,6 +39,9 @@ function handleLoginSuccess() {
 function openLoginModal() {
   showLoginModal.value = true;
   showSignUpModal.value = false;
+}
+function toggleMenu() {
+  menuActive.value = !menuActive.value;
 }
 
 const logout = () => {
@@ -146,7 +150,7 @@ watch(
 
     <button class="menu-toggle" @click="toggleMenu">☰</button>
 
-    <div class="nav-links">
+    <div class="nav-links" :class="{ active: menuActive }">
       <ul>
         <li>
           <router-link to="/" active-class="active-route">HOME</router-link>
@@ -156,17 +160,12 @@ watch(
             >PACKAGES</router-link
           >
         </li>
-        <li class="dropper">
-          <button class="dropBtn">BOOKING</button>
-          <div class="dropdown-content">
-            <router-link to="/booking" active-class="active-route"
-              >PRIVATE BOOKING</router-link
-            >
-            <router-link to="/public-entry" active-class="active-route"
-              >PUBLIC BOOKING</router-link
-            >
-          </div>
+        <li>
+          <router-link to="/booking" active-class="active-route"
+            >BOOKING</router-link
+          >
         </li>
+
         <li>
           <router-link to="/faqs" active-class="active-route">FAQs</router-link>
         </li>
@@ -284,6 +283,7 @@ watch(
   text-decoration: none;
   position: relative;
 }
+
 a::after {
   content: "";
   position: absolute;
@@ -298,9 +298,8 @@ a:hover::after {
   width: 100%;
 }
 
-.active-route {
-  color: #54d6a4;
-  font-size: 13px;
+.nav-links ul li a.active-route {
+  color: #54d6a4 !important;
 }
 .logs {
   bottom: -10px;

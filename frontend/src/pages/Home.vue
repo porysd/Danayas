@@ -7,20 +7,20 @@ import img from "../assets/danayas_day.jpg";
 import img1 from "../assets/danayas_night.jpg";
 import img2 from "../assets/danayas_event.jpg";
 import img3 from "../assets/danayas_event1.jpg";
-import HomePackage from "../components/HomePackage.vue";
 import Reviews from "../components/Reviews.vue";
 import NavBar from "../components/NavBar.vue";
 import Footer from "../components/Footer.vue";
 import { useBookingStore } from "../stores/bookingStore";
 import { usePublicEntryStore } from "../stores/publicEntryStore.js";
 import { useBlockedStore } from "../stores/blockedDateStore.js";
-import FullCalendar from "@fullcalendar/vue3";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import Dialog from "primevue/dialog";
 import Tag from "primevue/tag";
 import "animate.css";
+import { formatPeso } from "../utility/pesoFormat.js";
+import HomePackage from "../components/HomePackage.vue";
 
 const bookingStore = useBookingStore();
 const publicStore = usePublicEntryStore();
@@ -61,6 +61,12 @@ onUnmounted(() => {
   clearInterval(interval);
   return { currentImage };
 });
+
+const icon = ref(false);
+
+function iconActive() {
+  icon.value = !icon.value;
+}
 
 // From and to Date logic
 
@@ -306,75 +312,46 @@ function addAnimation() {
         :style="{ backgroundImage: `url(${currentImage})` }"
       >
         <h2 class="homeText slide-text">{{ currentText }}</h2>
+
+        <!-- <p
+            class="font-semibold text-white text-center"
+            style="text-shadow: 0px 4px 4px rgb(12, 70, 39); font-size: 19px"
+          >
+            "Step into the enchanting world of Danayas Resorts Events Venue,
+            where every corner tells a story <br />of simplicity and elegance"
+          </p> -->
+
+        <!-- <div class="flex justify-center items-center text-center mt-10">
+          <Button
+            class="book-now-btn absolute inset-0 flex justify-center items-center"
+            @click="$router.push('/booking')"
+          >
+            Book Now!
+            <span class="pi pi-arrow-right icon-on-hover"></span>
+          </Button>
+        </div> -->
       </div>
     </div>
+
     <div class="datePickerbackground">
       <div class="booking-container">
-        <span class="label" style="font-size: 20px; font-weight: 700"
-          >FROM</span
-        >
-        <div class="date-picker-wrapper">
-          <FloatLabel variant="on">
-            <DatePicker
-              v-model="checkInDate"
-              inputId="checkIn"
-              showIcon
-              iconDisplay="input"
-              class="custom-date-picker"
-              style="width: 20rem; height: 3rem; border: none"
-              :minDate="minDate"
-              :disabledDates="disabledDates"
-            >
-              <template #date="slotProps">
-                <span>
-                  <strong
-                    :style="getBookingStyle(slotProps.date)"
-                    class="date-box"
-                  >
-                    {{ slotProps.date.day }}
-                  </strong>
-                </span>
-              </template></DatePicker
-            >
-            <label for="checkIn">CHECK-IN</label>
-          </FloatLabel>
-        </div>
-        <span class="label" style="font-size: 20px; font-weight: 700">TO</span>
-
-        <div class="date-picker-wrapper">
-          <FloatLabel variant="on">
-            <DatePicker
-              v-model="checkOutDate"
-              inputId="checkOut"
-              showIcon
-              iconDisplay="input"
-              class="custom-date-picker"
-              style="width: 20rem; height: 3rem; border: none"
-              :minDate="minDate"
-              :disabledDates="disabledDates"
-            >
-              <template #date="slotProps">
-                <span>
-                  <strong
-                    :style="getBookingStyle(slotProps.date)"
-                    class="date-box"
-                  >
-                    {{ slotProps.date.day }}
-                  </strong>
-                </span>
-              </template></DatePicker
-            >
-            <label for="checkOut">CHECKOUT</label>
-          </FloatLabel>
-        </div>
-
-        <button @click="handleCheckAvailability" class="availability-btn">
-          Check Availability
+        <button @click="$router.push('/booking')" class="availability-btn">
+          BOOK NOW
+          <span class="pi pi-arrow-up-right icon-on-hover"></span>
         </button>
       </div>
     </div>
-
-    <div
+    <!-- 
+    <div class="flex justify-center items-center text-center">
+      <Button
+        class="book-now-btn absolute inset-0 flex justify-center items-center top-[-1rem]"
+        @click="$router.push('/booking')"
+      >
+        BOOK NOW
+        <span class="pi pi-arrow-up-right icon-on-hover"></span>
+      </Button>
+    </div> -->
+    <!-- <div
       v-if="showDatePicker"
       class="datePicker"
       style="
@@ -441,9 +418,9 @@ function addAnimation() {
           CHECK AVAILABILITY
         </button>
       </div>
-    </div>
+    </div> -->
 
-    <div class="scroller" data-speed="fast">
+    <!-- <div class="scroller" data-speed="fast">
       <ul
         class="tag-list scroller__inner flex flex-row m-auto align-center justify-center align-content gap-[2rem]"
       >
@@ -479,7 +456,7 @@ function addAnimation() {
           >
         </li>
       </ul>
-    </div>
+    </div> -->
 
     <div style="height: 10px"></div>
 
@@ -644,44 +621,34 @@ function addAnimation() {
         </div>
       </div>
     </div> -->
-    <section class="DanayasPackages">
-      <div class="packageSection content-center justify-center m-auto">
-        <H1
-          style="
-            font-size: 70px;
-            font-weight: Bold;
-            text-align: center;
-            color: #194d1d;
-            text-shadow: 0px 2px 2px rgb(40, 135, 21);
-          "
-          >Danayas Packages</H1
-        >
-        <p
-          style="
-            font-size: 20px;
-            font-weight: 400;
-            color: black;
-            text-align: center;
-            margin-bottom: 20px;
-            word-wrap: break-word;
-            margin-top: 10px;
-          "
-        >
-          “Immerse yourself in the seamless fusion of timeless architecture
-          and<br />
-          modern design, where each home tells a story of its own”
-        </p>
-        <div
-          class="SeeAllBtn content-center justify-center m-auto"
-          @click="$router.push('/Packages')"
-        >
-          <button>SEE ALL PACKAGES</button>
+    <div class="DanayasPackages align-center justify-center m-auto">
+      <div
+        class="packageSection flex flex-wrap content-center justify-center justify-items-center items-center m-auto relative"
+      >
+        <div class="titleWithTag">
+          <Tag
+            severity="success"
+            value="ARAT NA"
+            class="text-black dark:text-white"
+          ></Tag>
+          <h1 class="packageTitle">Danayas Packages</h1>
+          <p class="packagesText">
+            "Our affordable packages are designed to help make your event a
+            reality."
+          </p>
         </div>
-        <div class="packageComponent">
-          <HomePackage />
-        </div>
+        <button class="SeeAllBtn" @click="$router.push('/Packages')">
+          SEE ALL PACKAGES
+          <span class="ml-2 pi pi-arrow-up-right icon-on-hover"></span>
+        </button>
       </div>
-    </section>
+
+      <div
+        class="justify-center m-auto align-content flex flex-wrap content-center relative"
+      >
+        <HomePackage class="gap-5 flex" />
+      </div>
+    </div>
 
     <div
       class="DanayasAddress"
@@ -706,7 +673,6 @@ function addAnimation() {
             font-weight: bold;
             font-size: 65px;
             color: #194d1d;
-            text-align: center;
             margin-bottom: 0rem;
             margin-top: 1px;
             text-shadow: 0px 4px 4px rgb(255, 255, 255);
@@ -736,11 +702,9 @@ function addAnimation() {
           style="margin-bottom: 30px"
         >
           <iframe
-            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d1929.608118783353!2d121
-            .12431473799222!3d14.7003600939651!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3397bb19868e1b37%3A0x429ae5ae7c94d0f2!2s7%20Jones%20Dulong%20Bayan
-            %202%2C%20San%20Mateo%2C%20Rizal%20Philippines!5e0!3m2!1sen!2sph!4v1741699299438!5m2!1sen!2sph"
-            width="1100"
-            height="600"
+            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3859.2324149969772!2d121.12693807492596!3d14.699444585798691!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3397bb68dde68c6f%3A0xf33fcccb97074bc0!2sDANAYAS%20RESORTS%20EVENTS%20VENUE!5e0!3m2!1sen!2sph!4v1748963820294!5m2!1sen!2sph"
+            width="700"
+            height="500"
             style="border: 0; border-radius: 10px; margin-top: 3px"
             allowfullscreen=""
             loading="lazy"
@@ -795,6 +759,11 @@ function addAnimation() {
   align-items: center;
   align-content: center;
 }
+.book-now-btn .icon-on-hover {
+  margin-left: 8px;
+
+  transition: opacity 0.2s;
+}
 
 .homeSlider {
   position: relative;
@@ -845,25 +814,21 @@ function addAnimation() {
 
 .datePickerbackground {
   background-color: #fcfcfc;
-  width: 1065px;
-  height: 174px;
-  top: -80px;
+  width: 190px;
+  height: 60px;
+  top: -30px;
   position: relative;
   display: flex;
   margin: auto;
-  filter: drop-shadow(0px 4px 4px rgb(106, 104, 104));
-  border-radius: 20px;
-  padding: 66px;
+  border-radius: 30px;
 }
 
 .booking-container {
   display: flex;
   align-items: center;
+  margin: auto;
   justify-content: center;
   padding: 0px;
-  gap: 10px;
-  position: relative;
-  right: 1.5rem;
 }
 
 .date-picker-wrapper {
@@ -901,7 +866,7 @@ function addAnimation() {
   color: white;
   border: none;
   padding: 12px 20px;
-  border-radius: 18px;
+  border-radius: 30px;
   font-weight: bold;
   text-align: center;
   width: 180px;
@@ -1020,6 +985,32 @@ function addAnimation() {
   filter: blur(1px);
 }
 
+.packageSection {
+  padding: 1rem;
+
+  margin-bottom: 20px;
+}
+
+.packageTitle {
+  font-size: 60px;
+  font-weight: bold;
+  text-align: left;
+  color: #194d1d;
+  text-shadow: 0px 2px 2px rgb(40, 135, 21);
+  margin: 0;
+}
+.packagesText {
+  font-size: 16px;
+  font-weight: 480;
+  color: #052a08;
+}
+.titleWithTag {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  margin-left: 10px;
+}
+
 .SeeAllBtn {
   background-color: #41ab5d;
   color: #ffffff;
@@ -1031,7 +1022,9 @@ function addAnimation() {
   font-weight: 400;
   padding: 10px;
   word-wrap: break-word;
-  margin-bottom: 2rem;
+  margin-left: auto;
+  display: block;
+  margin-right: 30px;
 }
 
 .SeeAllBtn:hover {
@@ -1083,6 +1076,13 @@ h1 {
   line-height: 1.9;
   width: 1500px;
 }
+.tag {
+  margin-right: 9rem;
+  margin-left: 2rem;
+
+  text-align: justify;
+  line-height: 1.9;
+}
 
 #title {
   color: #194d1d;
@@ -1102,9 +1102,6 @@ h1 {
   font-size: 20px;
   font-family: "Fraunces", serif;
   margin-top: 8px;
-}
-#p.text {
-  font-size: larges;
 }
 
 .danayas-packages {

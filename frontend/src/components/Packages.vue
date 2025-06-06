@@ -62,6 +62,7 @@ const packageAvail = (pkg) => {
           <h3 class="font-bold">Mode: {{ pkg.mode }}</h3>
         </ul>
         <h1 class="font-bold mt-[10px]">Price: {{ formatPeso(pkg.price) }}</h1>
+        <h1 class="font-bold mt-[10px]">Pax: {{ pkg.maxPax }}</h1>
       </ul>
 
       <div class="detailsBtn">
@@ -94,6 +95,7 @@ const packageAvail = (pkg) => {
           <h3 class="font-bold">Mode: {{ pkg.mode }}</h3>
         </ul>
         <h1 class="font-bold mt-[10px]">Price: {{ formatPeso(pkg.price) }}</h1>
+        <h1 class="font-bold mt-[10px]">Pax: {{ pkg.maxPax }}</h1>
       </div>
 
       <div class="detailsBtn">
@@ -191,7 +193,6 @@ p {
 
 .card1 {
   width: 100%;
-  padding: 5px;
   height: 250px;
   object-fit: cover;
   border-radius: 20px;
@@ -212,12 +213,10 @@ p {
   background-color: #194d1d;
   border-bottom-left-radius: 10px;
   border-bottom-right-radius: 10px;
-
   display: flex;
   padding: 10px;
   align-items: center;
   justify-content: center;
-
   position: relative;
   bottom: 0;
   box-sizing: border-box;
