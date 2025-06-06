@@ -79,6 +79,40 @@ packageRoutes.openapi(
   }
 );
 
+packageRoutes.openapi(
+  createRoute({
+    tags: ["Packages"],
+    summary: "Get common Packages",
+    method: "get",
+    path: "/packages",
+    responses: {
+      200: { description: "Common Packages" },
+      404: { description: "No common packages found" },
+      500: { description: "Internal sever error" },
+    },
+  }),
+  async (c) => {
+    try {
+      // Example: get packages where isPromo is false and status is active
+      const packages = await db.query.PackagesTable.findMany({
+        where: (fields, { and, eq }) =>
+          and(eq(fields.isPromo, false), eq(fields.status, "active")),
+      });
+
+      if (!packages || packages.length === 0) {
+        throw new NotFoundError("No common packages found");
+      }
+
+      return c.json({
+        total: packages.length,
+        items: packages,
+      });
+    } catch (err) {
+      return errorHandler(err, c);
+    }
+  }
+);
+
 packageRoutes.use("/*", authMiddleware);
 
 packageRoutes.openapi(
