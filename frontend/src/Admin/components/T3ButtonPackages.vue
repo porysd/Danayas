@@ -93,9 +93,9 @@ const packageDetails = ref({
 });
 
 const onFileSelect = (event) => {
-  const file = event.file[0];
+  const file = event.files[0];
   if (file) {
-    packageDetails.value.imageUrl = file;
+    formData.value.imageUrl = file;
   }
 };
 </script>
@@ -177,12 +177,12 @@ const onFileSelect = (event) => {
             <label>Image URL:</label>
             <FileUpload
               ref="fileupload"
-              v-model="packageDetails.imageUrl"
+              v-model="formData.imageUrl"
               mode="basic"
               name="imageUrl"
               url="/api/upload"
               accept="image/*"
-              :maxFileSize="1000000"
+              :maxFileSize="5000000"
               @select="onFileSelect"
             />
           </div>

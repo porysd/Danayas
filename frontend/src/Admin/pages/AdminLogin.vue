@@ -58,7 +58,7 @@ const login = async () => {
       loginStatus.value = "success";
       setTimeout(() => {
         showModal.value = false;
-        router.replace("/admin/admin-dashboard");
+        router.replace("/employee/employee-dashboard");
       }, 1500);
     } else {
       loginStatus.value = "error";
@@ -85,18 +85,18 @@ const login = async () => {
     <div
       class="loginBox bg-white/30 backdrop-blur-md shadow-2xl rounded-2xl p-10 flex flex-col items-center gap-6 w-full max-w-md"
     >
-      <h1 class="text-4xl font-extrabold text-gray-800">Employee Login</h1>
-      <p class="text-gray-600 text-sm mb-4">
+      <h1 class="text-4xl font-extrabold text-gray-900">Employee Login</h1>
+      <p class="text-gray-800 text-sm mb-4">
         Welcome back! Please enter your details.
       </p>
 
       <div class="flex flex-col gap-2 w-full">
-        <label for="email" class="text-sm text-gray-700">Email </label>
+        <label for="email" class="text-sm text-gray-900">Email </label>
         <InputText id="email" v-model="email" class="p-3 rounded-lg" />
       </div>
 
       <div class="flex flex-col gap-2 w-full">
-        <label for="password" class="text-sm text-gray-700">Password</label>
+        <label for="password" class="text-sm text-gray-900">Password</label>
         <InputText
           id="password"
           type="password"
@@ -117,6 +117,14 @@ const login = async () => {
 
       <p class="text-xs text-gray-500 mt-4">© 2025 Danayas Resorts</p>
     </div>
+
+    <!-- <div class="w-">
+      <img
+        src="../assets/danayas_day.jpg"
+        alt="Employee Login Visual"
+        class="object-cover w-full h-full"
+      />
+    </div> -->
   </div>
   <div
     v-if="showModal"
@@ -155,10 +163,25 @@ const login = async () => {
 .loginContainer {
   background: #eef9eb;
 }
+/*
+
+  background-image: url("../assets/danayas_day.jpg");
+  background-size: cover;
+  background-position: center;
+  min-height: 100vh;
+
+  .loginContainer::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45); /* contrast overlay
+  z-index: 0;
+  pointer-events: none;
+} */
 
 .loginBox {
   background: rgba(255, 255, 255, 0.2);
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(30px);
   box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
 }
 

@@ -97,7 +97,6 @@ const confirmStatusUpdate = () => {
 };
 
 const saveChanges = () => {
-  formData.value.status = "rescheduled";
   emit("updateBooking", formData.value);
   toast.add({
     severity: "success",
@@ -125,7 +124,7 @@ const backPay = () => {
 };
 
 const confirmPay = () => {
-  emit("payPayment", formData.value);
+  emit("payBooking", formData.value);
   closeModals();
 };
 

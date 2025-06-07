@@ -11,10 +11,10 @@ const route = useRoute();
 
 // List of routes under "Booking"
 const bookingRoutes = [
-  "/admin/private-booking",
+  "/employee/private-booking",
   // "/admin/walk-in-booking",
-  "/admin/public-booking",
-  "/admin/blocked-dates",
+  "/employee/public-booking",
+  "/employee/blocked-dates",
 ];
 
 const currentBookingRoute = computed(() => bookingRoutes.includes(route.path));
@@ -33,13 +33,13 @@ const toggleBookingMenu = () => {
 
 // List of routes under "Content Management"
 const cmsRoute = [
-  "/admin/homepage",
-  "/admin/reviews",
-  "/admin/gallery",
-  "/admin/faqs",
-  "/admin/about-us",
-  "/admin/footer",
-  "/admin/terms-and-condition",
+  "/employee/homepage",
+  "/employee/reviews",
+  "/employee/gallery",
+  "/employee/faqs",
+  "/employee/about-us",
+  "/employee/footer",
+  "/employee/terms-and-condition",
 ];
 
 const currentCMSRoute = computed(() => cmsRoute.includes(route.path));
@@ -76,7 +76,7 @@ const toggleContentMenu = () => {
       class="flex flex-col space-y-2 w-full px-3 text-[#FCFCFC] dark:text-[#FCFCFC]"
     >
       <router-link
-        to="/admin/admin-dashboard"
+        to="/employee/employee-dashboard"
         class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
         active-class="active-route"
       >
@@ -98,12 +98,12 @@ const toggleContentMenu = () => {
 
       <div v-show="isBookingOpen" class="flex flex-col space-y-2 w-full pl-6">
         <router-link
-          to="/admin/private-booking"
+          to="/employee/private-booking"
           class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
           active-class="active-route"
         >
           <i class="pi pi-calendar-plus mr-2"></i>
-          Private Entries Booking</router-link
+          Private Booking</router-link
         >
         <!--<router-link
           to="/admin/walk-in-booking"
@@ -114,15 +114,15 @@ const toggleContentMenu = () => {
           Walk-In Booking</router-link
         >-->
         <router-link
-          to="/admin/public-booking"
+          to="/employee/public-booking"
           class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
           active-class="active-route"
         >
           <i class="pi pi-calendar-plus mr-2"></i>
-          Public Entries Booking</router-link
+          Public Booking</router-link
         >
         <router-link
-          to="/admin/blocked-dates"
+          to="/employee/blocked-dates"
           class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
           active-class="active-route"
         >
@@ -132,7 +132,7 @@ const toggleContentMenu = () => {
       </div>
 
       <router-link
-        to="/admin/payment"
+        to="/employee/payment"
         class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
         active-class="active-route"
       >
@@ -140,7 +140,7 @@ const toggleContentMenu = () => {
         Payment Management</router-link
       >
       <router-link
-        to="/admin/refund"
+        to="/employee/refund"
         class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
         active-class="active-route"
       >
@@ -149,7 +149,7 @@ const toggleContentMenu = () => {
       >
       <router-link
         v-if="role !== 'staff'"
-        to="/admin/reports"
+        to="/employee/reports"
         class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
         active-class="active-route"
       >
@@ -167,7 +167,7 @@ const toggleContentMenu = () => {
 
       <router-link
         v-if="role !== 'staff'"
-        to="/admin/customer-management"
+        to="/employee/customer-management"
         class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
         active-class="active-route"
       >
@@ -176,7 +176,7 @@ const toggleContentMenu = () => {
       >
       <router-link
         v-if="role !== 'staff'"
-        to="/admin/employee-management"
+        to="/employee/employee-management"
         class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
         active-class="active-route"
       >
@@ -185,7 +185,7 @@ const toggleContentMenu = () => {
       >
       <router-link
         v-if="role !== 'staff'"
-        to="/admin/packages-and-promos"
+        to="/employee/packages-and-promos"
         class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
         active-class="active-route"
       >
@@ -194,7 +194,7 @@ const toggleContentMenu = () => {
       >
       <router-link
         v-if="role !== 'staff'"
-        to="/admin/public-rates"
+        to="/employee/public-rates"
         class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
         active-class="active-route"
       >
@@ -203,7 +203,7 @@ const toggleContentMenu = () => {
       >
       <router-link
         v-if="role !== 'staff'"
-        to="/admin/discount-and-add-ons"
+        to="/employee/discount-and-add-ons"
         class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
         active-class="active-route"
       >
@@ -231,7 +231,7 @@ const toggleContentMenu = () => {
         class="flex flex-col space-y-2 w-full pl-6"
       >
         <router-link
-          to="/admin/homepage"
+          to="/employee/homepage"
           class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
           active-class="active-route"
         >
@@ -239,7 +239,7 @@ const toggleContentMenu = () => {
           Homepage</router-link
         >
         <router-link
-          to="/admin/reviews"
+          to="/employee/reviews"
           class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
           active-class="active-route"
         >
@@ -247,7 +247,7 @@ const toggleContentMenu = () => {
           Reviews</router-link
         >
         <router-link
-          to="/admin/gallery"
+          to="/employee/gallery"
           class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
           active-class="active-route"
         >
@@ -255,7 +255,7 @@ const toggleContentMenu = () => {
           Gallery</router-link
         >
         <router-link
-          to="/admin/faqs"
+          to="/employee/faqs"
           class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
           active-class="active-route"
         >
@@ -263,7 +263,7 @@ const toggleContentMenu = () => {
           FAQs</router-link
         >
         <router-link
-          to="/admin/about-us"
+          to="/employee/about-us"
           class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
           active-class="active-route"
         >
@@ -271,15 +271,15 @@ const toggleContentMenu = () => {
           About Us</router-link
         >
         <router-link
-          to="/admin/footer"
+          to="/employee/contact-us"
           class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
           active-class="active-route"
         >
           <i class="pi pi-file mr-2"></i>
-          Footer</router-link
+          Contact Us</router-link
         >
         <router-link
-          to="/admin/terms-and-condition"
+          to="/employee/terms-and-condition"
           class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
           active-class="active-route"
         >
@@ -290,7 +290,7 @@ const toggleContentMenu = () => {
 
       <router-link
         v-if="role !== 'staff'"
-        to="/admin/audit-logs"
+        to="/employee/logs"
         class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
         active-class="active-route"
       >

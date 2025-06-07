@@ -3,6 +3,7 @@ import { ref, defineProps, defineEmits, onMounted, onUnmounted } from "vue";
 import Button from "primevue/button";
 import Dialog from "primevue/dialog";
 import Toast from "primevue/toast";
+import { formatDate, formatDates } from "../../utility/dateFormat";
 import { useToast } from "primevue/usetoast";
 import DatePicker from "primevue/datepicker";
 
@@ -180,7 +181,7 @@ onUnmounted(() => {
         Are you sure you want to
         <strong class="text-red-500">DELETE</strong> this Blocked Date:
         <span class="font-black font-[Poppins]"
-          >{{ blocks.blockedDates }} {{ blocks.category }}</span
+          >{{ formatDates(blocks.blockedDates) }} : {{ blocks.category }}</span
         >?
       </span>
 

@@ -13,11 +13,13 @@ export const RefundDTO = z.object({
     description: "Unique identifier for the public",
     example: 1,
   }),
-
-  verifiedBy: z.number().nullable().optional().openapi({
-    description: "User ID of the staff who verified the refund",
-    example: 1,
-  }),
+  verifiedBy: z.preprocess((val) => {
+    if (typeof val === "string" || typeof val === "number") {
+      const num = Number(val);
+      return isNaN(num) ? undefined : num;
+    }
+    return undefined;
+  }, z.number().nullable().optional().openapi({ description: "User ID of the staff who verified the refund", example: 1 })),
   refundMethod: z.enum(["gcash", "cash"]).nullable().optional().openapi({
     description: "Mode of refund",
     example: "gcash",
@@ -47,7 +49,7 @@ export const RefundDTO = z.object({
     description: "Reference number for the refund",
     example: "1654 156 156354",
   }),
-  imageUrl: z.string().nullable().optional().openapi({
+  imageUrl: z.any().nullable().optional().openapi({
     description: "URL of the proof of refund image",
     example: "https://example.com/uploads/refund-proof.jpg",
   }),

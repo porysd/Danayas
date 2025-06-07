@@ -16,6 +16,10 @@ import InputNumber from "primevue/inputnumber";
 import { useBookingStore } from "../../stores/bookingStore.js";
 import { usePublicEntryStore } from "../../stores/publicEntryStore.js";
 import { useBlockedStore } from "../../stores/blockedDateStore.js";
+import {
+  getBookingStyle,
+  disabledDates,
+} from "../../composables/calendarStyle";
 
 const bookingStore = useBookingStore();
 const publicStore = usePublicEntryStore();
@@ -49,7 +53,6 @@ const newPublic = ref({
   numKids: 0,
   adultGuestNames: [],
   kidGuestNames: [],
-  discountId: "" || null,
 });
 
 const paymentDetails = ref({
@@ -115,103 +118,36 @@ const onFileSelect = (event) => {
 
 const minDate = new Date();
 
-const disabledDates = computed(() => {
-  const disabled = [];
+// const checkOutMinDate = computed(() => {
+//   if (!newBooking.value.checkInDate) return minDate;
+//   const checkIn = new Date(newBooking.value.checkInDate);
+//   if (
+//     newBooking.value.mode === "night-time" ||
+//     newBooking.value.mode === "whole-day"
+//   ) {
+//     const nextDay = new Date(checkIn);
+//     nextDay.setDate(checkIn.getDate() + 1);
+//     return nextDay;
+//   }
+//   return checkIn;
+// });
 
-  // Blocked dates
-  blockStore.blocked.forEach((bd) => {
-    if (bd.blockedDates) {
-      disabled.push(new Date(bd.blockedDates));
-    }
-  });
+// const maxDate = computed(() => {
+//   if (!newBooking.value.checkInDate) return null;
 
-  // Fully booked dates (whole-day or both day-time and night-time)
-  const bookingsByDate = {};
-  bookingStore.bookings.forEach((b) => {
-    if (b.checkInDate) {
-      const date = b.checkInDate;
-      if (!bookingsByDate[date]) bookingsByDate[date] = new Set();
-      bookingsByDate[date].add(b.mode);
-    }
-  });
-  publicStore.public.forEach((p) => {
-    if (p.entryDate) {
-      const date = p.entryDate;
-      if (!bookingsByDate[date]) bookingsByDate[date] = new Set();
-      bookingsByDate[date].add(p.mode);
-    }
-  });
+//   const checkIn = new Date(newBooking.value.checkInDate);
 
-  Object.entries(bookingsByDate).forEach(([date, modes]) => {
-    if (
-      modes.has("whole-day") ||
-      (modes.has("day-time") && modes.has("night-time"))
-    ) {
-      disabled.push(new Date(date));
-    }
-  });
+//   if (
+//     newBooking.value.mode === "night-time" ||
+//     newBooking.value.mode === "whole-day"
+//   ) {
+//     const nextDay = new Date(checkIn);
+//     nextDay.setDate(checkIn.getDate() + 1);
+//     return nextDay;
+//   }
 
-  return disabled;
-});
-
-const getBookingStyle = (slotDate) => {
-  const formattedDate = `${slotDate.year}-${String(slotDate.month + 1).padStart(
-    2,
-    "0"
-  )}-${String(slotDate.day).padStart(2, "0")}`;
-
-  // Collect all booking/public modes for the date
-  const mode = new Set();
-  let isBlocked = false;
-
-  bookingStore.bookings.forEach((b) => {
-    if (b.checkInDate === formattedDate) {
-      mode.add(b.mode);
-    }
-  });
-
-  publicStore.public.forEach((p) => {
-    if (p.entryDate === formattedDate) {
-      mode.add(p.mode);
-    }
-  });
-
-  if (blockStore.blocked.some((bd) => bd.blockedDates === formattedDate)) {
-    isBlocked = true;
-  }
-
-  let backgroundColor, color;
-
-  if (isBlocked) {
-    backgroundColor = "grey";
-    color = "white";
-  } else if (
-    mode.has("whole-day") ||
-    (mode.has("day-time") && mode.has("night-time"))
-  ) {
-    backgroundColor = "#FF6B6B"; // Fully Booked
-    color = "white";
-  } else if (mode.has("day-time")) {
-    backgroundColor = "#6A5ACD"; // Night Available
-    color = "white";
-  } else if (mode.has("night-time")) {
-    backgroundColor = "#FFD580"; // Day Available
-    color = "black";
-  } else {
-  }
-
-  return {
-    backgroundColor,
-    color,
-    width: "40px",
-    height: "40px",
-    display: "inline-flex",
-    justifyContent: "center",
-    alignItems: "center",
-    borderRadius: "10rem",
-    fontSize: "17px",
-  };
-};
+//   return checkIn;
+// });
 
 const confirmBooking = async () => {
   // Find the discount by ID or name

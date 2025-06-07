@@ -11,7 +11,7 @@ const router = useRouter();
 
 const logout = () => {
   authStore.logout();
-  router.replace("/admin/admin-login");
+  router.replace("/employee/employee-login");
 };
 
 // Show menu in Avatar
@@ -68,7 +68,7 @@ const userInitials = computed(() => {
   <div v-if="showMenu" ref="hideMenu" class="dropdown-menu">
     <ul>
       <li class="hover:bg-gray-100 dark:hover:bg-gray-700">
-        <router-link to="/admin/profile">My Profile</router-link>
+        <router-link to="/employee/profile">My Profile</router-link>
       </li>
       <li class="hover:bg-gray-100 dark:hover:bg-gray-700" @click="logout">
         Log Out

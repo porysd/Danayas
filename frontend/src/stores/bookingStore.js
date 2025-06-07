@@ -147,8 +147,8 @@ export const useBookingStore = defineStore("booking", {
         bookStatus: booking.bookStatus,
         cancelCategory: booking.cancelCategory,
         cancelReason: booking.cancelReason,
-        refundMethod: booking.refundMethod,
-        receiveName: booking.receiveName,
+        refundMethod: booking.refundMethod || null,
+        receiveName: booking.receiveName || null,
       };
 
       // if (booking.bookStatus === "cancelled") {

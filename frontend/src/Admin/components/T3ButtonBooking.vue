@@ -28,6 +28,8 @@ import {
   getBookingStyle,
   disabledDates,
 } from "../../composables/calendarStyle";
+import FileUpload from "primevue/fileupload";
+import InputNumber from "primevue/inputnumber";
 
 const toast = useToast();
 
@@ -92,8 +94,6 @@ const closeModals = () => {
   showCancelModal.value = false;
 };
 
-const cancelData = ref({});
-
 const confirmStatusUpdate = () => {
   if (
     formData.value.bookStatus === "cancelled" ||
@@ -109,26 +109,58 @@ const confirmStatusUpdate = () => {
       return;
     }
 
-    if (formData.value.bookStatus === "completed") {
+    if (formData.value.bookStatus === "pending-cancellation") {
+      if (!formData.value.refundMethod) {
+        toast.add({
+          severity: "error",
+          summary: "Error",
+          detail: "Refund Method is required",
+          life: 3000,
+        });
+        return;
+      }
+      if (
+        formData.value.refundMethod === "cash" &&
+        !formData.value.receiveName
+      ) {
+        toast.add({
+          severity: "error",
+          summary: "Error",
+          detail: "Receiver Name is required on cash",
+          life: 3000,
+        });
+        return;
+      } else {
+        toast.add({
+          severity: "error",
+          summary: "Error",
+          detail: "Proof of Payment is required on Gcash",
+          life: 3000,
+        });
+      }
+    }
+  }
+
+  if (formData.value.bookStatus === "completed") {
+    if (formData.value.bookingPaymentStatus !== "paid") {
+      toast.add({
+        severity: "error",
+        summary: "Error",
+        detail: "Booking should be paid to be completed",
+        life: 3000,
+      });
+      return;
+    } else {
       toast.add({
         severity: "success",
-        summary: "success",
+        summary: "Success",
         detail: "Booking is set to COMPLETED",
         life: 3000,
       });
     }
-
-    if (formData.value.bookStatus === "pending-cancellation") {
-    }
   }
-  console.log("Payload:", formData.value);
+
   emit("updateStatus", formData.value);
-  toast.add({
-    severity: "success",
-    summary: "Updated Status",
-    detail: "Successfully Updated Status",
-    life: 3000,
-  });
   closeModals();
 };
 
@@ -151,6 +183,7 @@ watch(
 
 const saveChanges = () => {
   try {
+    console.log("Saving booking with mode:", formData.value.mode);
     formData.value.bookStatus = "rescheduled";
     emit("updateBooking", formData.value);
     toast.add({
@@ -174,7 +207,7 @@ const addExcess = () => {
   try {
     formData.value.bookStatus = "reserved";
     formData.value.bookingPaymentStatus = "partially-paid";
-    console.log("Emitting updateBooking with:", formData.value); // Add this
+    console.log("Emitting updateBooking with:", formData.value);
     emit("updateBooking", formData.value);
     toast.add({
       severity: "success",
@@ -334,6 +367,12 @@ const unavailableModes = computed(() => {
   if (modes.has("whole-day")) {
     return new Set(["day-time", "night-time", "whole-day"]);
   }
+
+  if (modes.has("day-time") || modes.has("night-time")) {
+    const unavailable = new Set([...modes]);
+    unavailable.add("whole-day");
+    return unavailable;
+  }
   return modes;
 });
 
@@ -345,6 +384,13 @@ const availableModes = computed(() => {
   ];
   return allModes.filter((mode) => !unavailableModes.value.has(mode.value));
 });
+
+const onFileSelect = (event) => {
+  const file = event.files[0];
+  if (file) {
+    formData.value.imageUrl = file;
+  }
+};
 </script>
 
 <template>
@@ -434,7 +480,16 @@ const availableModes = computed(() => {
           <label>GCash Reference No:</label>
           <input class="w-full" v-model="formData.reference" />
           <label>Proof of Payment:</label>
-          <input class="w-full" v-model="formData.imageUrl" />
+          <FileUpload
+            ref="fileupload"
+            v-model="formData.imageUrl"
+            mode="basic"
+            name="imageUrl"
+            url="/api/upload"
+            accept="image/*"
+            :maxFileSize="1000000"
+            @select="onFileSelect"
+          />
         </template>
 
         <label>Sender Name:</label>
@@ -443,9 +498,19 @@ const availableModes = computed(() => {
         <div class="flex">
           <div class="w-[100%]">
             <label>Tendered Amount:</label>
-            <input
+            <!-- <input
               class="w-full"
               v-model.number="formData.tenderedAmount"
+              :disabled="isExact"
+            /> -->
+            <InputNumber
+              class="w-full"
+              placeholder="e.g. 2000"
+              inputId="currency-php"
+              mode="currency"
+              currency="PHP"
+              locale="en-PH"
+              v-model="formData.tenderedAmount"
               :disabled="isExact"
             />
           </div>

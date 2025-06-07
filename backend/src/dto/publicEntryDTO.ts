@@ -37,10 +37,10 @@ export const PublicEntryDTO = z.object({
     description: "Mode of the public entry",
     example: "day-time",
   }),
-  reservationType: z.enum(["online", "walk-in"]).nullable().optional().openapi({
-    description: "The type of reservation",
-    example: "online",
-  }),
+  // reservationType: z.enum(["online", "walk-in"]).nullable().optional().openapi({
+  //   description: "The type of reservation",
+  //   example: "online",
+  // }),
   numAdults: z.number().int().openapi({
     description: "Number of adults",
     example: 10,
@@ -77,19 +77,10 @@ export const PublicEntryDTO = z.object({
     description: "Remaining balance",
     example: 12000,
   }),
-  status: z
-    .enum([
-      "pending",
-      "reserved",
-      "cancelled",
-      "completed",
-      "rescheduled",
-      "pending-cancellation",
-    ])
-    .openapi({
-      description: "Status of the booking",
-      example: "pending",
-    }),
+  status: z.enum(["reserved", "cancelled", "completed"]).openapi({
+    description: "Status of the booking",
+    example: "reserved",
+  }),
   paymentTerms: z.enum(["installment", "full-payment"]).openapi({
     description: "The payment terms of the booking",
     example: "installment",

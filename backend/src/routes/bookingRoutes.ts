@@ -495,7 +495,9 @@ bookingRoutes.openapi(
             ? "day-time"
             : requestData.mode === "night-time"
             ? "night-time"
-            : "whole-day";
+            : requestData.mode === "whole-day"
+            ? "whole-day"
+            : booking.mode;
 
         await dateConflicts({
           date: processedData.checkInDate,

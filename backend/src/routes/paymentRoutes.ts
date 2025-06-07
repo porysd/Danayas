@@ -936,12 +936,12 @@ paymentRoutes.openapi(
                 ),
               });
 
-              if (
-                otherValidPayment.length === 0 &&
-                publics.status === "reserved"
-              ) {
-                status = "pending";
-              }
+              // if (
+              //   otherValidPayment.length === 0 &&
+              //   publics.status === "reserved"
+              // ) {
+              //   status = "pending";
+              // }
 
               await tx
                 .update(PublicEntryTable)
@@ -1267,73 +1267,73 @@ paymentRoutes.openapi(
           const publicPaymentStatus =
             Math.max(remainingBalance, 0) === 0 ? "paid" : "partially-paid";
 
-          const isLowAmountRefund =
-            tenderedAmount < 2000 &&
-            publics.amountPaid === 0 &&
-            publics.paymentTerms === "installment";
+          // const isLowAmountRefund =
+          //   tenderedAmount < 2000 &&
+          //   publics.amountPaid === 0 &&
+          //   publics.paymentTerms === "installment";
 
-          if (isLowAmountRefund) {
-            const refund = await tx
-              .insert(RefundsTable)
-              .values({
-                bookingId: null,
-                publicEntryId: publics.publicEntryId,
-                refundAmount: tenderedAmount,
-                refundStatus: "pending",
-                refundReason: "Net paid amount below ₱2000",
-                refundType: "low-amount",
-                refundMethod: "gcash",
-                remarks: "Auto refund for low amount",
-                createdAt: new Date().toISOString(),
-              })
-              .returning()
-              .execute();
+          // if (isLowAmountRefund) {
+          //   const refund = await tx
+          //     .insert(RefundsTable)
+          //     .values({
+          //       bookingId: null,
+          //       publicEntryId: publics.publicEntryId,
+          //       refundAmount: tenderedAmount,
+          //       refundStatus: "pending",
+          //       refundReason: "Net paid amount below ₱2000",
+          //       refundType: "low-amount",
+          //       refundMethod: "gcash",
+          //       remarks: "Auto refund for low amount",
+          //       createdAt: new Date().toISOString(),
+          //     })
+          //     .returning()
+          //     .execute();
 
-            await tx
-              .insert(AuditLogsTable)
-              .values({
-                userId,
-                action: "create",
-                tableName: "REFUND",
-                recordId: refund[0].refundId,
-                data: JSON.stringify(refund[0]),
-                remarks: "Auto refund (netPaidAmount < ₱2000)",
-                createdAt: new Date().toISOString(),
-              })
-              .execute();
-          }
+          //   await tx
+          //     .insert(AuditLogsTable)
+          //     .values({
+          //       userId,
+          //       action: "create",
+          //       tableName: "REFUND",
+          //       recordId: refund[0].refundId,
+          //       data: JSON.stringify(refund[0]),
+          //       remarks: "Auto refund (netPaidAmount < ₱2000)",
+          //       createdAt: new Date().toISOString(),
+          //     })
+          //     .execute();
+          // }
 
-          if (tenderedAmount > publics.remainingBalance && !isLowAmountRefund) {
-            const excess = tenderedAmount - publics.remainingBalance;
-            const refund = await tx
-              .insert(RefundsTable)
-              .values({
-                bookingId: null,
-                publicEntryId: publics.publicEntryId,
-                refundAmount: excess,
-                refundStatus: "pending",
-                refundReason: "Excess netPaidAmount",
-                refundType: "overpayment",
-                refundMethod: "gcash",
-                remarks: "Auto refund for overpayment",
-                createdAt: new Date().toISOString(),
-              })
-              .returning()
-              .execute();
+          // if (tenderedAmount > publics.remainingBalance && !isLowAmountRefund) {
+          //   const excess = tenderedAmount - publics.remainingBalance;
+          //   const refund = await tx
+          //     .insert(RefundsTable)
+          //     .values({
+          //       bookingId: null,
+          //       publicEntryId: publics.publicEntryId,
+          //       refundAmount: excess,
+          //       refundStatus: "pending",
+          //       refundReason: "Excess netPaidAmount",
+          //       refundType: "overpayment",
+          //       refundMethod: "gcash",
+          //       remarks: "Auto refund for overpayment",
+          //       createdAt: new Date().toISOString(),
+          //     })
+          //     .returning()
+          //     .execute();
 
-            await tx
-              .insert(AuditLogsTable)
-              .values({
-                userId,
-                action: "create",
-                tableName: "REFUND",
-                recordId: refund[0].refundId,
-                data: JSON.stringify(refund[0]),
-                remarks: "Refund due to overpayment",
-                createdAt: new Date().toISOString(),
-              })
-              .execute();
-          }
+          //   await tx
+          //     .insert(AuditLogsTable)
+          //     .values({
+          //       userId,
+          //       action: "create",
+          //       tableName: "REFUND",
+          //       recordId: refund[0].refundId,
+          //       data: JSON.stringify(refund[0]),
+          //       remarks: "Refund due to overpayment",
+          //       createdAt: new Date().toISOString(),
+          //     })
+          //     .execute();
+          // }
 
           await tx
             .update(PublicEntryTable)
@@ -1341,7 +1341,7 @@ paymentRoutes.openapi(
               amountPaid: amountPaid,
               remainingBalance: Math.max(remainingBalance, 0),
               publicPaymentStatus: publicPaymentStatus,
-              status: isLowAmountRefund ? "pending" : "reserved",
+              status: "reserved",
             })
             .where(eq(PublicEntryTable.publicEntryId, publics.publicEntryId))
             .execute();
@@ -1357,7 +1357,7 @@ paymentRoutes.openapi(
                 amountPaid: amountPaid,
                 remainingBalance: Math.max(remainingBalance, 0),
                 publicPaymentStatus: publicPaymentStatus,
-                status: isLowAmountRefund ? "pending" : "reserved",
+                status: "reserved",
               }),
               remarks: "Updated public entry due to payment verification",
               createdAt: new Date().toISOString(),

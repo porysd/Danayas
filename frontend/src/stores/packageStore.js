@@ -167,23 +167,26 @@ export const usePackageStore = defineStore("package", {
       const auth = useAuthStore();
       if (!auth.isLoggedIn) return;
 
-      const updatePackage = {
-        ...updatedPromo,
-        isPromo: false,
-        price: updatedPromo.price ? Number(updatedPromo.price) : null,
-        maxPax: updatedPromo.maxPax ? Number(updatedPromo.maxPax) : null,
-      };
+      // const updatePackage = {
+      //   ...updatedPromo,
+      //   isPromo: false,
+      //   price: updatedPromo.price ? Number(updatedPromo.price) : null,
+      //   maxPax: updatedPromo.maxPax ? Number(updatedPromo.maxPax) : null,
+      // };
 
+      const formData = new FormData();
+      for (const key in updatedPromo) {
+        formData.append(key, updatedPromo[key]);
+      }
       try {
         const response = await fetch(
           `http://localhost:3000/packages/${updatedPromo.packageId}`,
           {
             method: "PATCH",
             headers: {
-              "Content-Type": "application/json",
               Authorization: `Bearer ${auth.accessToken}`,
             },
-            body: JSON.stringify(updatePackage),
+            body: formData,
           }
         );
 
@@ -202,12 +205,17 @@ export const usePackageStore = defineStore("package", {
       const auth = useAuthStore();
       if (!auth.isLoggedIn) return;
 
-      const updatePackage = {
-        ...updatedPromo,
-        isPromo: true,
-        price: updatedPromo.price ? Number(updatedPromo.price) : null,
-        maxPax: updatedPromo.maxPax ? Number(updatedPromo.maxPax) : null,
-      };
+      // const updatePackage = {
+      //   ...updatedPromo,
+      //   isPromo: true,
+      //   price: updatedPromo.price ? Number(updatedPromo.price) : null,
+      //   maxPax: updatedPromo.maxPax ? Number(updatedPromo.maxPax) : null,
+      // };
+
+      const formData = new FormData();
+      for (const key in updatedPromo) {
+        formData.append(key, updatedPromo[key]);
+      }
 
       try {
         const response = await fetch(
@@ -215,10 +223,9 @@ export const usePackageStore = defineStore("package", {
           {
             method: "PATCH",
             headers: {
-              "Content-Type": "application/json",
               Authorization: `Bearer ${auth.accessToken}`,
             },
-            body: JSON.stringify(updatePackage),
+            body: formData,
           }
         );
 
