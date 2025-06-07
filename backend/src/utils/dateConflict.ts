@@ -40,19 +40,19 @@ export async function dateConflicts({
   }
 
   // PublicEntry conflict
-  const publicEntryConflict = await db.query.PublicEntryTable.findFirst({
-    where: sql`
-      ${publicEntryId ? sql`publicEntryId != ${publicEntryId} AND` : sql``}
-      status NOT IN ('cancelled', 'completed')
-      AND date(entryDate) = date(${date})
-    `,
-  });
+  // const publicEntryConflict = await db.query.PublicEntryTable.findFirst({
+  //   where: sql`
+  //     ${publicEntryId ? sql`publicEntryId != ${publicEntryId} AND` : sql``}
+  //     status NOT IN ('cancelled', 'completed')
+  //     AND date(entryDate) = date(${date})
+  //   `,
+  // });
 
-  if (publicEntryConflict) {
-    throw new BadRequestError(
-      `This date is already booked for ${mode}. Please choose a different date or time mode.`
-    );
-  }
+  // if (publicEntryConflict) {
+  //   throw new BadRequestError(
+  //     `This date is already booked for ${mode}. Please choose a different date or time mode.`
+  //   );
+  // }
 
   // Booking conflict
   const bookingConflict = await db.query.BookingsTable.findFirst({

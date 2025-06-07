@@ -11,30 +11,23 @@ export const PublicEntryTable = sqliteTable("PUBLIC_ENTRY", {
     .notNull(),
   discountId: integer("discountId").references(() => DiscountsTable.discountId),
   // PERSONAL INFORMATION
-  firstName: text("firstName"), // Nullable for Online (Customer)
-  lastName: text("lastName"), // Nullable for Online (Customer)
-  contactNo: text("contactNo"), // Nullable for Online (Customer)
-  address: text("address"), // Nullable for Online (Customer)
+  firstName: text("firstName").notNull(),
+  lastName: text("lastName").notNull(),
+  contactNo: text("contactNo").notNull(),
+  address: text("address").notNull(),
   // PUBLIC BOOKING DETAILS
   entryDate: text("entryDate").notNull(),
   mode: text("mode", { enum: ["day-time", "night-time"] }).notNull(),
-  reservationType: text("reservationType", {
-    enum: ["online", "walk-in"],
-  }).notNull(),
+  // reservationType: text("reservationType", {
+  //   enum: ["online", "walk-in"],
+  // }).notNull(),
   numAdults: integer("numAdults").notNull(),
   numKids: integer("numKids").notNull(),
   adultGuestNames: text("adultGuestNames").notNull(),
   kidGuestNames: text("kidGuestNames").notNull(),
   status: text("status", {
-    enum: [
-      "pending",
-      "reserved",
-      "cancelled",
-      "completed",
-      "rescheduled",
-      "pending-cancellation",
-    ],
-  }).default("pending"),
+    enum: ["reserved", "cancelled", "completed"],
+  }).default("reserved"),
   // ADULT AND KID RATES
   adultRateId: integer("adultRateId")
     .references(() => PublicEntryRateTable.rateId) // Foreign Key to the PublicEntryRateTable
