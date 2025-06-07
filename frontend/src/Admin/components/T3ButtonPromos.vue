@@ -79,6 +79,13 @@ onMounted(() => {
 onUnmounted(() => {
   document.addEventListener("click", closeMenu);
 });
+
+const onFileSelect = (event) => {
+  const file = event.files[0];
+  if (file) {
+    formData.value.imageUrl = file;
+  }
+};
 </script>
 
 <template>
@@ -158,11 +165,13 @@ onUnmounted(() => {
             <label>Image URL:</label>
             <FileUpload
               ref="fileupload"
+              v-model="formData.imageUrl"
               mode="basic"
-              name="demo[]"
+              name="imageUrl"
               url="/api/upload"
               accept="image/*"
-              :maxFileSize="1000000"
+              :maxFileSize="5000000"
+              @select="onFileSelect"
             />
           </div>
           <div class="addPackInput">

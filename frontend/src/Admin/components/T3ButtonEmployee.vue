@@ -5,16 +5,20 @@ import Button from "primevue/button";
 import Dialog from "primevue/dialog";
 import Toast from "primevue/toast";
 import { useToast } from "primevue/usetoast";
+import { usePinStore } from "../../stores/pinStore";
+import InputOtp from "primevue/inputotp";
 
 const toast = useToast();
+const pinStore = usePinStore();
 const showMenu = ref(false);
 const hideMenu = ref(false);
 const showArchiveModal = ref(false);
 const showDeleteModal = ref(false);
 const showEnableModal = ref(false);
 const showRoleModel = ref(false);
+const showPinModal = ref(false);
+const value = ref("");
 const formData = ref({});
-let previousState = null;
 
 const closeMenu = (event) => {
   if (hideMenu.value && !hideMenu.value.contains(event.target)) {
@@ -37,12 +41,6 @@ const emit = defineEmits([
   "changeRole",
   "enableEmployee",
 ]);
-
-const openArchiveModal = () => {
-  formData.value = { ...prop.employee };
-  showArchiveModal.value = true;
-  showMenu.value = false;
-};
 
 const openDeleteModal = () => {
   formData.value = { ...prop.employee };
@@ -67,17 +65,6 @@ const closeModals = () => {
   showDeleteModal.value = false;
   showRoleModel.value = false;
   showEnableModal.value = false;
-};
-
-const archiveEmployee = () => {
-  emit("archiveEmployee", formData.value);
-  toast.add({
-    severity: "warn",
-    summary: "Archive",
-    detail: "Successfully Archived a User",
-    life: 3000,
-  });
-  closeModals();
 };
 
 const confirmDisable = () => {
@@ -112,6 +99,51 @@ const changeRole = () => {
   });
   closeModals();
 };
+
+const openPinModal = () => {
+  formData.value = { ...prop.employee };
+  showPinModal.value = true;
+  showMenu.value = false;
+};
+
+const confirmPin = async () => {
+  try {
+    await pinStore.addPin({ pin: value.value });
+    toast.add({
+      severity: "success",
+      summary: "PIN Set",
+      detail: "PIN has been set/reset successfully.",
+      life: 3000,
+    });
+    showPinModal.value = false;
+    value.value = "";
+  } catch (err) {
+    console.error("Error: ", err);
+    toast.add({
+      severity: "error",
+      summary: "PIN Error",
+      detail: "Failed to set/reset PIN.",
+      life: 3000,
+    });
+  }
+};
+
+// const openArchiveModal = () => {
+//   formData.value = { ...prop.employee };
+//   showArchiveModal.value = true;
+//   showMenu.value = false;
+// };
+
+// const archiveEmployee = () => {
+//   emit("archiveEmployee", formData.value);
+//   toast.add({
+//     severity: "warn",
+//     summary: "Archive",
+//     detail: "Successfully Archived a User",
+//     life: 3000,
+//   });
+//   closeModals();
+// };
 </script>
 
 <template>
@@ -123,6 +155,12 @@ const changeRole = () => {
 
     <div v-if="showMenu" ref="hideMenu" class="dropdown-menu">
       <ul>
+        <li
+          class="hover:bg-gray-100 dark:hover:bg-gray-700"
+          @click="openPinModal"
+        >
+          Pin
+        </li>
         <li
           class="hover:bg-gray-100 dark:hover:bg-gray-700"
           @click="openRoleModal"
@@ -153,7 +191,7 @@ const changeRole = () => {
     </div>
   </div>
 
-  <Dialog v-model:visible="showArchiveModal" modal :style="{ width: '30rem' }">
+  <!-- <Dialog v-model:visible="showArchiveModal" modal :style="{ width: '30rem' }">
     <template #header>
       <div class="flex flex-col items-center justify-center w-full">
         <h2 class="text-xl font-bold font-[Poppins]">Archive User</h2>
@@ -186,7 +224,7 @@ const changeRole = () => {
         class="font-bold w-full"
       />
     </div>
-  </Dialog>
+  </Dialog> -->
 
   <Dialog v-model:visible="showDeleteModal" modal :style="{ width: '30rem' }">
     <template #header>
@@ -322,6 +360,45 @@ const changeRole = () => {
         @click="changeRole"
         class="font-bold w-full"
         severity="primary"
+      />
+    </div>
+  </Dialog>
+
+  <Dialog v-model:visible="showPinModal" modal :style="{ width: '30rem' }">
+    <template #header>
+      <div class="flex flex-col items-center justify-center w-full">
+        <h2 class="text-xl font-bold font-[Poppins]">Set or Reset PIN</h2>
+      </div>
+    </template>
+
+    <span
+      class="text-lg text-surface-700 dark:text-surface-400 block mb-8 text-center font-[Poppins]"
+    >
+      Set or Reset a
+      <strong class="text-green-500">PIN</strong> for this employee:
+      <span class="font-black font-[Poppins]"
+        >{{ employee.firstName }} {{ employee.lastName }}</span
+      >?
+    </span>
+
+    <div class="flex justify-center mb-6">
+      <InputOtp v-model="value" :length="6" />
+    </div>
+
+    <div class="flex justify-center gap-2 font-[Poppins]">
+      <Button
+        type="button"
+        label="Cancel"
+        severity="secondary"
+        @click="closeModals"
+        class="font-bold w-full"
+      />
+      <Button
+        type="button"
+        label="Set"
+        severity="success"
+        @click="confirmPin"
+        class="font-bold w-full"
       />
     </div>
   </Dialog>

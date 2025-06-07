@@ -14,7 +14,6 @@ const showMenu = ref(false);
 const showVoidModal = ref(false);
 const showValidModal = ref(false);
 const showInvalidModal = ref(false);
-const showPayModal = ref(false);
 const showRefractorModal = ref(false);
 const formData = ref({});
 
@@ -22,10 +21,7 @@ const pinStore = usePinStore();
 
 const prop = defineProps({
   payment: Object,
-  bookingName: {
-    type: String,
-    default: "Unknown",
-  },
+  paymentName: Function,
   showAction: true,
 });
 const emit = defineEmits([
@@ -113,11 +109,6 @@ const closeModals = () => {
   showInvalidModal.value = false;
   showRefractorModal.value = false;
   showOtp.value = false;
-};
-
-const confirmPay = () => {
-  emit("payPayment", formData.value);
-  closeModals();
 };
 
 const confirmValid = () => {
@@ -239,8 +230,8 @@ onUnmounted(() => {
       class="text-lg text-surface-700 dark:text-surface-400 block mb-8 text-center font-[Poppins]"
     >
       Are you sure you want to
-      <strong class="text-green-500">VALID</strong> this payment:
-      <span class="font-black font-[Poppins]">{{ payment.paymentId }}</span
+      <strong class="text-green-500">VALID</strong> this payment by
+      <span class="font-black font-[Poppins]">{{ paymentName(payment) }}</span
       >?
     </span>
 
@@ -273,9 +264,14 @@ onUnmounted(() => {
     >
       Are you sure you want to
       <strong class="text-orange-500">INVALID</strong> this payment:
-      <span class="font-black font-[Poppins]">{{ payment.paymentId }}</span
+      <span class="font-black font-[Poppins]">{{ paymentName(payment) }}</span
       >?
     </span>
+
+    <div class="text-left text-base space-y-2 mb-5">
+      <label>Remarks:</label>
+      <input class="w-full" v-model="formData.remarks" />
+    </div>
 
     <div class="flex justify-center gap-2 font-[Poppins]">
       <Button
@@ -306,7 +302,7 @@ onUnmounted(() => {
     >
       Are you sure you want to
       <strong class="text-red-500">VOID</strong> this payment:
-      <span class="font-black font-[Poppins]">{{ payment.paymentId }}</span
+      <span class="font-black font-[Poppins]">{{ paymentName(payment) }}</span
       >?
     </span>
 

@@ -14,7 +14,6 @@ import {
 } from "../../utility/dateFormat";
 import { formatPeso } from "../../utility/pesoFormat.js";
 import Select from "primevue/select";
-// import { getBookingStyle } from "../../composables/calendarStyle.js";
 import { useCatalogStore } from "../../stores/catalogStore.js";
 import { useDiscountStore } from "../../stores/discountStore.js";
 import { useBookingStore } from "../../stores/bookingStore.js";
@@ -25,6 +24,7 @@ import {
   getBookingStyle,
   disabledDates,
 } from "../../composables/calendarStyle";
+import InputNumber from "primevue/inputnumber";
 
 const toast = useToast();
 const bookingStore = useBookingStore();
@@ -54,7 +54,7 @@ const newBooking = ref({
   firstName: "" || null,
   lastName: "" || null,
   contactNo: "" || null,
-  email: "" || null,
+  emailAddress: "" || null,
   address: "" || null,
   packageId: "",
   eventType: "" || null,
@@ -87,14 +87,53 @@ const openAddBookingModal = () => {
 const closeAddBookingModal = () => {
   showAddBookingModal.value = false;
   showPaymentModal.value = false;
+  showBookingSummary.value = false;
 };
 
 const addBooking = () => {
+  const contactRegex =
+    /^(?:\+63\d{10}|\+63 \d{3} \d{3} \d{4}|09\d{9}|09\d{2} \d{3} \d{4})$/;
+  if (
+    !newBooking.value.firstName ||
+    !newBooking.value.lastName ||
+    !newBooking.value.emailAddress ||
+    !newBooking.value.address ||
+    !newBooking.value.packageName ||
+    !newBooking.value.checkInDate ||
+    !newBooking.value.checkOutDate ||
+    !newBooking.value.mode
+  ) {
+    alert("Please fill in all required fields.");
+    return;
+  }
+  if (!contactRegex.test(newBooking.value.contactNo)) {
+    alert(
+      "Invalid contact number format. Use +639171234567, +63 917 123 4567, 09171234567, or 0917 123 4567."
+    );
+    return;
+  }
   showAddBookingModal.value = false;
   showPaymentModal.value = true;
 };
 
 const bookingSummary = () => {
+  if (
+    !newBooking.value.paymentTerms ||
+    !paymentDetails.value.tenderedAmount ||
+    !paymentDetails.value.paymentMethod ||
+    !paymentDetails.value.senderName
+  ) {
+    alert("Please fill in all required fields.");
+    return;
+  }
+
+  if (paymentDetails.value.paymentMethod === "gcash") {
+    if (!paymentDetails.value.reference || !paymentDetails.value.imageUrl) {
+      alert("Please fill in all required fields.");
+      return;
+    }
+  }
+
   showBookingSummary.value = true;
   showPaymentModal.value = false;
 };
@@ -159,6 +198,19 @@ const selectedPackage = computed(() => {
   );
 });
 
+const allPackages = computed(() => {
+  const combined = [
+    ...(packageStore.packages || []),
+    ...(packageStore.promos || []),
+  ];
+  const seen = new Set();
+  return combined.filter((pkg) => {
+    if (seen.has(pkg.packageId)) return false;
+    seen.add(pkg.packageId);
+    return true;
+  });
+});
+
 const pkgName = selectedPackage?.name;
 const pkgPrice = selectedPackage?.price;
 
@@ -179,7 +231,7 @@ const addOnsTotal = computed(() => {
 });
 
 const totalAmount = computed(() => {
-  // const pkgPrice = selectedPackage.value?.price || 0;
+  const pkgPrice = selectedPackage.value?.price || 0;
   const discount = selectedDiscount.value?.percentage || 0;
   const discounted = pkgPrice - pkgPrice * (discount / 100);
   return Math.max(discounted + addOnsTotal.value, 0);
@@ -259,16 +311,6 @@ const availableModes = computed(() => {
 });
 
 const confirmBooking = async () => {
-  if (
-    !newBooking.value.packageName ||
-    !newBooking.value.checkInDate ||
-    !newBooking.value.checkOutDate ||
-    !newBooking.value.mode ||
-    !newBooking.value.paymentTerms
-  ) {
-    alert("Please fill in all required fields.");
-    return;
-  }
   // Find the discount by ID or name
   const discount = discountStore.discounts.find(
     (d) => d.discountId === newBooking.value.discountId
@@ -310,7 +352,7 @@ const confirmBooking = async () => {
     <Dialog
       v-model:visible="showAddBookingModal"
       modal
-      :style="{ width: '60rem', minHeight: '40rem' }"
+      :style="{ width: '60rem', minHeight: 'auto' }"
     >
       <template #header>
         <div class="flex flex-col items-center justify-center w-full">
@@ -347,7 +389,7 @@ const confirmBooking = async () => {
             <label>Email Address</label>
             <input
               class="packEvents"
-              v-model="newBooking.email"
+              v-model="newBooking.emailAddress"
               placeholder="Email Address"
             />
           </div>
@@ -370,10 +412,7 @@ const confirmBooking = async () => {
             <Select
               id="packages"
               v-model="newBooking.packageName"
-              :options="[
-                ...(packageStore.packages || []),
-                ...(packageStore.promos || []),
-              ]"
+              :options="allPackages"
               optionLabel="name"
               optionValue="packageId"
               placeholder="Select a Package or Promos"
@@ -485,11 +524,21 @@ const confirmBooking = async () => {
           </div> -->
           <div>
             <label>Number of Guest:</label>
-            <input
+            <!-- <InputNumber
               class="atcngs"
               type="number"
               v-model="newBooking.numberOfGuest"
               placeholder="Number of Guest"
+            /> -->
+            <InputNumber
+              v-model="newBooking.numberOfGuest"
+              placeholder="Number of Guest"
+              inputId="minmax-buttons"
+              mode="decimal"
+              showButtons
+              :min="0"
+              :max="100"
+              fluid
             />
           </div>
         </div>
@@ -585,9 +634,18 @@ const confirmBooking = async () => {
           </div>
           <div>
             <label>Tendered Amount:</label>
-            <input
+            <!-- <input
               v-model.number="paymentDetails.tenderedAmount"
               placeholder="Total Amount"
+            /> -->
+            <InputNumber
+              class="w-full"
+              placeholder="e.g. 2000"
+              inputId="currency-php"
+              mode="currency"
+              currency="PHP"
+              locale="en-PH"
+              v-model="paymentDetails.tenderedAmount"
             />
           </div>
         </div>
@@ -617,12 +675,12 @@ const confirmBooking = async () => {
             </div>
           </template>
         </div>
-
+        <!-- 
         <div class="packEvent">
           <div>
             <label>Total Amount: {{ formatPeso(totalAmount) }}</label>
           </div>
-        </div>
+        </div> -->
 
         <!--<div class="packEvent">
           <div>
@@ -687,7 +745,7 @@ const confirmBooking = async () => {
               {{ newBooking.lastName }}
             </p>
             <p><strong>Contact No: </strong> {{ newBooking.contactNo }}</p>
-            <p><strong>Email Address: </strong>{{ newBooking.email }}</p>
+            <p><strong>Email Address: </strong>{{ newBooking.emailAddress }}</p>
             <p><strong>Address: </strong> {{ newBooking.address }}</p>
           </div>
           <div class="w-[50%]">

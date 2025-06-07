@@ -6,6 +6,7 @@ import Toast from "primevue/toast";
 import Checkbox from "primevue/checkbox";
 import { useToast } from "primevue/usetoast";
 import { formatPeso } from "../../utility/pesoFormat";
+import FileUpload from "primevue/fileupload";
 
 const toast = useToast();
 const showMenu = ref(false);
@@ -44,6 +45,7 @@ const confirmCompleted = () => {
     refundStatus: "completed",
     // remarks: formData.value.remarks || "Refund Completed",
   };
+  console.log("Refund Payload", status);
   emit("completedRefund", status);
   toast.add({
     severity: "success",
@@ -86,6 +88,13 @@ const confirmFailed = () => {
     life: 3000,
   });
   closeModals();
+};
+
+const onFileSelect = (event) => {
+  const file = event.files[0];
+  if (file) {
+    formData.value.imageUrl = file;
+  }
 };
 
 const hideMenu = ref(false);
@@ -175,7 +184,16 @@ onUnmounted(() => {
           <label>GCash Reference No:</label>
           <input class="w-full" v-model="formData.reference" />
           <label>Proof of Payment:</label>
-          <input class="w-full" v-model="formData.imageUrl" />
+          <FileUpload
+            ref="fileupload"
+            v-model="formData.imageUrl"
+            mode="basic"
+            name="imageUrl"
+            url="/api/upload"
+            accept="image/*"
+            :maxFileSize="1000000"
+            @select="onFileSelect"
+          />
         </template>
 
         <label>Sender Name:</label>
@@ -273,12 +291,7 @@ onUnmounted(() => {
       >?
     </span>
 
-    <div class="space-y-4 font-[Poppins] px-4">
-      <p class="text-center text-lg">
-        Are you sure you want to
-        <strong class="text-green-600">complete</strong> this refund payment?
-      </p>
-
+    <div class="space-y-4 font-[Poppins] px-4 mb-4">
       <div class="text-left text-base space-y-2">
         <label>Remarks:</label>
         <input class="w-full" v-model="formData.remarks" />
