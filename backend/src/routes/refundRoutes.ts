@@ -21,6 +21,11 @@ import { authMiddleware } from "../middlewares/authMiddleware";
 import { verifyPermission } from "../utils/permissionUtils";
 import type { AuthContext } from "../types";
 import { Resend } from "resend";
+import {
+  refundFailedHtml,
+  refundLowAmountHtml,
+  refundOverpaymentHtml,
+} from "../utils/emailTemplates";
 
 const refundRoutes = new OpenAPIHono<AuthContext>();
 
@@ -697,35 +702,14 @@ refundRoutes.openapi(
               const notifyResult = await resend.emails.send({
                 from: "Danayas Resort <onboarding@resend.dev>",
                 to: ["realrickyjones@gmail.com"], // Replace with Customer email
-                subject: `Refund Processed for Your Booking at Danayas Resort & Events Venue`,
+                subject:
+                  "Refund Issued - Insufficient Payment Received for Your Booking",
                 replyTo: "Danayas@email.com", // Replace with Danayas email
-                html: `
-                      <div style="font-family: Arial, sans-serif; background: #fdfaf6; padding: 20px; color: #333;">
-                        <div style="max-width: 600px; margin: 0 auto; background: #fff; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
-                          <div style="background: #1e3d25; padding: 20px 30px; border-top-left-radius: 8px; border-top-right-radius: 8px;">
-                            <h2 style="margin: 0; color: #fdfaf6;">Danayas Resort & Events Venue</h2>
-                            <p style="margin: 5px 0 0; color: #fdfaf6;">Refund Initiated</p>
-                          </div>
-                          <div style="padding: 30px;">
-                            <p style="font-size: 16px;">Hello ${booking.firstName},</p>
-                            <p style="font-size: 15px;">Your recent payment for booking <strong>#${booking.bookingId}</strong> did not meet our minimum required down payment.</p>
-                            <p style="font-size: 14px; margin-top: 20px;">
-                              <strong>Refund Amount:</strong> ₱${refundAmount.toFixed(2)}
-                            </p>
-                            <p style="margin-top: 20px; font-size: 14px;">
-                              We have processed a full refund of your payment. You may retry with the correct amount. Contact us for assistance if needed.
-                            </p>
-                            <p style="margin-top: 30px; font-size: 13px; color: #999;">
-                              Sent automatically by the website on ${new Date().toLocaleString()}.
-                            </p>
-                          </div>
-                          <div style="background: #1e3d25; padding: 15px 30px; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; text-align: center;">
-                            <p style="margin: 0; font-size: 13px; color: #fdfaf6;">Danayas Resort & Events Venue</p>
-                            <p style="margin: 0; font-size: 12px; color: #ccc;">© ${new Date().getFullYear()} All rights reserved.</p>
-                          </div>
-                        </div>
-                      </div>
-                  `,
+                html: refundLowAmountHtml({
+                  customerName: booking.firstName ?? "Customer",
+                  bookingId: booking.bookingId,
+                  refundAmount,
+                }),
               });
             }
             if (isOverPayment) {
@@ -736,33 +720,13 @@ refundRoutes.openapi(
               const notifyResult = await resend.emails.send({
                 from: "Danayas Resort <onboarding@resend.dev>",
                 to: ["realrickyjones@gmail.com"], // Replace with Customer email
-                subject: `Refund Processed for Your Booking at Danayas Resort & Events Venue`,
+                subject: `Refund Issued - Overpayment on Your Danayas Booking`,
                 replyTo: "Danayas@email.com", // Replace with Danayas email
-                html: `
-                      <div style="font-family: Arial, sans-serif; background: #fdfaf6; padding: 20px; color: #333;">
-                        <div style="max-width: 600px; margin: 0 auto; background: #fff; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
-                          <div style="background: #1e3d25; padding: 20px 30px; border-top-left-radius: 8px; border-top-right-radius: 8px;">
-                            <h2 style="margin: 0; color: #fdfaf6;">Danayas Resort & Events Venue</h2>
-                            <p style="margin: 5px 0 0; color: #fdfaf6;">Refund Initiated</p>
-                          </div>
-                          <div style="padding: 30px;">
-                            <p style="font-size: 16px;">Hello ${booking.firstName},</p>
-                            <p style="font-size: 15px;">We have processed a refund due to an overpayment for your booking <strong>#${booking.bookingId}</strong>.</p>
-                            <p style="font-size: 14px; margin-top: 20px;">
-                              <strong>Refund Amount:</strong> ₱${refundAmount.toFixed(2)}
-                            </p>
-                            <p style="margin-top: 20px; font-size: 14px;">You will receive the refund via GCash shortly. If you have any questions, please contact our team.</p>
-                            <p style="margin-top: 30px; font-size: 13px; color: #999;">
-                              Sent automatically by the website on ${new Date().toLocaleString()}.
-                            </p>
-                          </div>
-                          <div style="background: #1e3d25; padding: 15px 30px; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; text-align: center;">
-                            <p style="margin: 0; font-size: 13px; color: #fdfaf6;">Danayas Resort & Events Venue</p>
-                            <p style="margin: 0; font-size: 12px; color: #ccc;">© ${new Date().getFullYear()} All rights reserved.</p>
-                          </div>
-                        </div>
-                      </div>
-                  `,
+                html: refundOverpaymentHtml({
+                  customerName: booking.firstName ?? "Customer",
+                  bookingId: booking.bookingId,
+                  refundAmount: refund.refundAmount,
+                }),
               });
             }
 
@@ -818,40 +782,19 @@ refundRoutes.openapi(
               publicPaymentStatus =
                 amountPaid === 0 ? "unpaid" : "partially-paid";
 
-                const resend = new Resend(process.env.RESEND_API_KEY);
-                const notifyResult = await resend.emails.send({
-                  from: "Danayas Resort <onboarding@resend.dev>",
-                  to: ["realrickyjones@gmail.com"], // Replace with Customer email
-                  subject: `Refund Processed for Your Booking at Danayas Resort & Events Venue`,
-                  replyTo: "Danayas@email.com", // Replace with Danayas email
-                  html: `
-                        <div style="font-family: Arial, sans-serif; background: #fdfaf6; padding: 20px; color: #333;">
-                          <div style="max-width: 600px; margin: 0 auto; background: #fff; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
-                            <div style="background: #1e3d25; padding: 20px 30px; border-top-left-radius: 8px; border-top-right-radius: 8px;">
-                              <h2 style="margin: 0; color: #fdfaf6;">Danayas Resort & Events Venue</h2>
-                              <p style="margin: 5px 0 0; color: #fdfaf6;">Refund Initiated</p>
-                            </div>
-                            <div style="padding: 30px;">
-                              <p style="font-size: 16px;">Hello ${booking.firstName},</p>
-                              <p style="font-size: 15px;">Your recent payment for booking <strong>#${booking.publicEntryId}</strong> did not meet our minimum required down payment.</p>
-                              <p style="font-size: 14px; margin-top: 20px;">
-                                <strong>Refund Amount:</strong> ₱${refundAmount.toFixed(2)}
-                              </p>
-                              <p style="margin-top: 20px; font-size: 14px;">
-                                We have processed a full refund of your payment. You may retry with the correct amount. Contact us for assistance if needed.
-                              </p>
-                              <p style="margin-top: 30px; font-size: 13px; color: #999;">
-                                Sent automatically by the website on ${new Date().toLocaleString()}.
-                              </p>
-                            </div>
-                            <div style="background: #1e3d25; padding: 15px 30px; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; text-align: center;">
-                              <p style="margin: 0; font-size: 13px; color: #fdfaf6;">Danayas Resort & Events Venue</p>
-                              <p style="margin: 0; font-size: 12px; color: #ccc;">© ${new Date().getFullYear()} All rights reserved.</p>
-                            </div>
-                          </div>
-                        </div>
-                    `,
-                });
+              const resend = new Resend(process.env.RESEND_API_KEY);
+              const notifyResult = await resend.emails.send({
+                from: "Danayas Resort <onboarding@resend.dev>",
+                to: ["realrickyjones@gmail.com"], // Replace with Customer email
+                subject:
+                  "Refund Issued - Insufficient Payment Received for Your Booking",
+                replyTo: "Danayas@email.com", // Replace with Danayas email
+                html: refundLowAmountHtml({
+                  customerName: booking.firstName ?? "Customer",
+                  bookingId: booking.publicEntryId,
+                  refundAmount,
+                }),
+              });
             }
             if (isOverPayment) {
               remainingBalance = Math.max(booking.remainingBalance, 0);
@@ -860,33 +803,13 @@ refundRoutes.openapi(
               const notifyResult = await resend.emails.send({
                 from: "Danayas Resort <onboarding@resend.dev>",
                 to: ["realrickyjones@gmail.com"], // Replace with Customer email
-                subject: `Refund Processed for Your Booking at Danayas Resort & Events Venue`,
+                subject: `Refund Issued - Overpayment on Your Danayas Booking`,
                 replyTo: "Danayas@email.com", // Replace with Danayas email
-                html: `
-                      <div style="font-family: Arial, sans-serif; background: #fdfaf6; padding: 20px; color: #333;">
-                        <div style="max-width: 600px; margin: 0 auto; background: #fff; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
-                          <div style="background: #1e3d25; padding: 20px 30px; border-top-left-radius: 8px; border-top-right-radius: 8px;">
-                            <h2 style="margin: 0; color: #fdfaf6;">Danayas Resort & Events Venue</h2>
-                            <p style="margin: 5px 0 0; color: #fdfaf6;">Refund Initiated</p>
-                          </div>
-                          <div style="padding: 30px;">
-                            <p style="font-size: 16px;">Hello ${booking.firstName},</p>
-                            <p style="font-size: 15px;">We have processed a refund due to an overpayment for your booking <strong>#${booking.publicEntryId}</strong>.</p>
-                            <p style="font-size: 14px; margin-top: 20px;">
-                              <strong>Refund Amount:</strong> ₱${refundAmount.toFixed(2)}
-                            </p>
-                            <p style="margin-top: 20px; font-size: 14px;">You will receive the refund via GCash shortly. If you have any questions, please contact our team.</p>
-                            <p style="margin-top: 30px; font-size: 13px; color: #999;">
-                              Sent automatically by the website on ${new Date().toLocaleString()}.
-                            </p>
-                          </div>
-                          <div style="background: #1e3d25; padding: 15px 30px; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; text-align: center;">
-                            <p style="margin: 0; font-size: 13px; color: #fdfaf6;">Danayas Resort & Events Venue</p>
-                            <p style="margin: 0; font-size: 12px; color: #ccc;">© ${new Date().getFullYear()} All rights reserved.</p>
-                          </div>
-                        </div>
-                      </div>
-                  `,
+                html: refundOverpaymentHtml({
+                  customerName: booking.firstName ?? "Customer",
+                  bookingId: booking.publicEntryId,
+                  refundAmount: refund.refundAmount,
+                }),
               });
             }
 
@@ -942,39 +865,17 @@ refundRoutes.openapi(
             }
 
             const resend = new Resend(process.env.RESEND_API_KEY);
-              const notifyResult = await resend.emails.send({
-                from: "Danayas Resort <onboarding@resend.dev>",
-                to: ["realrickyjones@gmail.com"], // Replace with Customer email
-                subject: `Refund Failed - Danayas Resort`,
-                replyTo: "Danayas@email.com", // Replace with Danayas email
-                html: `
-                      <div style="font-family: Arial, sans-serif; background: #fdfaf6; padding: 20px; color: #333;">
-                        <div style="max-width: 600px; margin: 0 auto; background: #fff; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
-                          <div style="background: #1e3d25; padding: 20px 30px; border-top-left-radius: 8px; border-top-right-radius: 8px;">
-                            <h2 style="margin: 0; color: #fdfaf6;">Danayas Resort & Events Venue</h2>
-                            <p style="margin: 5px 0 0; color: #fdfaf6;">Refund Failed Notification</p>
-                          </div>
-                          <div style="padding: 30px;">
-                            <p style="font-size: 16px;">Hello ${booking.firstName},</p>
-                            <p style="font-size: 15px;">
-                              We regret to inform you that your refund request for the amount of <strong>₱${refund.refundAmount.toFixed(2)}</strong> could not be processed at this time.
-                            </p>
-                            <p style="font-size: 15px;">
-                              <strong>Reason:</strong> ${refund.refundReason}
-                            </p>
-                            <p style="margin-top: 20px; font-size: 14px;">Please contact our support team for assistance or further clarification.</p>
-                            <p style="margin-top: 30px; font-size: 13px; color: #999;">
-                              Sent automatically by the website on ${new Date().toLocaleString()}.
-                            </p>
-                          </div>
-                          <div style="background: #1e3d25; padding: 15px 30px; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; text-align: center;">
-                            <p style="margin: 0; font-size: 13px; color: #fdfaf6;">Danayas Resort & Events Venue</p>
-                            <p style="margin: 0; font-size: 12px; color: #ccc;">© ${new Date().getFullYear()} All rights reserved.</p>
-                          </div>
-                        </div>
-                      </div>
-                  `,
-              });
+            const notifyResult = await resend.emails.send({
+              from: "Danayas Resort <onboarding@resend.dev>",
+              to: ["realrickyjones@gmail.com"], // Replace with Customer email
+              subject: `Refund Failed - Action Required for Your Booking at Danayas`,
+              replyTo: "Danayas@email.com", // Replace with Danayas email
+              html: refundFailedHtml({
+                customerName: booking.firstName ?? "Customer",
+                refundAmount: refund.refundAmount,
+                reason: refund.refundReason,
+              }),
+            });
 
             const updatedBooking = (
               await tx
@@ -1010,6 +911,19 @@ refundRoutes.openapi(
             if (!booking) {
               throw new NotFoundError("Booking not found.");
             }
+            const resend = new Resend(process.env.RESEND_API_KEY);
+            const notifyResult = await resend.emails.send({
+              from: "Danayas Resort <onboarding@resend.dev>",
+              to: ["realrickyjones@gmail.com"], // Replace with Customer email
+              subject: `Refund Failed - Action Required for Your Booking at Danayas`,
+              replyTo: "Danayas@email.com", // Replace with Danayas email
+              html: refundFailedHtml({
+                customerName: booking.firstName ?? "Customer",
+                refundAmount: refund.refundAmount,
+                reason: refund.refundReason,
+              }),
+            });
+            
             const updatedBooking = (
               await tx
                 .update(PublicEntryTable)

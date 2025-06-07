@@ -28,6 +28,7 @@ import { RefundPaymentsTable } from "../schemas/RefundPayment";
 import { AuditLogsTable } from "../schemas/AuditLog";
 import { BookingAddOnsTable, CatalogAddOnsTable } from "../schemas/schema";
 import { Resend } from "resend";
+import { bookingConfirmationHtml, refundPendingHtml } from "../utils/emailTemplates";
 
 const bookingRoutes = new OpenAPIHono<AuthContext>();
 
@@ -387,59 +388,23 @@ bookingRoutes.openapi(
           })
           .execute();
 
-        const resend = new Resend(process.env.RESEND_API_KEY);
-        const notifyResult = await resend.emails.send({
-          from: "Danayas Resort <onboarding@resend.dev>",
-          to: ["realrickyjones@gmail.com"], // Replace with Customer email
-          subject: `Your Booking Confirmation at Danayas Resort & Events Venue`,
-          replyTo: "Danayas@email.com", // Replace with Danayas email
-          html: `
-                <div style="font-family: Arial, sans-serif; background: #fdfaf6; padding: 20px; color: #333;">
-                  <div style="max-width: 600px; margin: 0 auto; background: #fff; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
-                    <div style="background: #1e3d25; padding: 20px 30px; border-top-left-radius: 8px; border-top-right-radius: 8px;">
-                      <h2 style="margin: 0; color: #fdfaf6;">Danayas Resort & Events Venue</h2>
-                      <p style="margin: 5px 0 0; color: #fdfaf6;">Booking Confirmation</p>
-                    </div>
-                    <div style="padding: 30px;">
-                      <p style="font-size: 16px;">Hello ${processedBody.firstName},</p>
-                      <p style="font-size: 15px;">Thank you for your booking! Here are your reservation details:</p>
-                      <table style="width: 100%; margin-top: 20px; font-size: 15px;">
-                        <tr>
-                          <td style="padding: 8px 0; font-weight: bold;">Package:</td>
-                          <td style="padding: 8px 0;">${selectedPackage.name} (${body.mode})</td>
-                        </tr>
-                        <tr>
-                          <td style="padding: 8px 0; font-weight: bold;">Check-In:</td>
-                          <td style="padding: 8px 0;">${processedBody.checkInDate}</td>
-                        </tr>
-                        <tr>
-                          <td style="padding: 8px 0; font-weight: bold;">Check-Out:</td>
-                          <td style="padding: 8px 0;">${processedBody.checkOutDate}</td>
-                        </tr>
-                        <tr>
-                          <td style="padding: 8px 0; font-weight: bold;">Total Amount:</td>
-                          <td style="padding: 8px 0;">₱${totalAmount.toLocaleString()}</td>
-                        </tr>
-                        <tr>
-                          <td style="padding: 8px 0; font-weight: bold;">Payment Status:</td>
-                          <td style="padding: 8px 0;">Unpaid</td>
-                        </tr>
-                      </table>
-                      <p style="margin-top: 30px; font-size: 14px;">
-                        We will contact you soon with further instructions. If you have any questions, feel free to reply to this email.
-                      </p>
-                      <p style="margin-top: 10px; font-size: 13px; color: #999;">
-                        Booking created on ${new Date().toLocaleString()}.
-                      </p>
-                    </div>
-                    <div style="background: #1e3d25; padding: 15px 30px; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; text-align: center;">
-                      <p style="margin: 0; font-size: 13px; color: #fdfaf6;">Danayas Resort & Events Venue</p>
-                      <p style="margin: 0; font-size: 12px; color: #ccc;">© ${new Date().getFullYear()} All rights reserved.</p>
-                    </div>
-                  </div>
-                </div>
-              `,
-        });
+          // EMAIL FOR BOOKING CONFIRMATION
+          const resend = new Resend(process.env.RESEND_API_KEY);
+          await resend.emails.send({
+            from: "Danayas Resort <onboarding@resend.dev>",
+            to: ["realrickyjones@gmail.com"], // Replace with Customer email
+            subject: `Your Booking Confirmation at Danayas Resort & Events Venue`,
+            replyTo: "Danayas@email.com", // Replace with Danayas email
+            html: bookingConfirmationHtml({
+              firstName: processedBody.firstName ?? "Guest",
+              packageName: selectedPackage.name,
+              mode: body.mode,
+              checkInDate: processedBody.checkInDate,
+              checkOutDate: processedBody.checkOutDate,
+              totalAmount,
+            }),
+          });
+          
 
         return insertedBooking;
       });
@@ -785,56 +750,20 @@ bookingRoutes.openapi(
             return sum + payment.netPaidAmount;
           }, 0);
 
+          // SEND EMAIL NOTIFICATION FOR PENDING REFUND
           const resend = new Resend(process.env.RESEND_API_KEY);
           const notifyResult = await resend.emails.send({
             from: "Danayas Resort <onboarding@resend.dev>",
             to: ["realrickyjones@gmail.com"], // Replace with Customer email
             subject: `Refund Processing Review for Your Cancelled Booking`,
             replyTo: "Danayas@email.com", // Replace with Danayas email
-            html: `
-                  <div style="font-family: Arial, sans-serif; background: #fdfaf6; padding: 20px; color: #333;">
-                    <div style="max-width: 600px; margin: 0 auto; background: #fff; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
-                      <div style="background: #1e3d25; padding: 20px 30px; border-top-left-radius: 8px; border-top-right-radius: 8px;">
-                        <h2 style="margin: 0; color: #fdfaf6;">Danayas Resort & Events Venue</h2>
-                        <p style="margin: 5px 0 0; color: #fdfaf6;">Refund Processing Notification</p>
-                      </div>
-                      <div style="padding: 30px;">
-                        <p style="font-size: 16px;">Dear ${booking.firstName},</p>
-                        <p style="font-size: 15px;">
-                          We have received your cancellation request for booking <strong>#${bookingId}</strong>. A refund is currently being processed and reviewed.
-                        </p>
-                        <table style="width: 100%; margin-top: 20px; font-size: 14px;">
-                          <tr>
-                            <td style="padding: 6px 0; font-weight: bold;">Refund Amount:</td>
-                            <td style="padding: 6px 0;">₱${(totalPaid * 0.5).toFixed(2)}</td>
-                          </tr>
-                          <tr>
-                            <td style="padding: 6px 0; font-weight: bold;">Refund Method:</td>
-                            <td style="padding: 6px 0;">${refundMethod.toUpperCase()}</td>
-                          </tr>
-                          ${
-                            refundMethod === "cash" && receiveName
-                              ? `<tr>
-                                  <td style="padding: 6px 0; font-weight: bold;">Receiver Name:</td>
-                                  <td style="padding: 6px 0;">${receiveName}</td>
-                                </tr>`
-                              : ""
-                          }
-                        </table>
-                        <p style="margin-top: 20px; font-size: 14px;">
-                          Please allow a few business days for the refund to be reviewed. If you have any concerns, feel free to contact our support team.
-                        </p>
-                        <p style="margin-top: 30px; font-size: 13px; color: #999;">
-                          Sent automatically by the website on ${new Date().toLocaleString()}.
-                        </p>
-                      </div>
-                      <div style="background: #1e3d25; padding: 15px 30px; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; text-align: center;">
-                        <p style="margin: 0; font-size: 13px; color: #fdfaf6;">Danayas Resort & Events Venue</p>
-                        <p style="margin: 0; font-size: 12px; color: #ccc;">© ${new Date().getFullYear()} All rights reserved.</p>
-                      </div>
-                    </div>
-                  </div>
-              `,
+            html: refundPendingHtml({
+              bookingId,
+              firstName: booking.firstName ?? "Customer",
+              refundAmount: totalPaid * 0.5,
+              refundMethod,
+              receiveName,
+            }),
           });
 
           const refund = (
