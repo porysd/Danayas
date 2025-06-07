@@ -22,6 +22,14 @@ import Textarea from "primevue/textarea";
 import { useBookingStore } from "../stores/bookingStore";
 import { usePublicEntryStore } from "../stores/publicEntryStore.js";
 import { useBlockedStore } from "../stores/blockedDateStore.js";
+import {
+  getBookingStyle,
+  disabledDates,
+  fullCalendarEvents,
+} from "../composables/calendarStyle";
+import { formatPeso } from "../utility/pesoFormat";
+import FileUpload from "primevue/fileupload";
+import Checkbox from "primevue/checkbox";
 
 const toast = useToast();
 
@@ -33,9 +41,13 @@ const showRescheduleModal = ref(false);
 const rescheduleData = ref({});
 const showCancelDialog = ref(false);
 const cancelData = ref({});
+const { calendarEvents, calendarOptions } = fullCalendarEvents();
+const showPayModal = ref(false);
+const showPaymentModal = ref(false);
+const formData = ref({});
 
-const props = defineProps(["booking", "showAction", "refund"]);
-const emit = defineEmits(["rescheduleBooking", "cancelBooking"]);
+const props = defineProps(["booking", "showAction", "refund", "payAgain"]);
+const emit = defineEmits(["rescheduleBooking", "cancelBooking", "payPayment"]);
 
 const openRescheduleModal = () => {
   rescheduleData.value = {
@@ -50,6 +62,8 @@ const openRescheduleModal = () => {
 const closeModals = () => {
   showRescheduleModal.value = false;
   showCancelDialog.value = false;
+  showPayModal.value = false;
+  showPaymentModal.value = false;
 };
 
 watch(
@@ -112,6 +126,35 @@ const confirmCancellation = () => {
   showCancelDialog.value = false;
 };
 
+const onFileSelect = (event) => {
+  const file = event.files[0];
+  if (file) {
+    formData.value.imageUrl = file;
+  }
+};
+
+const openPayModal = () => {
+  formData.value = { ...props.payAgain };
+  showPayModal.value = true;
+  showMenu.value = false;
+};
+
+const nextPay = () => {
+  showPayModal.value = false;
+  showPaymentModal.value = true;
+};
+
+const backPay = () => {
+  showPayModal.value = true;
+  showPaymentModal.value = false;
+};
+
+const confirmPay = () => {
+  const payload = { ...formData.value, paymentMethod: "gcash" };
+  emit("payPayment", payload);
+  closeModals();
+};
+
 const hideMenu = ref(null);
 const closeMenu = (event) => {
   if (hideMenu.value && !hideMenu.value.contains(event.target)) {
@@ -128,213 +171,115 @@ onUnmounted(() => {
 
 const minDate = new Date();
 
-const disabledDates = computed(() => {
-  const disabled = [];
-
-  // Blocked dates
-  blockStore.blocked.forEach((bd) => {
-    if (bd.blockedDates) {
-      disabled.push(new Date(bd.blockedDates));
-    }
-  });
-
-  // Fully booked dates (whole-day or both day-time and night-time)
-  const bookingsByDate = {};
-  bookingStore.bookings.forEach((b) => {
-    if (b.checkInDate) {
-      const date = b.checkInDate;
-      if (!bookingsByDate[date]) bookingsByDate[date] = new Set();
-      bookingsByDate[date].add(b.mode);
-    }
-  });
-  publicStore.public.forEach((p) => {
-    if (p.entryDate) {
-      const date = p.entryDate;
-      if (!bookingsByDate[date]) bookingsByDate[date] = new Set();
-      bookingsByDate[date].add(p.mode);
-    }
-  });
-
-  Object.entries(bookingsByDate).forEach(([date, modes]) => {
-    if (
-      modes.has("whole-day") ||
-      (modes.has("day-time") && modes.has("night-time"))
-    ) {
-      disabled.push(new Date(date));
-    }
-  });
-
-  return disabled;
-});
-
-const getBookingStyle = (slotDate) => {
-  const formattedDate = `${slotDate.year}-${String(slotDate.month + 1).padStart(
-    2,
-    "0"
-  )}-${String(slotDate.day).padStart(2, "0")}`;
-
-  // Collect all booking/public modes for the date
-  const mode = new Set();
-  let isBlocked = false;
-
-  bookingStore.bookings.forEach((b) => {
-    if (b.checkInDate === formattedDate) {
-      mode.add(b.mode);
-    }
-  });
-
-  publicStore.public.forEach((p) => {
-    if (p.entryDate === formattedDate) {
-      mode.add(p.mode);
-    }
-  });
-
-  if (blockStore.blocked.some((bd) => bd.blockedDates === formattedDate)) {
-    isBlocked = true;
-  }
-
-  let backgroundColor, color;
-
-  if (isBlocked) {
-    backgroundColor = "grey";
-    color = "white";
-  } else if (
-    mode.has("whole-day") ||
-    (mode.has("day-time") && mode.has("night-time"))
+const checkOutMinDate = computed(() => {
+  if (!rescheduleData.value.checkInDate) return minDate;
+  const checkIn = new Date(rescheduleData.value.checkInDate);
+  if (
+    rescheduleData.value.mode === "night-time" ||
+    rescheduleData.value.mode === "whole-day"
   ) {
-    backgroundColor = "#FF6B6B"; // Fully Booked
-    color = "white";
-  } else if (mode.has("day-time")) {
-    backgroundColor = "#6A5ACD"; // Night Available
-    color = "white";
-  } else if (mode.has("night-time")) {
-    backgroundColor = "#FFD580"; // Day Available
-    color = "black";
-  } else {
+    const nextDay = new Date(checkIn);
+    nextDay.setDate(checkIn.getDate() + 1);
+    return nextDay;
   }
-
-  return {
-    backgroundColor,
-    color,
-    width: "40px",
-    height: "40px",
-    display: "inline-flex",
-    justifyContent: "center",
-    alignItems: "center",
-    borderRadius: "10rem",
-    fontSize: "17px",
-  };
-};
-
-// Process booking days
-const mapBookingsToEvents = (
-  bookings = [],
-  publics = [],
-  blockedDates = []
-) => {
-  const eventByDate = {};
-
-  bookings.forEach((b) => {
-    const date = b.checkInDate;
-    if (!eventByDate[date])
-      eventByDate[date] = { modes: new Set(), blocked: null };
-    eventByDate[date].modes.add(b.mode);
-  });
-
-  publics.forEach((p) => {
-    const date = p.entryDate;
-    if (!eventByDate[date])
-      eventByDate[date] = { modes: new Set(), blocked: null };
-    eventByDate[date].modes.add(p.mode);
-  });
-
-  blockedDates.forEach((bd) => {
-    const date = bd.blockedDates;
-    if (!eventByDate[date])
-      eventByDate[date] = { modes: new Set(), blocked: null };
-    eventByDate[date].blocked = bd;
-  });
-
-  return Object.entries(eventByDate).map(([date, { modes, blocked }]) => {
-    let backgroundColor, textColor, title;
-
-    if (blocked) {
-      backgroundColor = "grey";
-      textColor = "white";
-      title = "Not Available";
-    } else if (
-      modes.has("whole-day") ||
-      (modes.has("day-time") && modes.has("night-time"))
-    ) {
-      backgroundColor = "#FF6B6B";
-      textColor = "white";
-      title = "Fully Booked";
-    } else if (modes.has("day-time")) {
-      backgroundColor = "#6A5ACD";
-      textColor = "white";
-      title = "Night Available";
-    } else if (modes.has("night-time")) {
-      backgroundColor = "#FFD580";
-      textColor = "black";
-      title = "Day Available";
-    } else {
-      backgroundColor = "#90EE90";
-      textColor = "#15803D";
-      title = "Available";
-    }
-
-    return {
-      id: `summary-${date}`,
-      title,
-      start: date,
-      backgroundColor,
-      textColor,
-      allDay: true,
-    };
-  });
-};
-
-const calendarEvents = computed(() => {
-  return mapBookingsToEvents(
-    bookingStore.bookings,
-    publicStore.public,
-    blockStore.blocked
-  );
+  return checkIn;
 });
 
-const calendarOptions = ref({
-  plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin],
-  headerToolbar: {
-    left: "prev,next today",
-    center: "title",
-    right: "dayGridMonth,timeGridWeek,timeGridDay",
-  },
-  initialView: "dayGridMonth",
-  editable: false,
-  selectable: false,
-  selectMirror: false,
-  dayMaxEvents: false,
-  weekends: true,
-  events: calendarEvents,
+const maxDate = computed(() => {
+  if (!rescheduleData.value.checkInDate) return null;
+
+  const checkIn = new Date(rescheduleData.value.checkInDate);
+
+  if (
+    rescheduleData.value.mode === "night-time" ||
+    rescheduleData.value.mode === "whole-day"
+  ) {
+    const nextDay = new Date(checkIn);
+    nextDay.setDate(checkIn.getDate() + 1);
+    return nextDay;
+  }
+
+  return checkIn;
+});
+
+const allowedStatus = ["reserved", "pending", "rescheduled"];
+
+const unavailableModes = computed(() => {
+  const date = rescheduleData.value.checkInDate;
+  if (!date) return new Set();
+
+  const formattedDate = formatDateISO(date);
+
+  const modes = new Set();
+
+  bookingStore.bookings
+    .filter((b) => allowedStatus.includes(b.bookStatus))
+    .forEach((b) => {
+      if (b.checkInDate) {
+        const bookingDate =
+          typeof b.checkInDate === "string"
+            ? b.checkInDate.slice(0, 10)
+            : new Date(b.checkInDate).toISOString().split("T")[0];
+
+        if (bookingDate === formattedDate) {
+          modes.add(b.mode);
+        }
+      }
+    });
+
+  publicStore.public
+    .filter((p) => allowedStatus.includes(p.status))
+    .forEach((p) => {
+      if (p.entryDate) {
+        const entryDate =
+          typeof p.entryDate === "string"
+            ? p.entryDate.slice(0, 10)
+            : new Date(p.entryDate).toISOString().split("T")[0];
+
+        if (entryDate === formattedDate) {
+          modes.add(p.mode);
+        }
+      }
+    });
+
+  if (modes.has("whole-day")) {
+    return new Set(["day-time", "night-time", "whole-day"]);
+  }
+
+  if (modes.has("day-time") || modes.has("night-time")) {
+    const unavailable = new Set([...modes]);
+    unavailable.add("whole-day");
+    return unavailable;
+  }
+  return modes;
 });
 </script>
 
 <template>
   <div class="relative menu-container inline-block">
     <button
-      @click.stop="$emit('click')"
+      @click.stop="showMenu = !showMenu"
       class="logBtn pi pi-ellipsis-v cursor-pointer"
     ></button>
 
-    <div v-if="showAction" ref="hideMenu" class="loggerBtn">
+    <div v-if="showMenu" ref="hideMenu" class="loggerBtn">
       <ul>
         <li
+          v-if="payAgain && showAction"
+          class="hover:bg-gray-100 dark:hover:bg-gray-700"
+          @click="openPayModal"
+        >
+          Pay Again
+        </li>
+        <li
+          v-if="!showAction && !payAgain"
           class="hover:bg-gray-100 dark:hover:bg-gray-700"
           @click="openRescheduleModal"
         >
           Reschedule
         </li>
         <li
+          v-if="!showAction && !payAgain"
           class="hover:bg-gray-100 dark:hover:bg-gray-700"
           @click="openCancelDialog"
         >
@@ -343,6 +288,156 @@ const calendarOptions = ref({
       </ul>
     </div>
   </div>
+
+  <Dialog v-model:visible="showPayModal" modal :style="{ width: '30rem' }">
+    <template #header>
+      <div class="flex flex-col items-center justify-center w-full">
+        <h2 class="text-xl font-bold font-[Poppins]">Confirm Payment</h2>
+      </div>
+    </template>
+
+    <div class="space-y-4 font-[Poppins] px-4">
+      <p class="text-center text-lg">
+        Please pay
+        <strong class="text-green-600">AGAIN</strong> to process this payment?
+      </p>
+
+      <div class="text-left text-base space-y-2">
+        <p>
+          <strong>Name:</strong>
+          {{ booking.firstName }} {{ booking.lastName }}
+        </p>
+        <p><strong>Payment Terms: </strong> {{ booking.paymentTerms }}</p>
+        <p>
+          <strong>Amount Paid: </strong>{{ formatPeso(booking.amountPaid) }}
+        </p>
+        <p>
+          <strong>Remaining Balance: </strong
+          >{{ formatPeso(booking.remainingBalance) }}
+        </p>
+        <label class="block text-lg mb-2"
+          ><strong>Payment Method:</strong> GCash</label
+        >
+
+        <label>GCash Reference No:</label>
+        <input class="w-full" v-model="formData.reference" />
+        <label>Proof of Payment:</label>
+        <FileUpload
+          ref="fileupload"
+          v-model="formData.imageUrl"
+          mode="basic"
+          name="imageUrl"
+          url="/api/upload"
+          accept="image/*"
+          :maxFileSize="1000000"
+          @select="onFileSelect"
+        />
+
+        <label>Sender Name:</label>
+        <input class="w-full" v-model="formData.senderName" />
+
+        <div class="flex">
+          <div class="w-[100%]">
+            <label>Tendered Amount:</label>
+            <input class="w-full" v-model.number="formData.tenderedAmount" />
+          </div>
+        </div>
+
+        <!--<div class="mb-4">
+          <label class="block text-lg mb-2">Excess Charge</label>
+          <select
+            v-model="formData.bookStatus"
+            class="border p-2 rounded w-full"
+          >
+            <option value="cancelled">Yes</option>
+            <option value="completed">No</option>
+          </select>
+          <div class="flex flex-col">
+            <template v-if="formData.bookStatus === 'cancelled'">
+              <label>Extra Guest:</label>
+              <input v-model="formData.cancelReason" />
+              <label>Add ons:</label>
+              <input v-model="formData.cancelReason" />
+            </template>
+          </div>
+        </div>-->
+      </div>
+    </div>
+
+    <div class="flex justify-center gap-2 mt-6 font-[Poppins] px-4">
+      <Button
+        type="button"
+        label="Cancel"
+        severity="secondary"
+        @click="closeModals"
+        class="font-bold w-full"
+      />
+      <Button
+        type="button"
+        label="Next"
+        severity="success"
+        @click="nextPay"
+        class="font-bold w-full"
+      />
+    </div>
+  </Dialog>
+
+  <Dialog v-model:visible="showPaymentModal" modal :style="{ width: '30rem' }">
+    <template #header>
+      <div class="flex flex-col items-center justify-center w-full">
+        <h2 class="text-xl font-bold font-[Poppins]">Confirm Payment</h2>
+      </div>
+    </template>
+
+    <div class="space-y-4 font-[Poppins] px-4">
+      <p class="text-center text-lg">
+        Are you sure you want to
+        <strong class="text-green-600">complete</strong> this partial payment?
+      </p>
+
+      <div class="text-left text-base space-y-2">
+        <p>
+          <strong>Name:</strong>
+          {{ booking.firstName }} {{ booking.lastName }}
+        </p>
+        <p><strong>Payment Terms: </strong> {{ booking.paymentTerms }}</p>
+        <p>
+          <strong>Amount Paid: </strong>{{ formatPeso(booking.amountPaid) }}
+        </p>
+        <p>
+          <strong>Remaining Balance: </strong
+          >{{ formatPeso(booking.remainingBalance) }}
+        </p>
+
+        <p><strong>Payment Method: </strong> {{ formData.paymentMethod }}</p>
+        <p><strong>Sender Name: </strong> {{ formData.senderName }}</p>
+        <p>
+          <strong>Tendered Amount: </strong>
+          {{ formatPeso(formData.tenderedAmount) }}
+        </p>
+
+        <p>
+          <strong>Change: </strong>
+          {{ formatPeso(formData.tenderedAmount - formData.remainingBalance) }}
+        </p>
+      </div>
+    </div>
+    <div class="flex justify-center gap-2 mt-6 font-[Poppins] px-4">
+      <Button
+        type="button"
+        label="Back"
+        severity="secondary"
+        @click="backPay"
+        class="font-bold w-full"
+      />
+      <Button
+        type="button"
+        label="Pay"
+        severity="success"
+        @click="confirmPay"
+        class="font-bold w-full"
+      /></div
+  ></Dialog>
 
   <Dialog
     v-model:visible="showRescheduleModal"
@@ -392,7 +487,8 @@ const calendarOptions = ref({
           iconDisplay="input"
           dateFormat="mm-dd-yy"
           placeholder="Check-Out"
-          :minDate="minDate"
+          :minDate="checkOutMinDate"
+          :maxDate="maxDate"
           :disabledDates="disabledDates"
         >
           <template #date="slotProps">
@@ -567,5 +663,45 @@ const calendarOptions = ref({
   .fc-daygrid-event-dot {
     display: none;
   }
+}
+
+.packEvent,
+.cDate,
+.atcng,
+.dAdd {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+}
+
+.packEvent div,
+.cDate div,
+.atcng div,
+.dAdd div {
+  display: flex;
+  flex-direction: column;
+  width: 40%;
+}
+
+.cDate div,
+.atcng div {
+  width: 26.3%;
+}
+
+label {
+  display: block;
+  text-align: left;
+  font-size: 16px;
+  font-weight: 400;
+  margin-bottom: 10px;
+  margin-top: 10px;
+}
+
+input {
+  padding: 8px;
+  border: 1px solid #e2e8f0;
+  background-color: #ffffff;
+  border-radius: 5px;
 }
 </style>

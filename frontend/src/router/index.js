@@ -33,7 +33,7 @@ import Reviews from "../Admin/pages/Reviews.vue";
 import Gallery from "../Admin/pages/Gallery.vue";
 import FAQs from "../Admin/pages/FAQs.vue";
 import AdminAboutUs from "../Admin/pages/AboutUs.vue";
-import Footer from "../Admin/pages/Footer.vue";
+import Footer from "../Admin/pages/ContactUs.vue";
 import TermsAndCondition from "../Admin/pages/TermsAndCondition.vue";
 import Archived from "../Admin/pages/Archived.vue";
 import Profile from "../Admin/pages/Profile.vue";
@@ -58,88 +58,100 @@ const routes = [
   { path: "/profile-page", component: Profilepage },
 
   // Admin Pages
-  { path: "/admin/admin-login", component: AdminLogin },
+  { path: "/employee/employee-login", component: AdminLogin },
   {
-    path: "/admin/admin-dashboard",
+    path: "/employee/employee-dashboard",
     component: AdminDashboard,
     meta: { requiresAuth: true },
   },
   {
-    path: "/admin/employee-management",
+    path: "/employee/employee-management",
     component: EmployeeManagement,
     meta: { requiresAuth: true },
   },
   {
-    path: "/admin/private-booking",
+    path: "/employee/private-booking",
     component: Booking,
     meta: { requiresAuth: true },
   },
   {
-    path: "/admin/public-booking",
+    path: "/employee/public-booking",
     component: PublicEntry,
     meta: { requiresAuth: true },
   },
   {
-    path: "/admin/blocked-dates",
+    path: "/employee/blocked-dates",
     component: BlockedDate,
     meta: { requiresAuth: true },
   },
   {
-    path: "/admin/payment",
+    path: "/employee/payment",
     component: Payment,
     meta: { requiresAuth: true },
   },
   {
-    path: "/admin/refund",
+    path: "/employee/refund",
     component: Refund,
     meta: { requiresAuth: true },
   },
   {
-    path: "/admin/transaction",
+    path: "/employee/transaction",
     component: Transaction,
     meta: { requiresAuth: true },
   },
   {
-    path: "/admin/reports",
+    path: "/employee/reports",
     component: Reports,
     meta: { requiresAuth: true },
   },
   {
-    path: "/admin/packages-and-promos",
+    path: "/employee/packages-and-promos",
     component: PackagesAndPromos,
     meta: { requiresAuth: true },
   },
   {
-    path: "/admin/public-rates",
+    path: "/employee/public-rates",
     component: PublicRates,
     meta: { requiresAuth: true },
   },
   {
-    path: "/admin/discount-and-add-ons",
+    path: "/employee/discount-and-add-ons",
     component: DiscountAndAddOns,
     meta: { requiresAuth: true },
   },
   {
-    path: "/admin/customer-management",
+    path: "/employee/customer-management",
     component: CustomerManagement,
     meta: { requiresAuth: true },
   },
   {
-    path: "/admin/homepage",
+    path: "/employee/homepage",
     component: Homepage,
     meta: { requiresAuth: true },
   },
-  { path: "/admin/reviews", component: Reviews, meta: { requiresAuth: true } },
-  { path: "/admin/gallery", component: Gallery, meta: { requiresAuth: true } },
-  { path: "/admin/faqs", component: FAQs, meta: { requiresAuth: true } },
   {
-    path: "/admin/about-us",
+    path: "/employee/reviews",
+    component: Reviews,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/employee/gallery",
+    component: Gallery,
+    meta: { requiresAuth: true },
+  },
+  { path: "/employee/faqs", component: FAQs, meta: { requiresAuth: true } },
+  {
+    path: "/employee/about-us",
     component: AdminAboutUs,
     meta: { requiresAuth: true },
   },
-  { path: "/admin/footer", component: Footer, meta: { requiresAuth: true } },
   {
-    path: "/admin/terms-and-condition",
+    path: "/employee/contact-us",
+    component: Footer,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/employee/terms-and-condition",
     component: TermsAndCondition,
     meta: { requiresAuth: true },
   },
@@ -148,8 +160,12 @@ const routes = [
   //   component: Archived,
   //   meta: { requiresAuth: true },
   // },
-  { path: "/admin/profile", component: Profile, meta: { requiresAuth: true } },
-  { path: "/admin/audit-logs", component: AuditLogs },
+  {
+    path: "/employee/profile",
+    component: Profile,
+    meta: { requiresAuth: true },
+  },
+  { path: "/employee/logs", component: AuditLogs },
 
   // Not Found Page
   { path: "/:pathMatch(.*)*", component: NotFound },

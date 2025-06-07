@@ -4,7 +4,6 @@ import NavBar from "../components/NavBar.vue";
 import Footer from "../components/Footer.vue";
 import Dialog from "primevue/dialog";
 import { useBookingStore } from "../stores/bookingStore";
-import { usePublicEntryStore } from "../stores/publicEntryStore";
 import { useUserStore } from "../stores/userStore";
 import { formatDates } from "../utility/dateFormat";
 import { formatPeso } from "../utility/pesoFormat";
@@ -16,20 +15,18 @@ import Button from "primevue/button";
 import Logger from "../components/Logger.vue";
 import { useToast } from "primevue/usetoast";
 import { useCatalogStore } from "../stores/catalogStore";
-const catalogStore = useCatalogStore();
+import { usePaymentStore } from "../stores/paymentStore";
 
+const catalogStore = useCatalogStore();
 const toast = useToast();
 
-const isMenuOpen1 = ref(false);
-const isMenuOpen2 = ref(false);
-
 const bookingStore = useBookingStore();
-const publicStore = usePublicEntryStore();
 const refundStore = useRefundStore();
 
 const userStore = useUserStore();
 const packageStore = usePackageStore();
 const authStore = useAuthStore();
+const paymentStore = usePaymentStore();
 
 const userBookings = ref([]);
 const historyBookings = ref([]);
@@ -42,9 +39,9 @@ onMounted(async () => {
   await packageStore.fetchAllPackages();
   await packageStore.fetchAllPromos();
   await bookingStore.fetchUserBookings();
-  await publicStore.fetchAllPublic();
   await refundStore.fetchRefunds();
   await catalogStore.fetchAllCatalogs();
+  await paymentStore.fetchPayments();
 
   try {
     const userId = authStore.user?.userId;
@@ -68,48 +65,25 @@ onMounted(async () => {
             "pending-cancellation",
           ].includes(booking.bookStatus)
       );
-      const publics = publicStore.public.filter(
-        (publics) =>
-          publics.userId === id &&
-          [
-            "pending",
-            "reserved",
-            "rescheduled",
-            "pending-cancellation",
-          ].includes(publics.status)
-      );
 
-      userBookings.value = [...bookings, ...publics];
+      userBookings.value = [...bookings];
 
       const bookingDone = bookingStore.bookings.filter(
         (booking) =>
           booking.userId === id &&
           ["cancelled", "completed"].includes(booking.bookStatus)
       );
-      const publicDone = publicStore.public.filter((publics) => {
-        publics.userId === id &&
-          ["cancelled", "completed"].includes(publics.status);
-      });
 
-      historyBookings.value = [...bookingDone, ...publicDone];
+      historyBookings.value = [...bookingDone];
 
       const allUserBookings = bookingStore.bookings.filter(
         (booking) => booking.userId === id
       );
-      const allUserPublics = publicStore.public.filter(
-        (publics) => publics.userId === id
-      );
 
       const pending = refundStore.refunds.find((refund) => {
-        const linkedEntry =
-          allUserBookings.find(
-            (entry) => entry.bookingId && entry.bookingId === refund.bookingId
-          ) ||
-          allUserPublics.find(
-            (entry) =>
-              entry.publicEntryId &&
-              entry.publicEntryId === refund.publicEntryId
-          );
+        const linkedEntry = allUserBookings.find(
+          (entry) => entry.bookingId && entry.bookingId === refund.bookingId
+        );
         return (
           linkedEntry &&
           refund.refundMethod === "gcash" &&
@@ -154,6 +128,10 @@ const cancelHandler = async (cancelStatus) => {
   // await refundStore.updateRefund(cancelStatus);
 };
 
+const paymentHandler = async (paymentData) => {
+  await paymentStore.addPayment(paymentData);
+};
+
 const refundHandler = async (acknowledgeValue) => {
   try {
     if (!pendingRefund.value) {
@@ -174,6 +152,7 @@ const refundHandler = async (acknowledgeValue) => {
       life: 3000,
     });
 
+    console.log("Acknowledgement Payload: ", updatedRefund);
     showAcknowledgement.value = false;
     pendingRefund.value = null;
   } catch (error) {
@@ -204,26 +183,6 @@ const getPackageData = (packageId) => {
 
 const showAction = ref(false);
 
-const handleLoggerClick = (booking) => {
-  if (booking.bookStatus === "pending") {
-    if (toast) {
-      toast.add({
-        severity: "warn",
-        summary: "Not Allowed",
-        detail: "You cannot open actions while booking is pending.",
-        life: 3000,
-      });
-    } else {
-      alert("You cannot open actions while booking is pending.");
-    }
-    showAction.value = false;
-    openMenuBookingId.value = null;
-  } else {
-    showAction.value = true;
-    openMenuBookingId.value = booking.bookingId;
-  }
-};
-
 const selected = ref(null);
 const details = ref(false);
 
@@ -244,6 +203,12 @@ const getStatusSeverity = (status) => {
       return "success";
     case "cancelled":
       return "danger";
+    case "unpaid":
+      return "danger";
+    case "partially-paid":
+      return "info";
+    case "paid":
+      return "success";
     default:
       return "secondary";
   }
@@ -251,11 +216,62 @@ const getStatusSeverity = (status) => {
 
 const getRefundRemarks = (booking) => {
   const refund = refundStore.refunds.find(
-    (r) =>
-      (r.bookingId && r.bookingId === booking.bookingId) ||
-      (r.publicEntryId && r.publicEntryId === booking.publicEntryId)
+    (r) => r.bookingId && r.bookingId === booking.bookingId
   );
   return refund?.remarks || null;
+};
+
+const getInvalidRemarks = (booking) => {
+  const invalid = paymentStore.invalid.find(
+    (p) => p.bookingId && p.bookingId === booking.bookingId
+  );
+
+  const hasValid = paymentStore.payments.some(
+    (p) =>
+      p.bookingId === booking.bookingId &&
+      (p.paymentStatus === "valid" ||
+        p.bookingPaymentStatus === "paid" ||
+        p.bookingPaymentStatus === "partially-paid")
+  );
+  return !hasValid ? invalid?.remarks || null : null;
+};
+
+const hasInvalidPayment = (booking) => {
+  const hasInvalid = paymentStore.payments.some(
+    (p) => p.bookingId === booking.bookingId && p.paymentStatus === "invalid"
+  );
+
+  const hasValid = paymentStore.payments.some(
+    (p) =>
+      p.bookingId === booking.bookingId &&
+      (p.paymentStatus === "valid" ||
+        p.paymentStatus === "pending" ||
+        p.bookingPaymentStatus === "paid" ||
+        p.bookingPaymentStatus === "partially-paid")
+  );
+
+  return hasInvalid && !hasValid ? booking : null;
+};
+
+const handleLoggerClick = (booking) => {
+  // Allow full menu only for reserved
+  if (booking.bookStatus === "reserved") {
+    openMenuBookingId.value = booking.bookingId;
+    return;
+  }
+  // Allow only payAgain for pending with invalid payment
+  if (booking.bookStatus === "pending" && hasInvalidPayment(booking)) {
+    openMenuBookingId.value = booking.bookingId;
+    return;
+  }
+  // Otherwise, block and show toast
+  toast.add({
+    severity: "warn",
+    summary: "Not allowed",
+    detail: "You cannot open actions for this booking.",
+    life: 3000,
+  });
+  openMenuBookingId.value = null;
 };
 </script>
 
@@ -287,47 +303,49 @@ const getRefundRemarks = (booking) => {
       :key="booking.bookingId"
       @click="openDetails(booking)"
     >
-      <div class="w-full mt-10 text-right" @click.stop>
+      <div
+        class="w-full top-5 text-right"
+        @click.stop
+        style="position: relative"
+      >
         <Logger
           :booking="booking"
+          :payAgain="hasInvalidPayment(booking) ? booking : null"
           :refund="booking"
-          :showAction="showAction && openMenuBookingId === booking.bookingId"
+          :showAction="openMenuBookingId === booking.bookingId"
           @click="handleLoggerClick(booking)"
           @rescheduleBooking="rescheduleHandler"
           @cancelBooking="cancelHandler"
+          @payPayment="paymentHandler"
         />
       </div>
 
       <div class="information">
-        <p>
-          <Tag
-            severity="info"
-            :value="booking.bookingId ? 'PRIVATE' : 'PUBLIC'"
-          />
-        </p>
+        <p>Package: {{ getPackageName(booking.packageId) }}</p>
         <p>
           Personal Information: {{ booking.firstName }}
           {{ booking.lastName }}
         </p>
 
-        <template v-if="booking.bookingId">
-          <p>
-            Date: {{ formatDates(booking.checkInDate) }} to
-            {{ formatDates(booking.checkOutDate) }}
-          </p></template
-        >
-        <template v-else>
-          <p>Date: {{ formatDates(booking.entryDate) }}</p>
-        </template>
+        <p>
+          Date: {{ formatDates(booking.checkInDate) }} to
+          {{ formatDates(booking.checkOutDate) }}
+        </p>
+
+        <p>
+          Payment Status:
+          <Tag
+            :severity="getStatusSeverity(booking.bookingPaymentStatus)"
+            :value="getInvalidRemarks(booking) || booking.bookingPaymentStatus"
+          />
+        </p>
         <p>Total Amount: {{ formatPeso(booking.totalAmount) }}</p>
       </div>
-      <div class="flex justify-end mb-10" style="position: relative">
+      <div class="flex justify-end -top-8 gap-2" style="position: relative">
         <Tag
           class="mb"
-          :severity="getStatusSeverity(booking.bookStatus || booking.status)"
-          :value="
-            getRefundRemarks(booking) || booking.bookStatus || booking.status
-          "
+          :severity="getStatusSeverity(booking.bookStatus)"
+          :value="getRefundRemarks(booking) || booking.bookStatus"
         />
       </div>
     </div>
@@ -358,34 +376,34 @@ const getRefundRemarks = (booking) => {
       </div>
 
       <div class="information">
-        <p>
-          <Tag
-            severity="info"
-            :value="booking.bookingId ? 'PRIVATE' : 'PUBLIC'"
-          />
-        </p>
+        <p>Package: {{ getPackageName(booking.packageId) }}</p>
         <p>
           Personal Information: {{ booking.firstName }}
           {{ booking.lastName }}
         </p>
 
-        <template v-if="booking.bookingId">
-          <p>
-            Date: {{ formatDates(booking.checkInDate) }} to
-            {{ formatDates(booking.checkOutDate) }}
-          </p></template
-        >
-        <template v-else>
-          <p>Date: {{ formatDates(booking.entryDate) }}</p>
-        </template>
+        <p>
+          Date: {{ formatDates(booking.checkInDate) }} to
+          {{ formatDates(booking.checkOutDate) }}
+        </p>
+
+        <p>
+          Payment Status:
+          <Tag
+            :severity="getStatusSeverity(booking.bookingPaymentStatus)"
+            :value="booking.bookingPaymentStatus"
+          />
+        </p>
         <p>Total Amount: {{ formatPeso(booking.totalAmount) }}</p>
       </div>
-      <div class="flex justify-end mb-10" style="position: relative">
+      <div class="flex justify-end -top-8 gap-2" style="position: relative">
         <Tag
           class="mb"
           :severity="getStatusSeverity(booking.bookStatus || booking.status)"
           :value="
-            getRefundRemarks(booking) || booking.bookStatus || booking.status
+            getRefundRemarks(booking) ||
+            booking.cancelReason ||
+            booking.bookStatus
           "
         />
       </div>
@@ -527,10 +545,7 @@ const getRefundRemarks = (booking) => {
               <Divider />
               <h1>
                 <strong>Payment Status: </strong
-                >{{
-                  selected?.bookingPaymentStatus ||
-                  selected?.publicPaymentStatus
-                }}
+                >{{ selected?.bookingPaymentStatus }}
               </h1>
               <h1>
                 <strong>TOTAL: </strong>{{ formatPeso(selected?.totalAmount) }}
@@ -650,7 +665,6 @@ textarea {
 
 .information {
   font-weight: 600;
-
   width: 100%;
   line-height: 1.9rem;
 }
