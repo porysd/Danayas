@@ -11,10 +11,10 @@ import Paginator from "primevue/paginator";
 import Divider from "primevue/divider";
 import Tag from "primevue/tag";
 import Toast from "primevue/toast";
+import Dialog from "primevue/dialog";
 import { useToast } from "primevue/usetoast";
 import { useBlockedStore } from "../../stores/blockedDateStore.js";
 import { formatDates, formatDate } from "../../utility/dateFormat.js";
-
 import { formatPeso } from "../../utility/pesoFormat.js";
 
 const toast = useToast();
@@ -163,28 +163,43 @@ const getStatusSeverity = (status) => {
         </div>
       </div>
 
-      <div v-if="ratesDetails" class="modal">
-        <div class="modal-content font-[Poppins]">
-          <h2 class="text-xl font-bold m-auto justify-center flex">
-            Rate Details
-          </h2>
+      <Dialog
+        v-model:visible="details"
+        modal
+        :style="{ width: '30rem' }"
+        class="modal"
+      >
+        <template #header>
+          <div class="flex flex-col items-center justify-center w-full">
+            <h2 class="text-xl font-bold font-[Poppins]">
+              Blocked Date Details
+            </h2>
+          </div>
+        </template>
+
+        <div class="font-[Poppins]">
           <Divider />
+
           <div class="flex flex-col gap-2">
-            <p><strong>Category:</strong> {{ selecteRates?.category }}</p>
-            <p><strong>Price Rate:</strong> {{ selecteRates?.rate }}</p>
-            <p><strong>Mode:</strong> {{ selecteRates?.mode }}</p>
-            <p><strong>Active:</strong> {{ selecteRates?.active }}</p>
+            <p>
+              <strong>Blocked Date:</strong>
+              {{ formatDates(selected?.blockedDates) }}
+            </p>
+            <p><strong>Category: </strong> {{ selected?.category }}</p>
+            <p><strong>Status:</strong> {{ selected?.status }}</p>
+            <p><strong>Created By:</strong> {{ selected?.createdBy }}</p>
             <p>
               <strong>Created At:</strong>
-              {{ formatDates(selecteRates?.createdAt) }}
+              {{ formatDates(selected?.createdAt) }}
             </p>
+
             <Divider />
             <button class="closeDetails mt-5 w-[100%]" @click="closeModal">
               Close
             </button>
           </div>
         </div>
-      </div>
+      </Dialog>
     </div>
   </main>
 </template>
@@ -333,25 +348,6 @@ const getStatusSeverity = (status) => {
   .p-tablist-active-bar {
     display: none;
   }
-}
-
-.modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 999;
-}
-.modal-content {
-  background: white;
-  padding: 20px;
-  border-radius: 5px;
-  width: auto;
 }
 
 .closeDetails {

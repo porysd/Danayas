@@ -15,10 +15,16 @@ import interactionPlugin from "@fullcalendar/interaction";
 import { useBookingStore } from "../../stores/bookingStore.js";
 import { usePublicEntryStore } from "../../stores/publicEntryStore.js";
 import { useBlockedStore } from "../../stores/blockedDateStore.js";
+import {
+  getBookingStyle,
+  disabledDates,
+  fullCalendarEvents,
+} from "../../composables/calendarStyle";
 
 const bookingStore = useBookingStore();
 const publicStore = usePublicEntryStore();
 const blockStore = useBlockedStore();
+const { calendarEvents, calendarOptions } = fullCalendarEvents();
 
 onMounted(async () => {
   await bookingStore.fetchUserBookings();
@@ -86,8 +92,8 @@ const chartData = ref({
     {
       data: months.value,
       backgroundColor: monthColors,
-      borderWidth: 2,
-      borderRadius: 20,
+      borderWidth: 1,
+      borderRadius: 10,
       borderSkipped: false,
     },
   ],
@@ -103,6 +109,19 @@ const chartOptions = ref({
   plugins: {
     legend: {
       display: false,
+    },
+  },
+  scales: {
+    x: {
+      grid: {
+        display: false,
+        drawBorder: false,
+      },
+    },
+    y: {
+      grid: {
+        drawBorder: false,
+      },
     },
   },
 });
@@ -198,99 +217,6 @@ const countCompletedBookings = computed(() => {
 
   return completedDates;
 });
-
-// Process booking days
-// FOR CALENDAR
-const mapBookingsToEvents = (
-  bookings = [],
-  publics = [],
-  blockedDates = []
-) => {
-  const eventByDate = {};
-
-  bookings.forEach((b) => {
-    const date = b.checkInDate;
-    if (!eventByDate[date])
-      eventByDate[date] = { modes: new Set(), blocked: null };
-    eventByDate[date].modes.add(b.mode);
-  });
-
-  publics.forEach((p) => {
-    const date = p.entryDate;
-    if (!eventByDate[date])
-      eventByDate[date] = { modes: new Set(), blocked: null };
-    eventByDate[date].modes.add(p.mode);
-  });
-
-  blockedDates.forEach((bd) => {
-    const date = bd.blockedDates;
-    if (!eventByDate[date])
-      eventByDate[date] = { modes: new Set(), blocked: null };
-    eventByDate[date].blocked = bd;
-  });
-
-  return Object.entries(eventByDate).map(([date, { modes, blocked }]) => {
-    let backgroundColor, textColor, title;
-
-    if (blocked) {
-      backgroundColor = "grey";
-      textColor = "white";
-      title = "Not Available";
-    } else if (
-      modes.has("whole-day") ||
-      (modes.has("day-time") && modes.has("night-time"))
-    ) {
-      backgroundColor = "#FF6B6B";
-      textColor = "white";
-      title = "Fully Booked";
-    } else if (modes.has("day-time")) {
-      backgroundColor = "#6A5ACD";
-      textColor = "white";
-      title = "Night Available";
-    } else if (modes.has("night-time")) {
-      backgroundColor = "#FFD580";
-      textColor = "black";
-      title = "Day Available";
-    } else {
-      backgroundColor = "#90EE90";
-      textColor = "#15803D";
-      title = "Available";
-    }
-
-    return {
-      id: `summary-${date}`,
-      title,
-      start: date,
-      backgroundColor,
-      textColor,
-      allDay: true,
-    };
-  });
-};
-
-const calendarEvents = computed(() => {
-  return mapBookingsToEvents(
-    bookingStore.bookings,
-    publicStore.public,
-    blockStore.blocked
-  );
-});
-
-const calendarOptions = ref({
-  plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin],
-  headerToolbar: {
-    left: "prev,next today",
-    center: "title",
-    right: "dayGridMonth,timeGridWeek,timeGridDay",
-  },
-  initialView: "dayGridMonth",
-  editable: false,
-  selectable: false,
-  selectMirror: false,
-  dayMaxEvents: false,
-  weekends: true,
-  events: calendarEvents,
-});
 </script>
 
 <template>
@@ -319,7 +245,7 @@ const calendarOptions = ref({
                 />
               </p>
               <h3
-                class="text-xl sm:text-3xl font-medium text-gray-800 dark:text-white mt-1"
+                class="text-xl sm:text-5xl font-medium text-gray-800 dark:text-white"
               >
                 {{ countPendingBookings }}
               </h3>
@@ -345,7 +271,7 @@ const calendarOptions = ref({
                 />
               </p>
               <h3
-                class="text-xl sm:text-3xl font-medium text-gray-800 dark:text-white mt-1"
+                class="text-xl sm:text-5xl font-medium text-gray-800 dark:text-white"
               >
                 {{ countConfirmedBookings }}
               </h3>
@@ -371,7 +297,7 @@ const calendarOptions = ref({
                 />
               </p>
               <h3
-                class="text-xl sm:text-3xl font-medium text-gray-800 dark:text-white mt-1"
+                class="text-xl sm:text-5xl font-medium text-gray-800 dark:text-white"
               >
                 {{ countRescheduledBooking }}
               </h3>
@@ -424,7 +350,7 @@ const calendarOptions = ref({
                 />
               </p>
               <h3
-                class="text-xl sm:text-3xl font-medium text-gray-800 dark:text-white mt-1"
+                class="text-xl sm:text-5xl font-medium text-gray-800 dark:text-white"
               >
                 {{ countCancelledBookings }}
               </h3>
@@ -451,7 +377,7 @@ const calendarOptions = ref({
                 />
               </p>
               <h3
-                class="text-xl sm:text-3xl font-medium text-gray-800 dark:text-white mt-1"
+                class="text-xl sm:text-5xl font-medium text-gray-800 dark:text-white"
               >
                 {{ countCompletedBookings }}
               </h3>
@@ -495,7 +421,7 @@ const calendarOptions = ref({
 
       <div class="charts">
         <div
-          class="calendarChart p-4 md:p-5 shadow-lg bg-[#FCFCFC] dark:bg-[#18181b] font-[Poppins]"
+          class="calendarChart p-4 md:p-5 shadow-lg bg-[#FCFCFC] dark:bg-[#18181b] font-[Poppins] w-[100%]"
         >
           <FullCalendar class="fullCalendar" :options="calendarOptions">
             <template #eventContent="{ event, timeText }">
@@ -542,14 +468,14 @@ const calendarOptions = ref({
         <div
           class="chartPeak p-4 md:p-5 shadow-lg bg-[#FCFCFC] dark:bg-[#18181b]"
         >
-          <div class="font-semibold text-xl mb-4 text-left w-[90%]">
+          <div class="font-semibold text-xl mb-4 text-center w-[100%]">
             Peak Months of Reservations
           </div>
           <Chart
             type="bar"
             :data="chartData"
             :options="chartOptions"
-            class="h-[20rem] w-[30rem]"
+            class="h-[20rem] w-[20rem]"
           />
         </div>
       </div>
@@ -560,8 +486,8 @@ const calendarOptions = ref({
 <style scoped>
 :deep(.fullCalendar) {
   margin: 0 auto;
-  width: 530px;
-  height: 320px;
+  width: 750px;
+  height: 345px;
   font-size: 10px;
 
   .fc {
@@ -569,11 +495,12 @@ const calendarOptions = ref({
   }
 
   .fc-toolbar-title {
-    font-size: 14px;
+    font-size: 20px;
+    font-weight: bold;
   }
 
   .fc-button {
-    background-color: #41ab5d;
+    background-color: #194d1d;
     color: white;
     border-radius: 6px;
     padding: 2px 6px;
@@ -645,23 +572,26 @@ const calendarOptions = ref({
 .completedBook,
 .noCustomer,
 .cancelledBook {
-  height: 100px;
-  width: 300px;
-
-  border-radius: 10px;
+  min-height: 140px;
+  width: 320px;
+  border-radius: 16px;
   max-width: 100%;
+  box-shadow: 0 4px 24px 0 rgba(31, 38, 135, 0.1);
+  transition: box-shadow 0.3s, transform 0.2s;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .pendingBook:hover,
 .completedBook:hover,
 .noCustomer:hover,
 .cancelledBook:hover {
-  height: 105px;
-  width: 320px;
-  cursor: pointer;
+  box-shadow: 0 16px 40px 0 rgba(31, 38, 135, 0.18);
+  transform: translateY(-4px) scale(1.03);
 }
 
-.pendingBook:active,
+/*.pendingBook:active,
 .completedBook:active,
 .noCustomer:active,
 .cancelledBook:active {
@@ -670,13 +600,13 @@ const calendarOptions = ref({
 
   opacity: 0.8;
   cursor: pointer;
-}
+} */
 
 .charts {
   display: flex;
   flex-direction: row;
   margin-top: 30px;
-  gap: 50px;
+  gap: 10px;
   justify-content: center;
   height: 380px;
   max-height: 550px;
@@ -691,9 +621,27 @@ const calendarOptions = ref({
   align-items: center;
   display: flex;
   flex-direction: column;
-  width: 50%;
   border-radius: 10px;
-
   max-width: 100%;
+}
+
+.chartPeak {
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.12);
+  border-radius: 18px;
+  background: linear-gradient(135deg, #f8fafc 0%, #e0f2fe 100%);
+  transition: box-shadow 0.3s;
+}
+.chartPeak:hover {
+  box-shadow: 0 16px 40px 0 rgba(31, 38, 135, 0.18);
+}
+
+.calendarChart {
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.12);
+  border-radius: 18px;
+
+  transition: box-shadow 0.3s;
+}
+.calendarChart:hover {
+  box-shadow: 0 16px 40px 0 rgba(31, 38, 135, 0.18);
 }
 </style>

@@ -659,114 +659,13 @@ onUnmounted(() => {
       <div class="tabBookings">
         <Tabs value="0">
           <TabList>
-            <Tab value="0">PENDING</Tab>
-            <Tab value="1">RESERVED</Tab>
-            <Tab value="2">RESCHEDULED</Tab>
-            <Tab value="3">PENDING CANCELLATION</Tab>
-            <Tab value="4">CANCELLED</Tab>
-            <Tab value="5">COMPLETED</Tab>
-            <Tab value="6">OVERALL</Tab>
+            <Tab value="0">RESERVED</Tab>
+            <Tab value="1">CANCELLED</Tab>
+            <Tab value="2">COMPLETED</Tab>
+            <Tab value="3">OVERALL</Tab>
           </TabList>
           <TabPanels>
             <TabPanel value="0">
-              <div class="tableContainer">
-                <table class="dTable border-[#194D1D] dark:border-[#FCFCFC]">
-                  <thead>
-                    <tr
-                      class="header-style bg-[#194D1D] dark:bg-[#18181b] border-[#194D1D] dark:border-[#18181b]"
-                    >
-                      <th>ID</th>
-                      <th>NAME</th>
-                      <th>ENTRY DATE</th>
-                      <th>NO. ADULTS</th>
-                      <th>NO. KIDS</th>
-                      <th>STATUS</th>
-                      <th>PAY TERMS</th>
-                      <th>PAYMENT STATUS</th>
-                      <th>TOTAL</th>
-                      <th>PAID</th>
-                      <th>BALANCE</th>
-                      <th>DATE</th>
-                      <th></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr
-                      class="bRow border-[#194D1D] dark:border-[#18181b]"
-                      v-for="publics in paginatedPendings"
-                      :key="publics.id"
-                      @click="openPublicDetails(publics)"
-                    >
-                      <td class="w-[3%]">{{ publics.publicEntryId }}</td>
-                      <td class="w-[15%]">
-                        <strong
-                          >{{ publics.firstName }}
-                          {{ publics.lastName }}</strong
-                        >
-                        <br />
-                        {{ publics.contactNo }}
-                      </td>
-                      <td class="w-[12%]">
-                        {{ formatDates(publics.entryDate) }}
-                      </td>
-                      <td class="w-[7%]">
-                        {{ publics.numAdults }}
-                      </td>
-                      <td class="w-[7%]">
-                        {{ publics.numKids }}
-                      </td>
-                      <td class="w-[8%]">
-                        <Tag
-                          :severity="getStatusSeverity(publics.status)"
-                          :value="publics.status"
-                        />
-                      </td>
-                      <td class="w-[7%]">{{ publics.paymentTerms }}</td>
-                      <td class="w-[7%]">
-                        <Tag
-                          :severity="
-                            getPaymentStatusSeverity(
-                              publics.publicPaymentStatus
-                            )
-                          "
-                          :value="publics.publicPaymentStatus"
-                        />
-                      </td>
-                      <td class="w-[7%]">
-                        {{ formatPeso(publics.totalAmount) }}
-                      </td>
-                      <td class="w-[7%]">
-                        {{ formatPeso(publics.amountPaid) }}
-                      </td>
-                      <td class="w-[7%]">
-                        {{ formatPeso(publics.remainingBalance) }}
-                      </td>
-                      <td class="w-[8%]">
-                        {{ formatDates(publics.createdAt) }}
-                      </td>
-                      <td class="w-[5%]" @click.stop>
-                        <T3ButtonPublic
-                          :publics="publics"
-                          :payment="publics"
-                          @payPayment="secondPaymentHandler"
-                          @updateStatus="updateStatusHandler"
-                          @updateBooking="updateBookingHandler"
-                        />
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-                <Paginator
-                  :first="firstPending"
-                  :rows="rows"
-                  :totalRecords="totalPendings"
-                  :rowsPerPageOptions="[5, 10, 20, 30]"
-                  @page="onPageChangePending"
-                  class="rowPagination"
-                />
-              </div>
-            </TabPanel>
-            <TabPanel value="1">
               <div class="tableContainer">
                 <table class="dTable border-[#194D1D] dark:border-[#FCFCFC]">
                   <thead>
@@ -864,203 +763,8 @@ onUnmounted(() => {
                 />
               </div>
             </TabPanel>
-            <TabPanel value="2">
-              <div class="tableContainer">
-                <table class="dTable border-[#194D1D] dark:border-[#FCFCFC]">
-                  <thead>
-                    <tr
-                      class="header-style bg-[#194D1D] dark:bg-[#18181b] border-[#194D1D] dark:border-[#18181b]"
-                    >
-                      <th>ID</th>
-                      <th>NAME</th>
-                      <th>ENTRY DATE</th>
-                      <th>NO. ADULTS</th>
-                      <th>NO. KIDS</th>
-                      <th>STATUS</th>
-                      <th>PAY TERMS</th>
-                      <th>PAYMENT STATUS</th>
-                      <th>TOTAL</th>
-                      <th>PAID</th>
-                      <th>BALANCE</th>
-                      <th>DATE</th>
-                      <th></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr
-                      class="bRow border-[#194D1D] dark:border-[#18181b]"
-                      v-for="publics in paginatedRescheduled"
-                      :key="publics.id"
-                      @click="openPublicDetails(publics)"
-                    >
-                      <td class="w-[3%]">{{ publics.publicEntryId }}</td>
-                      <td class="w-[15%]">
-                        <strong
-                          >{{ publics.firstName }}
-                          {{ publics.lastName }}</strong
-                        >
-                        <br />
-                        {{ publics.contactNo }}
-                      </td>
-                      <td class="w-[12%]">
-                        {{ formatDates(publics.entryDate) }}
-                      </td>
-                      <td class="w-[7%]">
-                        {{ publics.numAdults }}
-                      </td>
-                      <td class="w-[7%]">
-                        {{ publics.numKids }}
-                      </td>
-                      <td class="w-[8%]">
-                        <Tag
-                          :severity="getStatusSeverity(publics.status)"
-                          :value="publics.status"
-                        />
-                      </td>
-                      <td class="w-[7%]">{{ publics.paymentTerms }}</td>
-                      <td class="w-[7%]">
-                        <Tag
-                          :severity="
-                            getPaymentStatusSeverity(
-                              publics.publicPaymentStatus
-                            )
-                          "
-                          :value="publics.publicPaymentStatus"
-                        />
-                      </td>
-                      <td class="w-[7%]">
-                        {{ formatPeso(publics.totalAmount) }}
-                      </td>
-                      <td class="w-[7%]">
-                        {{ formatPeso(publics.amountPaid) }}
-                      </td>
-                      <td class="w-[7%]">
-                        {{ formatPeso(publics.remainingBalance) }}
-                      </td>
-                      <td class="w-[8%]">
-                        {{ formatDates(publics.createdAt) }}
-                      </td>
-                      <td class="w-[5%]" @click.stop>
-                        <T3ButtonPublic
-                          :publics="publics"
-                          :payment="publics"
-                          @payBooking="secondPaymentHandler"
-                          @updateStatus="updateStatusHandler"
-                          @updateBooking="updateBookingHandler"
-                        />
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-                <Paginator
-                  :first="firstRescheduled"
-                  :rows="rows"
-                  :totalRecords="totalRescheduled"
-                  :rowsPerPageOptions="[5, 10, 20, 30]"
-                  @page="onPageChangeRescheduled"
-                  class="rowPagination"
-                />
-              </div>
-            </TabPanel>
-            <TabPanel value="3">
-              <div class="tableContainer">
-                <table class="dTable border-[#194D1D] dark:border-[#FCFCFC]">
-                  <thead>
-                    <tr
-                      class="header-style bg-[#194D1D] dark:bg-[#18181b] border-[#194D1D] dark:border-[#18181b]"
-                    >
-                      <th>ID</th>
-                      <th>NAME</th>
-                      <th>ENTRY DATE</th>
-                      <th>NO. ADULTS</th>
-                      <th>NO. KIDS</th>
-                      <th>STATUS</th>
-                      <th>PAY TERMS</th>
-                      <th>PAYMENT STATUS</th>
-                      <th>TOTAL</th>
-                      <th>PAID</th>
-                      <th>BALANCE</th>
-                      <th>DATE</th>
-                      <th></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr
-                      class="bRow border-[#194D1D] dark:border-[#18181b]"
-                      v-for="publics in paginatedCancellation"
-                      :key="publics.id"
-                      @click="openPublicDetails(publics)"
-                    >
-                      <td class="w-[3%]">{{ publics.publicEntryId }}</td>
-                      <td class="w-[15%]">
-                        <strong
-                          >{{ publics.firstName }}
-                          {{ publics.lastName }}</strong
-                        >
-                        <br />
-                        {{ publics.contactNo }}
-                      </td>
-                      <td class="w-[12%]">
-                        {{ formatDates(publics.entryDate) }}
-                      </td>
-                      <td class="w-[7%]">
-                        {{ publics.numAdults }}
-                      </td>
-                      <td class="w-[7%]">
-                        {{ publics.numKids }}
-                      </td>
-                      <td class="w-[8%]">
-                        <Tag
-                          :severity="getStatusSeverity(publics.status)"
-                          :value="publics.status"
-                        />
-                      </td>
-                      <td class="w-[7%]">{{ publics.paymentTerms }}</td>
-                      <td class="w-[7%]">
-                        <Tag
-                          :severity="
-                            getPaymentStatusSeverity(
-                              publics.publicPaymentStatus
-                            )
-                          "
-                          :value="publics.publicPaymentStatus"
-                        />
-                      </td>
-                      <td class="w-[7%]">
-                        {{ formatPeso(publics.totalAmount) }}
-                      </td>
-                      <td class="w-[7%]">
-                        {{ formatPeso(publics.amountPaid) }}
-                      </td>
-                      <td class="w-[7%]">
-                        {{ formatPeso(publics.remainingBalance) }}
-                      </td>
-                      <td class="w-[8%]">
-                        {{ formatDates(publics.createdAt) }}
-                      </td>
-                      <td class="w-[5%]" @click.stop>
-                        <T3ButtonPublic
-                          :publics="publics"
-                          :payment="publics"
-                          @payBooking="secondPaymentHandler"
-                          @updateStatus="updateStatusHandler"
-                          @updateBooking="updateBookingHandler"
-                        />
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-                <Paginator
-                  :first="firstPendingCancellation"
-                  :rows="rows"
-                  :totalRecords="totalCancellation"
-                  :rowsPerPageOptions="[5, 10, 20, 30]"
-                  @page="onPageChangeCancellation"
-                  class="rowPagination"
-                />
-              </div>
-            </TabPanel>
-            <TabPanel value="4">
+
+            <TabPanel value="1">
               <div class="tableContainer">
                 <table class="dTable border-[#194D1D] dark:border-[#FCFCFC]">
                   <thead>
@@ -1158,7 +862,7 @@ onUnmounted(() => {
                 />
               </div>
             </TabPanel>
-            <TabPanel value="5">
+            <TabPanel value="2">
               <div class="tableContainer">
                 <table class="dTable border-[#194D1D] dark:border-[#FCFCFC]">
                   <thead>
@@ -1256,7 +960,7 @@ onUnmounted(() => {
                 />
               </div>
             </TabPanel>
-            <TabPanel value="6">
+            <TabPanel value="3">
               <div class="tableContainer">
                 <table class="dTable border-[#194D1D] dark:border-[#FCFCFC]">
                   <thead>

@@ -410,6 +410,7 @@ const showAction = ref(false);
                       <td class="w-[3%]" @click.stop>
                         <T3ButtonTransaction
                           :payment="payment"
+                          :paymentName="getPaymentName"
                           :showAction="!showAction"
                           @validPayment="updatePaymentHandler"
                           @invalidPayment="updatePaymentHandler"
@@ -496,6 +497,7 @@ const showAction = ref(false);
                       <td class="w-[3%]" @click.stop>
                         <T3ButtonTransaction
                           :payment="payment"
+                          :paymentName="getPaymentName"
                           :showAction="showAction"
                           @validPayment="updatePaymentHandler"
                           @invalidPayment="updatePaymentHandler"
@@ -581,6 +583,7 @@ const showAction = ref(false);
                       <td class="w-[3%]" @click.stop>
                         <T3ButtonTransaction
                           :payment="payment"
+                          :paymentName="getPaymentName"
                           :showAction="showAction"
                           @validPayment="updatePaymentHandler"
                           @invalidPayment="updatePaymentHandler"
@@ -699,7 +702,7 @@ const showAction = ref(false);
         <div class="flex flex-col gap-2">
           <p><strong>Payment ID:</strong> {{ selectedPayment?.paymentId }}</p>
           <p>
-            <strong>Transaction ID:</strong>
+            <strong>Booking ID:</strong>
             {{ selectedPayment?.bookingId }}
           </p>
           <p>
@@ -707,13 +710,14 @@ const showAction = ref(false);
             {{ getPaymentName(selectedPayment?.bookingId) }}
           </p>
           <p>
-            <strong>Downpayment Amount: </strong
+            <strong>Tendered Amount: </strong
             >{{ formatPeso(selectedPayment?.tenderedAmount) }}
           </p>
           <p>
-            <strong>Amount Paid:</strong>
-            {{ formatPeso(selectedPayment?.amountPaid) }}
+            <strong>Change Amount:</strong>
+            {{ formatPeso(selectedPayment?.changeAmount) }}
           </p>
+          <p><strong>Sender Name: </strong>{{ selectedPayment?.senderName }}</p>
           <p><strong>Mode:</strong> {{ selectedPayment?.paymentMethod }}</p>
           <p><strong>Reference: </strong>{{ selectedPayment?.reference }}</p>
           <p>
@@ -724,6 +728,7 @@ const showAction = ref(false);
             <strong>Paid At: </strong
             >{{ formatDates(selectedPayment?.createdAt) }}
           </p>
+          <p><strong>Remarks: </strong>{{ selectedPayment?.remarks }}</p>
           <Divider />
           <button class="closeDetails mt-5 w-[100%]" @click="closeModal">
             Close
@@ -783,7 +788,7 @@ td {
 
 .tableContainer {
   max-height: 75%;
-  overflow: visible;
+  overflow-y: auto;
   border-radius: 5px;
 }
 

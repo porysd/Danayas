@@ -23,6 +23,8 @@ import { usePaymentStore } from "../../stores/paymentStore.js";
 import { useRefundStore } from "../../stores/refundStore.js";
 import { useBookingStore } from "../../stores/bookingStore.js";
 import { usePublicEntryStore } from "../../stores/publicEntryStore.js";
+import Inplace from "primevue/inplace";
+import Image from "primevue/image";
 
 const refundStore = useRefundStore();
 const bookingStore = useBookingStore();
@@ -519,7 +521,27 @@ onUnmounted(() => {
           <p><strong>Sender Name: </strong>{{ selectedRefund?.senderName }}</p>
           <p><strong>Reference: </strong>{{ selectedRefund?.reference }}</p>
           <p>
-            <strong>Proof of Refund: </strong>{{ selectedRefund?.imageUrl }}
+            <strong>Proof of Refund: </strong>
+            <Inplace>
+              <template #display>
+                <span class="inline-flex items-center gap-2">
+                  <span class="pi pi-image"></span>
+                  <span>View Photo</span>
+                </span>
+              </template>
+              <template #content>
+                <div v-if="selectedRefund?.imageUrl">
+                  <Image
+                    :src="`http://localhost:3000${selectedRefund?.imageUrl}`"
+                    class="w-full sm:w-80 shadow-md"
+                    alt="Image"
+                  />
+                </div>
+                <div v-else>
+                  <p>No image available for this promo.</p>
+                </div>
+              </template>
+            </Inplace>
           </p>
           <p><strong>Remarks: </strong>{{ selectedRefund?.remarks }}</p>
           <p>

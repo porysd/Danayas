@@ -16,6 +16,8 @@ const userData = ref({
   address: "",
 });
 
+const passData = ref({});
+
 onMounted(async () => {
   console.log("Auth initialized:", authStore.user, authStore.role);
 
@@ -32,6 +34,7 @@ onMounted(async () => {
   console.log("Fetched user:", fetchedUser);
 
   userData.value = {
+    userId: fetchedUser.userId,
     username: fetchedUser.username,
     firstName: fetchedUser.firstName,
     lastName: fetchedUser.lastName,
