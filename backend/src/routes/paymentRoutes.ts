@@ -25,6 +25,7 @@ import { revokePermission, verifyPermission } from "../utils/permissionUtils";
 import type { AuthContext } from "../types";
 import fs from "fs/promises";
 import path from "path";
+import { Resend } from "resend";
 
 const paymentRoutes = new OpenAPIHono<AuthContext>();
 
@@ -426,6 +427,56 @@ paymentRoutes.openapi(
             const updatedBookingPaymentStatus =
               updatedRemainingBalance === 0 ? "paid" : "partially-paid";
 
+            const customer = await db.query.UsersTable.findFirst({
+              where: eq(UsersTable.userId, booking.userId),
+            });
+
+            const resend = new Resend(process.env.RESEND_API_KEY);
+            const notifyResult = await resend.emails.send({
+              from: "Danayas Resort <onboarding@resend.dev>",
+              to: ["realrickyjones@gmail.com"], // Replace with Customer email
+              subject: `Payment Recorded for Your Reservation at Danayas Resort`,
+              replyTo: "Danayas@email.com", // Replace with Danayas email
+              html: `
+                    <div style="font-family: Arial, sans-serif; background: #fdfaf6; padding: 20px; color: #333;">
+                      <div style="max-width: 600px; margin: 0 auto; background: #fff; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+                        <div style="background: #1e3d25; padding: 20px 30px; border-top-left-radius: 8px; border-top-right-radius: 8px;">
+                          <h2 style="margin: 0; color: #fdfaf6;">Danayas Resort & Events Venue</h2>
+                          <p style="margin: 5px 0 0; color: #fdfaf6;">Payment Notification</p>
+                        </div>
+                        <div style="padding: 30px;">
+                          <p style="font-size: 16px;">Hello ${customer?.firstName},</p>
+                          <p style="font-size: 15px;">
+                            This is to inform you that a payment has been added to your reservation by our staff.
+                          </p>
+                          <table style="width: 100%; margin-top: 20px; font-size: 14px;">
+                            <tr>
+                              <td style="padding: 6px 0; font-weight: bold;">Payment Method:</td>
+                              <td style="padding: 6px 0;">${paymentMethod}</td>
+                            </tr>
+                            <tr>
+                              <td style="padding: 6px 0; font-weight: bold;">Amount Paid:</td>
+                              <td style="padding: 6px 0;">₱${netPaidAmount.toFixed(2)}</td>
+                            </tr>
+                            <tr>
+                              <td style="padding: 6px 0; font-weight: bold;">Change Returned:</td>
+                              <td style="padding: 6px 0;">₱${changeAmount.toFixed(2)}</td>
+                            </tr>
+                          </table>
+                          <p style="margin-top: 20px; font-size: 14px;">Thank you for choosing Danayas Resort. Please keep this record for reference.</p>
+                          <p style="margin-top: 30px; font-size: 13px; color: #999;">
+                            Sent automatically by the website on ${new Date().toLocaleString()}.
+                          </p>
+                        </div>
+                        <div style="background: #1e3d25; padding: 15px 30px; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; text-align: center;">
+                          <p style="margin: 0; font-size: 13px; color: #fdfaf6;">Danayas Resort & Events Venue</p>
+                          <p style="margin: 0; font-size: 12px; color: #ccc;">© ${new Date().getFullYear()} All rights reserved.</p>
+                        </div>
+                      </div>
+                    </div>
+                  `,
+            });
+
             await tx
               .update(BookingsTable)
               .set({
@@ -582,6 +633,56 @@ paymentRoutes.openapi(
             const updatePublicStatus =
               updatePublicBalance === 0 ? "paid" : "partially-paid";
 
+            const customer = await db.query.UsersTable.findFirst({
+              where: eq(UsersTable.userId, publics.userId),
+            });
+
+            const resend = new Resend(process.env.RESEND_API_KEY);
+            const notifyResult = await resend.emails.send({
+              from: "Danayas Resort <onboarding@resend.dev>",
+              to: ["realrickyjones@gmail.com"], // Replace with Customer email
+              subject: `Payment Recorded for Your Reservation at Danayas Resort`,
+              replyTo: "Danayas@email.com", // Replace with Danayas email
+              html: `
+                      <div style="font-family: Arial, sans-serif; background: #fdfaf6; padding: 20px; color: #333;">
+                        <div style="max-width: 600px; margin: 0 auto; background: #fff; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+                          <div style="background: #1e3d25; padding: 20px 30px; border-top-left-radius: 8px; border-top-right-radius: 8px;">
+                            <h2 style="margin: 0; color: #fdfaf6;">Danayas Resort & Events Venue</h2>
+                            <p style="margin: 5px 0 0; color: #fdfaf6;">Payment Notification</p>
+                          </div>
+                          <div style="padding: 30px;">
+                            <p style="font-size: 16px;">Hello ${customer?.firstName},</p>
+                            <p style="font-size: 15px;">
+                              This is to inform you that a payment has been added to your reservation by our staff.
+                            </p>
+                            <table style="width: 100%; margin-top: 20px; font-size: 14px;">
+                              <tr>
+                                <td style="padding: 6px 0; font-weight: bold;">Payment Method:</td>
+                                <td style="padding: 6px 0;">${paymentMethod}</td>
+                              </tr>
+                              <tr>
+                                <td style="padding: 6px 0; font-weight: bold;">Amount Paid:</td>
+                                <td style="padding: 6px 0;">₱${netPaidAmount.toFixed(2)}</td>
+                              </tr>
+                              <tr>
+                                <td style="padding: 6px 0; font-weight: bold;">Change Returned:</td>
+                                <td style="padding: 6px 0;">₱${changeAmount.toFixed(2)}</td>
+                              </tr>
+                            </table>
+                            <p style="margin-top: 20px; font-size: 14px;">Thank you for choosing Danayas Resort. Please keep this record for reference.</p>
+                            <p style="margin-top: 30px; font-size: 13px; color: #999;">
+                              Sent automatically by the website on ${new Date().toLocaleString()}.
+                            </p>
+                          </div>
+                          <div style="background: #1e3d25; padding: 15px 30px; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; text-align: center;">
+                            <p style="margin: 0; font-size: 13px; color: #fdfaf6;">Danayas Resort & Events Venue</p>
+                            <p style="margin: 0; font-size: 12px; color: #ccc;">© ${new Date().getFullYear()} All rights reserved.</p>
+                          </div>
+                        </div>
+                      </div>
+                    `,
+            });
+
             await tx
               .update(PublicEntryTable)
               .set({
@@ -719,6 +820,56 @@ paymentRoutes.openapi(
             const bookingPaymentStatus =
               remainingBalance === 0 ? "paid" : "partially-paid";
 
+            const customer = await db.query.UsersTable.findFirst({
+              where: eq(UsersTable.userId, booking.userId),
+            });
+
+            const resend = new Resend(process.env.RESEND_API_KEY);
+            const notifyResult = await resend.emails.send({
+              from: "Danayas Resort <onboarding@resend.dev>",
+              to: ["realrickyjones@gmail.com"], // Replace with Customer email
+              subject: `Payment Recorded for Your Reservation at Danayas Resort`,
+              replyTo: "Danayas@email.com", // Replace with Danayas email
+              html: `
+                        <div style="font-family: Arial, sans-serif; background: #fdfaf6; padding: 20px; color: #333;">
+                          <div style="max-width: 600px; margin: 0 auto; background: #fff; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+                            <div style="background: #1e3d25; padding: 20px 30px; border-top-left-radius: 8px; border-top-right-radius: 8px;">
+                              <h2 style="margin: 0; color: #fdfaf6;">Danayas Resort & Events Venue</h2>
+                              <p style="margin: 5px 0 0; color: #fdfaf6;">Payment Notification</p>
+                            </div>
+                            <div style="padding: 30px;">
+                              <p style="font-size: 16px;">Hello ${customer?.firstName},</p>
+                              <p style="font-size: 15px;">
+                                This is to inform you that a payment has been added to your reservation by our staff.
+                              </p>
+                              <table style="width: 100%; margin-top: 20px; font-size: 14px;">
+                                <tr>
+                                  <td style="padding: 6px 0; font-weight: bold;">Payment Method:</td>
+                                  <td style="padding: 6px 0;">${payment.paymentMethod}</td>
+                                </tr>
+                                <tr>
+                                  <td style="padding: 6px 0; font-weight: bold;">Amount Paid:</td>
+                                  <td style="padding: 6px 0;">₱${payment.netPaidAmount.toFixed(2)}</td>
+                                </tr>
+                                <tr>
+                                  <td style="padding: 6px 0; font-weight: bold;">Change Returned:</td>
+                                  <td style="padding: 6px 0;">₱${payment.changeAmount.toFixed(2)}</td>
+                                </tr>
+                              </table>
+                              <p style="margin-top: 20px; font-size: 14px;">Thank you for choosing Danayas Resort. Please keep this record for reference.</p>
+                              <p style="margin-top: 30px; font-size: 13px; color: #999;">
+                                Sent automatically by the website on ${new Date().toLocaleString()}.
+                              </p>
+                            </div>
+                            <div style="background: #1e3d25; padding: 15px 30px; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; text-align: center;">
+                              <p style="margin: 0; font-size: 13px; color: #fdfaf6;">Danayas Resort & Events Venue</p>
+                              <p style="margin: 0; font-size: 12px; color: #ccc;">© ${new Date().getFullYear()} All rights reserved.</p>
+                            </div>
+                          </div>
+                        </div>
+                      `,
+            });
+
             const updatedBooking = await tx
               .update(BookingsTable)
               .set({
@@ -769,6 +920,56 @@ paymentRoutes.openapi(
             const publicPaymentStatus =
               remainingBalance === 0 ? "paid" : "partially-paid";
 
+            const customer = await db.query.UsersTable.findFirst({
+              where: eq(UsersTable.userId, publics.userId),
+            });
+
+            const resend = new Resend(process.env.RESEND_API_KEY);
+            const notifyResult = await resend.emails.send({
+              from: "Danayas Resort <onboarding@resend.dev>",
+              to: ["realrickyjones@gmail.com"], // Replace with Customer email
+              subject: `Payment Recorded for Your Reservation at Danayas Resort`,
+              replyTo: "Danayas@email.com", // Replace with Danayas email
+              html: `
+                        <div style="font-family: Arial, sans-serif; background: #fdfaf6; padding: 20px; color: #333;">
+                          <div style="max-width: 600px; margin: 0 auto; background: #fff; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+                            <div style="background: #1e3d25; padding: 20px 30px; border-top-left-radius: 8px; border-top-right-radius: 8px;">
+                              <h2 style="margin: 0; color: #fdfaf6;">Danayas Resort & Events Venue</h2>
+                              <p style="margin: 5px 0 0; color: #fdfaf6;">Payment Notification</p>
+                            </div>
+                            <div style="padding: 30px;">
+                              <p style="font-size: 16px;">Hello ${customer?.firstName},</p>
+                              <p style="font-size: 15px;">
+                                This is to inform you that a payment has been added to your reservation by our staff.
+                              </p>
+                              <table style="width: 100%; margin-top: 20px; font-size: 14px;">
+                                <tr>
+                                  <td style="padding: 6px 0; font-weight: bold;">Payment Method:</td>
+                                  <td style="padding: 6px 0;">${payment.paymentMethod}</td>
+                                </tr>
+                                <tr>
+                                  <td style="padding: 6px 0; font-weight: bold;">Amount Paid:</td>
+                                  <td style="padding: 6px 0;">₱${payment.netPaidAmount.toFixed(2)}</td>
+                                </tr>
+                                <tr>
+                                  <td style="padding: 6px 0; font-weight: bold;">Change Returned:</td>
+                                  <td style="padding: 6px 0;">₱${payment.changeAmount.toFixed(2)}</td>
+                                </tr>
+                              </table>
+                              <p style="margin-top: 20px; font-size: 14px;">Thank you for choosing Danayas Resort. Please keep this record for reference.</p>
+                              <p style="margin-top: 30px; font-size: 13px; color: #999;">
+                                Sent automatically by the website on ${new Date().toLocaleString()}.
+                              </p>
+                            </div>
+                            <div style="background: #1e3d25; padding: 15px 30px; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; text-align: center;">
+                              <p style="margin: 0; font-size: 13px; color: #fdfaf6;">Danayas Resort & Events Venue</p>
+                              <p style="margin: 0; font-size: 12px; color: #ccc;">© ${new Date().getFullYear()} All rights reserved.</p>
+                            </div>
+                          </div>
+                        </div>
+                      `,
+            });
+
             const updatePublic = await tx
               .update(PublicEntryTable)
               .set({
@@ -811,6 +1012,77 @@ paymentRoutes.openapi(
               400
             );
           }
+
+          let customer;
+
+          // Process Status in Private Booking
+          if (payment.publicEntryId == null) {
+            if (payment.bookingId == null) {
+              throw new NotFoundError("Booking not found");
+            }
+
+            const booking = await tx.query.BookingsTable.findFirst({
+              where: eq(BookingsTable.bookingId, payment.bookingId),
+            });
+
+            if (!booking) {
+              throw new NotFoundError("Booking not found.");
+            }
+            customer = await db.query.UsersTable.findFirst({
+              where: eq(UsersTable.userId, booking.userId),
+            });
+          }
+          // Process Status in Public Entry
+          if (payment.bookingId == null) {
+            if (payment.publicEntryId == null) {
+              throw new NotFoundError(" Public not found");
+            }
+
+            const publics = await tx.query.PublicEntryTable.findFirst({
+              where: eq(PublicEntryTable.publicEntryId, payment.publicEntryId),
+            });
+
+            if (!publics) {
+              throw new NotFoundError("Public Entry not found");
+            }
+
+            customer = await db.query.UsersTable.findFirst({
+              where: eq(UsersTable.userId, publics.userId),
+            });
+          }
+
+          const resend = new Resend(process.env.RESEND_API_KEY);
+          const notifyResult = await resend.emails.send({
+            from: "Danayas Resort <onboarding@resend.dev>",
+            to: ["realrickyjones@gmail.com"], // Replace with Customer email
+            subject: `Payment Invalid for Your Reservation at Danayas Resort`,
+            replyTo: "Danayas@email.com", // Replace with Danayas email
+            html: `
+                     <div style="font-family: Arial, sans-serif; background: #fdfaf6; padding: 20px; color: #333;">
+                      <div style="max-width: 600px; margin: 0 auto; background: #fff; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+                        <div style="background: #b30000; padding: 20px 30px; border-top-left-radius: 8px; border-top-right-radius: 8px;">
+                          <h2 style="margin: 0; color: #fff;">Danayas Resort & Events Venue</h2>
+                          <p style="margin: 5px 0 0; color: #fff;">Payment Rejected</p>
+                        </div>
+                        <div style="padding: 30px;">
+                          <p style="font-size: 16px;">Dear ${customer?.firstName},</p>
+                          <p style="font-size: 15px;">
+                            Your recent payment has been <strong>marked invalid</strong> by our team.
+                          </p>
+                          <p><strong>Reason:</strong> ${parsed.remarks}</p>
+                          <p style="margin-top: 20px; font-size: 14px;">Please contact us to resolve this issue or submit a new payment.</p>
+                          <p style="margin-top: 30px; font-size: 13px; color: #999;">
+                            Sent automatically by the website on ${new Date().toLocaleString()}.
+                          </p>
+                        </div>
+                        <div style="background: #b30000; padding: 15px 30px; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; text-align: center;">
+                          <p style="margin: 0; font-size: 13px; color: #fff;">Danayas Resort & Events Venue</p>
+                          <p style="margin: 0; font-size: 12px; color: #eee;">© ${new Date().getFullYear()} All rights reserved.</p>
+                        </div>
+                      </div>
+                    </div>
+                  `,
+          });
         }
 
         if (paymentStatus === "voided") {
@@ -864,6 +1136,39 @@ paymentRoutes.openapi(
               ) {
                 bookStatus = "pending";
               }
+
+              const resend = new Resend(process.env.RESEND_API_KEY);
+              const notifyResult = await resend.emails.send({
+                from: "Danayas Resort <onboarding@resend.dev>",
+                to: ["realrickyjones@gmail.com"], // Replace with Customer email
+                subject: `Payment Voided for Your Reservation at Danayas Resort`,
+                replyTo: "Danayas@email.com", // Replace with Danayas email
+                html: `
+                     <div style="font-family: Arial, sans-serif; background: #fdfaf6; padding: 20px; color: #333;">
+                      <div style="max-width: 600px; margin: 0 auto; background: #fff; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+                        <div style="background: #9e7300; padding: 20px 30px; border-top-left-radius: 8px; border-top-right-radius: 8px;">
+                          <h2 style="margin: 0; color: #fff;">Danayas Resort & Events Venue</h2>
+                          <p style="margin: 5px 0 0; color: #fff;">Payment Voided</p>
+                        </div>
+                        <div style="padding: 30px;">
+                          <p style="font-size: 16px;">Hello ${booking.firstName},</p>
+                          <p style="font-size: 15px;">
+                            One of your previous payments has been <strong>voided</strong> by our team.
+                          </p>
+                          <p><strong>Remarks:</strong> ${parsed.remarks}</p>
+                          <p style="margin-top: 20px; font-size: 14px;">You may resubmit a new payment or contact support for clarification.</p>
+                          <p style="margin-top: 30px; font-size: 13px; color: #999;">
+                            Sent automatically by the website on ${new Date().toLocaleString()}.
+                          </p>
+                        </div>
+                        <div style="background: #9e7300; padding: 15px 30px; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; text-align: center;">
+                          <p style="margin: 0; font-size: 13px; color: #fff;">Danayas Resort & Events Venue</p>
+                          <p style="margin: 0; font-size: 12px; color: #eee;">© ${new Date().getFullYear()} All rights reserved.</p>
+                        </div>
+                      </div>
+                    </div>
+                  `,
+              });
 
               await tx
                 .update(BookingsTable)
@@ -940,6 +1245,39 @@ paymentRoutes.openapi(
               ) {
                 status = "pending";
               }
+
+              const resend = new Resend(process.env.RESEND_API_KEY);
+              const notifyResult = await resend.emails.send({
+                from: "Danayas Resort <onboarding@resend.dev>",
+                to: ["realrickyjones@gmail.com"], // Replace with Customer email
+                subject: `Your Booking Confirmation at Danayas Resort & Events Venue`,
+                replyTo: "Danayas@email.com", // Replace with Danayas email
+                html: `
+                     <div style="font-family: Arial, sans-serif; background: #fdfaf6; padding: 20px; color: #333;">
+                      <div style="max-width: 600px; margin: 0 auto; background: #fff; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+                        <div style="background: #9e7300; padding: 20px 30px; border-top-left-radius: 8px; border-top-right-radius: 8px;">
+                          <h2 style="margin: 0; color: #fff;">Danayas Resort & Events Venue</h2>
+                          <p style="margin: 5px 0 0; color: #fff;">Payment Voided</p>
+                        </div>
+                        <div style="padding: 30px;">
+                          <p style="font-size: 16px;">Hello ${publics.firstName},</p>
+                          <p style="font-size: 15px;">
+                            One of your previous payments has been <strong>voided</strong> by our team.
+                          </p>
+                          <p><strong>Remarks:</strong> ${parsed.remarks}</p>
+                          <p style="margin-top: 20px; font-size: 14px;">You may resubmit a new payment or contact support for clarification.</p>
+                          <p style="margin-top: 30px; font-size: 13px; color: #999;">
+                            Sent automatically by the website on ${new Date().toLocaleString()}.
+                          </p>
+                        </div>
+                        <div style="background: #9e7300; padding: 15px 30px; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; text-align: center;">
+                          <p style="margin: 0; font-size: 13px; color: #fff;">Danayas Resort & Events Venue</p>
+                          <p style="margin: 0; font-size: 12px; color: #eee;">© ${new Date().getFullYear()} All rights reserved.</p>
+                        </div>
+                      </div>
+                    </div>
+                  `,
+              });
 
               await tx
                 .update(PublicEntryTable)

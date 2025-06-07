@@ -1,8 +1,8 @@
-import { createRoute, OpenAPIHono } from "@hono/zod-openapi";
+import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import db from "../config/database";
 import { RegisterDTO, LoginDTO } from "../dto/authDTO";
 import { UsersTable } from "../schemas/User";
-import { eq } from "drizzle-orm";
+import { and, eq, gt } from "drizzle-orm";
 import { sign, verify } from "hono/jwt";
 import { AccessTokenDTO } from "../dto/authDTO";
 import { ErrorSchema } from "../utils/ErrorSchema";
@@ -11,6 +11,9 @@ import { errorHandler } from "../middlewares/errorHandler";
 import type { AuthContext } from "../types";
 import { AuditLogsTable } from "../schemas/AuditLog";
 import { GetUserDTO } from "../dto/userDTO";
+import { VerificationTable } from "../schemas/schema";
+import { randomUUID } from "crypto";
+import { Resend } from "resend";
 
 export default new OpenAPIHono<AuthContext>()
   .openapi(
@@ -63,6 +66,67 @@ export default new OpenAPIHono<AuthContext>()
               .execute()
           )[0];
 
+          const token = randomUUID();
+          const tokenHashed = await Bun.password.hash(token);
+
+          await tx.insert(VerificationTable).values({
+            userId: createUser.userId,
+            tokenHashed,
+            tokenType: "email_verification",
+            isUsed: 0,
+            createdAt: new Date(Date.now()).toISOString(),
+            expiresAt: new Date(Date.now() + 1000 * 60 * 15).toISOString(), // 15 mins
+          });
+
+          const resend = new Resend(process.env.RESEND_API_KEY);
+          const notifyResult = await resend.emails.send({
+            from: "Email Verification <onboarding@resend.dev>",
+            to: ["realrickyjones@gmail.com"],
+            subject: `Email Verification from ${body.username}`,
+            replyTo: body.email,
+            html: `
+              <div style="font-family: Arial, sans-serif; background: #fdfaf6; padding: 20px; color: #333;">
+                <div style="max-width: 600px; margin: 0 auto; background: #fff; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+                  <div style="background: #1e3d25; padding: 20px 30px; border-top-left-radius: 8px; border-top-right-radius: 8px;">
+                    <h2 style="margin: 0; color: #fdfaf6;">Danayas Resort & Events Venue</h2>
+                    <p style="margin: 5px 0 0; color: #fdfaf6;">Email Verification</p>
+                  </div>
+                  <div style="padding: 30px;">
+                    <p style="font-size: 16px;">Hello,</p>
+                    <p style="font-size: 15px;">Thank you for signing up. Please verify your email by clicking the link below:</p>
+
+                    <div style="margin: 30px 0; text-align: center;">
+                      <a href="http://localhost:3000/auth/verify-email?token=${token}" 
+                        style="display: inline-block; background-color: #1e3d25; color: #fdfaf6; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">
+                        Verify Email
+                      </a>
+                    </div>
+
+                    <p style="font-size: 14px;">If the button above doesn’t work, you can also copy and paste this link into your browser:</p>
+                    <p style="word-break: break-all; font-size: 13px; color: #006400;">
+                      http://localhost:3000/auth/verify-email?token=${token}
+                    </p>
+
+                    <p style="margin-top: 30px; font-size: 13px; color: #999;">
+                      Sent automatically by the website on ${new Date().toLocaleString()}.
+                    </p>
+                  </div>
+                  <div style="background: #1e3d25; padding: 15px 30px; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; text-align: center;">
+                    <p style="margin: 0; font-size: 13px; color: #fdfaf6;">Danayas Resort & Events Venue</p>
+                    <p style="margin: 0; font-size: 12px; color: #ccc;">© ${new Date().getFullYear()} All rights reserved.</p>
+                  </div>
+                </div>
+              </div>
+            `,
+          });
+
+          if (notifyResult.error) {
+            return c.json(
+              { success: false, error: notifyResult.error.message },
+              500
+            );
+          }
+
           await tx
             .insert(AuditLogsTable)
             .values({
@@ -78,15 +142,15 @@ export default new OpenAPIHono<AuthContext>()
 
           return createUser;
         });
-
+        // Should be redirect to the frontend for email verification
         return c.json(
           {
-            message: "Registration successful. Please log in.",
-            user: {
-              userId: created.userId,
-              email: created.email,
-              role: created.role,
-            },
+            message: "User created successfully. Please verify your email.",
+            // user: {
+            //   userId: created.userId,
+            //   email: created.email,
+            //   role: created.role,
+            // },
           },
           201
         );
@@ -265,6 +329,78 @@ export default new OpenAPIHono<AuthContext>()
       }
     }
   )
+  .openapi(
+    createRoute({
+      tags: ["Authentication"],
+      summary: "Verify user's email address using token",
+      method: "post",
+      path: "/verify-email",
+      request: {
+        query: z.object({
+          token: z.string().openapi({
+            description: "Verification token sent to the user's email",
+            example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+          }),
+        }),
+      },
+      responses: {
+        201: {
+          description: "Email verified successfully",
+        },
+        400: {
+          description: "Invalid or expired token",
+        },
+      },
+    }),
+    async (c) => {
+      try {
+        const { token } = c.req.valid("query");
+
+        const allTokens = await db.query.VerificationTable.findMany({
+          where: and(
+            eq(VerificationTable.tokenType, "email_verification"),
+            eq(VerificationTable.isUsed, 0),
+            gt(VerificationTable.expiresAt, new Date().toISOString())
+          ),
+        });
+
+        let isTokenFound = false;
+        for (const t of allTokens) {
+          const isValid = await Bun.password.verify(token, t.tokenHashed);
+          if (isValid) {
+            // Mark the token as used
+            await db
+              .update(VerificationTable)
+              .set({ isUsed: 1 })
+              .where(eq(VerificationTable.tokenHashed, t.tokenHashed))
+              .execute();
+
+            // Update user's isVerified status
+            await db
+              .update(UsersTable)
+              .set({ isVerified: 1 })
+              .where(eq(UsersTable.userId, t.userId))
+              .execute();
+
+            isTokenFound = true;
+          }
+        }
+        if (!isTokenFound) {
+          throw new UnauthorizedError("Invalid or expired token");
+        }
+
+        return c.json(
+          {
+            message: "Email verified successfully",
+          },
+          200
+        );
+      } catch (err) {
+        return errorHandler(err, c);
+      }
+    }
+  )
+
   .post("/logout", async (c) => {
     return c.text("Logout");
   });

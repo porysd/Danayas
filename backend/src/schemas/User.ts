@@ -19,4 +19,5 @@ export const UsersTable = sqliteTable("USER", {
   role: text("role", { enum: ["admin", "staff", "customer"] })
     .notNull()
     .default("customer"),
+  isVerified: integer("isVerified").default(0),
 });

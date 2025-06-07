@@ -41,6 +41,12 @@ export const UserDTO = z.object({
     example: "active",
     default: "active",
   }),
+  isVerified: z
+  .union([z.boolean(), z.number().int().min(0).max(1)])
+  .transform((val) => Number(val)).openapi({
+    description: "Indicates whether the user is verified",
+    example: false,
+  }),
 });
 
 export const GetUserDTO = UserDTO.omit({
