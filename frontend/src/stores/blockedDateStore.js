@@ -16,6 +16,7 @@ export const useBlockedStore = defineStore("blockedDates", {
       const limit = 50;
       let page = 1;
       let hasMoreData = true;
+      let allBlocked = [];
 
       while (hasMoreData) {
         const res = await fetch(
@@ -27,7 +28,6 @@ export const useBlockedStore = defineStore("blockedDates", {
             },
           }
         );
-
         if (!res.ok) {
           console.error("Failed to fetch blocked dates");
           break;
@@ -35,9 +35,8 @@ export const useBlockedStore = defineStore("blockedDates", {
         const blockedData = await res.json();
 
         if (blockedData.items && blockedData.items.length > 0) {
-          this.blocked.push(...blockedData.items);
-
-          if (blockedData.length === 0) {
+          allBlocked.push(...blockedData.items);
+          if (blockedData.items.length < limit) {
             hasMoreData = false;
           } else {
             page++;
@@ -46,6 +45,8 @@ export const useBlockedStore = defineStore("blockedDates", {
           hasMoreData = false;
         }
       }
+
+      this.blocked = allBlocked.reverse();
     },
 
     // Add blocked

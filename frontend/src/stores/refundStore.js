@@ -23,6 +23,7 @@ export const useRefundStore = defineStore("refund", {
         const limit = 50;
         let page = 1;
         let hasMoreData = true;
+        let allRefunds = [];
 
         while (hasMoreData) {
           const response = await fetch(
@@ -37,22 +38,8 @@ export const useRefundStore = defineStore("refund", {
           const refundData = await response.json();
 
           if (refundData.items && refundData.items.length > 0) {
-            this.refunds = refundData.items;
-
-            this.pending = refundData.items.filter(
-              (p) => p.refundStatus === "pending"
-            );
-
-            this.completed = refundData.items.filter(
-              (p) => p.refundStatus === "completed"
-            );
-
-            this.failed = refundData.items.filter(
-              (p) => p.refundStatus === "failed"
-            );
-
-            this.refundData.unshift(...refundData.items.reverse());
-            if (refundData.length === 0) {
+            allRefunds = allRefunds.concat(refundData.items);
+            if (refundData.items.length < limit) {
               hasMoreData = false;
             } else {
               page++;
@@ -61,6 +48,12 @@ export const useRefundStore = defineStore("refund", {
             hasMoreData = false;
           }
         }
+        this.refunds = allRefunds.reverse();
+        this.pending = allRefunds.filter((p) => p.refundStatus === "pending");
+        this.completed = allRefunds.filter(
+          (p) => p.refundStatus === "completed"
+        );
+        this.failed = allRefunds.filter((p) => p.refundStatus === "failed");
       } catch (error) {
         console.error("Error fetching refunds:", error);
       }
@@ -87,34 +80,49 @@ export const useRefundStore = defineStore("refund", {
       const newRefund = await res.json();
       this.refunds.push(newRefund);
 
-      return newRefund;
+      await this.fetchRefunds();
     },
 
     // Update PAYMENT
     async updateRefund(refund) {
+      const formData = new FormData();
       const auth = useAuthStore();
       if (!auth.isLoggedIn) return;
+
+      for (const key in refund) {
+        const value = refund[key];
+        if (
+          value !== null &&
+          value !== undefined &&
+          !(key === "imageUrl" && !(value instanceof File))
+        ) {
+          formData.append(key, value);
+        }
+      }
+
       try {
         const response = await fetch(
           `http://localhost:3000/refund/${refund.refundId}`,
           {
             method: "PATCH",
             headers: {
-              "Content-Type": "application/json",
               Authorization: `Bearer ${auth.accessToken}`,
             },
-            body: JSON.stringify(refund),
+            body: formData,
           }
         );
 
-        if (!response.ok) throw new Error("Failed to update refund");
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Failed to update refund: ${errorText}`);
+        }
 
-        // const index = this.refunds.findIndex(
-        //   (p) => p.refundId === refund.refundId
-        // );
-        // if (index !== -1) {
-        //   Object.assign(this.refunds[index], refund);
-        // }
+        const index = this.refunds.findIndex(
+          (p) => p.refundId === refund.refundId
+        );
+        if (index !== -1) {
+          Object.assign(this.refunds[index], refund);
+        }
 
         await this.fetchRefunds();
       } catch (err) {
