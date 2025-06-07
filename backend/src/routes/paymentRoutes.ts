@@ -25,6 +25,12 @@ import { revokePermission, verifyPermission } from "../utils/permissionUtils";
 import type { AuthContext } from "../types";
 import fs from "fs/promises";
 import path from "path";
+import {
+  paymentInvalidHtml,
+  paymentNotificationHtml,
+  paymentVoidedHtml,
+} from "../utils/emailTemplates";
+import { Resend } from "resend";
 
 const paymentRoutes = new OpenAPIHono<AuthContext>();
 
@@ -427,6 +433,25 @@ paymentRoutes.openapi(
             const updatedBookingPaymentStatus =
               updatedRemainingBalance === 0 ? "paid" : "partially-paid";
 
+            const customer = await db.query.UsersTable.findFirst({
+              where: eq(UsersTable.userId, booking.userId),
+            });
+
+            // PAYMENT NOTIFICATION EMAIL FOR PRIVATE BOOKING
+            const resend = new Resend(process.env.RESEND_API_KEY);
+            const notifyResult = await resend.emails.send({
+              from: "Danayas Resort <onboarding@resend.dev>",
+              to: ["realrickyjones@gmail.com"], // Replace with Customer email
+              subject: `Payment Recorded for Your Reservation at Danayas Resort`,
+              replyTo: "Danayas@email.com", // Replace with Danayas email
+              html: paymentNotificationHtml({
+                customerName: customer?.firstName ?? "Customer",
+                paymentMethod: parsed.paymentMethod,
+                netPaidAmount,
+                changeAmount,
+              }),
+            });
+
             await tx
               .update(BookingsTable)
               .set({
@@ -584,6 +609,25 @@ paymentRoutes.openapi(
             const updatePublicStatus =
               updatePublicBalance === 0 ? "paid" : "partially-paid";
 
+            const customer = await db.query.UsersTable.findFirst({
+              where: eq(UsersTable.userId, publics.userId),
+            });
+
+            // PAYMENT NOTIFICATION EMAIL FOR PUBLIC BOOKING
+            const resend = new Resend(process.env.RESEND_API_KEY);
+            const notifyResult = await resend.emails.send({
+              from: "Danayas Resort <onboarding@resend.dev>",
+              to: ["realrickyjones@gmail.com"], // Replace with Customer email
+              subject: `Payment Recorded for Your Reservation at Danayas Resort`,
+              replyTo: "Danayas@email.com", // Replace with Danayas email
+              html: paymentNotificationHtml({
+                customerName: customer?.firstName ?? "Customer",
+                paymentMethod: parsed.paymentMethod,
+                netPaidAmount,
+                changeAmount,
+              }),
+            });
+
             await tx
               .update(PublicEntryTable)
               .set({
@@ -721,6 +765,25 @@ paymentRoutes.openapi(
             const bookingPaymentStatus =
               remainingBalance === 0 ? "paid" : "partially-paid";
 
+            const customer = await db.query.UsersTable.findFirst({
+              where: eq(UsersTable.userId, booking.userId),
+            });
+
+            // PAYMENT NOTIFICATION EMAIL FOR PRIVATE BOOKING
+            const resend = new Resend(process.env.RESEND_API_KEY);
+            const notifyResult = await resend.emails.send({
+              from: "Danayas Resort <onboarding@resend.dev>",
+              to: ["realrickyjones@gmail.com"], // Replace with Customer email
+              subject: `Payment Recorded for Your Reservation at Danayas Resort`,
+              replyTo: "Danayas@email.com", // Replace with Danayas email
+              html: paymentNotificationHtml({
+                customerName: customer?.firstName ?? "Customer",
+                paymentMethod: payment.paymentMethod,
+                netPaidAmount: payment.netPaidAmount,
+                changeAmount: payment.changeAmount,
+              }),
+            });
+
             const updatedBooking = await tx
               .update(BookingsTable)
               .set({
@@ -771,6 +834,25 @@ paymentRoutes.openapi(
             const publicPaymentStatus =
               remainingBalance === 0 ? "paid" : "partially-paid";
 
+            const customer = await db.query.UsersTable.findFirst({
+              where: eq(UsersTable.userId, publics.userId),
+            });
+
+            // PAYMENT NOTIFICATION EMAIL FOR PUBLIC BOOKING
+            const resend = new Resend(process.env.RESEND_API_KEY);
+            const notifyResult = await resend.emails.send({
+              from: "Danayas Resort <onboarding@resend.dev>",
+              to: ["realrickyjones@gmail.com"], // Replace with Customer email
+              subject: `Payment Recorded for Your Reservation at Danayas Resort`,
+              replyTo: "Danayas@email.com", // Replace with Danayas email
+              html: paymentNotificationHtml({
+                customerName: customer?.firstName ?? "Customer",
+                paymentMethod: payment.paymentMethod,
+                netPaidAmount: payment.netPaidAmount,
+                changeAmount: payment.changeAmount,
+              }),
+            });
+
             const updatePublic = await tx
               .update(PublicEntryTable)
               .set({
@@ -813,6 +895,56 @@ paymentRoutes.openapi(
               400
             );
           }
+          let customer;
+
+          // Process Status in Private Booking
+          if (payment.publicEntryId == null) {
+            if (payment.bookingId == null) {
+              throw new NotFoundError("Booking not found");
+            }
+
+            const booking = await tx.query.BookingsTable.findFirst({
+              where: eq(BookingsTable.bookingId, payment.bookingId),
+            });
+
+            if (!booking) {
+              throw new NotFoundError("Booking not found.");
+            }
+            customer = await db.query.UsersTable.findFirst({
+              where: eq(UsersTable.userId, booking.userId),
+            });
+          }
+          // Process Status in Public Entry
+          if (payment.bookingId == null) {
+            if (payment.publicEntryId == null) {
+              throw new NotFoundError(" Public not found");
+            }
+
+            const publics = await tx.query.PublicEntryTable.findFirst({
+              where: eq(PublicEntryTable.publicEntryId, payment.publicEntryId),
+            });
+
+            if (!publics) {
+              throw new NotFoundError("Public Entry not found");
+            }
+
+            customer = await db.query.UsersTable.findFirst({
+              where: eq(UsersTable.userId, publics.userId),
+            });
+          }
+
+          // PAYMENT NOTIFICATION EMAIL FOR INVALID PAYMENT
+          const resend = new Resend(process.env.RESEND_API_KEY);
+          const notifyResult = await resend.emails.send({
+            from: "Danayas Resort <onboarding@resend.dev>",
+            to: ["realrickyjones@gmail.com"],
+            subject: `Payment Invalid for Your Reservation at Danayas Resort`,
+            replyTo: "Danayas@email.com",
+            html: paymentInvalidHtml({
+              customerName: customer?.firstName ?? "Customer",
+              reason: parsed.remarks,
+            }),
+          });
         }
 
         if (paymentStatus === "voided") {
@@ -823,6 +955,7 @@ paymentRoutes.openapi(
               400
             );
           }
+          let customer;
           if (payment.paymentStatus === "valid") {
             if (payment.publicEntryId == null) {
               if (payment.bookingId == null) {
@@ -866,6 +999,19 @@ paymentRoutes.openapi(
               ) {
                 bookStatus = "pending";
               }
+
+              // PAYMENT NOTIFICATION EMAIL FOR VOIDED PAYMENT
+              const resend = new Resend(process.env.RESEND_API_KEY);
+              const notifyResult = await resend.emails.send({
+                from: "Danayas Resort <onboarding@resend.dev>",
+                to: ["realrickyjones@gmail.com"],
+                subject: `Payment Voided for Your Reservation at Danayas Resort`,
+                replyTo: "Danayas@email.com",
+                html: paymentVoidedHtml({
+                  customerName: booking?.firstName ?? "Customer",
+                  remarks: parsed.remarks,
+                }),
+              });
 
               await tx
                 .update(BookingsTable)
@@ -942,6 +1088,19 @@ paymentRoutes.openapi(
               // ) {
               //   status = "pending";
               // }
+
+              // PAYMENT NOTIFICATION EMAIL FOR VOIDED PAYMENT
+              const resend = new Resend(process.env.RESEND_API_KEY);
+              const notifyResult = await resend.emails.send({
+                from: "Danayas Resort <onboarding@resend.dev>",
+                to: ["realrickyjones@gmail.com"],
+                subject: `Payment Voided for Your Reservation at Danayas Resort`,
+                replyTo: "Danayas@email.com",
+                html: paymentVoidedHtml({
+                  customerName: publics?.firstName ?? "Customer",
+                  remarks: parsed.remarks,
+                }),
+              });
 
               await tx
                 .update(PublicEntryTable)
