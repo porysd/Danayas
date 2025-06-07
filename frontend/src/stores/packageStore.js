@@ -5,6 +5,7 @@ export const usePackageStore = defineStore("package", {
   state: () => ({
     packages: [],
     promos: [],
+    commonPackages: [],
   }),
   getters: {
     getPackageById: (state) => (id) => {
@@ -54,6 +55,36 @@ export const usePackageStore = defineStore("package", {
         } else {
           hasMoreData = false;
         }
+      }
+    },
+
+    async fetchCommonPackages() {
+      try {
+        const limit = 4;
+        const page = 1;
+        this.commonPackages = [];
+
+        const res = await fetch(
+          `http://localhost:3000/packages/packages?limit=${limit}&page=${page}`,
+          {
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        if (!res.ok) {
+          console.error("Failed to fetch common packages");
+          return;
+        }
+
+        const packagesData = await res.json();
+        this.promos = packagesData.items || [];
+
+        // If your backend returns { items: [...] }
+        this.commonPackages = packagesData.items || [];
+      } catch (err) {
+        console.error("Error fetching common packages:", err);
       }
     },
 
