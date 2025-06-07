@@ -20,6 +20,8 @@ import { errorHandler } from "../middlewares/errorHandler";
 import { authMiddleware } from "../middlewares/authMiddleware";
 import { verifyPermission } from "../utils/permissionUtils";
 import type { AuthContext } from "../types";
+import fs from "fs/promises";
+import path from "path";
 
 const refundRoutes = new OpenAPIHono<AuthContext>();
 
@@ -499,7 +501,7 @@ refundRoutes.openapi(
         description: "Update Refund",
         required: true,
         content: {
-          "application/json": { schema: UpdateRefundDTO },
+          "multipart/form-data": { schema: UpdateRefundDTO },
         },
       },
     },
@@ -533,22 +535,71 @@ refundRoutes.openapi(
       }
 
       const refundId = Number(c.req.param("id"));
+      const verifiedBy = userId;
 
       if (isNaN(refundId)) {
         throw new BadRequestError("Invalid refund ID.");
       }
 
-      const parsed = UpdateRefundDTO.parse(await c.req.json());
+      const refund = await db.query.RefundsTable.findFirst({
+        where: eq(RefundsTable.refundId, refundId),
+      });
+
+      if (!refund) {
+        throw new NotFoundError("Refund not found.");
+      }
+
+      const body = await c.req.parseBody();
+      const file = body["imageUrl"] as File;
+      let imageUrl = null;
+
+      const parsed = UpdateRefundDTO.parse(body);
 
       if (
         parsed.refundMethod === "gcash" &&
-        (!parsed.reference || !parsed.imageUrl)
+        parsed.refundStatus === "completed"
       ) {
-        return c.json(
-          { error: "Reference and imageUrl are required for online payments" },
-          400
-        );
+        const referenceCode = parsed.reference ?? refund.reference;
+        const image = parsed.imageUrl ?? refund.imageUrl;
+
+        if (!referenceCode || !image) {
+          return c.json(
+            {
+              error: "Reference and imageUrl are required for online payments",
+            },
+            400
+          );
+        }
+
+        if (file) {
+          const allowedMimeTypes = [
+            "image/jpeg",
+            "image/png",
+            "image/jpg",
+            "image/jfif",
+          ];
+
+          if (!allowedMimeTypes.includes(file.type)) {
+            throw new BadRequestError(
+              "Invalid file type, Only Jpeg, Png, and Jpg are allowed"
+            );
+          }
+
+          const uploadDir = path.join(process.cwd(), "public", "RefundImages");
+          await fs.mkdir(uploadDir, { recursive: true });
+
+          const uniqueFileName = `${Date.now()}-${file.name}`;
+          const filePath = path.join(uploadDir, uniqueFileName);
+
+          const fileBuffer = await file.arrayBuffer();
+          await fs.writeFile(filePath, Buffer.from(fileBuffer));
+
+          parsed.imageUrl = `/RefundImages/${uniqueFileName}`;
+        } else if (!parsed.imageUrl) {
+          parsed.imageUrl = refund.imageUrl;
+        }
       }
+
       if (
         parsed.refundMethod === "cash" &&
         (parsed.reference || parsed.imageUrl)
@@ -562,14 +613,6 @@ refundRoutes.openapi(
       }
 
       const refundStatus = parsed.refundStatus;
-
-      const refund = await db.query.RefundsTable.findFirst({
-        where: eq(RefundsTable.refundId, refundId),
-      });
-
-      if (!refund) {
-        throw new NotFoundError("Refund not found.");
-      }
 
       // Remove acknowledge to process remarks on CASH
       if (
@@ -868,7 +911,7 @@ refundRoutes.openapi(
         const result = (
           await tx
             .update(RefundsTable)
-            .set({ ...parsed, refundStatus })
+            .set({ ...parsed, verifiedBy, refundStatus })
             .where(eq(RefundsTable.refundId, refundId))
             .returning()
             .execute()

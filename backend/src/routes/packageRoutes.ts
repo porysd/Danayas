@@ -273,7 +273,7 @@ packageRoutes.openapi(
       }),
       body: {
         content: {
-          "application/json": {
+          "multipart/form-data": {
             schema: UpdatePackageDTO,
           },
         },
@@ -307,11 +307,52 @@ packageRoutes.openapi(
         throw new ForbiddenError("No permission to update package.");
       }
 
-      const { id } = c.req.valid("param");
-      const body = c.req.valid("json");
+      const packageId = Number(c.req.param("id"));
+
+      const packages = await db.query.PackagesTable.findFirst({
+        where: eq(PackagesTable.packageId, packageId),
+      });
+
+      if (!packages) {
+        throw new NotFoundError("Package not found.");
+      }
+
+      const body = await c.req.parseBody();
+      const file = body["imageUrl"] as File;
+      let imageUrl = null;
+
+      const parsed = UpdatePackageDTO.parse(body);
+
+      if (file) {
+        const allowedMimeTypes = [
+          "image/jpeg",
+          "image/png",
+          "image/jpg",
+          "image/jfif",
+        ];
+
+        if (!allowedMimeTypes.includes(file.type)) {
+          throw new BadRequestError(
+            "Invalid file type, Only Jpeg, Png, and Jpg are allowed"
+          );
+        }
+
+        const uploadDir = path.join(process.cwd(), "public", "PackageImages");
+        await fs.mkdir(uploadDir, { recursive: true });
+
+        const uniqueFileName = `${Date.now()}-${file.name}`;
+        const filePath = path.join(uploadDir, uniqueFileName);
+
+        const fileBuffer = await file.arrayBuffer();
+        await fs.writeFile(filePath, Buffer.from(fileBuffer));
+
+        parsed.imageUrl = `/PackageImages/${uniqueFileName}`;
+      } else {
+        parsed.imageUrl = packages.imageUrl;
+      }
 
       const updatedBody = {
-        ...body,
+        ...parsed,
         updatedAt: new Date().toISOString().slice(0, 19).replace("T", " "),
       };
 
@@ -320,7 +361,7 @@ packageRoutes.openapi(
           await tx
             .update(PackagesTable)
             .set(updatedBody)
-            .where(eq(PackagesTable.packageId, id))
+            .where(eq(PackagesTable.packageId, packageId))
             .returning()
             .execute()
         )[0];
