@@ -238,9 +238,6 @@ onUnmounted(() => {
               <td>{{ revenue.paymentMethod }}</td>
               <td>{{ formatPeso(revenue.netPaidAmount) }}</td>
               <td>{{ formatDates(revenue.createdAt) }}</td>
-              <td @click.stop>
-                <T3ButtonTransaction />
-              </td>
             </tr>
           </tbody>
         </table>
@@ -281,9 +278,6 @@ onUnmounted(() => {
               <td>{{ revenue.refundMethod }}</td>
               <td>{{ formatPeso(revenue.refundAmount) }}</td>
               <td>{{ formatDates(revenue.createdAt) }}</td>
-              <td @click.stop>
-                <T3ButtonTransaction />
-              </td>
             </tr>
           </tbody>
         </table>
@@ -294,16 +288,9 @@ onUnmounted(() => {
           {{ formatPeso(reportStore.totalRefund) }}
         </p>
       </div>
-
-      <div class="flex flex-col mt-5 items-end">
-        <p class="text-lg">
-          <strong>Net Revenue: </strong>
-          {{ formatPeso(reportStore.netRevenue) }}
-        </p>
-      </div>
     </div>
 
-    <div v-if="paymentDetails" class="modal">
+    <!-- <div v-if="paymentDetails" class="modal">
       <div class="modal-content">
         <h2>Payment Details</h2>
         <p>Payment ID: {{ selectedPayment?.paymentId }}</p>
@@ -318,7 +305,7 @@ onUnmounted(() => {
         <p>Paid At: {{ selectedPayment?.paidAt }}</p>
         <button class="closeDetails" @click="closeModal">Close</button>
       </div>
-    </div>
+    </div> -->
   </main>
 </template>
 
@@ -366,7 +353,7 @@ onUnmounted(() => {
 }
 
 .tableContainer {
-  max-height: 25%;
+  max-height: 30%;
   overflow-y: auto;
   border-radius: 5px;
 }

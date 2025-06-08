@@ -22,6 +22,7 @@ import { usePaymentStore } from "../../stores/paymentStore.js";
 import { useBookingStore } from "../../stores/bookingStore.js";
 import { usePublicEntryStore } from "../../stores/publicEntryStore.js";
 import Image from "primevue/image";
+import Dialog from "primevue/dialog";
 
 const paymentStore = usePaymentStore();
 const bookingStore = useBookingStore();
@@ -135,30 +136,6 @@ const totalPending = computed(() => filteredPending.value.length);
 const totalPayments = computed(() => filteredPayment.value.length); // VALID
 const totalInvalid = computed(() => filteredInvalid.value.length);
 const totalVoided = computed(() => filteredVoid.value.length);
-
-const first = ref(0);
-const rows = ref(10);
-
-const paginatedPending = computed(() => {
-  return filteredPending.value.slice(first.value, first.value + rows.value);
-});
-
-const paginatedPayments = computed(() => {
-  return filteredPayment.value.slice(first.value, first.value + rows.value);
-});
-
-const paginatedInvalid = computed(() => {
-  return filteredInvalid.value.slice(first.value, first.value + rows.value);
-});
-
-const paginatedVoid = computed(() => {
-  return filteredVoid.value.slice(first.value, first.value + rows.value);
-});
-
-const onPageChange = (event) => {
-  first.value = event.first;
-  rows.value = event.rows;
-};
 
 //Search logic
 const showMenu = ref(false);
@@ -339,9 +316,9 @@ const showAction = ref(false);
         <Tabs value="0">
           <TabList>
             <Tab value="0">PENDING</Tab>
-            <Tab value="1">VALID</Tab>
-            <Tab value="2">INVALID</Tab>
-            <Tab value="3">VOID</Tab>
+            <Tab value="1">APPROVED</Tab>
+            <Tab value="2">DENIED</Tab>
+            <!-- <Tab value="3">VOID</Tab> -->
           </TabList>
           <TabPanels>
             <TabPanel value="0">
@@ -365,7 +342,7 @@ const showAction = ref(false);
                   <tbody>
                     <tr
                       class="cRow"
-                      v-for="payment in paginatedPending"
+                      v-for="payment in filteredPending"
                       :key="payment.paymentId"
                       @click="openPaymentDetails(payment)"
                     >
@@ -421,14 +398,6 @@ const showAction = ref(false);
                     </tr>
                   </tbody>
                 </table>
-                <Paginator
-                  :first="first"
-                  :rows="rows"
-                  :totalRecords="totalPending"
-                  :rowsPerPageOptions="[5, 10, 20, 30]"
-                  @page="onPageChange"
-                  class="rowPagination"
-                />
               </div>
             </TabPanel>
 
@@ -452,7 +421,7 @@ const showAction = ref(false);
                   <tbody>
                     <tr
                       class="cRow"
-                      v-for="payment in paginatedPayments"
+                      v-for="payment in filteredPayment"
                       :key="payment.paymentId"
                       @click="openPaymentDetails(payment)"
                     >
@@ -475,7 +444,11 @@ const showAction = ref(false);
                       <td class="w-[5%]">
                         <Tag
                           :severity="getStatusSeverity(payment.paymentStatus)"
-                          :value="payment.paymentStatus"
+                          :value="
+                            payment.paymentStatus === 'valid'
+                              ? 'Approved'
+                              : 'Denied'
+                          "
                         />
                       </td>
                       <td class="w-[10%]" @click.stop>
@@ -507,14 +480,6 @@ const showAction = ref(false);
                     </tr>
                   </tbody>
                 </table>
-                <Paginator
-                  :first="first"
-                  :rows="rows"
-                  :totalRecords="totalPayments"
-                  :rowsPerPageOptions="[5, 10, 20, 30]"
-                  @page="onPageChange"
-                  class="rowPagination"
-                />
               </div>
             </TabPanel>
 
@@ -538,7 +503,7 @@ const showAction = ref(false);
                   <tbody>
                     <tr
                       class="cRow"
-                      v-for="payment in paginatedInvalid"
+                      v-for="payment in filteredInvalid"
                       :key="payment.paymentId"
                       @click="openPaymentDetails(payment)"
                     >
@@ -561,7 +526,11 @@ const showAction = ref(false);
                       <td class="w-[5%]">
                         <Tag
                           :severity="getStatusSeverity(payment.paymentStatus)"
-                          :value="payment.paymentStatus"
+                          :value="
+                            payment.paymentStatus === 'valid'
+                              ? 'Approved'
+                              : 'Denied'
+                          "
                         />
                       </td>
                       <td class="w-[10%]" @click.stop>
@@ -593,18 +562,10 @@ const showAction = ref(false);
                     </tr>
                   </tbody>
                 </table>
-                <Paginator
-                  :first="first"
-                  :rows="rows"
-                  :totalRecords="totalInvalid"
-                  :rowsPerPageOptions="[5, 10, 20, 30]"
-                  @page="onPageChange"
-                  class="rowPagination"
-                />
               </div>
             </TabPanel>
 
-            <TabPanel value="3">
+            <!-- <TabPanel value="3">
               <div class="tableContainer">
                 <table class="dTable">
                   <thead>
@@ -678,26 +639,20 @@ const showAction = ref(false);
                     </tr>
                   </tbody>
                 </table>
-                <Paginator
-                  :first="first"
-                  :rows="rows"
-                  :totalRecords="totalVoided"
-                  :rowsPerPageOptions="[5, 10, 20, 30]"
-                  @page="onPageChange"
-                  class="rowPagination"
-                />
               </div>
-            </TabPanel>
+            </TabPanel> -->
           </TabPanels>
         </Tabs>
       </div>
     </div>
 
-    <div v-if="paymentDetails" class="modal">
-      <div class="modal-content font-[Poppins]">
-        <h2 class="text-xl font-bold m-auto justify-center align-center flex">
-          Payment Details
-        </h2>
+    <Dialog v-model:visible="paymentDetails" modal :style="{ width: '30rem' }">
+      <template #header>
+        <div class="flex flex-col items-center justify-center w-full">
+          <h2 class="text-xl font-bold font-[Poppins]">Payment Details</h2>
+        </div>
+      </template>
+      <div class="font-[Poppins]">
         <Divider />
         <div class="flex flex-col gap-2">
           <p><strong>Payment ID:</strong> {{ selectedPayment?.paymentId }}</p>
@@ -735,7 +690,7 @@ const showAction = ref(false);
           </button>
         </div>
       </div>
-    </div>
+    </Dialog>
   </main>
 </template>
 
@@ -788,7 +743,7 @@ td {
 
 .tableContainer {
   max-height: 75%;
-  overflow-y: auto;
+  overflow: visible;
   border-radius: 5px;
 }
 

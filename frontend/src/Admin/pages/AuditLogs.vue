@@ -26,18 +26,6 @@ onMounted(() => {
 
 const total = computed(() => filtered.value.length);
 
-const first = ref(0);
-const rows = ref(10);
-
-const paginatedLogs = computed(() => {
-  return filtered.value.slice(first.value, first.value + rows.value);
-});
-
-const onPageChangeCat = (event) => {
-  first.value = event.first;
-  rows.value = event.rows;
-};
-
 const selected = ref(null);
 const details = ref(false);
 
@@ -98,7 +86,7 @@ const filtered = computed(() => {
             <tbody>
               <tr
                 class="paRow"
-                v-for="logs in paginatedLogs"
+                v-for="logs in filtered"
                 :key="logs.id"
                 @click="openDetails(logs)"
               >

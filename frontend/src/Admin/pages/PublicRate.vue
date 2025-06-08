@@ -16,6 +16,7 @@ import { useToast } from "primevue/usetoast";
 import { usePublicRateStore } from "../../stores/publicRateStore.js";
 import { formatDates } from "../../utility/dateFormat.js";
 import { formatPeso } from "../../utility/pesoFormat.js";
+import Dialog from "primevue/dialog";
 
 const toast = useToast();
 const rateStore = usePublicRateStore();
@@ -36,18 +37,6 @@ const updateRateHandler = async (rateDetails) => {
 
 const deleteRateHandler = async (rateDetails) => {
   await rateStore.deleteRates(rateDetails);
-};
-
-const first = ref(0);
-const rows = ref(5);
-
-const paginatedRates = computed(() => {
-  return filteredRates.value.slice(first.value, first.value + rows.value);
-});
-
-const onPageChangeCat = (event) => {
-  first.value = event.first;
-  rows.value = event.rows;
 };
 
 const selecteRates = ref(null);
@@ -125,7 +114,7 @@ const getStatusSeverity = (status) => {
             <tbody>
               <tr
                 class="paRow"
-                v-for="rates in paginatedRates"
+                v-for="rates in filteredRates"
                 :key="rates.id"
                 @click="openRateDetails(rates)"
               >
@@ -153,40 +142,34 @@ const getStatusSeverity = (status) => {
               </tr>
             </tbody>
           </table>
-          <Paginator
-            :first="first"
-            :rows="rows"
-            :totalRecords="totalRates"
-            :rowsPerPageOptions="[5, 10, 20, 30]"
-            @page="onPageChangeCat"
-            class="rowPagination"
-          />
-        </div>
-      </div>
-
-      <div v-if="ratesDetails" class="modal">
-        <div class="modal-content font-[Poppins]">
-          <h2 class="text-xl font-bold m-auto justify-center flex">
-            Rate Details
-          </h2>
-          <Divider />
-          <div class="flex flex-col gap-2">
-            <p><strong>Category:</strong> {{ selecteRates?.category }}</p>
-            <p><strong>Price Rate:</strong> {{ selecteRates?.rate }}</p>
-            <p><strong>Mode:</strong> {{ selecteRates?.mode }}</p>
-            <p><strong>Active:</strong> {{ selecteRates?.active }}</p>
-            <p>
-              <strong>Created At:</strong>
-              {{ formatDates(selecteRates?.createdAt) }}
-            </p>
-            <Divider />
-            <button class="closeDetails mt-5 w-[100%]" @click="closeModal">
-              Close
-            </button>
-          </div>
         </div>
       </div>
     </div>
+
+    <Dialog v-model:visible="ratesDetails" modal :style="{ width: '30rem' }">
+      <template #header>
+        <div class="flex flex-col items-center justify-center w-full">
+          <h2 class="text-xl font-bold font-[Poppins]">Rate Details</h2>
+        </div>
+      </template>
+      <div class="font-[Poppins]">
+        <Divider />
+        <div class="flex flex-col gap-2">
+          <p><strong>Category:</strong> {{ selecteRates?.category }}</p>
+          <p><strong>Price Rate:</strong> {{ selecteRates?.rate }}</p>
+          <p><strong>Mode:</strong> {{ selecteRates?.mode }}</p>
+          <p><strong>Active:</strong> {{ selecteRates?.active }}</p>
+          <p>
+            <strong>Created At:</strong>
+            {{ formatDates(selecteRates?.createdAt) }}
+          </p>
+          <Divider />
+          <button class="closeDetails mt-5 w-[100%]" @click="closeModal">
+            Close
+          </button>
+        </div>
+      </div>
+    </Dialog>
   </main>
 </template>
 

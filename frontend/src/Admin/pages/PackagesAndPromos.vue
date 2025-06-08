@@ -25,6 +25,7 @@ import { formatPeso } from "../../utility/pesoFormat";
 import { formatDates } from "../../utility/dateFormat";
 import Inplace from "primevue/inplace";
 import Image from "primevue/image";
+import Dialog from "primevue/dialog";
 
 const toast = useToast();
 const packageStore = usePackageStore();
@@ -52,38 +53,6 @@ const deletePackageHandler = async (packageT) => {
 
 const totalPackages = computed(() => filteredPackages.value.length);
 const totalPromos = computed(() => filteredPromos.value.length);
-
-// Paginator or pagination of the tables
-const firstPack = ref(0);
-const rowsPack = ref(10);
-
-const paginatedPackages = computed(() => {
-  return filteredPackages.value.slice(
-    firstPack.value,
-    firstPack.value + rowsPack.value
-  );
-});
-
-const onPageChangePack = (event) => {
-  firstPack.value = event.first;
-  rowsPack.value = event.rows;
-};
-
-// Paginator or pagination of the tables
-const firstPro = ref(0);
-const rowsPro = ref(10);
-
-const paginatedPromos = computed(() => {
-  return filteredPromos.value.slice(
-    firstPro.value,
-    firstPro.value + rowsPro.value
-  );
-});
-
-const onPageChangePro = (event) => {
-  firstPro.value = event.first;
-  rowsPro.value = event.rows;
-};
 
 //Package Details
 const selectedPackage = ref(null);
@@ -212,7 +181,7 @@ const getStatusSeverity = (status) => {
                   <tbody>
                     <tr
                       class="paRow"
-                      v-for="packageT in paginatedPackages"
+                      v-for="packageT in filteredPackages"
                       :key="packageT.id"
                       @click="openPackageDetails(packageT)"
                     >
@@ -244,14 +213,6 @@ const getStatusSeverity = (status) => {
                     </tr>
                   </tbody>
                 </table>
-                <Paginator
-                  :first="firstPack"
-                  :rows="rowsPack"
-                  :totalRecords="totalPackages"
-                  :rowsPerPageOptions="[5, 10, 20, 30]"
-                  @page="onPageChangePack"
-                  class="rowPagination"
-                />
               </div>
             </TabPanel>
             <TabPanel value="1">
@@ -274,7 +235,7 @@ const getStatusSeverity = (status) => {
                   <tbody>
                     <tr
                       class="paRow"
-                      v-for="promo in paginatedPromos"
+                      v-for="promo in filteredPromos"
                       :key="promo.id"
                       @click="openPromoDetails(promo)"
                     >
@@ -305,14 +266,6 @@ const getStatusSeverity = (status) => {
                     </tr>
                   </tbody>
                 </table>
-                <Paginator
-                  :first="firstPro"
-                  :rows="rowsPro"
-                  :totalRecords="totalPromos"
-                  :rowsPerPageOptions="[5, 10, 20, 30]"
-                  @page="onPageChangePro"
-                  class="rowPagination"
-                />
               </div>
             </TabPanel>
           </TabPanels>
@@ -320,11 +273,13 @@ const getStatusSeverity = (status) => {
       </div>
     </div>
 
-    <div v-if="packageDetails" class="modal">
-      <div class="modal-content font-[Poppins]">
-        <h2 class="text-xl font-bold m-auto justify-center align-center flex">
-          Package Details
-        </h2>
+    <Dialog v-model:visible="packageDetails" modal :style="{ width: '30rem' }">
+      <template #header>
+        <div class="flex flex-col items-center justify-center w-full">
+          <h2 class="text-xl font-bold font-[Poppins]">Package Details</h2>
+        </div>
+      </template>
+      <div class="font-[Poppins]">
         <Divider />
         <div class="flex flex-col gap-2">
           <p><strong>Package ID:</strong> {{ selectedPackage?.packageId }}</p>
@@ -374,13 +329,15 @@ const getStatusSeverity = (status) => {
           </button>
         </div>
       </div>
-    </div>
+    </Dialog>
 
-    <div v-if="promoDetails" class="modal">
-      <div class="modal-content font-[Poppins]">
-        <h2 class="text-xl font-bold m-auto justify-center align-center flex">
-          Promo Details
-        </h2>
+    <Dialog v-model:visible="promoDetails" modal :style="{ width: '30rem' }">
+      <template #header>
+        <div class="flex flex-col items-center justify-center w-full">
+          <h2 class="text-xl font-bold font-[Poppins]">Promo Details</h2>
+        </div>
+      </template>
+      <div class="font-[Poppins]">
         <Divider />
         <div class="flex flex-col gap-2">
           <p><strong>Package ID:</strong> {{ selectedPromo?.packageId }}</p>
@@ -431,7 +388,7 @@ const getStatusSeverity = (status) => {
           </button>
         </div>
       </div>
-    </div>
+    </Dialog>
   </main>
 </template>
 

@@ -38,18 +38,6 @@ const deleteHandler = async (blockedDetails) => {
   await blockedStore.deleteBlockedDates(blockedDetails);
 };
 
-const first = ref(0);
-const rows = ref(5);
-
-const paginated = computed(() => {
-  return filtered.value.slice(first.value, first.value + rows.value);
-});
-
-const onPageChangeCat = (event) => {
-  first.value = event.first;
-  rows.value = event.rows;
-};
-
 const selected = ref(null);
 const details = ref(false);
 
@@ -125,7 +113,7 @@ const getStatusSeverity = (status) => {
             <tbody>
               <tr
                 class="paRow"
-                v-for="blocks in paginated"
+                v-for="blocks in filtered"
                 :key="blocks.id"
                 @click="openRateDetails(blocks)"
               >
@@ -152,14 +140,6 @@ const getStatusSeverity = (status) => {
               </tr>
             </tbody>
           </table>
-          <Paginator
-            :first="first"
-            :rows="rows"
-            :totalRecords="total"
-            :rowsPerPageOptions="[5, 10, 20, 30]"
-            @page="onPageChangeCat"
-            class="rowPagination"
-          />
         </div>
       </div>
 

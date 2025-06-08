@@ -12,6 +12,7 @@ import ProfileAvatar from "../components/ProfileAvatar.vue";
 import Paginator from "primevue/paginator";
 import { formatDates } from "../../utility/dateFormat";
 import { useTermsStore } from "../../stores/termStore.js";
+import Dialog from "primevue/dialog";
 
 const termsStore = useTermsStore();
 
@@ -48,17 +49,6 @@ const closeModal = () => {
 };
 
 // Paginator or pagination of the tables
-const first = ref(0);
-const rows = ref(10);
-
-const paginatedTerms = computed(() => {
-  return filteredTerms.value.slice(first.value, first.value + rows.value);
-});
-
-const onPageChange = (event) => {
-  first.value = event.first;
-  rows.value = event.rows;
-};
 
 // Search and Filter Button Logic
 const showMenu = ref(false);
@@ -114,7 +104,7 @@ const filteredTerms = computed(() => {
           <tbody>
             <tr
               class="eRow border-[#194D1D] dark:border-[#18181b]"
-              v-for="term in paginatedTerms"
+              v-for="term in filteredTerms"
               :key="term.userId"
               @click="openFaqsDetails(term)"
             >
@@ -133,22 +123,17 @@ const filteredTerms = computed(() => {
             </tr>
           </tbody>
         </table>
-        <Paginator
-          :first="first"
-          :rows="rows"
-          :totalRecords="totalTerms"
-          :rowsPerPageOptions="[5, 10, 20, 30]"
-          @page="onPageChange"
-          class="rowPagination"
-        />
       </div>
     </div>
-
-    <div v-if="details" class="modal">
-      <div class="modal-content font-[Poppins]">
-        <h2 class="text-xl font-bold m-auto justify-center align-center flex">
-          FAQs Details
-        </h2>
+    <Dialog v-model:visible="details" modal :style="{ width: '30rem' }">
+      <template #header>
+        <div class="flex flex-col items-center justify-center w-full">
+          <h2 class="text-xl font-bold font-[Poppins]">
+            Terms & Conditions Details
+          </h2>
+        </div>
+      </template>
+      <div class="font-[Poppins]">
         <Divider />
         <div class="flex flex-col gap-2">
           <p>
@@ -169,7 +154,7 @@ const filteredTerms = computed(() => {
           Close
         </button>
       </div>
-    </div>
+    </Dialog>
   </main>
 </template>
 
@@ -219,7 +204,7 @@ td {
 
 .tableContainer {
   max-height: 75%;
-  overflow: visible;
+  overflow: auto;
   border-radius: 5px;
 }
 

@@ -21,6 +21,7 @@ import { usePublicEntryStore } from "../../stores/publicEntryStore.js";
 import { usePaymentStore } from "../../stores/paymentStore.js";
 import { formatPeso } from "../../utility/pesoFormat";
 import { formatDates } from "../../utility/dateFormat";
+import Dialog from "primevue/dialog";
 
 const publicStore = usePublicEntryStore();
 const paymentStore = usePaymentStore();
@@ -129,91 +130,6 @@ const closeModal = () => {
   publicDetails.value = false;
 };
 
-// Paginator or pagination of the tables
-const first = ref(0);
-const firstPending = ref(0);
-const firstReserved = ref(0);
-const firstPendingCancellation = ref(0);
-const firstCancelled = ref(0);
-const firstRescheduled = ref(0);
-const firstCompleted = ref(0);
-const rows = ref(10);
-
-const paginatedPublic = computed(() => {
-  return filteredPublic.value.slice(first.value, first.value + rows.value);
-});
-
-const paginatedPendings = computed(() => {
-  return filteredPendings.value.slice(
-    firstPending.value,
-    firstPending.value + rows.value
-  );
-});
-
-const paginatedReserved = computed(() => {
-  return filteredReserved.value.slice(
-    firstReserved.value,
-    firstReserved.value + rows.value
-  );
-});
-
-const paginatedCancellation = computed(() => {
-  return filteredPendingCancellation.value.slice(
-    firstPendingCancellation.value,
-    firstPendingCancellation.value + rows.value
-  );
-});
-
-const paginatedCancelled = computed(() => {
-  return filteredCancelled.value.slice(
-    firstCancelled.value,
-    firstCancelled.value + rows.value
-  );
-});
-
-const paginatedCompleted = computed(() => {
-  return filteredCompleted.value.slice(
-    firstCompleted.value,
-    firstCompleted.value + rows.value
-  );
-});
-
-const paginatedRescheduled = computed(() => {
-  return filteredRescheduled.value.slice(
-    firstRescheduled.value,
-    firstRescheduled.value + rows.value
-  );
-});
-
-const onPageChange = (event) => {
-  first.value = event.first;
-  rows.value = event.rows;
-};
-const onPageChangePending = (event) => {
-  firstPending.value = event.first;
-  rows.value = event.rows;
-};
-const onPageChangeReserved = (event) => {
-  firstReserved.value = event.first;
-  rows.value = event.rows;
-};
-const onPageChangeRescheduled = (event) => {
-  firstRescheduled.value = event.first;
-  rows.value = event.rows;
-};
-const onPageChangeCancellation = (event) => {
-  firstPendingCancellation.value = event.first;
-  rows.value = event.rows;
-};
-const onPageChangeCancelled = (event) => {
-  firstCancelled.value = event.first;
-  rows.value = event.rows;
-};
-const onPageChangeCompleted = (event) => {
-  firstCompleted.value = event.first;
-  rows.value = event.rows;
-};
-
 // Search Bar logic
 const showMenu = ref(false);
 const searchQuery = ref("");
@@ -308,34 +224,8 @@ const filteredPublic = computed(() => {
   return result;
 });
 
-const filteredPendings = computed(() => {
-  let result = publicStore.pending;
-
-  if (searchQuery.value !== "") {
-    result = result.filter((booking) =>
-      Object.values(booking).some((val) =>
-        String(val).toLowerCase().includes(searchQuery.value.toLowerCase())
-      )
-    );
-  }
-  return result;
-});
-
 const filteredReserved = computed(() => {
   let result = publicStore.reserved;
-
-  if (searchQuery.value !== "") {
-    result = result.filter((booking) =>
-      Object.values(booking).some((val) =>
-        String(val).toLowerCase().includes(searchQuery.value.toLowerCase())
-      )
-    );
-  }
-  return result;
-});
-
-const filteredPendingCancellation = computed(() => {
-  let result = publicStore.pendingCancellation;
 
   if (searchQuery.value !== "") {
     result = result.filter((booking) =>
@@ -362,19 +252,6 @@ const filteredCancelled = computed(() => {
 
 const filteredCompleted = computed(() => {
   let result = publicStore.completed;
-
-  if (searchQuery.value !== "") {
-    result = result.filter((booking) =>
-      Object.values(booking).some((val) =>
-        String(val).toLowerCase().includes(searchQuery.value.toLowerCase())
-      )
-    );
-  }
-  return result;
-});
-
-const filteredRescheduled = computed(() => {
-  let result = publicStore.rescheduled;
 
   if (searchQuery.value !== "") {
     result = result.filter((booking) =>
@@ -690,7 +567,7 @@ onUnmounted(() => {
                   <tbody>
                     <tr
                       class="bRow border-[#194D1D] dark:border-[#18181b]"
-                      v-for="publics in paginatedReserved"
+                      v-for="publics in filteredReserved"
                       :key="publics.id"
                       @click="openPublicDetails(publics)"
                     >
@@ -704,7 +581,8 @@ onUnmounted(() => {
                         {{ publics.contactNo }}
                       </td>
                       <td class="w-[12%]">
-                        {{ formatDates(publics.entryDate) }}
+                        {{ formatDates(publics.entryDate) }} <br />
+                        {{ publics.mode }}
                       </td>
                       <td class="w-[7%]">
                         {{ publics.numAdults }}
@@ -753,14 +631,6 @@ onUnmounted(() => {
                     </tr>
                   </tbody>
                 </table>
-                <Paginator
-                  :first="firstReserved"
-                  :rows="rows"
-                  :totalRecords="totalReserved"
-                  :rowsPerPageOptions="[5, 10, 20, 30]"
-                  @page="onPageChangeReserved"
-                  class="rowPagination"
-                />
               </div>
             </TabPanel>
 
@@ -789,7 +659,7 @@ onUnmounted(() => {
                   <tbody>
                     <tr
                       class="bRow border-[#194D1D] dark:border-[#18181b]"
-                      v-for="publics in paginatedCancelled"
+                      v-for="publics in filteredCancelled"
                       :key="publics.id"
                       @click="openPublicDetails(publics)"
                     >
@@ -803,7 +673,8 @@ onUnmounted(() => {
                         {{ publics.contactNo }}
                       </td>
                       <td class="w-[12%]">
-                        {{ formatDates(publics.entryDate) }}
+                        {{ formatDates(publics.entryDate) }} <br />
+                        {{ publics.mode }}
                       </td>
                       <td class="w-[7%]">
                         {{ publics.numAdults }}
@@ -852,14 +723,6 @@ onUnmounted(() => {
                     </tr>
                   </tbody>
                 </table>
-                <Paginator
-                  :first="firstCancelled"
-                  :rows="rows"
-                  :totalRecords="totalCancelled"
-                  :rowsPerPageOptions="[5, 10, 20, 30]"
-                  @page="onPageChangeCancelled"
-                  class="rowPagination"
-                />
               </div>
             </TabPanel>
             <TabPanel value="2">
@@ -887,7 +750,7 @@ onUnmounted(() => {
                   <tbody>
                     <tr
                       class="bRow border-[#194D1D] dark:border-[#18181b]"
-                      v-for="publics in paginatedCompleted"
+                      v-for="publics in filteredCompleted"
                       :key="publics.id"
                       @click="openPublicDetails(publics)"
                     >
@@ -901,7 +764,8 @@ onUnmounted(() => {
                         {{ publics.contactNo }}
                       </td>
                       <td class="w-[12%]">
-                        {{ formatDates(publics.entryDate) }}
+                        {{ formatDates(publics.entryDate) }} <br />
+                        {{ publics.mode }}
                       </td>
                       <td class="w-[7%]">
                         {{ publics.numAdults }}
@@ -950,14 +814,6 @@ onUnmounted(() => {
                     </tr>
                   </tbody>
                 </table>
-                <Paginator
-                  :first="firstCompleted"
-                  :rows="rows"
-                  :totalRecords="totalCompleted"
-                  :rowsPerPageOptions="[5, 10, 20, 30]"
-                  @page="onPageChangeCompleted"
-                  class="rowPagination"
-                />
               </div>
             </TabPanel>
             <TabPanel value="3">
@@ -985,7 +841,7 @@ onUnmounted(() => {
                   <tbody>
                     <tr
                       class="bRow border-[#194D1D] dark:border-[#18181b]"
-                      v-for="publics in paginatedPubilc"
+                      v-for="publics in filteredPublic"
                       :key="publics.id"
                       @click="openPublicDetails(publics)"
                     >
@@ -999,7 +855,8 @@ onUnmounted(() => {
                         {{ publics.contactNo }}
                       </td>
                       <td class="w-[12%]">
-                        {{ formatDates(publics.entryDate) }}
+                        {{ formatDates(publics.entryDate) }} <br />
+                        {{ publics.mode }}
                       </td>
                       <td class="w-[7%]">
                         {{ publics.numAdults }}
@@ -1048,14 +905,6 @@ onUnmounted(() => {
                     </tr>
                   </tbody>
                 </table>
-                <Paginator
-                  :first="first"
-                  :rows="rows"
-                  :totalRecords="totalPublic"
-                  :rowsPerPageOptions="[5, 10, 20, 30]"
-                  @page="onPageChange"
-                  class="rowPagination"
-                />
               </div>
             </TabPanel>
           </TabPanels>
@@ -1063,11 +912,20 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <div v-if="publicDetails" class="modal">
-      <div class="modal-content font-[Poppins]">
-        <h2 class="text-xl font-bold m-auto justify-center align-center flex">
-          Public Details
-        </h2>
+    <Dialog
+      v-model:visible="publicDetails"
+      modal
+      :style="{ width: '30rem' }"
+      class="modal"
+    >
+      <template #header>
+        <div class="flex flex-col items-center justify-center w-full">
+          <h2 class="text-xl font-bold font-[Poppins]">
+            Public Booking Details
+          </h2>
+        </div>
+      </template>
+      <div class="font-[Poppins]">
         <Divider />
         <div>
           <p>
@@ -1078,10 +936,6 @@ onUnmounted(() => {
           <p>
             <strong>Name:</strong> {{ selectedPublic?.firstName }}
             {{ selectedPublic?.lastName }}
-          </p>
-          <p><strong>Contact No.:</strong> {{ selectedPublic?.contactNo }}</p>
-          <p>
-            <strong>Email Address:</strong> {{ selectedPublic?.emailAddress }}
           </p>
           <p><strong>Address:</strong> {{ selectedPublic?.address }}</p>
           <p>
@@ -1108,10 +962,6 @@ onUnmounted(() => {
           </p>
           <p><strong>Status:</strong> {{ selectedPublic?.status }}</p>
           <p>
-            <strong>Reservation Type:</strong>
-            {{ selectedPublic?.reservationType }}
-          </p>
-          <p>
             <strong>Created At:</strong>
             {{ formatDates(selectedPublic?.createdAt) }}
           </p>
@@ -1121,7 +971,7 @@ onUnmounted(() => {
           Close
         </button>
       </div>
-    </div>
+    </Dialog>
   </main>
 </template>
 

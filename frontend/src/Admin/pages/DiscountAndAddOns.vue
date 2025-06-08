@@ -23,6 +23,7 @@ import { useToast } from "primevue/usetoast";
 import { useDiscountStore } from "../../stores/discountStore.js";
 import { useCatalogStore } from "../../stores/catalogStore.js";
 import { useAddOnsStore } from "../../stores/addOnsStore.js";
+import Dialog from "primevue/dialog";
 
 const toast = useToast();
 const discountStore = useDiscountStore();
@@ -64,18 +65,6 @@ const closeModal = () => {
   addOnsDetails.value = false;
 };
 
-const first = ref(0);
-const rows = ref(5);
-
-const paginatedDiscount = computed(() => {
-  return filteredDiscount.value.slice(first.value, first.value + rows.value);
-});
-
-const onPageChangePro = (event) => {
-  first.value = event.first;
-  rows.value = event.rows;
-};
-
 // ADD ONS
 
 const totalAddOns = computed(() => filteredAddOns.value.length);
@@ -83,21 +72,6 @@ const totalAddOns = computed(() => filteredAddOns.value.length);
 // const addAddOnsHandler = async (addOnsDetails) => {
 //   await addOnsStore.addAddOns(addOnsDetails);
 // };
-
-const firstAo = ref(0);
-const rowsAo = ref(10);
-
-const paginatedAddOns = computed(() => {
-  return filteredAddOns.value.slice(
-    firstAo.value,
-    firstAo.value + rowsAo.value
-  );
-});
-
-const onPageChangeAo = (event) => {
-  firstAo.value = event.first;
-  rowsAo.value = event.rows;
-};
 
 const selectedAddOns = ref(null);
 const addOnsDetails = ref(false);
@@ -121,21 +95,6 @@ const updateCatalogHandler = async (catalogDetails) => {
 
 const deleteCatalogHandler = async (catalogDetails) => {
   await catalogStore.deleteCatalog(catalogDetails);
-};
-
-const firstCat = ref(0);
-const rowsCat = ref(5);
-
-const paginatedCatalogs = computed(() => {
-  return filteredCatalog.value.slice(
-    firstCat.value,
-    firstCat.value + rowsCat.value
-  );
-});
-
-const onPageChangeCat = (event) => {
-  firstCat.value = event.first;
-  rowsCat.value = event.rows;
 };
 
 const selectedCatalog = ref(null);
@@ -240,7 +199,7 @@ const getStatusSeverity = (status) => {
           <TabList>
             <Tab value="0">DISCOUNT</Tab>
             <Tab value="1">CATALOG ADD ONS</Tab>
-            <Tab value="2">BOOKING ADD ONS</Tab>
+            <!-- <Tab value="2">BOOKING ADD ONS</Tab> -->
           </TabList>
           <TabPanels>
             <TabPanel value="0">
@@ -260,7 +219,7 @@ const getStatusSeverity = (status) => {
                   <tbody>
                     <tr
                       class="paRow"
-                      v-for="discount in paginatedDiscount"
+                      v-for="discount in filteredDiscount"
                       :key="discount.id"
                       @click="openDiscountDetails(discount)"
                     >
@@ -288,14 +247,6 @@ const getStatusSeverity = (status) => {
                     </tr>
                   </tbody>
                 </table>
-                <Paginator
-                  :first="first"
-                  :rows="rows"
-                  :totalRecords="totalDiscounts"
-                  :rowsPerPageOptions="[5, 10, 20, 30]"
-                  @page="onPageChangePro"
-                  class="rowPagination"
-                />
               </div>
             </TabPanel>
             <TabPanel value="1">
@@ -314,7 +265,7 @@ const getStatusSeverity = (status) => {
                   <tbody>
                     <tr
                       class="paRow"
-                      v-for="catalog in paginatedCatalogs"
+                      v-for="catalog in filteredCatalog"
                       :key="catalog.id"
                       @click="openCatalogDetails(catalog)"
                     >
@@ -341,17 +292,9 @@ const getStatusSeverity = (status) => {
                     </tr>
                   </tbody>
                 </table>
-                <Paginator
-                  :first="firstCat"
-                  :rows="rowsCat"
-                  :totalRecords="totalCatalog"
-                  :rowsPerPageOptions="[5, 10, 20, 30]"
-                  @page="onPageChangeCat"
-                  class="rowPagination"
-                />
               </div>
             </TabPanel>
-            <TabPanel value="2">
+            <!-- <TabPanel value="2">
               <div class="tableContainer">
                 <table class="dTable">
                   <thead>
@@ -395,16 +338,22 @@ const getStatusSeverity = (status) => {
                   class="rowPagination"
                 />
               </div>
-            </TabPanel>
+            </TabPanel> -->
           </TabPanels>
         </Tabs>
       </div>
 
-      <div v-if="discountDetails" class="modal">
-        <div class="modal-content font-[Poppins]">
-          <h2 class="text-xl font-bold m-auto justify-center flex">
-            Discount Details
-          </h2>
+      <Dialog
+        v-model:visible="discountDetails"
+        modal
+        :style="{ width: '30rem' }"
+      >
+        <template #header>
+          <div class="flex flex-col items-center justify-center w-full">
+            <h2 class="text-xl font-bold font-[Poppins]">Discount Details</h2>
+          </div>
+        </template>
+        <div class="font-[Poppins]">
           <Divider />
           <div class="flex flex-col gap-2">
             <p><strong>Discount Name:</strong> {{ selectedDiscount?.name }}</p>
@@ -419,13 +368,19 @@ const getStatusSeverity = (status) => {
             </button>
           </div>
         </div>
-      </div>
+      </Dialog>
 
-      <div v-if="catalogDetails" class="modal">
-        <div class="modal-content font-[Poppins]">
-          <h2 class="text-xl font-bold m-auto justify-center flex">
-            Catalog Add-On Details
-          </h2>
+      <Dialog
+        v-model:visible="catalogDetails"
+        modal
+        :style="{ width: '30rem' }"
+      >
+        <template #header>
+          <div class="flex flex-col items-center justify-center w-full">
+            <h2 class="text-xl font-bold font-[Poppins]">Catalog Details</h2>
+          </div>
+        </template>
+        <div class="font-[Poppins]">
           <Divider />
           <div class="flex flex-col gap-2">
             <p>
@@ -440,7 +395,7 @@ const getStatusSeverity = (status) => {
             </button>
           </div>
         </div>
-      </div>
+      </Dialog>
 
       <div v-if="addOnsDetails" class="modal">
         <div class="modal-content font-[Poppins]">
