@@ -27,6 +27,8 @@ import { RefundsTable } from "../schemas/Refund";
 import { RefundPaymentsTable } from "../schemas/RefundPayment";
 import { AuditLogsTable } from "../schemas/AuditLog";
 import { BookingAddOnsTable, CatalogAddOnsTable } from "../schemas/schema";
+import { Resend } from "resend";
+import { bookingConfirmationHtml, refundPendingHtml } from "../utils/emailTemplates";
 
 const bookingRoutes = new OpenAPIHono<AuthContext>();
 
@@ -388,6 +390,23 @@ bookingRoutes.openapi(
           })
           .execute();
 
+        // EMAIL FOR BOOKING CONFIRMATION
+        const resend = new Resend(process.env.RESEND_API_KEY);
+        await resend.emails.send({
+          from: "Danayas Resort <onboarding@resend.dev>",
+          to: ["realrickyjones@gmail.com"], // Replace with Customer email
+          subject: `Your Booking Confirmation at Danayas Resort & Events Venue`,
+          replyTo: "Danayas@email.com", // Replace with Danayas email
+          html: bookingConfirmationHtml({
+            firstName: processedBody.firstName ?? "Guest",
+            packageName: selectedPackage.name,
+            mode: body.mode,
+            checkInDate: processedBody.checkInDate,
+            checkOutDate: processedBody.checkOutDate,
+            totalAmount,
+          }),
+        });
+
         return insertedBooking;
       });
 
@@ -731,6 +750,22 @@ bookingRoutes.openapi(
           const totalPaid = allValidPayments.reduce((sum, payment) => {
             return sum + payment.netPaidAmount;
           }, 0);
+
+          // SEND EMAIL NOTIFICATION FOR PENDING REFUND
+          const resend = new Resend(process.env.RESEND_API_KEY);
+          const notifyResult = await resend.emails.send({
+            from: "Danayas Resort <onboarding@resend.dev>",
+            to: ["realrickyjones@gmail.com"], // Replace with Customer email
+            subject: `Refund Processing Review for Your Cancelled Booking`,
+            replyTo: "Danayas@email.com", // Replace with Danayas email
+            html: refundPendingHtml({
+              bookingId,
+              firstName: booking.firstName ?? "Customer",
+              refundAmount: totalPaid * 0.5,
+              refundMethod,
+              receiveName,
+            }),
+          });
 
           const refund = (
             await tx

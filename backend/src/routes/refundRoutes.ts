@@ -22,6 +22,12 @@ import { verifyPermission } from "../utils/permissionUtils";
 import type { AuthContext } from "../types";
 import fs from "fs/promises";
 import path from "path";
+import {
+  refundFailedHtml,
+  refundLowAmountHtml,
+  refundOverpaymentHtml,
+} from "../utils/emailTemplates";
+import { Resend } from "resend";
 
 const refundRoutes = new OpenAPIHono<AuthContext>();
 
@@ -734,10 +740,37 @@ refundRoutes.openapi(
               remainingBalance = booking.remainingBalance + refundAmount;
               bookingPaymentStatus =
                 amountPaid === 0 ? "unpaid" : "partially-paid";
+
+              const resend = new Resend(process.env.RESEND_API_KEY);
+              const notifyResult = await resend.emails.send({
+                from: "Danayas Resort <onboarding@resend.dev>",
+                to: ["realrickyjones@gmail.com"], // Replace with Customer email
+                subject:
+                  "Refund Issued - Insufficient Payment Received for Your Booking",
+                replyTo: "Danayas@email.com", // Replace with Danayas email
+                html: refundLowAmountHtml({
+                  customerName: booking.firstName ?? "Customer",
+                  bookingId: booking.bookingId,
+                  refundAmount,
+                }),
+              });
             }
             if (isOverPayment) {
               remainingBalance = Math.max(booking.remainingBalance, 0);
               bookingPaymentStatus = "paid";
+
+              const resend = new Resend(process.env.RESEND_API_KEY);
+              const notifyResult = await resend.emails.send({
+                from: "Danayas Resort <onboarding@resend.dev>",
+                to: ["realrickyjones@gmail.com"], // Replace with Customer email
+                subject: `Refund Issued - Overpayment on Your Danayas Booking`,
+                replyTo: "Danayas@email.com", // Replace with Danayas email
+                html: refundOverpaymentHtml({
+                  customerName: booking.firstName ?? "Customer",
+                  bookingId: booking.bookingId,
+                  refundAmount: refund.refundAmount,
+                }),
+              });
             }
 
             const updatedBooking = (
@@ -791,10 +824,37 @@ refundRoutes.openapi(
               remainingBalance = booking.remainingBalance + refundAmount;
               publicPaymentStatus =
                 amountPaid === 0 ? "unpaid" : "partially-paid";
+
+              const resend = new Resend(process.env.RESEND_API_KEY);
+              const notifyResult = await resend.emails.send({
+                from: "Danayas Resort <onboarding@resend.dev>",
+                to: ["realrickyjones@gmail.com"], // Replace with Customer email
+                subject:
+                  "Refund Issued - Insufficient Payment Received for Your Booking",
+                replyTo: "Danayas@email.com", // Replace with Danayas email
+                html: refundLowAmountHtml({
+                  customerName: booking.firstName ?? "Customer",
+                  bookingId: booking.publicEntryId,
+                  refundAmount,
+                }),
+              });
             }
             if (isOverPayment) {
               remainingBalance = Math.max(booking.remainingBalance, 0);
               publicPaymentStatus = "paid";
+
+              const resend = new Resend(process.env.RESEND_API_KEY);
+              const notifyResult = await resend.emails.send({
+                from: "Danayas Resort <onboarding@resend.dev>",
+                to: ["realrickyjones@gmail.com"], // Replace with Customer email
+                subject: `Refund Issued - Overpayment on Your Danayas Booking`,
+                replyTo: "Danayas@email.com", // Replace with Danayas email
+                html: refundOverpaymentHtml({
+                  customerName: booking.firstName ?? "Customer",
+                  bookingId: booking.publicEntryId,
+                  refundAmount: refund.refundAmount,
+                }),
+              });
             }
 
             const updatedBooking = (
@@ -848,6 +908,19 @@ refundRoutes.openapi(
               throw new NotFoundError("Booking not found.");
             }
 
+            const resend = new Resend(process.env.RESEND_API_KEY);
+            const notifyResult = await resend.emails.send({
+              from: "Danayas Resort <onboarding@resend.dev>",
+              to: ["realrickyjones@gmail.com"], // Replace with Customer email
+              subject: `Refund Failed - Action Required for Your Booking at Danayas`,
+              replyTo: "Danayas@email.com", // Replace with Danayas email
+              html: refundFailedHtml({
+                customerName: booking.firstName ?? "Customer",
+                refundAmount: refund.refundAmount,
+                reason: refund.refundReason,
+              }),
+            });
+
             const updatedBooking = (
               await tx
                 .update(BookingsTable)
@@ -882,6 +955,20 @@ refundRoutes.openapi(
             if (!booking) {
               throw new NotFoundError("Booking not found.");
             }
+
+            const resend = new Resend(process.env.RESEND_API_KEY);
+            const notifyResult = await resend.emails.send({
+              from: "Danayas Resort <onboarding@resend.dev>",
+              to: ["realrickyjones@gmail.com"], // Replace with Customer email
+              subject: `Refund Failed - Action Required for Your Booking at Danayas`,
+              replyTo: "Danayas@email.com", // Replace with Danayas email
+              html: refundFailedHtml({
+                customerName: booking.firstName ?? "Customer",
+                refundAmount: refund.refundAmount,
+                reason: refund.refundReason,
+              }),
+            });
+            
             const updatedBooking = (
               await tx
                 .update(PublicEntryTable)
