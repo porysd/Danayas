@@ -8,6 +8,10 @@ import { cors } from "hono/cors";
 import { errorHandler } from "./middlewares/errorHandler";
 import { serveStatic } from "hono/bun";
 import { startExpireBookingJob } from "./cron/expiredBookings";
+import {
+  autoAcknowledgeNoResponseJob,
+  autoAcknowledgeNoChoiceJob,
+} from "./cron/refundAcknowledge";
 
 const app = new OpenAPIHono()
   .doc("/openapi", {
@@ -52,6 +56,8 @@ routes.forEach(({ path, handler }) => {
 });
 
 startExpireBookingJob();
+autoAcknowledgeNoResponseJob();
+autoAcknowledgeNoChoiceJob();
 
 Bun.serve({
   port: 3000,
