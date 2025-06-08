@@ -16,10 +16,7 @@ import InputNumber from "primevue/inputnumber";
 import { useBookingStore } from "../../stores/bookingStore.js";
 import { usePublicEntryStore } from "../../stores/publicEntryStore.js";
 import { useBlockedStore } from "../../stores/blockedDateStore.js";
-import {
-  getBookingStyle,
-  disabledDates,
-} from "../../composables/calendarStyle";
+import { getBookingStyle } from "../../composables/calendarStyle";
 
 const bookingStore = useBookingStore();
 const publicStore = usePublicEntryStore();

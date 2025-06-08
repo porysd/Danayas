@@ -119,8 +119,8 @@ const confirmValid = () => {
   emit("validPayment", status);
   toast.add({
     severity: "success",
-    summary: "Payment Valid",
-    detail: "The payment has been valid successfully.",
+    summary: "Payment Approved",
+    detail: "The payment has been approved successfully.",
     life: 3000,
   });
   closeModals();
@@ -135,8 +135,8 @@ const confirmInvalid = () => {
   emit("invalidPayment", status);
   toast.add({
     severity: "warn",
-    summary: "Payment Invalid",
-    detail: "The payment has been invalid successfully.",
+    summary: "Payment Denied",
+    detail: "The payment has been denied successfully.",
     life: 3000,
   });
   closeModals();
@@ -182,31 +182,27 @@ onUnmounted(() => {
       class="adminButton pi pi-ellipsis-v"
     ></button>
 
-    <div v-if="showMenu" ref="hideMenu" class="dropdown-menu">
+    <div v-if="showMenu && showAction" ref="hideMenu" class="dropdown-menu">
       <ul>
         <li
           class="hover:bg-gray-100 dark:hover:bg-gray-700"
           @click="openValidModal"
         >
-          Valid
+          Approved
         </li>
         <li
           class="hover:bg-gray-100 dark:hover:bg-gray-700"
           @click="openInvalidModal"
         >
-          Invalid
+          Denied
         </li>
-        <li
+        <!-- <li
           @click="openVoidModal"
           class="hover:bg-gray-100 dark:hover:bg-gray-700"
         >
           Void
-        </li>
-        <li
-          v-if="showAction"
-          class="hover:bg-gray-100 dark:hover:bg-gray-700"
-          @click="openOtp"
-        >
+        </li> -->
+        <li class="hover:bg-gray-100 dark:hover:bg-gray-700" @click="openOtp">
           Refractor
         </li>
         <!-- <li
@@ -223,14 +219,14 @@ onUnmounted(() => {
   <Dialog v-model:visible="showValidModal" modal :style="{ width: '30rem' }">
     <template #header>
       <div class="flex flex-col items-center justify-center w-full">
-        <h2 class="text-xl font-bold font-[Poppins]">Valid Payment</h2>
+        <h2 class="text-xl font-bold font-[Poppins]">Approved Payment</h2>
       </div>
     </template>
     <span
       class="text-lg text-surface-700 dark:text-surface-400 block mb-8 text-center font-[Poppins]"
     >
       Are you sure you want to
-      <strong class="text-green-500">VALID</strong> this payment by
+      <strong class="text-green-500">APPROVED</strong> this payment by
       <span class="font-black font-[Poppins]">{{ paymentName(payment) }}</span
       >?
     </span>
@@ -256,14 +252,14 @@ onUnmounted(() => {
   <Dialog v-model:visible="showInvalidModal" modal :style="{ width: '30rem' }">
     <template #header>
       <div class="flex flex-col items-center justify-center w-full">
-        <h2 class="text-xl font-bold font-[Poppins]">Invalid Payment</h2>
+        <h2 class="text-xl font-bold font-[Poppins]">Denied Payment</h2>
       </div>
     </template>
     <span
       class="text-lg text-surface-700 dark:text-surface-400 block mb-8 text-center font-[Poppins]"
     >
       Are you sure you want to
-      <strong class="text-orange-500">INVALID</strong> this payment:
+      <strong class="text-orange-500">DENIED</strong> this payment:
       <span class="font-black font-[Poppins]">{{ paymentName(payment) }}</span
       >?
     </span>

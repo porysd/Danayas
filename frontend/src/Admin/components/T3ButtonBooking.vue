@@ -24,12 +24,14 @@ import {
 import { useBookingStore } from "../../stores/bookingStore.js";
 import { usePublicEntryStore } from "../../stores/publicEntryStore.js";
 import { useBlockedStore } from "../../stores/blockedDateStore.js";
+import { useCatalogStore } from "../../stores/catalogStore.js";
 import {
   getBookingStyle,
   disabledDates,
 } from "../../composables/calendarStyle";
 import FileUpload from "primevue/fileupload";
 import InputNumber from "primevue/inputnumber";
+import MultiSelect from "primevue/multiselect";
 
 const toast = useToast();
 
@@ -45,6 +47,7 @@ const formData = ref({});
 
 const bookingStore = useBookingStore();
 const publicStore = usePublicEntryStore();
+const catalogStore = useCatalogStore();
 const blockStore = useBlockedStore();
 // onMounted(() => {
 //   bookingStore.fetchUserBookings();
@@ -891,6 +894,16 @@ const onFileSelect = (event) => {
           v-model="formData.numberOfGuest"
           placeholder="Number of Guest"
         />
+        <label>Add Ons:</label>
+        <MultiSelect
+          v-model="formData.catalogAddOnIds"
+          :options="catalogStore.catalog"
+          optionLabel="itemName"
+          optionValue="catalogAddOnId"
+          style="width: 100%"
+        />
+
+        <p><strong>TOTAL: </strong> {{ formatPeso(totalAmount) }}</p>
       </div>
     </div>
 

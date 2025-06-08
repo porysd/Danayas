@@ -14,6 +14,8 @@ import {
 } from "../../utility/dateFormat";
 import { formatPeso } from "../../utility/pesoFormat.js";
 import Select from "primevue/select";
+import RadioButton from "primevue/radiobutton";
+import FullCalendar from "@fullcalendar/vue3";
 import { useCatalogStore } from "../../stores/catalogStore.js";
 import { useDiscountStore } from "../../stores/discountStore.js";
 import { useBookingStore } from "../../stores/bookingStore.js";
@@ -23,19 +25,22 @@ import { usePackageStore } from "../../stores/packageStore.js";
 import {
   getBookingStyle,
   disabledDates,
+  fullCalendarEvents,
 } from "../../composables/calendarStyle";
 import InputNumber from "primevue/inputnumber";
+import BookPackage from "../../components/BookPackage.vue";
 
 const toast = useToast();
 const bookingStore = useBookingStore();
 const publicStore = usePublicEntryStore();
 const blockStore = useBlockedStore();
-const catalogStore = useCatalogStore();
+// const catalogStore = useCatalogStore();
 const discountStore = useDiscountStore();
 const packageStore = usePackageStore();
+const { calendarEvents, calendarOptions } = fullCalendarEvents();
 
 onMounted(() => {
-  catalogStore.fetchAllCatalogs();
+  // catalogStore.fetchAllCatalogs();
   discountStore.fetchAllDiscounts();
   packageStore.fetchAllPackages();
   packageStore.fetchAllPromos();
@@ -47,6 +52,8 @@ onMounted(() => {
 defineProps(["data", "packageName"]);
 
 const showAddBookingModal = ref(false);
+const showCalendarModal = ref(false);
+const showPackageModal = ref(false);
 const showPaymentModal = ref(false);
 const showBookingSummary = ref(false);
 
@@ -88,6 +95,8 @@ const closeAddBookingModal = () => {
   showAddBookingModal.value = false;
   showPaymentModal.value = false;
   showBookingSummary.value = false;
+  showPackageModal.value = false;
+  showCalendarModal.value = false;
 };
 
 const addBooking = () => {
@@ -97,11 +106,7 @@ const addBooking = () => {
     !newBooking.value.firstName ||
     !newBooking.value.lastName ||
     !newBooking.value.emailAddress ||
-    !newBooking.value.address ||
-    !newBooking.value.packageName ||
-    !newBooking.value.checkInDate ||
-    !newBooking.value.checkOutDate ||
-    !newBooking.value.mode
+    !newBooking.value.address
   ) {
     alert("Please fill in all required fields.");
     return;
@@ -113,6 +118,36 @@ const addBooking = () => {
     return;
   }
   showAddBookingModal.value = false;
+  showCalendarModal.value = true;
+};
+
+const calendarModal = () => {
+  if (
+    !newBooking.value.checkInDate ||
+    !newBooking.value.checkOutDate ||
+    !newBooking.value.mode
+  ) {
+    alert("Please fill in all required fields.");
+    return;
+  }
+
+  showCalendarModal.value = false;
+  showPackageModal.value = true;
+};
+
+const availPackageHandler = (pkg) => {
+  newBooking.value.packageId = pkg.packageId;
+  newBooking.value.packageName = pkg.packageId;
+  newBooking.value.mode = pkg.mode;
+};
+
+const packageModal = () => {
+  if (!newBooking.value.packageId) {
+    alert("Please select a pacakge");
+    return;
+  }
+
+  showPackageModal.value = false;
   showPaymentModal.value = true;
 };
 
@@ -140,13 +175,72 @@ const bookingSummary = () => {
 
 const backToBooking = () => {
   showAddBookingModal.value = true;
-  showPaymentModal.value = false;
+
+  showCalendarModal.value = false;
+};
+
+const backToCalendar = () => {
+  showPackageModal.value = false;
+
+  showCalendarModal.value = true;
+};
+
+const backToPackage = () => {
+  showPackageModal.value = true;
+  showPaymentmodal.value = false;
 };
 
 const backToPayment = () => {
   showPaymentModal.value = true;
   showBookingSummary.value = false;
 };
+
+const arrivalTimeOptions = computed(() => {
+  const times = [];
+  if (newBooking.value.mode === "day-time") {
+    // 9:00 AM to 5:00 PM (in 30-minute increments)
+    let hour = 9,
+      minute = 0;
+    while (hour < 17 || (hour === 17 && minute === 0)) {
+      const h = hour % 12 === 0 ? 12 : hour % 12;
+      const ampm = hour < 12 ? "AM" : "PM";
+      times.push(`${h}:${minute === 0 ? "00" : "30"} ${ampm}`);
+      if (minute === 0) minute = 30;
+      else {
+        minute = 0;
+        hour++;
+      }
+    }
+  } else if (newBooking.value.mode === "night-time") {
+    // 7:00 PM to 11:30 PM
+    let hour = 19,
+      minute = 0;
+    while (hour < 24 || (hour === 24 && minute === 0)) {
+      const h = hour % 12 === 0 ? 12 : hour % 12;
+      times.push(`${h}:${minute === 0 ? "00" : "30"} PM`);
+      if (hour === 23 && minute === 30) break;
+      if (minute === 0) minute = 30;
+      else {
+        minute = 0;
+        hour++;
+      }
+    }
+    // 12:00 AM to 5:00 AM
+    hour = 0;
+    minute = 0;
+    while (hour < 5 || (hour === 5 && minute === 0)) {
+      const h = hour === 0 ? 12 : hour;
+      times.push(`${h}:${minute === 0 ? "00" : "30"} AM`);
+      if (hour === 5 && minute === 0) break;
+      if (minute === 0) minute = 30;
+      else {
+        minute = 0;
+        hour++;
+      }
+    }
+  }
+  return times;
+});
 
 const minDate = new Date();
 
@@ -198,21 +292,21 @@ const selectedPackage = computed(() => {
   );
 });
 
-const allPackages = computed(() => {
-  const combined = [
-    ...(packageStore.packages || []),
-    ...(packageStore.promos || []),
-  ];
-  const seen = new Set();
-  return combined.filter((pkg) => {
-    if (seen.has(pkg.packageId)) return false;
-    seen.add(pkg.packageId);
-    return true;
-  });
-});
+// const allPackages = computed(() => {
+//   const combined = [
+//     ...(packageStore.packages || []),
+//     ...(packageStore.promos || []),
+//   ];
+//   const seen = new Set();
+//   return combined.filter((pkg) => {
+//     if (seen.has(pkg.packageId)) return false;
+//     seen.add(pkg.packageId);
+//     return true;
+//   });
+// });
 
-const pkgName = selectedPackage?.name;
-const pkgPrice = selectedPackage?.price;
+// const pkgName = selectedPackage?.name;
+// const pkgPrice = selectedPackage?.price;
 
 const selectedDiscount = computed(() => {
   return discountStore.discounts.find(
@@ -231,11 +325,26 @@ const addOnsTotal = computed(() => {
 });
 
 const totalAmount = computed(() => {
-  const pkgPrice = selectedPackage.value?.price || 0;
+  const pkg = selectedPackage.value;
+  const pkgPrice = pkg?.price || 0;
   const discount = selectedDiscount.value?.percentage || 0;
   const discounted = pkgPrice - pkgPrice * (discount / 100);
-  return Math.max(discounted + addOnsTotal.value, 0);
-  // return discounted;
+  const addOns = addOnsTotal.value || 0;
+
+  let extra = 0;
+  const guestCount = Number(newBooking.value.numberOfGuest) || 0;
+  const maxPax = pkg?.maxPax || 0;
+  if (guestCount > maxPax) {
+    const extraGuests = guestCount - maxPax;
+    if (newBooking.value.mode === "day-time") extra = extraGuests * 100;
+    if (
+      newBooking.value.mode === "night-time" ||
+      newBooking.value.mode === "whole-day"
+    )
+      extra = extraGuests * 150;
+  }
+
+  return Math.max(discounted + addOns + extra, 0);
 });
 
 watch(
@@ -252,6 +361,13 @@ watch(
     } else {
       newBooking.value.checkOutDate = checkInDate;
     }
+  }
+);
+
+watch(
+  () => newBooking.value.checkInDate,
+  () => {
+    newBooking.value.mode = "";
   }
 );
 
@@ -301,14 +417,14 @@ const unavailableModes = computed(() => {
   return modes;
 });
 
-const availableModes = computed(() => {
-  const allModes = [
-    { value: "day-time", label: "Day Time" },
-    { value: "night-time", label: "Night Time" },
-    { value: "whole-day", label: "Whole Day" },
-  ];
-  return allModes.filter((mode) => !unavailableModes.value.has(mode.value));
-});
+// const availableModes = computed(() => {
+//   const allModes = [
+//     { value: "day-time", label: "Day Time" },
+//     { value: "night-time", label: "Night Time" },
+//     { value: "whole-day", label: "Whole Day" },
+//   ];
+//   return allModes.filter((mode) => !unavailableModes.value.has(mode.value));
+// });
 
 const confirmBooking = async () => {
   // Find the discount by ID or name
@@ -405,123 +521,144 @@ const confirmBooking = async () => {
             />
           </div>
         </div>
+      </div>
 
-        <div class="flex justify-center gap-3">
-          <div class="w-full md:w-[40%]">
-            <label for="packages">Package Name:</label>
-            <Select
-              id="packages"
-              v-model="newBooking.packageName"
-              :options="allPackages"
-              optionLabel="name"
-              optionValue="packageId"
-              placeholder="Select a Package or Promos"
-              class="w-full"
-            />
+      <div class="flex justify-center gap-2 font-[Poppins] mt-7">
+        <Button
+          type="button"
+          label="Cancel"
+          severity="secondary"
+          @click="closeAddBookingModal"
+          class="font-bold w-full"
+        />
+        <Button
+          type="button"
+          label="Next"
+          severity="primary"
+          @click="addBooking"
+          class="font-bold w-full"
+        />
+      </div>
+    </Dialog>
+
+    <Dialog
+      v-model:visible="showCalendarModal"
+      modal
+      :style="{ width: '60rem', minHeight: 'auto' }"
+    >
+      <template #header>
+        <div class="flex flex-col items-center justify-center w-full">
+          <h2 class="text-xl font-bold font-[Poppins]">Date Details</h2>
+        </div>
+      </template>
+      <div class="modal">
+        <FullCalendar class="fullCalendar" :options="calendarOptions">
+          <template #eventContent="{ event, timeText }">
+            <b>{{ timeText }}</b> <i>{{ event.title }}</i>
+          </template>
+        </FullCalendar>
+
+        <div class="flex flex-row w-[%] justify-center m-auto">
+          <div class="cDate flex-1/2">
+            <div>
+              <label>Check-In Date:</label>
+              <DatePicker
+                v-model="newBooking.checkInDate"
+                placeholder="Check-In"
+                showIcon
+                fluid
+                iconDisplay="input"
+                :minDate="minDate"
+                :disabledDates="disabledDates"
+              >
+                <template #date="slotProps">
+                  <span>
+                    <strong
+                      :style="getBookingStyle(slotProps.date)"
+                      class="date-box"
+                    >
+                      {{ slotProps.date.day }}
+                    </strong>
+                  </span>
+                </template></DatePicker
+              >
+            </div>
+            <div>
+              <label>Check-Out Date:</label>
+
+              <DatePicker
+                v-model="newBooking.checkOutDate"
+                placeholder="Check-Out"
+                showIcon
+                fluid
+                iconDisplay="input"
+                :minDate="checkOutMinDate"
+                :maxDate="maxDate"
+                :disabledDates="disabledDates"
+              >
+                <template #date="slotProps">
+                  <span>
+                    <strong
+                      :style="getBookingStyle(slotProps.date)"
+                      class="date-box"
+                    >
+                      {{ slotProps.date.day }}
+                    </strong>
+                  </span>
+                </template></DatePicker
+              >
+            </div>
           </div>
-          <div class="w-[40%]">
-            <label>Catering:</label>
-            <select
-              v-model="newBooking.catering"
-              class="border p-2 rounded w-full"
-            >
-              <option value="true">Yes</option>
-              <option value="false">No</option>
-            </select>
+          <div class="w-[30%]">
+            <label>Mode:</label>
+            <div class="flex items-center gap-10">
+              <div>
+                <RadioButton
+                  v-model="newBooking.mode"
+                  inputId="dayMode"
+                  name="bookingMode"
+                  value="day-time"
+                  size="large"
+                  :disabled="unavailableModes.has('day-time')"
+                />
+                <label for="dayMode" class="text-xl font-[Poppins]">DAY</label>
+              </div>
+              <div>
+                <RadioButton
+                  v-model="newBooking.mode"
+                  inputId="nightMode"
+                  name="bookingMode"
+                  value="night-time"
+                  size="large"
+                  :disabled="unavailableModes.has('night-time')"
+                />
+                <label for="nightMode" class="text-xl font-[Poppins]"
+                  >NIGHT
+                </label>
+              </div>
+            </div>
           </div>
-          <!-- <div class="w-[40%]">
-            <label>Event Type:</label>
-            <input
-              class="packEvents"
-              v-model="newBooking.eventType"
-              placeholder="Event Type"
-              style="width: 100%"
-            />
-          </div> -->
         </div>
 
         <div class="cDate">
           <div>
-            <label>Check-In Date:</label>
-            <DatePicker
-              v-model="newBooking.checkInDate"
-              placeholder="Check-In"
-              showIcon
-              fluid
-              iconDisplay="input"
-              :minDate="minDate"
-              :disabledDates="disabledDates"
-            >
-              <template #date="slotProps">
-                <span>
-                  <strong
-                    :style="getBookingStyle(slotProps.date)"
-                    class="date-box"
-                  >
-                    {{ slotProps.date.day }}
-                  </strong>
-                </span>
-              </template></DatePicker
-            >
-          </div>
-          <div>
-            <label>Check-Out Date:</label>
+            <label>Arrival Time:</label>
 
-            <DatePicker
-              v-model="newBooking.checkOutDate"
-              placeholder="Check-Out"
-              showIcon
-              fluid
-              iconDisplay="input"
-              :minDate="checkOutMinDate"
-              :maxDate="maxDate"
-              :disabledDates="disabledDates"
+            <select
+              class="atcngs"
+              v-model="newBooking.arrivalTime"
+              :disabled="!newBooking.mode"
             >
-              <template #date="slotProps">
-                <span>
-                  <strong
-                    :style="getBookingStyle(slotProps.date)"
-                    class="date-box"
-                  >
-                    {{ slotProps.date.day }}
-                  </strong>
-                </span>
-              </template></DatePicker
-            >
-          </div>
-          <div>
-            <label>Mode:</label>
-            <select v-model="newBooking.mode" class="border p-2 rounded w-full">
+              <option value="" disabled>Select Arrival Time</option>
               <option
-                v-for="mode in availableModes"
-                :key="mode.value"
-                :value="mode.value"
+                v-for="time in arrivalTimeOptions"
+                :key="time"
+                :value="time"
               >
-                {{ mode.label }}
+                {{ time }}
               </option>
             </select>
           </div>
-        </div>
-
-        <div class="atcng">
-          <div>
-            <label>Arrival Time:</label>
-            <input
-              class="atcngs"
-              v-model="newBooking.arrivalTime"
-              placeholder="Arival Time"
-            />
-          </div>
-          <!-- <div>
-            <label>Catering:</label>
-            <select
-              v-model="newBooking.catering"
-              class="border p-2 rounded w-full"
-            >
-              <option value="true">Yes</option>
-              <option value="false">No</option>
-            </select>
-          </div> -->
           <div>
             <label>Number of Guest:</label>
             <!-- <InputNumber
@@ -541,29 +678,66 @@ const confirmBooking = async () => {
               fluid
             />
           </div>
-        </div>
-        <!-- 
-        <div class="flex justify-center gap-3">
-          <div class="w-full md:w-[40%]">
-            <label for="discount">Discount ID or Name:</label>
-            <Select
-              id="discount"
-              v-model="newBooking.discountId"
-              :options="discountStore.discounts"
-              optionLabel="name"
-              optionValue="discountId"
-              placeholder="Select a Discount"
-              class="w-full"
-            />
+          <div>
+            <label>Catering:</label>
+            <select
+              v-model="newBooking.catering"
+              name="catering"
+              id="catering"
+              class="border p-2 rounded w-full"
+            >
+              <option :value="1">Yes</option>
+              <option :value="0">No</option>
+            </select>
           </div>
-          <div class="w-[40%]">
-            <label>Add Ons:</label>
-            <MultiSelect
-              v-model="newBooking.catalogAddOnIds"
-              :options="catalogStore.catalog"
-              optionLabel="itemName"
-              optionValue="catalogAddOnId"
-              style="width: 100%"
+        </div>
+      </div>
+
+      <div class="flex justify-center gap-2 font-[Poppins] mt-7">
+        <Button
+          type="button"
+          label="Cancel"
+          severity="secondary"
+          @click="backToBooking"
+          class="font-bold w-full"
+        />
+        <Button
+          type="button"
+          label="Next"
+          severity="primary"
+          @click="calendarModal"
+          class="font-bold w-full"
+        />
+      </div>
+    </Dialog>
+
+    <Dialog
+      v-model:visible="showPackageModal"
+      modal
+      :style="{ width: '60rem', minHeight: 'auto' }"
+    >
+      <template #header>
+        <div class="flex flex-col items-center justify-center w-full">
+          <h2 class="text-xl font-bold font-[Poppins]">Booking Details</h2>
+        </div>
+      </template>
+      <div class="modal">
+        <BookPackage
+          :mode="newBooking.mode"
+          @availPackage="availPackageHandler"
+        />
+
+        <!-- <div class="flex justify-center gap-3">
+          <div class="w-full md:w-[40%]">
+            <label for="packages">Package Name:</label>
+            <Select
+              id="packages"
+              v-model="newBooking.packageName"
+              :options="allPackages"
+              optionLabel="name"
+              optionValue="packageId"
+              placeholder="Select a Package or Promos"
+              class="w-full"
             />
           </div>
         </div> -->
@@ -574,14 +748,14 @@ const confirmBooking = async () => {
           type="button"
           label="Cancel"
           severity="secondary"
-          @click="closeAddBookingModal"
+          @click="backToCalendar"
           class="font-bold w-full"
         />
         <Button
           type="button"
           label="Next"
           severity="primary"
-          @click="addBooking"
+          @click="packageModal"
           class="font-bold w-full"
         />
       </div>
@@ -713,7 +887,7 @@ const confirmBooking = async () => {
           type="button"
           label="Back"
           severity="secondary"
-          @click="backToBooking"
+          @click="backToPackage"
           class="font-bold w-full"
         />
         <Button
@@ -894,8 +1068,11 @@ const confirmBooking = async () => {
 }
 
 .modal select {
+  padding: 8px;
   border: 1px solid #e2e8f0;
   background-color: #ffffff;
+  border-radius: 5px;
+  height: 40px;
 }
 
 :deep(.gcashUpload) {
@@ -905,6 +1082,54 @@ const confirmBooking = async () => {
   }
   .p-fileupload-choose-button {
     background: #41ab5d;
+  }
+}
+
+:deep(.fullCalendar) {
+  margin: 0 auto;
+  width: 750px;
+  height: 345px;
+  font-size: 10px;
+
+  .fc {
+    font-family: Poppins, sans-serif;
+  }
+
+  .fc-toolbar-title {
+    font-size: 20px;
+    font-weight: bold;
+  }
+
+  .fc-button {
+    background-color: #194d1d;
+    color: white;
+    border-radius: 6px;
+    padding: 2px 6px;
+    font-size: 10px;
+    height: 24px;
+    min-width: 24px;
+  }
+
+  .fc-button .fc-icon {
+    font-size: 10px;
+  }
+
+  .fc-daygrid-event {
+    font-size: 10px;
+    padding: 1px 2px;
+    white-space: normal;
+  }
+
+  .fc-daygrid-more-link {
+    font-size: 9px;
+  }
+
+  .fc-event-title {
+    font-weight: 600;
+  }
+
+  .fc-daygrid-event-dot {
+    display: none; /* Hide dot, show full colored event */
   }
 }
 

@@ -18,6 +18,11 @@ const formData = ref({});
 const prop = defineProps({
   refund: Object,
   bookingName: Function,
+  showAction: true,
+  remarksOnly: {
+    type: Boolean,
+    default: false,
+  },
 });
 const emit = defineEmits(["completedRefund", "failedRefund"]);
 
@@ -121,15 +126,17 @@ onUnmounted(() => {
       class="adminButton pi pi-ellipsis-v"
     ></button>
 
-    <div v-if="showMenu" ref="hideMenu" class="dropdown-menu">
+    <div v-if="showMenu && showAction" ref="hideMenu" class="dropdown-menu">
       <ul>
         <li
+          v-if="!prop.remarksOnly"
           class="hover:bg-gray-100 dark:hover:bg-gray-700"
           @click="openCompletedModal"
         >
           Completed
         </li>
         <li
+          v-if="!prop.remarksOnly"
           class="hover:bg-gray-100 dark:hover:bg-gray-700"
           @click="openFailedModal"
         >
