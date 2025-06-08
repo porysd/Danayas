@@ -5,12 +5,17 @@ export const useTermsStore = defineStore("terms", {
   state: () => ({
     terms: [],
   }),
+  getters: {
+    getTermId: (state) => (id) => {
+      return state.terms.find((trm) => trm.termsId === id);
+    },
+  },
 
   actions: {
     //Fetch All Terms
     async fetchAlltermAndCondition() {
-      const auth = useAuthStore();
-      if (!auth.isLoggedIn) return;
+      // const auth = useAuthStore();
+      // if (!auth.isLoggedIn) return;
       try {
         this.terms = [];
         const limit = 50;
@@ -23,7 +28,7 @@ export const useTermsStore = defineStore("terms", {
             {
               headers: {
                 "Content-Type": "application/json",
-                Authorization: `Bearer ${auth.accessToken}`,
+                // Authorization: `Bearer ${auth.accessToken}`,
               },
             }
           );
@@ -49,8 +54,8 @@ export const useTermsStore = defineStore("terms", {
         console.error("Error fetching terms and conditions", err);
       }
     },
-    // Add Terms
 
+    // Add Terms
     async addTerms(termsData) {
       try {
         const auth = useAuthStore();
