@@ -43,7 +43,6 @@ import Footer from "../components/Footer.vue";
           ></textarea>
         </div>
 
-        <!-- Social Links -->
         <div class="flex gap-5 mt-6">
           <a
             href="https://www.facebook.com/profile.php?id=61552657702549"
@@ -85,7 +84,7 @@ import Footer from "../components/Footer.vue";
 
       <div class="flex-1">
         <iframe
-          src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d1929.608118783353!2d121.12431473799222!3d14.7003600939651!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3397bb19868e1b37%3A0x429ae5ae7c94d0f2!2s7%20Jones%20Dulong%20Bayan%202%2C%20San%20Mateo%2C%20Rizal%20Philippines!5e0!3m2!1sen!2sph!4v1741699299438!5m2!1sen!2sph"
+          src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3859.2324149969772!2d121.12693807492596!3d14.699444585798691!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3397bb68dde68c6f%3A0xf33fcccb97074bc0!2sDANAYAS%20RESORTS%20EVENTS%20VENUE!5e0!3m2!1sen!2sph!4v1748963820294!5m2!1sen!2sph"
           width="100%"
           height="400"
           class="rounded-xl border-0 w-full"

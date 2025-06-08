@@ -246,6 +246,25 @@ watch(
   }
 );
 
+watch(
+  () => newBooking.value.paymentTerms,
+  (val) => {
+    if (val === "full-payment") {
+      paymentDetails.value.tenderedAmount = totalAmount.value;
+    } else if (val === "installment") {
+      paymentDetails.value.tenderedAmount = null;
+    }
+  }
+);
+watch(() => {
+  () => newBooking.value.numberOfGuest,
+    (val) => {
+      if (val < 0) {
+        newBooking.value.numberOfGuest = Math.abs(val);
+      }
+    };
+});
+
 const minDate = new Date();
 
 const checkOutMinDate = computed(() => {
@@ -366,7 +385,7 @@ const stepThreeBtn = (activateCallback) => {
     toast.add({
       severity: "warn",
       summary: "Installment Warning",
-      detail: "Down payment must be at least ₱2,000 for installment.",
+      detail: "watch must be at least ₱2,000 for installment.",
       life: 4000,
     });
     return; // Block step
@@ -390,6 +409,53 @@ const stepThreeBtn = (activateCallback) => {
 
   activateCallback("4");
 };
+
+const arrivalTimeOptions = computed(() => {
+  const times = [];
+  if (newBooking.value.mode === "day-time") {
+    // 9:00 AM to 5:00 PM (in 30-minute increments)
+    let hour = 9,
+      minute = 0;
+    while (hour < 17 || (hour === 17 && minute === 0)) {
+      const h = hour % 12 === 0 ? 12 : hour % 12;
+      const ampm = hour < 12 ? "AM" : "PM";
+      times.push(`${h}:${minute === 0 ? "00" : "30"} ${ampm}`);
+      if (minute === 0) minute = 30;
+      else {
+        minute = 0;
+        hour++;
+      }
+    }
+  } else if (newBooking.value.mode === "night-time") {
+    // 7:00 PM to 11:30 PM
+    let hour = 19,
+      minute = 0;
+    while (hour < 24 || (hour === 24 && minute === 0)) {
+      const h = hour % 12 === 0 ? 12 : hour % 12;
+      times.push(`${h}:${minute === 0 ? "00" : "30"} PM`);
+      if (hour === 23 && minute === 30) break;
+      if (minute === 0) minute = 30;
+      else {
+        minute = 0;
+        hour++;
+      }
+    }
+    // 12:00 AM to 5:00 AM
+    hour = 0;
+    minute = 0;
+    while (hour < 5 || (hour === 5 && minute === 0)) {
+      const h = hour === 0 ? 12 : hour;
+      times.push(`${h}:${minute === 0 ? "00" : "30"} AM`);
+      if (hour === 5 && minute === 0) break;
+      if (minute === 0) minute = 30;
+      else {
+        minute = 0;
+        hour++;
+      }
+    }
+  }
+  return times;
+});
 
 const authStore = useAuthStore();
 const userStore = useUserStore();
@@ -484,11 +550,28 @@ const addOnsTotal = computed(() => {
     return sum + (addOn?.price || 0);
   }, 0);
 });
+
 const totalAmount = computed(() => {
-  const pkgPrice = selectedPackage.value?.price || 0;
+  const pkg = selectedPackage.value;
+  const pkgPrice = pkg?.price || 0;
   const discount = selectedDiscount.value?.percentage || 0;
   const discounted = pkgPrice - pkgPrice * (discount / 100);
-  return Math.max(discounted + addOnsTotal.value, 0);
+  const addOns = addOnsTotal.value || 0;
+
+  let extra = 0;
+  const guestCount = Number(newBooking.value.numberOfGuest) || 0;
+  const maxPax = pkg?.maxPax || 0;
+  if (guestCount > maxPax) {
+    const extraGuests = guestCount - maxPax;
+    if (newBooking.value.mode === "day-time") extra = extraGuests * 100;
+    if (
+      newBooking.value.mode === "night-time" ||
+      newBooking.value.mode === "whole-day"
+    )
+      extra = extraGuests * 150;
+  }
+
+  return Math.max(discounted + addOns + extra, 0);
 });
 
 const addBookingHandler = async (newBooking, paymentDetails) => {
@@ -641,9 +724,11 @@ const prevBtn = () => {
                 <div
                   class="flex m-auto justify-center align-center mt-20 mb-20"
                 >
-                  <div class="flex gap-40">
-                    <div>
-                      <h1 class="mb-10 text-center font-[600] text-lg">
+                  <div class="flex gap-40 bg-[#9edf9c] p-5 rounded-xl">
+                    <div class="p-5 rounded-xl">
+                      <h1
+                        class="mb-10 text-center text-xl font-[Poppins] font-[700] text-lg"
+                      >
                         Check-in & Check-out
                       </h1>
                       <div class="flex gap-10">
@@ -694,44 +779,58 @@ const prevBtn = () => {
                         </FloatLabel>
                       </div>
                     </div>
-                    <div class="flex">
+                    <div class="bg-[#9edf9c] p-5 rounded-xl">
                       <div class="ml-10">
-                        <h1 class="mb-10 text-center font-[600] c">Mode</h1>
-                        <div class="flex items-center gap-2">
-                          <RadioButton
-                            v-model="newBooking.mode"
-                            inputId="dayMode"
-                            name="bookingMode"
-                            value="day-time"
-                            size="large"
-                            :disabled="unavailableModes.has('day-time')"
-                          />
-                          <label for="dayMode" class="text-xl font-[Poppins]"
-                            >DAY TIME</label
-                          >
+                        <h1
+                          class="mb-10 text-center text-xl font-[Poppins] font-[700]"
+                        >
+                          Mode
+                        </h1>
+                        <div class="flex items-center gap-3">
+                          <div class="flex-col gap-30">
+                            <RadioButton
+                              class="mr-3"
+                              v-model="newBooking.mode"
+                              inputId="dayMode"
+                              name="bookingMode"
+                              value="day-time"
+                              size="large"
+                              :disabled="unavailableModes.has('day-time')"
+                            />
+                            <label for="dayMode" class="text-xl font-[Poppins]"
+                              >DAY TIME
+                              <p class="text-center mt-2 ml-3">(9am to 5pm )</p>
+                            </label>
+                          </div>
+                          <div class="flex-col">
+                            <RadioButton
+                              class="mr-3"
+                              v-model="newBooking.mode"
+                              inputId="nightMode"
+                              name="bookingMode"
+                              value="night-time"
+                              size="large"
+                              :disabled="unavailableModes.has('night-time')"
+                            />
+                            <label
+                              for="nightMode"
+                              class="text-xl font-[Poppins]"
+                              >NIGHT TIME
+                              <p class="text-center mt-2 ml-3">(7am to 5am)</p>
+                            </label>
+                          </div>
 
-                          <RadioButton
-                            v-model="newBooking.mode"
-                            inputId="nightMode"
-                            name="bookingMode"
-                            value="night-time"
-                            size="large"
-                            :disabled="unavailableModes.has('night-time')"
-                          />
-                          <label for="nightMode" class="text-xl font-[Poppins]"
-                            >NIGHT TIME</label
-                          >
-                          <RadioButton
+                          <!-- <RadioButton
                             v-model="newBooking.mode"
                             inputId="wholeDay"
                             name="bookingMode"
                             value="whole-day"
                             size="large"
                             :disabled="unavailableModes.has('whole-day')"
-                          />
-                          <label for="wholeDay" class="text-xl font-[Poppins]"
+                          /> -->
+                          <!-- <label for="wholeDay" class="text-xl font-[Poppins]"
                             >WHOLE DAY</label
-                          >
+                          > -->
                         </div>
                       </div>
                     </div>
@@ -778,6 +877,14 @@ const prevBtn = () => {
                           >NIGHT AVAILABLE</label
                         >
                       </div>
+                      <div
+                        class="flex absolute items-center gap-4 right-30 top-6"
+                      >
+                        <span class="w-6 h-6 rounded-full bg-[#686868]"></span>
+                        <label class="text-sm font-semibold"
+                          >NOT AVAILABLE</label
+                        >
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -810,6 +917,7 @@ const prevBtn = () => {
                   <div class="overflow-auto">
                     <BookPackage
                       :mode="newBooking.mode"
+                      :selectedPackageId="selectedPackage?.packageId"
                       @availPackage="availPackageHandler"
                     />
                     <!--availPackage comes from the BookPackage and holds the selected-->
@@ -820,15 +928,15 @@ const prevBtn = () => {
                 class="flex-col flex justify-center items-center font-medium h-auto w-[40rem] mt-5"
               >
                 <div
-                  class="bg-[#9edf9c] p-5 rounded-lg w-[30rem] h-[55rem] mt-10"
+                  class="Summary bg-[#9edf9c] p-5 rounded-lg w-[30rem] h-[55rem] mt-10"
                 >
                   <h1
-                    class="font-black font-[Poppins] text-2xl p-5 flex align-center justify-center m-auto"
+                    class="font-black font-[Poppins] text-2xl p-5 flex align-center justify-center m-auto mb-10"
                   >
                     Booking Summary:
                   </h1>
 
-                  <div class="bg-[#fcfcfc] rounded-sm p-2 mb-2">
+                  <div class="bg-[#fcfcfc] border rounded-sm p-5 mb-2">
                     <div class="flex">
                       <p>
                         Date: {{ formatDates(newBooking.checkInDate) }} to
@@ -845,7 +953,10 @@ const prevBtn = () => {
                     </div>
                   </div>
 
-                  <div v-if="selectedPackage" class="bg-[#fcfcfc] p-2 rounded">
+                  <div
+                    v-if="selectedPackage"
+                    class="bg-[#fcfcfc] border p-2 rounded"
+                  >
                     <p>Mode: {{ newBooking.mode }}</p>
                   </div>
 
@@ -853,7 +964,9 @@ const prevBtn = () => {
                     <h1 class="text-lg font-bold font-[Poppins]">
                       Package Selected:
                     </h1>
-                    <div class="flex flex-col bg-[#fcfcfc] p-1 rounded-sm">
+                    <div
+                      class="bg-[#fcfcfc] border rounded-sm p-5 mb-2 flex flex-col"
+                    >
                       <p>Package Name: {{ selectedPackage?.name }}</p>
                       <p>Inclusion:</p>
                       <p class="whitespace-pre-wrap">
@@ -861,7 +974,7 @@ const prevBtn = () => {
                       </p>
                       <p>Mode: {{ selectedPackage?.mode }}</p>
 
-                      <p>
+                      <!-- <p>
                         Add Ons:
                         <span
                           v-if="
@@ -895,10 +1008,10 @@ const prevBtn = () => {
                           </ul>
                         </span>
                         <span v-else> None </span>
-                      </p>
+                      </p> -->
                     </div>
 
-                    <div class="bg-[#4BB344] p-1 rounded-sm">
+                    <div class="bg-[#4BB344] border p-1 rounded-sm">
                       <p>
                         TOTAL CHARGED:
                         {{ formatPeso(totalAmount) }}
@@ -909,6 +1022,7 @@ const prevBtn = () => {
                     <Button
                       label="Continue "
                       iconPos="right"
+                      class="border-1"
                       @click="
                         nextBtn();
                         stepTwoBtn(activateCallback);
@@ -916,6 +1030,7 @@ const prevBtn = () => {
                     />
                     <Button
                       label="Back"
+                      class="border-1"
                       severity="secondary"
                       @click="
                         activateCallback('1');
@@ -932,7 +1047,9 @@ const prevBtn = () => {
               <div
                 class="flex-col flex justify-center items-center font-medium h-auto w-[50rem] mt-5"
               >
-                <div class="flex flex-col overflow-auto h-[65rem] w-[50rem]">
+                <div
+                  class="contactInfo p-10 flex flex-col overflow-auto h-[70rem] w-[50rem] border"
+                >
                   <h1
                     class="text-left w-[100%] flex font-black text-4xl font-[Poppins] mt-10"
                   >
@@ -987,20 +1104,38 @@ const prevBtn = () => {
 
                     <div class="guestInfo">
                       <div>
-                        <label>Arrival Time:</label>
-                        <input
+                        <label for="Arrival Time">Arrival Time:</label>
+                        <select
                           v-model="newBooking.arrivalTime"
                           class="packEvents"
+                          id="arrival"
                           placeholder="Arrival Time"
-                        />
+                          :disabled="!newBooking.mode"
+                        >
+                          <option value="" disabled>Select Arrival Time</option>
+                          <option
+                            v-for="time in arrivalTimeOptions"
+                            :key="time"
+                            :value="time"
+                          >
+                            {{ time }}
+                          </option>
+                        </select>
                       </div>
+
                       <div>
                         <label>Number of Guest:</label>
                         <input
                           v-model="newBooking.numberOfGuest"
                           type="number"
+                          min="0"
                           class="packEvents"
                           placeholder="Number of Guest"
+                          @input="
+                            newBooking.numberOfGuest = Math.abs(
+                              newBooking.numberOfGuest
+                            )
+                          "
                         />
                       </div>
                       <div>
@@ -1017,13 +1152,13 @@ const prevBtn = () => {
                     </div>
                   </div>
 
-                  <div class="mt-10">
-                    <h1 class="ml-20 text-xl font-bold font-[Poppins]">
+                  <div class="mt-10 items-left">
+                    <h1 class="text-xl font-bold font-[Poppins]">
                       Payment Terms:
                     </h1>
 
-                    <div class="flex items-center gap-5 ml-20 mt-5 mb-5">
-                      <div class="flex items-center gap-2">
+                    <div class="flex items-left gap-5 mt-5 mb-5">
+                      <div class="flex items-left gap-2">
                         <RadioButton
                           v-model="newBooking.paymentTerms"
                           inputId="installment"
@@ -1033,7 +1168,7 @@ const prevBtn = () => {
                           @click="showMessage"
                         />
                         <label for="dayMode" class="text-xl font-[Poppins]"
-                          >Installment</label
+                          >Down Payment</label
                         >
                       </div>
                       <div class="flex items-center gap-2">
@@ -1051,16 +1186,95 @@ const prevBtn = () => {
                       </div>
                     </div>
                     <Message v-if="visible" severity="error"
-                      >You are required to pay a ₱2,000 down payment. The
-                      remaining balance must be settled on the reserved date.<br />📌
+                      >You are required to pay a ₱2,000 watch. The remaining
+                      balance must be settled on the reserved date.<br />📌
                       Bookings are non-refundable.<br /><br />
                       <span
                         class="text-blue-600 underline cursor-pointer"
                         @click="termsVisible = true"
                       >
                         View full Terms and Conditions
-                      </span></Message
+                      </span>
+                    </Message>
+                    <Dialog
+                      v-model:visible="termsVisible"
+                      modal
+                      :style="{ width: '70rem' }"
+                      :breakpoints="{ '1199px': '75vw', '575px': '90vw' }"
                     >
+                      <hr class="Header" data-content="Terms & Condition" />
+                      <ol
+                        class="list-decimal list-inside space-y-2 text-black border-1"
+                      >
+                        <li>
+                          A downpayment Reservation fee of P 2000-3000.00 is
+                          required to ensure the client's specified schedule.
+                        </li>
+                        <li>
+                          Reservation in case of delay, shall be given an
+                          allowance of two (2) Days based on agreed time.
+                          Without prior notice, the management can cancel the
+                          reservation and forfeit the watch after the allowable
+                          extension time.
+                        </li>
+                        <li>
+                          Reservation fee or watch is non-refundable in case of
+                          cancellation.
+                        </li>
+                        <li>
+                          50% of the reservation fee or downpayment can be
+                          refundable in cases of cancellation due to natural
+                          disaster.
+                        </li>
+                        <li>
+                          In case of cancellation, the customer has the option
+                          to change the date and subject of availability in the
+                          area.
+                        </li>
+                        <li>
+                          Full contract payment should be made upon entrance on
+                          the day itself and excess charges shall be connected
+                          upon check—out.
+                        </li>
+                        <li>
+                          It is understood that the management is not
+                          responsible for any accident, injury, or loss that may
+                          occur during the tenure of the lease. The Customer
+                          waives the right to claim damages against the
+                          management.
+                        </li>
+                        <li>
+                          Food and Drinks are not allowed in the Pool Area
+                        </li>
+                        <li>Swimming when drunk is strictly prohibited.</li>
+                        <li>
+                          Firearms and illegal substances are strictly
+                          prohibited
+                        </li>
+                        <li>Children must be always accompanied by adults.</li>
+                        <li>
+                          Excess guests will be charged depending on the chosen
+                          schedule. In Daytime (P100.00/ per head) Overnight (P
+                          150.00/ per head)
+                        </li>
+                        <li>Pets are not allowed in the pool premises.</li>
+                        <li>
+                          It is our standard procedure to check items and
+                          equipment 30 minutes upon check—out of guests.
+                        </li>
+                        <li>
+                          Any loss or damage to property during the tenure of
+                          the lease shall be accounted to the customer.
+                        </li>
+                        <li>No refund policy is implemented</li>
+                        <li>Clients must properly observe the house rules</li>
+                        <li>
+                          It is understood that the customers agreed on the
+                          terms and conditions of the Danayas Resorts Events
+                          Venue.
+                        </li>
+                      </ol>
+                    </Dialog>
                     <Message v-if="visible1" severity="error"
                       >You are required to pay the total amount upon booking to
                       secure your reservation.<br />📌 Bookings are
@@ -1071,22 +1285,178 @@ const prevBtn = () => {
                       >
                         View full Terms and Conditions
                       </span>
-                      <TermsCondition v-model:visible="termsVisible" />
                     </Message>
+                    <Dialog
+                      v-model:visible="termsVisible"
+                      modal
+                      :style="{ width: '70rem' }"
+                      :breakpoints="{ '1199px': '75vw', '575px': '90vw' }"
+                    >
+                      <hr class="Header" data-content="Terms & Condition" />
+                      <ol
+                        class="list-decimal list-inside space-y-2 text-black border-1"
+                      >
+                        <li>
+                          A downpayment Reservation fee of P 2000-3000.00 is
+                          required to ensure the client's specified schedule.
+                        </li>
+                        <li>
+                          Reservation in case of delay, shall be given an
+                          allowance of two (2) Days based on agreed time.
+                          Without prior notice, the management can cancel the
+                          reservation and forfeit the watch after the allowable
+                          extension time.
+                        </li>
+                        <li>
+                          Reservation fee or watch is non-refundable in case of
+                          cancellation.
+                        </li>
+                        <li>
+                          50% of the reservation fee or downpayment can be
+                          refundable in cases of cancellation due to natural
+                          disaster.
+                        </li>
+                        <li>
+                          In case of cancellation, the customer has the option
+                          to change the date and subject of availability in the
+                          area.
+                        </li>
+                        <li>
+                          Full contract payment should be made upon entrance on
+                          the day itself and excess charges shall be connected
+                          upon check—out.
+                        </li>
+                        <li>
+                          It is understood that the management is not
+                          responsible for any accident, injury, or loss that may
+                          occur during the tenure of the lease. The Customer
+                          waives the right to claim damages against the
+                          management.
+                        </li>
+                        <li>
+                          Food and Drinks are not allowed in the Pool Area
+                        </li>
+                        <li>Swimming when drunk is strictly prohibited.</li>
+                        <li>
+                          Firearms and illegal substances are strictly
+                          prohibited
+                        </li>
+                        <li>Children must be always accompanied by adults.</li>
+                        <li>
+                          Excess guests will be charged depending on the chosen
+                          schedule. In Daytime (P100.00/ per head) Overnight (P
+                          150.00/ per head)
+                        </li>
+                        <li>Pets are not allowed in the pool premises.</li>
+                        <li>
+                          It is our standard procedure to check items and
+                          equipment 30 minutes upon check—out of guests.
+                        </li>
+                        <li>
+                          Any loss or damage to property during the tenure of
+                          the lease shall be accounted to the customer.
+                        </li>
+                        <li>No refund policy is implemented</li>
+                        <li>Clients must properly observe the house rules</li>
+                        <li>
+                          It is understood that the customers agreed on the
+                          terms and conditions of the Danayas Resorts Events
+                          Venue.
+                        </li>
+                      </ol>
+                    </Dialog>
+                  </div>
+                  <div>
+                    <h1 class="text-lg font-bold font-[Poppins]">Payment:</h1>
+                    <h1 class="text-lg font-sm font-[Poppins] text-center">
+                      DANAYAS RESORTS EVENTS VENUE: <br />
+                      09xx xxx xxxx
+                    </h1>
+
+                    <h1 class="text-m font-[Poppins]">GCASH Reference Code:</h1>
+                    <div
+                      class="bg-[#fcfcfc] mb-2 rounded border border-green-500"
+                    >
+                      <div>
+                        <input
+                          class="p-2 w-full"
+                          placeholder="FEJIJKA4381FK9"
+                          v-model="paymentDetails.reference"
+                        />
+                      </div>
+                    </div>
+                    <div class="gcashUpload">
+                      <h1 class="text-xl font-bold font-[Poppins] mb-3 mt-3">
+                        Proof of Payment:
+                      </h1>
+                      <FileUpload
+                        ref="fileupload"
+                        v-model="paymentDetails.imageUrl"
+                        mode="basic"
+                        name="imageUrl"
+                        url="/api/upload"
+                        accept="image/*"
+                        :maxFileSize="1000000"
+                        @select="onFileSelect"
+                      />
+                      <span v-if="fileError" class="text-red-600 font-bold">
+                        {{ fileError }}
+                      </span>
+                      <!--<div class="bg-[#fcfcfc] mb-2 p-1 rounded-sm">
+                          <input
+                            class="p-2"
+                            placeholder="image url"
+                            v-model="paymentDetails.imageUrl"
+                          />
+                        </div>-->
+                    </div>
+                    <div>
+                      <h1 class="text-m font-[Poppins]">Name of the Sender:</h1>
+                      <div
+                        class="bg-[#fcfcfc] border border-green-500 mb-2 p-1 rounded-sm"
+                      >
+                        <div>
+                          <input
+                            class="p-2 w-full"
+                            placeholder="Juan Dela Cruz"
+                            v-model="paymentDetails.senderName"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    <h1 class="text-lg font-bold font-[Poppins]">
+                      Tendered Amount:
+                    </h1>
+                    <div class="mb-2 rounded border border-green-500">
+                      <div>
+                        <InputNumber
+                          class="w-full"
+                          placeholder="e.g. 2000"
+                          inputId="currency-php"
+                          mode="currency"
+                          currency="PHP"
+                          locale="en-PH"
+                          v-model="paymentDetails.tenderedAmount"
+                          :readonly="newBooking.paymentTerms === 'full-payment'"
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
               <div
                 class="flex-col flex justify-center items-center font-medium h-auto w-[40rem] mt-5"
               >
-                <div class="bg-[#9edf9c] p-5 rounded-lg w-[30rem] h-auto mt-10">
+                <div
+                  class="Summary bg-[#9edf9c] p-5 rounded-lg w-[30rem] h-auto relative mt-0"
+                >
                   <h1
                     class="font-black font-[Poppins] text-2xl p-5 flex align-center justify-center m-auto"
                   >
                     Booking Summary:
                   </h1>
 
-                  <div class="bg-[#fcfcfc] mb-2 p-2 rounded-sm">
+                  <div class="bg-[#fcfcfc] border rounded-sm p-5 mb-2">
                     <div class="flex">
                       <p>
                         Date: {{ formatDates(newBooking.checkInDate) }} to
@@ -1103,7 +1473,7 @@ const prevBtn = () => {
                     </div>
                   </div>
 
-                  <div class="bg-[#fcfcfc] p-2 rounded-sm">
+                  <div class="bg-[#fcfcfc] border rounded-sm p-5 mb-2">
                     <p>Mode: {{ newBooking.mode }}</p>
                   </div>
 
@@ -1111,7 +1481,9 @@ const prevBtn = () => {
                     <h1 class="text-lg font-bold font-[Poppins]">
                       Package Selected:
                     </h1>
-                    <div class="flex flex-col bg-[#fcfcfc] p-1 rounded-sm">
+                    <div
+                      class="flex flex-col bg-[#fcfcfc] p-1 rounded-sm border p-5 mb-2"
+                    >
                       <p>Package Name: {{ selectedPackage?.name }}</p>
                       <p>Inclusion:</p>
                       <p class="whitespace-pre-wrap">
@@ -1119,7 +1491,61 @@ const prevBtn = () => {
                       </p>
                       <p>Mode: {{ selectedPackage?.mode }}</p>
 
+                      <p>Max Pax: {{ selectedPackage?.maxPax }}</p>
+
                       <p>
+                        Number of Guests: {{ newBooking.numberOfGuest }}
+                        <span
+                          v-if="
+                            selectedPackage &&
+                            Number(newBooking.numberOfGuest) >
+                              selectedPackage.maxPax
+                          "
+                        >
+                          (Extra:
+                          {{
+                            Number(newBooking.numberOfGuest) -
+                            selectedPackage.maxPax
+                          }}
+                          ×
+                          <span v-if="newBooking.mode === 'day-time'"
+                            >₱100</span
+                          >
+                          <span
+                            v-else-if="
+                              newBooking.mode === 'night-time' ||
+                              newBooking.mode === 'whole-day'
+                            "
+                            >₱150</span
+                          >
+                          =
+                          <span v-if="newBooking.mode === 'day-time'">
+                            ₱{{
+                              (Number(newBooking.numberOfGuest) -
+                                selectedPackage.maxPax) *
+                              100
+                            }}
+                          </span>
+                          <span
+                            v-else-if="
+                              newBooking.mode === 'night-time' ||
+                              newBooking.mode === 'whole-day'
+                            "
+                          >
+                            ₱{{
+                              (Number(newBooking.numberOfGuest) -
+                                selectedPackage.maxPax) *
+                              150
+                            }}
+                          </span>
+                          )
+                        </span>
+                      </p>
+                      <p class="mt-5 text-red-400 font-[10px] font-[Poppins]">
+                        Note: If about Max Pax you will be charged ₱100 per
+                        person.
+                      </p>
+                      <!-- <p>
                         Add Ons:
                         <span
                           v-if="
@@ -1153,86 +1579,11 @@ const prevBtn = () => {
                           </ul>
                         </span>
                         <span v-else> None </span>
-                      </p>
+                      </p> -->
                     </div>
 
-                    <div class="bg-[#4BB344] p-1 rounded-sm">
+                    <div class="bg-[#4BB344] p-1 border rounded-sm">
                       <p>TOTAL CHARGED: {{ formatPeso(totalAmount) }}</p>
-                    </div>
-                    <div>
-                      <h1 class="text-lg font-bold font-[Poppins]">Payment:</h1>
-                      <h1 class="text-lg font-sm font-[Poppins] text-center">
-                        DANAYAS RESORTS EVENTS VENUE: <br />
-                        09xx xxx xxxx
-                      </h1>
-                      <h1 class="text-lg font-bold font-[Poppins]">
-                        Tendered Amount:
-                      </h1>
-                      <div class="bg-[#fcfcfc] mb-2 rounded">
-                        <div>
-                          <InputNumber
-                            class="w-full"
-                            placeholder="e.g. 2000"
-                            inputId="currency-php"
-                            mode="currency"
-                            currency="PHP"
-                            locale="en-PH"
-                            v-model="paymentDetails.tenderedAmount"
-                          />
-                        </div>
-                      </div>
-
-                      <h1 class="text-m font-[Poppins]">
-                        GCASH Reference Code:
-                      </h1>
-                      <div class="bg-[#fcfcfc] mb-2 rounded">
-                        <div>
-                          <input
-                            class="p-2 w-full"
-                            placeholder="FEJIJKA4381FK9"
-                            v-model="paymentDetails.reference"
-                          />
-                        </div>
-                      </div>
-                      <div class="gcashUpload">
-                        <h1 class="text-xl font-bold font-[Poppins] mb-3 mt-3">
-                          Proof of Payment:
-                        </h1>
-                        <FileUpload
-                          ref="fileupload"
-                          v-model="paymentDetails.imageUrl"
-                          mode="basic"
-                          name="imageUrl"
-                          url="/api/upload"
-                          accept="image/*"
-                          :maxFileSize="1000000"
-                          @select="onFileSelect"
-                        />
-                        <span v-if="fileError" class="text-red-600 font-bold">
-                          {{ fileError }}
-                        </span>
-                        <!--<div class="bg-[#fcfcfc] mb-2 p-1 rounded-sm">
-                          <input
-                            class="p-2"
-                            placeholder="image url"
-                            v-model="paymentDetails.imageUrl"
-                          />
-                        </div>-->
-                      </div>
-                      <div>
-                        <h1 class="text-m font-[Poppins]">
-                          Name of the Sender:
-                        </h1>
-                        <div class="bg-[#fcfcfc] mb-2 p-1 rounded-sm">
-                          <div>
-                            <input
-                              class="p-2 w-full"
-                              placeholder="Juan Dela Cruz"
-                              v-model="paymentDetails.senderName"
-                            />
-                          </div>
-                        </div>
-                      </div>
                     </div>
                   </div>
                   <div class="flex pt-6 gap-2 flex-col">
@@ -1290,7 +1641,7 @@ const prevBtn = () => {
                     <Divider />
 
                     <h1
-                      class="font-bold text-[16px] font-[Poppins] mt-[2rem] text-center"
+                      class="font-bold text-[25px] font-[Poppins] mt-[2rem] text-center"
                     >
                       Booking Summary
                     </h1>
@@ -1316,6 +1667,9 @@ const prevBtn = () => {
                       </div>
                       <div class="">
                         <p>Email Address: {{ userData.email }}</p>
+                      </div>
+                      <div class="">
+                        <p>Address: {{ userData.address }}</p>
                       </div>
                       <div class="">
                         <p>Address: {{ userData.address }}</p>
@@ -1384,7 +1738,10 @@ const prevBtn = () => {
                 </div>
 
                 <div class="card">
-                  <TreeTable :value="nodes" tableStyle="min-width: 50rem">
+                  <TreeTable
+                    :value="nodes"
+                    tableStyle="min-width: 50rem;border:1px solid green"
+                  >
                     <Column
                       field="description"
                       header="Description"
@@ -1461,60 +1818,8 @@ const prevBtn = () => {
       <hr class="Header" data-content="Terms & Condition" />
 
       <ol class="list-decimal list-inside space-y-2 text-black border-1">
-        <li>
-          A downpayment Reservation fee of P 2000-3000.00 is required to ensure
-          the client's specified schedule.
-        </li>
-        <li>
-          Reservation in case of delay, shall be given an allowance of two (2)
-          Days based on agreed time. Without prior notice, the management can
-          cancel the reservation and forfeit the down payment after the
-          allowable extension time.
-        </li>
-        <li>
-          Reservation fee or down payment is non-refundable in case of
-          cancellation.
-        </li>
-        <li>
-          50% of the reservation fee or downpayment can be refundable in cases
-          of cancellation due to natural disaster.
-        </li>
-        <li>
-          In case of cancellation, the customer has the option to change the
-          date and subject of availability in the area.
-        </li>
-        <li>
-          Full contract payment should be made upon entrance on the day itself
-          and excess charges shall be connected upon check—out.
-        </li>
-        <li>
-          It is understood that the management is not responsible for any
-          accident, injury, or loss that may occur during the tenure of the
-          lease. The Customer waives the right to claim damages against the
-          management.
-        </li>
-        <li>Food and Drinks are not allowed in the Pool hArea</li>
-        <li>Swimming when drunk is strictly prohibited.</li>
-        <li>Firearms and illegal substances are strictly prohibited</li>
-        <li>Children must be always accompanied by adults.</li>
-        <li>
-          Excess guests will be charged depending on the chosen schedule. In
-          Daytime (P100.00/ per head) Overnight (P 150.00/ per head)
-        </li>
-        <li>Pets are not allowed in the pool premises.</li>
-        <li>
-          It is our standard procedure to check items and equipment 30 minutes
-          upon check—out of guests.
-        </li>
-        <li>
-          Any loss or damage to property during the tenure of the lease shall be
-          accounted to the customer.
-        </li>
-        <li>No refund policy is implemented</li>
-        <li>Clients must properly observe the house rules</li>
-        <li>
-          It is understood that the customers agreed on the terms and conditions
-          of the Danayas Resorts Events Venue.
+        <li v-for="trm in termsStore.terms" :key="trm.termId">
+          {{ trm.content }}
         </li>
       </ol>
       <div class="flex items-center gap-2">
@@ -1553,10 +1858,21 @@ const prevBtn = () => {
   font-size: 1.3rem;
   margin-top: 5px;
   margin-bottom: 30px;
-
   color: rgb(2, 2, 2);
   text-align: center;
   height: 1.5rem;
+}
+.Summary {
+  border: solid 3px rgb(9, 52, 9);
+  border-top-left-radius: 100px;
+  border-top-right-radius: 10px;
+  height: auto;
+}
+.contactInfo {
+  border: solid 2px rgb(9, 52, 9);
+  border-radius: 2%;
+  position: relative;
+  margin-top: 50px;
 }
 
 .Header::before {
@@ -1789,7 +2105,11 @@ const prevBtn = () => {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
-  justify-content: center;
+  left: 0;
+  right: 0;
+
+  position: relative;
+  justify-content: left;
 }
 
 .personalInfo > div,

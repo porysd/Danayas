@@ -21,6 +21,7 @@ const avail = (pkg) => {
 
 const props = defineProps({
   mode: String, // could be 'Day', 'Night', or 'Whole Day'
+  selectedPackageId: [String, Number],
 });
 
 const filteredPackages = computed(() =>
@@ -33,7 +34,12 @@ const filteredPromos = computed(() =>
 </script>
 
 <template>
-  <div class="bookPackage" v-for="pkg in filteredPackages" :key="pkg.packageId">
+  <div
+    class="bookPackage"
+    :class="{ selected: selectedPackageId === pkg.packageId }"
+    v-for="pkg in filteredPackages"
+    :key="pkg.packageId"
+  >
     <div id="leftPart"></div>
 
     <div id="rightPart">
@@ -60,7 +66,12 @@ const filteredPromos = computed(() =>
     </div>
   </div>
 
-  <div class="bookPackage" v-for="pkg in filteredPromos" :key="pkg.packageId">
+  <div
+    class="bookPackage"
+    :class="{ selected: selectedPackageId == pkg.packageId }"
+    v-for="pkg in filteredPromos"
+    :key="pkg.packageId"
+  >
     <div id="leftPart"></div>
 
     <div id="rightPart">
@@ -91,8 +102,9 @@ const filteredPromos = computed(() =>
 <style scoped>
 .bookPackage {
   margin: auto;
-  border: 1px solid black;
-  border-radius: 10px;
+  border: 2px solid rgb(7, 47, 3);
+  border-top-right-radius: 60px;
+  border-bottom-left-radius: 60px;
   display: flex;
   width: 40rem;
   margin-bottom: 20px;
@@ -101,7 +113,7 @@ const filteredPromos = computed(() =>
 
 .bookPackage:hover {
   width: 41rem;
-  background-color: #e6f4ea;
+  background-color: #d3f0da;
 }
 
 .bookPackage:active,
@@ -109,7 +121,13 @@ const filteredPromos = computed(() =>
   border: 2px solid #194d1d;
   background-color: #e6f4ea;
 }
-
+.selected {
+  background-color: #aaf0c1;
+  transform: scale(1.02);
+  border: 2px solid rgb(7, 47, 3);
+  border-top-right-radius: 60px;
+  border-bottom-left-radius: 60px;
+}
 #rightPart {
   margin-left: 40px;
   flex: 1;
@@ -133,7 +151,7 @@ const filteredPromos = computed(() =>
 
 .selected {
   border: 2px solid #194d1d;
-  background-color: #d3f0da;
   transform: scale(1.02);
+  background-color: #a4ffbe;
 }
 </style>
