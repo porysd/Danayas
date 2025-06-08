@@ -54,6 +54,9 @@ import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 
+import { useTermsStore } from "../stores/termStore";
+const termsStore = useTermsStore();
+
 const toast = useToast();
 const router = useRouter();
 const bookingStore = useBookingStore();
@@ -75,6 +78,7 @@ onMounted(async () => {
   publicStore.fetchAllPublic();
   blockStore.fetchAllBlocked();
   catalogStore.fetchAllCatalogs();
+  termsStore.fetchAlltermAndCondition();
 
   if (packageStore.packages.length === 0 && packageStore.fetchAllPackages) {
     await packageStore.fetchAllPackages();

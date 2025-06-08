@@ -42,6 +42,7 @@ export const autoAcknowledgeNoResponseJob = () => {
 
 export const autoAcknowledgeNoChoiceJob = () => {
   cron.schedule("0 0 * * *", async () => {
+    //second, minute, hour, date in month, month, day in a week
     try {
       console.log(
         "[CRON] Checking for refunds with 'no' acknowledge past 7 days..."
