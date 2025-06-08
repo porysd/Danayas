@@ -121,10 +121,10 @@ export const useTermsStore = defineStore("terms", {
         const res = await fetch(
           `http://localhost:3000/termAndCondition/${termsData.termsId}`,
           {
-            method: "Delete",
+            method: "DELETE",
             headers: {
-              "content-Type": "application/json",
-              Authorization: `Bearer ${auth.accessToken},`,
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${auth.accessToken}`,
             },
           }
         );
