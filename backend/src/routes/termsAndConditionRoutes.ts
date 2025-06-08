@@ -20,8 +20,6 @@ import { AuditLogsTable } from "../schemas/schema";
 
 const termsRoutes = new OpenAPIHono<AuthContext>();
 
-termsRoutes.use("/*", authMiddleware);
-
 termsRoutes.openapi(
   createRoute({
     tags: ["Terms"],
@@ -29,12 +27,6 @@ termsRoutes.openapi(
     method: "get",
     path: "/",
     request: {
-      headers: z.object({
-        Authorization: z.string().openapi({
-          description: "Bearer access token",
-          example: "Bearer <token>",
-        }),
-      }),
       query: z.object({
         limit: z.coerce.number().nonnegative().min(1).default(20).openapi({
           example: 50,
@@ -68,19 +60,6 @@ termsRoutes.openapi(
   }),
   async (c) => {
     try {
-      const userId = c.get("userId");
-      const hasPermission = await verifyPermission(
-        userId,
-        "TermsAndCondition",
-        "read"
-      );
-
-      if (!hasPermission) {
-        throw new ForbiddenError(
-          "No permission to change terms and conditions."
-        );
-      }
-
       const { limit, page } = c.req.valid("query");
 
       if (limit < 1 || page < 1) {
@@ -109,6 +88,8 @@ termsRoutes.openapi(
     }
   }
 );
+
+termsRoutes.use("/*", authMiddleware);
 
 termsRoutes.openapi(
   createRoute({
