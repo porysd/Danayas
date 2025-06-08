@@ -13,6 +13,7 @@ import ProfileAvatar from "../components/ProfileAvatar.vue";
 import Paginator from "primevue/paginator";
 import Checkbox from "primevue/checkbox";
 import { useUserStore } from "../../stores/userStore.js";
+import Dialog from "primevue/dialog";
 
 const userStore = useUserStore();
 
@@ -37,19 +38,6 @@ const changeRoleHandler = async (employee) => {
 };
 
 const totalEmployees = computed(() => filteredEmployee.value.length);
-
-// Paginator or pagination of the tables
-const first = ref(0);
-const rows = ref(10);
-
-const paginatedEmployees = computed(() => {
-  return filteredEmployee.value.slice(first.value, first.value + rows.value);
-});
-
-const onPageChange = (event) => {
-  first.value = event.first;
-  rows.value = event.rows;
-};
 
 // Search and Filter Button Logic
 const showMenu = ref(false);
@@ -306,7 +294,7 @@ onUnmounted(() => {
             <tr
               class="eRow border-[#194D1D] dark:border-[#18181b]"
               :class="{ 'disabled-row': employee.status === 'disable' }"
-              v-for="employee in paginatedEmployees"
+              v-for="employee in filteredEmployee"
               :key="employee.userId"
               @click="openEmployeeDetails(employee)"
             >
@@ -350,11 +338,13 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <div v-if="employeeDetails" class="modal">
-      <div class="modal-content font-[Poppins]">
-        <h2 class="text-xl font-bold m-auto justify-center align-center flex">
-          Employee Details
-        </h2>
+    <Dialog v-model:visible="employeeDetails" modal :style="{ width: '30rem' }">
+      <template #header>
+        <div class="flex flex-col items-center justify-center w-full">
+          <h2 class="text-xl font-bold font-[Poppins]">Employee Details</h2>
+        </div>
+      </template>
+      <div class="font-[Poppins]">
         <Divider />
         <div class="flex flex-col gap-2">
           <p><strong>User ID:</strong> {{ selectedEmployee?.userId }}</p>
@@ -378,7 +368,7 @@ onUnmounted(() => {
           Close
         </button>
       </div>
-    </div>
+    </Dialog>
   </main>
 </template>
 

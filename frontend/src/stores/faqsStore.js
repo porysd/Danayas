@@ -115,15 +115,14 @@ export const useFaqsStore = defineStore("faqs", {
         const res = await fetch(
           `http://localhost:3000/faqs/${faqsData.faqsId}`,
           {
-            method: "Delete",
+            method: "DELETE",
             headers: {
-              "content-Type": "application/json",
-              Authorization: `Bearer ${auth.accessToken},`,
+              Authorization: `Bearer ${auth.accessToken}`,
             },
           }
         );
         if (!res.ok) {
-          console.log("Failedd to delete Faqs");
+          console.log("Failed to delete Faqs");
         }
         this.faqs = this.faqs.filter((c) => c.faqsId !== faqsData.faqsId);
       } catch (err) {

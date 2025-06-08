@@ -179,11 +179,11 @@ watch(
             >ABOUT US</router-link
           >
         </li>
-        <li>
+        <!-- <li>
           <router-link to="/contact-us" active-class="active-route"
             >CONTACT US</router-link
           >
-        </li>
+        </li> -->
       </ul>
     </div>
 

@@ -26,7 +26,7 @@ import Footer from "../components/Footer.vue";
             'animate-enter fade-in-10 slide-in-from-r-9 animate-duration-1000',
           leaveClass: 'animate-leave fade-out-0',
         }"
-        src="../assets/aboutUs1.jpg"
+        src="../assets/Team1.jpg"
         class="w-2/5 rounded-[20px] mb-4"
         style="border-radius: 20px"
       />
@@ -95,7 +95,7 @@ import Footer from "../components/Footer.vue";
           'animate-enter fade-in-10 slide-in-from-r-9 animate-duration-1000',
         leaveClass: 'animate-leave fade-out-0',
       }"
-      src="../assets/aboutUs1.jpg"
+      src="../assets/BG1.jpg"
       class="w-2/5 rounded-[20px] mb-4"
       style="border-radius: 20px"
     />
@@ -110,7 +110,7 @@ import Footer from "../components/Footer.vue";
     </div>
 
     <!-- Ensure this container stays in a row -->
-    <div class="staff-image flex justify-center gap-10">
+    <div class="staff-image flex justify-center block gap-2">
       <div
         class="staff-card"
         v-animateonscroll="{
@@ -118,7 +118,7 @@ import Footer from "../components/Footer.vue";
             'animate-enter fade-in-10 zoom-in-50 slide-in-from-t-20 animate-duration-1000',
         }"
       >
-        <img src="../assets/staff.jpg" alt="Shaina" />
+        <img src="../assets/Junnil.jpg" alt="Shaina" />
         <div class="staff-overlay">
           <h3>Shaina May Tendenilla</h3>
           <a
@@ -148,7 +148,7 @@ import Footer from "../components/Footer.vue";
             'animate-enter fade-in-10 zoom-in-50 slide-in-from-t-20 animate-duration-1000',
         }"
       >
-        <img src="../assets/staff.jpg" alt="Shaina" />
+        <img src="../assets/Angela.jpg" alt="Shaina" />
         <div class="staff-overlay">
           <h3>Shaina May Tendenilla</h3>
           <a
@@ -178,7 +178,7 @@ import Footer from "../components/Footer.vue";
             'animate-enter fade-in-10 zoom-in-50 slide-in-from-t-20 animate-duration-1000',
         }"
       >
-        <img src="../assets/staff.jpg" alt="Shaina" />
+        <img src="../assets/Hiraku.jpg" alt="Shaina" />
         <div class="staff-overlay">
           <h3>Shaina May Tendenilla</h3>
           <a
@@ -208,7 +208,181 @@ import Footer from "../components/Footer.vue";
             'animate-enter fade-in-10 zoom-in-50 slide-in-from-t-20 animate-duration-1000',
         }"
       >
-        <img src="../assets/staff.jpg" alt="Shaina" />
+        <img src="../assets/Jaimee.jpg" alt="Shaina" />
+        <div class="staff-overlay">
+          <h3>Shaina May Tendenilla</h3>
+          <a
+            href="https://www.facebook.com/profile.php?id=61552657702549"
+            target="_blank"
+          >
+            <img
+              src="../assets/facebookneon.jpg"
+              alt="Facebook"
+              style="
+                border-radius: 50%;
+                object-fit: cover;
+                margin: auto;
+                margin-top: 5px;
+                width: 40px;
+                height: 40px;
+              "
+            />
+          </a>
+        </div>
+      </div>
+      <div
+        class="staff-card"
+        v-animateonscroll="{
+          enterClass:
+            'animate-enter fade-in-10 zoom-in-50 slide-in-from-t-20 animate-duration-1000',
+        }"
+      >
+        <img src="../assets/Darya.jpg" alt="Shaina" />
+        <div class="staff-overlay">
+          <h3>Darya</h3>
+          <a
+            href="https://www.facebook.com/profile.php?id=61552657702549"
+            target="_blank"
+          >
+            <img
+              src="../assets/facebookneon.jpg"
+              alt="Facebook"
+              style="
+                border-radius: 50%;
+                object-fit: cover;
+                margin: auto;
+                margin-top: 5px;
+                width: 40px;
+                height: 40px;
+              "
+            />
+          </a>
+        </div>
+      </div>
+      <div
+        class="staff-card"
+        v-animateonscroll="{
+          enterClass:
+            'animate-enter fade-in-10 zoom-in-50 slide-in-from-t-20 animate-duration-1000',
+        }"
+      >
+        <img src="../assets/Jhanicka.jpg" alt="Shaina" />
+        <div class="staff-overlay">
+          <h3>Shaina May Tendenilla</h3>
+          <a
+            href="https://www.facebook.com/profile.php?id=61552657702549"
+            target="_blank"
+          >
+            <img
+              src="../assets/facebookneon.jpg"
+              alt="Facebook"
+              style="
+                border-radius: 50%;
+                object-fit: cover;
+                margin: auto;
+                margin-top: 5px;
+                width: 40px;
+                height: 40px;
+              "
+            />
+          </a>
+        </div>
+      </div>
+      <div
+        class="staff-card"
+        v-animateonscroll="{
+          enterClass:
+            'animate-enter fade-in-10 zoom-in-50 slide-in-from-t-20 animate-duration-1000',
+        }"
+      >
+        <img src="../assets/Jhannus.jpg" alt="Shaina" />
+        <div class="staff-overlay">
+          <h3>Shaina May Tendenilla</h3>
+          <a
+            href="https://www.facebook.com/profile.php?id=61552657702549"
+            target="_blank"
+          >
+            <img
+              src="../assets/facebookneon.jpg"
+              alt="Facebook"
+              style="
+                border-radius: 50%;
+                object-fit: cover;
+                margin: auto;
+                margin-top: 5px;
+                width: 40px;
+                height: 40px;
+              "
+            />
+          </a>
+        </div>
+      </div>
+      <div
+        class="staff-card"
+        v-animateonscroll="{
+          enterClass:
+            'animate-enter fade-in-10 zoom-in-50 slide-in-from-t-20 animate-duration-1000',
+        }"
+      >
+        <img src="../assets/Hiraku.jpg" alt="Shaina" />
+        <div class="staff-overlay">
+          <h3>Shaina May Tendenilla</h3>
+          <a
+            href="https://www.facebook.com/profile.php?id=61552657702549"
+            target="_blank"
+          >
+            <img
+              src="../assets/facebookneon.jpg"
+              alt="Facebook"
+              style="
+                border-radius: 50%;
+                object-fit: cover;
+                margin: auto;
+                margin-top: 5px;
+                width: 40px;
+                height: 40px;
+              "
+            />
+          </a>
+        </div>
+      </div>
+      <div
+        class="staff-card"
+        v-animateonscroll="{
+          enterClass:
+            'animate-enter fade-in-10 zoom-in-50 slide-in-from-t-20 animate-duration-1000',
+        }"
+      >
+        <img src="../assets/Hiraku.jpg" alt="Shaina" />
+        <div class="staff-overlay">
+          <h3>Shaina May Tendenilla</h3>
+          <a
+            href="https://www.facebook.com/profile.php?id=61552657702549"
+            target="_blank"
+          >
+            <img
+              src="../assets/facebookneon.jpg"
+              alt="Facebook"
+              style="
+                border-radius: 50%;
+                object-fit: cover;
+                margin: auto;
+                margin-top: 5px;
+                width: 40px;
+                height: 40px;
+              "
+            />
+          </a>
+        </div>
+      </div>
+      <div
+        class="staff-card"
+        v-animateonscroll="{
+          enterClass:
+            'animate-enter fade-in-10 zoom-in-50 slide-in-from-t-20 animate-duration-1000',
+        }"
+      >
+        <img src="../assets/Hiraku.jpg" alt="Shaina" />
         <div class="staff-overlay">
           <h3>Shaina May Tendenilla</h3>
           <a
@@ -244,17 +418,24 @@ h3 {
   font-weight: 600;
 }
 .staff-card {
+  flex: 1 25%;
   position: relative;
-  width: 280px;
   height: 500px;
   border-radius: 20px;
   overflow: hidden;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-  transition: transform 0.3s ease;
+  transition: flex-basis 0.5s, width 0.5s;
+  width: 100%;
+  max-width: 100px;
+  max-width: 100%;
+}
+.staff-card:hover {
+  flex-basis: 100%;
+  width: 100%;
+  z-index: 2;
 }
 
 .staff-card img {
-  width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
@@ -321,12 +502,14 @@ a {
   margin: auto;
   margin-top: 17rem;
 }
+.staff-image {
+  display: flex;
+}
 
 .img {
   position: relative;
   height: 50vh;
   width: 100%;
   display: inline-block;
-  border-radius: 8px;
 }
 </style>

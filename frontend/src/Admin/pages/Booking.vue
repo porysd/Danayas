@@ -17,6 +17,7 @@ import Tab from "primevue/tab";
 import TabPanels from "primevue/tabpanels";
 import TabPanel from "primevue/tabpanel";
 import Checkbox from "primevue/checkbox";
+import Dialog from "primevue/dialog";
 import { useBookingStore } from "../../stores/bookingStore.js";
 import { usePackageStore } from "../../stores/packageStore.js";
 import { usePaymentStore } from "../../stores/paymentStore.js";
@@ -1208,11 +1209,16 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <div v-if="bookingDetails" class="modal">
-      <div class="modal-content font-[Poppins]">
-        <h2 class="text-xl font-bold m-auto justify-center align-center flex">
-          Booking Details
-        </h2>
+    <Dialog v-model:visible="bookingDetails" modal :style="{ width: '30rem' }">
+      <template #header>
+        <div class="flex flex-col items-center justify-center w-full">
+          <h2 class="text-xl font-bold font-[Poppins]">
+            Private Booking Details
+          </h2>
+        </div>
+      </template>
+
+      <div class="font-[Poppins]">
         <Divider />
         <div>
           <p><strong>Booking ID:</strong> {{ selectedBooking?.bookingId }}</p>
@@ -1236,22 +1242,32 @@ onUnmounted(() => {
           <p>
             <strong>Arrival Time:</strong> {{ selectedBooking?.arrivalTime }}
           </p>
-          <p><strong>Event Type:</strong> {{ selectedBooking?.eventType }}</p>
           <p>
             <strong>Number of Guest:</strong>
             {{ selectedBooking?.numberOfGuest }}
           </p>
           <p><strong>Catering:</strong> {{ selectedBooking?.catering }}</p>
-          <p><strong>Discount:</strong> {{ selectedBooking?.discountId }}</p>
           <p>
             <strong>Payment Terms:</strong> {{ selectedBooking?.paymentTerms }}
           </p>
           <p>
-            <strong>Total Amount Due:</strong>
-            {{ selectedBooking?.totalAmount }}
+            <strong>Total Amount :</strong>
+            {{ formatPeso(selectedBooking?.totalAmount) }}
+          </p>
+          <p>
+            <strong>Paid:</strong>
+            {{ formatPeso(selectedBooking?.amountPaid) }}
+          </p>
+          <p>
+            <strong>Balance:</strong>
+            {{ formatPeso(selectedBooking?.remainingBalance) }}
           </p>
           <p>
             <strong>Booking Status:</strong> {{ selectedBooking?.bookStatus }}
+          </p>
+          <p>
+            <strong>Booking Payment Status:</strong>
+            {{ selectedBooking?.bookingPaymentStatus }}
           </p>
           <p>
             <strong>Reservation Type:</strong>
@@ -1264,7 +1280,7 @@ onUnmounted(() => {
           Close
         </button>
       </div>
-    </div>
+    </Dialog>
   </main>
 </template>
 

@@ -13,6 +13,7 @@ import ProfileAvatar from "../components/ProfileAvatar.vue";
 import Paginator from "primevue/paginator";
 import Checkbox from "primevue/checkbox";
 import { useUserStore } from "../../stores/userStore.js";
+import Dialog from "primevue/dialog";
 
 const userStore = useUserStore();
 // const loading = ref(true);
@@ -38,19 +39,6 @@ const enableCustomerHandler = async (customer) => {
 };
 
 const totalCustomers = computed(() => filteredCustomer.value.length);
-
-// Paginator or pagination of the tables
-const first = ref(0);
-const rows = ref(10);
-
-const paginatedCustomers = computed(() => {
-  return filteredCustomer.value.slice(first.value, first.value + rows.value);
-});
-
-const onPageChange = (event) => {
-  first.value = event.first;
-  rows.value = event.rows;
-};
 
 // Search and Filter Button Logic
 const showMenu = ref(false);
@@ -256,7 +244,7 @@ onUnmounted(() => {
             <tr
               class="cRow"
               :class="{ 'disabled-row': customer.status === 'disable' }"
-              v-for="customer in paginatedCustomers"
+              v-for="customer in filteredCustomer"
               :key="customer.userId"
               @click="openCustomerDetails(customer)"
             >
@@ -287,22 +275,16 @@ onUnmounted(() => {
             </tr>
           </tbody>
         </table>
-        <Paginator
-          :first="first"
-          :rows="rows"
-          :totalRecords="totalCustomers"
-          :rowsPerPageOptions="[5, 10, 20, 30]"
-          @page="onPageChange"
-          class="rowPagination"
-        />
       </div>
     </div>
 
-    <div v-if="customerDetails" class="modal">
-      <div class="modal-content font-[Poppins]">
-        <h2 class="text-xl font-bold m-auto justify-center flex">
-          Customer Details
-        </h2>
+    <Dialog v-model:visible="customerDetails" modal :style="{ width: '30rem' }">
+      <template #header>
+        <div class="flex flex-col items-center justify-center w-full">
+          <h2 class="text-xl font-bold font-[Poppins]">Customer Details</h2>
+        </div>
+      </template>
+      <div class="font-[Poppins]">
         <Divider />
         <div class="flex flex-col gap-2">
           <p><strong>User ID:</strong> {{ selectedCustomer?.userId }}</p>
@@ -325,7 +307,7 @@ onUnmounted(() => {
           </button>
         </div>
       </div>
-    </div>
+    </Dialog>
   </main>
 </template>
 

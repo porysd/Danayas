@@ -168,7 +168,9 @@ export const usePublicEntryStore = defineStore("publicEntry", {
       const body = {
         status: publics.status,
         cancelCategory: publics.cancelCategory,
-        cancelreason: publics.cancelReason,
+        cancelReason: publics.cancelReason,
+        refundMethod: publics.refundMethod || null,
+        receiveName: publics.receiveName || null,
       };
 
       // if (publics.status === "cancelled") {

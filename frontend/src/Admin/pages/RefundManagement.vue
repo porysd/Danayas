@@ -25,6 +25,7 @@ import { useBookingStore } from "../../stores/bookingStore.js";
 import { usePublicEntryStore } from "../../stores/publicEntryStore.js";
 import Inplace from "primevue/inplace";
 import Image from "primevue/image";
+import Dialog from "primevue/dialog";
 
 const refundStore = useRefundStore();
 const bookingStore = useBookingStore();
@@ -203,6 +204,7 @@ onMounted(() => {
 onUnmounted(() => {
   document.addEventListener("click", closeMenu);
 });
+const showAction = ref(false);
 </script>
 
 <template>
@@ -319,6 +321,7 @@ onUnmounted(() => {
                       <td class="w-[3%]" @click.stop>
                         <T3ButtonRefund
                           :refund="refund"
+                          :showAction="!showAction"
                           @completedRefund="updateRefundHandler"
                           @failedRefund="updateRefundHandler"
                           :bookingName="getPaymentName"
@@ -327,14 +330,6 @@ onUnmounted(() => {
                     </tr>
                   </tbody>
                 </table>
-                <Paginator
-                  :first="first"
-                  :rows="rows"
-                  :totalRecords="totalPending"
-                  :rowsPerPageOptions="[5, 10, 20, 30]"
-                  @page="onPageChange"
-                  class="rowPagination"
-                />
               </div>
             </TabPanel>
 
@@ -394,6 +389,8 @@ onUnmounted(() => {
                       <td class="w-[3%]" @click.stop>
                         <T3ButtonRefund
                           :refund="refund"
+                          :showAction="!showAction"
+                          :remarksOnly="true"
                           @completedRefund="updateRefundHandler"
                           @failedRefund="updateRefundHandler"
                           :bookingName="getPaymentName"
@@ -402,14 +399,6 @@ onUnmounted(() => {
                     </tr>
                   </tbody>
                 </table>
-                <Paginator
-                  :first="first"
-                  :rows="rows"
-                  :totalRecords="totalCompleted"
-                  :rowsPerPageOptions="[5, 10, 20, 30]"
-                  @page="onPageChange"
-                  class="rowPagination"
-                />
               </div>
             </TabPanel>
 
@@ -468,6 +457,7 @@ onUnmounted(() => {
                       <td class="w-[3%]" @click.stop>
                         <T3ButtonRefund
                           :refund="refund"
+                          :showAction="showAction"
                           @completedRefund="updateRefundHandler"
                           @failedRefund="updateRefundHandler"
                           :bookingName="getPaymentName"
@@ -476,14 +466,6 @@ onUnmounted(() => {
                     </tr>
                   </tbody>
                 </table>
-                <Paginator
-                  :first="first"
-                  :rows="rows"
-                  :totalRecords="totalFailed"
-                  :rowsPerPageOptions="[5, 10, 20, 30]"
-                  @page="onPageChange"
-                  class="rowPagination"
-                />
               </div>
             </TabPanel>
           </TabPanels>
@@ -491,11 +473,13 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <div v-if="refundDetails" class="modal">
-      <div class="modal-content font-[Poppins]">
-        <h2 class="text-xl font-bold m-auto justify-center align-center flex">
-          Refund Details
-        </h2>
+    <Dialog v-model:visible="refundDetails" modal :style="{ width: '30rem' }">
+      <template #header>
+        <div class="flex flex-col items-center justify-center w-full">
+          <h2 class="text-xl font-bold font-[Poppins]">Payment Details</h2>
+        </div>
+      </template>
+      <div class="font-[Poppins]">
         <Divider />
         <div class="flex flex-col gap-2">
           <p><strong>Refund ID:</strong> {{ selectedRefund?.refundId }}</p>
@@ -538,7 +522,7 @@ onUnmounted(() => {
                   />
                 </div>
                 <div v-else>
-                  <p>No image available for this promo.</p>
+                  <p>No image available for this refund.</p>
                 </div>
               </template>
             </Inplace>
@@ -554,7 +538,7 @@ onUnmounted(() => {
           </button>
         </div>
       </div>
-    </div>
+    </Dialog>
   </main>
 </template>
 

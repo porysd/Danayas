@@ -21,6 +21,7 @@ const toast = useToast();
 const showMenu = ref(false);
 const showEditModal = ref(false);
 const showStatusModal = ref(false);
+const showCompleteModal = ref(false);
 const showPayModal = ref(false);
 const showPaymentModal = ref(false);
 const formData = ref({});
@@ -44,9 +45,17 @@ const openStatusModal = () => {
     status: props.publics.status || "pending",
     cancelCategory: props.publics.cancelCategory || "",
     cancelReason: props.publics.cancelReason || "",
+    refundMethod: props.publics.refundMethod || "",
+    receiveName: props.publics.receiveName || "",
     ...props.publics,
   };
   showStatusModal.value = true;
+  showMenu.value = false;
+};
+
+const openCompleteModal = () => {
+  formData.value = { ...props.publics };
+  showCompleteModal.value = true;
   showMenu.value = false;
 };
 
@@ -55,37 +64,34 @@ const closeModals = () => {
   showStatusModal.value = false;
   showPayModal.value = false;
   showPaymentModal.value = false;
+  showCompleteModal.value = false;
 };
 
 const confirmStatusUpdate = () => {
-  if (
-    formData.value.status === "cancelled" ||
-    formData.value.status === "pending-cancellation"
-  ) {
-    if (!formData.value.cancelCategory || !formData.value.cancelReason) {
-      toast.add({
-        severity: "error",
-        summary: "Error",
-        detail: "Cancel Category and Cancel Reason is required",
-        life: 3000,
-      });
-      return;
-    }
-
-    // if (
-    //   formData.value.cancelCategory === "others" &&
-    //   !formData.value.cancelReason
-    // ) {
-    //   toast.add({
-    //     severity: "error",
-    //     summary: "Error",
-    //     detail: 'Cancel Reason is required for "Others" category',
-    //     life: 3000,
-    //   });
-    //   return;
-    // }
+  formData.value.status = "cancelled";
+  formData.value.cancelCategory = formData.value.cancelCategory?.trim();
+  formData.value.cancelReason = formData.value.cancelReason?.trim();
+  if (!formData.value.cancelCategory || !formData.value.cancelReason) {
+    toast.add({
+      severity: "error",
+      summary: "Error",
+      detail: "Cancel Category and Cancel Reason is required",
+      life: 3000,
+    });
+    return;
   }
-  console.log("Payload:", formData.value);
+  emit("updateStatus", formData.value);
+  toast.add({
+    severity: "success",
+    summary: "Updated Status",
+    detail: "Successfully Updated Status",
+    life: 3000,
+  });
+  closeModals();
+};
+
+const confirmComplete = () => {
+  formData.value.status = "completed";
   emit("updateStatus", formData.value);
   toast.add({
     severity: "success",
@@ -172,16 +178,22 @@ onUnmounted(() => {
         </li>
         <li
           class="hover:bg-gray-100 dark:hover:bg-gray-700"
-          @click="openStatusModal"
+          @click="openCompleteModal"
         >
-          Status
+          Completed
         </li>
         <li
+          class="hover:bg-gray-100 dark:hover:bg-gray-700"
+          @click="openStatusModal"
+        >
+          Cancel
+        </li>
+        <!-- <li
           class="hover:bg-gray-100 dark:hover:bg-gray-700"
           @click="openEditModal"
         >
           Update
-        </li>
+        </li> -->
       </ul>
     </div>
   </div>
@@ -349,40 +361,53 @@ onUnmounted(() => {
       </div>
     </template>
 
+    <span
+      class="text-lg text-surface-700 dark:text-surface-400 block mb-8 text-center font-[Poppins]"
+    >
+      Are you sure you want to
+      <strong class="text-red-500">CANCEL</strong> this public booking:
+      <span class="font-black font-[Poppins]"
+        >{{ formData.firstName }} {{ formData.lastName }}</span
+      >?
+    </span>
+
     <div class="mb-4">
-      <label class="block text-lg font-semibold mb-2">Booking Status</label>
-      <select v-model="formData.status" class="border p-2 rounded w-full">
-        <option value="completed">Completed</option>
-        <option value="pending-cancellation">Pending Cancellation</option>
-        <option value="cancelled">Cancelled</option>
+      <label>Cancel Category:</label>
+      <select
+        v-model="formData.cancelCategory"
+        class="border p-2 rounded w-full"
+        required
+      >
+        <option value="natural-disaster">Natural Disaster</option>
+        <option value="others">Others:</option>
       </select>
-      <div>
-        <template
-          v-if="
-            formData.status === 'cancelled' ||
-            formData.status === 'pending-cancellation'
-          "
+      <label>Reason for Cancellation:</label>
+      <Textarea
+        class="w-full"
+        v-model="formData.cancelReason"
+        autoResize
+        rows="3"
+        cols="30"
+        placeholder="Please provide a message or link(if natural disaster)"
+      />
+      <template v-if="formData.cancelCategory === 'natural-disaster'">
+        <label>Refund Method:</label>
+        <select
+          v-model="formData.refundMethod"
+          class="border p-2 rounded w-full"
+          required
         >
-          <label>Cancel Category:</label>
-          <select
-            v-model="formData.cancelCategory"
-            class="border p-2 rounded w-full"
-            required
-          >
-            <option value="natural-disaster">Natural Disaster</option>
-            <option value="others">Others:</option>
-          </select>
-          <label>Reason for Cancellation:</label>
-          <Textarea
-            class="w-full"
-            v-model="formData.cancelReason"
-            autoResize
-            rows="3"
-            cols="30"
-            placeholder="Please provide a message or link(if natural disaster)"
-          />
+          <option value="gcash">GCash</option>
+          <option value="cash">Cash</option>
+        </select>
+
+        <template v-if="formData.refundMethod === 'cash'">
+          <div class="flex flex-col">
+            <label>Receiver Name:</label>
+            <InputText v-model="formData.receiveName" />
+          </div>
         </template>
-      </div>
+      </template>
     </div>
 
     <div class="flex justify-center gap-2 font-[Poppins]">
@@ -398,6 +423,44 @@ onUnmounted(() => {
         label="Save"
         severity="primary"
         @click="confirmStatusUpdate"
+        class="font-bold w-full"
+        :disabled="
+          !formData.cancelCategory?.trim() || !formData.cancelReason?.trim()
+        "
+      />
+    </div>
+  </Dialog>
+
+  <Dialog v-model:visible="showCompleteModal" modal :style="{ width: '30rem' }">
+    <template #header>
+      <div class="flex flex-col items-center justify-center w-full">
+        <h2 class="text-xl font-bold font-[Poppins]">Update Booking Status</h2>
+      </div>
+    </template>
+
+    <span
+      class="text-lg text-surface-700 dark:text-surface-400 block mb-8 text-center font-[Poppins]"
+    >
+      Are you sure you want to
+      <strong class="text-green-500">COMPLETE</strong> this public booking:
+      <span class="font-black font-[Poppins]"
+        >{{ formData.firstName }} {{ formData.lastName }}</span
+      >?
+    </span>
+
+    <div class="flex justify-center gap-2 font-[Poppins]">
+      <Button
+        type="button"
+        label="Cancel"
+        severity="secondary"
+        @click="closeModals"
+        class="font-bold w-full"
+      />
+      <Button
+        type="button"
+        label="Save"
+        severity="Complete"
+        @click="confirmComplete"
         class="font-bold w-full"
       />
     </div>

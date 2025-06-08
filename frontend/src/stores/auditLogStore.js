@@ -40,7 +40,8 @@ export const useLogStore = defineStore("auditLogs", {
 
           if (logsData.items && logsData.items.length > 0) {
             this.logs = Array.isArray(this.logs) ? this.logs : [];
-            this.logs.push(...logsData.items);
+
+            this.logs.push(...logsData.items.reverse());
 
             if (logsData.length === 0) {
               hasMoreData = false;
@@ -51,6 +52,8 @@ export const useLogStore = defineStore("auditLogs", {
             hasMoreData = false;
           }
         }
+
+        this.logs.reverse();
       } catch (e) {
         console.error("Error fetching logs", e);
       }
