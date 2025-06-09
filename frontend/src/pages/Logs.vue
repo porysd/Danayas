@@ -254,17 +254,16 @@ const hasInvalidPayment = (booking) => {
 };
 
 const handleLoggerClick = (booking) => {
-  // Allow full menu only for reserved
   if (booking.bookStatus === "reserved") {
     openMenuBookingId.value = booking.bookingId;
     return;
   }
-  // Allow only payAgain for pending with invalid payment
-  if (booking.bookStatus === "pending" && hasInvalidPayment(booking)) {
+
+  if (hasInvalidPayment(booking) && booking.bookStatus === "pending") {
     openMenuBookingId.value = booking.bookingId;
     return;
   }
-  // Otherwise, block and show toast
+
   toast.add({
     severity: "warn",
     summary: "Not allowed",
@@ -312,7 +311,7 @@ const handleLoggerClick = (booking) => {
           :booking="booking"
           :payAgain="hasInvalidPayment(booking) ? booking : null"
           :refund="booking"
-          :showAction="openMenuBookingId === booking.bookingId"
+          :showAction="showAction && openMenuBookingId === booking.bookingId"
           @click="handleLoggerClick(booking)"
           @rescheduleBooking="rescheduleHandler"
           @cancelBooking="cancelHandler"

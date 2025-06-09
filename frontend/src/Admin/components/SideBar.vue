@@ -270,14 +270,14 @@ const toggleContentMenu = () => {
           <i class="pi pi-users mr-2"></i>
           About Us</router-link
         >
-        <router-link
+        <!-- <router-link
           to="/employee/contact-us"
           class="sidebar-btn rounded-xl p-2.5 text-left font-bold"
           active-class="active-route"
         >
           <i class="pi pi-file mr-2"></i>
           Contact Us</router-link
-        >
+        > -->
         <router-link
           to="/employee/terms-and-condition"
           class="sidebar-btn rounded-xl p-2.5 text-left font-bold"

@@ -24,9 +24,16 @@ const props = defineProps({
   selectedPackageId: [String, Number],
 });
 
-const filteredPackages = computed(() =>
-  packageStore.packages.filter((pkg) => !props.mode || pkg.mode === props.mode)
-);
+const filteredPackages = computed(() => {
+  const seen = new Set();
+  return packageStore.packages
+    .filter((pkg) => !props.mode || pkg.mode === props.mode)
+    .filter((pkg) => {
+      if (seen.has(pkg.packageId)) return false;
+      seen.add(pkg.packageId);
+      return true;
+    });
+});
 
 const filteredPromos = computed(() =>
   packageStore.promos.filter((pkg) => !props.mode || pkg.mode === props.mode)

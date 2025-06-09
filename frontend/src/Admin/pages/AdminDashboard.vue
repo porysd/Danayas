@@ -635,6 +635,10 @@ const countCompletedBookings = computed(() => {
   box-shadow: 0 16px 40px 0 rgba(31, 38, 135, 0.18);
 }
 
+.my-app-dark .chartPeak {
+  background: #18181b;
+}
+
 .calendarChart {
   box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.12);
   border-radius: 18px;
