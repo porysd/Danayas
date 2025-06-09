@@ -265,7 +265,7 @@ const unavailableModes = computed(() => {
     <div v-if="showMenu" ref="hideMenu" class="loggerBtn">
       <ul>
         <li
-          v-if="payAgain && showAction"
+          v-if="payAgain"
           class="hover:bg-gray-100 dark:hover:bg-gray-700"
           @click="openPayModal"
         >
@@ -414,11 +414,6 @@ const unavailableModes = computed(() => {
         <p>
           <strong>Tendered Amount: </strong>
           {{ formatPeso(formData.tenderedAmount) }}
-        </p>
-
-        <p>
-          <strong>Change: </strong>
-          {{ formatPeso(formData.tenderedAmount - formData.remainingBalance) }}
         </p>
       </div>
     </div>
