@@ -822,6 +822,7 @@ const onFileSelect = (event) => {
           v-model="formData.numberOfGuest"
           placeholder="Number of Guest"
           disabled
+          min="0"
         />
       </div>
     </div>
