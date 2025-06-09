@@ -20,3 +20,5 @@ export * from "./PublicEntryRate.ts";
 export * from "./PublicAddOns.ts";
 
 export * from "./BlockedDates.ts";
+
+export * from "./Verification.ts";
