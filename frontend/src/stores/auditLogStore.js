@@ -16,7 +16,7 @@ export const useLogStore = defineStore("auditLogs", {
 
         this.logs = [];
 
-        const limit = 50;
+        const limit = 1000;
         let page = 1;
         let hasMoreData = true;
 
@@ -53,7 +53,7 @@ export const useLogStore = defineStore("auditLogs", {
           }
         }
 
-        this.logs.reverse();
+        this.logs = logsData.reverse();
       } catch (e) {
         console.error("Error fetching logs", e);
       }
