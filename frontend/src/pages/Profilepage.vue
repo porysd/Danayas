@@ -33,6 +33,7 @@ onMounted(async () => {
   console.log("Fetched user:", fetchedUser);
 
   userData.value = {
+    userId: fetchedUser.userId,
     username: fetchedUser.username,
     firstName: fetchedUser.firstName,
     lastName: fetchedUser.lastName,
@@ -108,12 +109,7 @@ const toggleEdit = async () => {
         </div>
         <div>
           <label>Email Address:</label>
-          <input
-            class="packEvents"
-            id="address"
-            v-model="userData.email"
-            :disabled="!isEditing"
-          />
+          <input type="email" v-model="userData.email" :disabled="!isEditing" />
         </div>
 
         <div>

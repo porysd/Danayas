@@ -820,7 +820,7 @@ const prevBtn = () => {
                               for="nightMode"
                               class="text-xl font-[Poppins]"
                               >NIGHT TIME
-                              <p class="text-center mt-2 ml-3">(7am to 5am)</p>
+                              <p class="text-center mt-2 ml-3">(7pm to 5am)</p>
                             </label>
                           </div>
 
