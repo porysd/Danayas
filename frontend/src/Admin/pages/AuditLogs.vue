@@ -104,14 +104,6 @@ const filtered = computed(() => {
               </tr>
             </tbody>
           </table>
-          <Paginator
-            :first="first"
-            :rows="rows"
-            :totalRecords="total"
-            :rowsPerPageOptions="[5, 10, 20, 30]"
-            @page="onPageChangeCat"
-            class="rowPagination"
-          />
         </div>
       </div>
 

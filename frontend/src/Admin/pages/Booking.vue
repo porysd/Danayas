@@ -45,7 +45,7 @@ const addBookingHandler = async (booking, paymentDetails) => {
     const newBooking = await bookingStore.addBooking(booking);
     const bookingId = newBooking.bookingId;
 
-    // 32: Create Payment with booking id
+    // 2: Create Payment with booking id
     const fullPaymentDetails = {
       ...paymentDetails,
       bookingId,
